@@ -6,17 +6,16 @@ Test cases for L{twisted.logger._file}.
 """
 
 from io import StringIO
+from types import TracebackType
+from typing import IO, Any, AnyStr, Optional, Type, cast
 
-from zope.interface.verify import verifyObject, BrokenMethodImplementation
-
-from twisted.trial.unittest import TestCase
+from zope.interface.exceptions import BrokenMethodImplementation
+from zope.interface.verify import verifyObject
 
 from twisted.python.failure import Failure
-from twisted.python.compat import unicode
-from .._observer import ILogObserver
-from .._file import FileLogObserver
-from .._file import textFileLogObserver
-
+from twisted.trial.unittest import TestCase
+from .._file import FileLogObserver, textFileLogObserver
+from .._interfaces import ILogObserver
 
 
 class FileLogObserverTests(TestCase):
@@ -24,70 +23,62 @@ class FileLogObserverTests(TestCase):
     Tests for L{FileLogObserver}.
     """
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{FileLogObserver} is an L{ILogObserver}.
         """
         with StringIO() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
+            observer = FileLogObserver(fileHandle, lambda e: str(e))
             try:
                 verifyObject(ILogObserver, observer)
             except BrokenMethodImplementation as e:
                 self.fail(e)
 
-
-    def test_observeWrites(self):
+    def test_observeWrites(self) -> None:
         """
         L{FileLogObserver} writes to the given file when it observes events.
         """
         with StringIO() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
+            observer = FileLogObserver(fileHandle, lambda e: str(e))
             event = dict(x=1)
             observer(event)
-            self.assertEqual(fileHandle.getvalue(), unicode(event))
+            self.assertEqual(fileHandle.getvalue(), str(event))
 
-
-    def _test_observeWrites(self, what, count):
+    def _test_observeWrites(self, what: Optional[str], count: int) -> None:
         """
         Verify that observer performs an expected number of writes when the
         formatter returns a given value.
 
         @param what: the value for the formatter to return.
-        @type what: L{unicode}
-
         @param count: the expected number of writes.
-        @type count: L{int}
         """
         with DummyFile() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: what)
+            observer = FileLogObserver(cast(IO[Any], fileHandle), lambda e: what)
             event = dict(x=1)
             observer(event)
             self.assertEqual(fileHandle.writes, count)
 
-
-    def test_observeWritesNone(self):
+    def test_observeWritesNone(self) -> None:
         """
         L{FileLogObserver} does not write to the given file when it observes
         events and C{formatEvent} returns L{None}.
         """
         self._test_observeWrites(None, 0)
 
-
-    def test_observeWritesEmpty(self):
+    def test_observeWritesEmpty(self) -> None:
         """
         L{FileLogObserver} does not write to the given file when it observes
-        events and C{formatEvent} returns C{u""}.
+        events and C{formatEvent} returns C{""}.
         """
-        self._test_observeWrites(u"", 0)
+        self._test_observeWrites("", 0)
 
-
-    def test_observeFlushes(self):
+    def test_observeFlushes(self) -> None:
         """
         L{FileLogObserver} calles C{flush()} on the output file when it
         observes an event.
         """
         with DummyFile() as fileHandle:
-            observer = FileLogObserver(fileHandle, lambda e: unicode(e))
+            observer = FileLogObserver(cast(IO[Any], fileHandle), lambda e: str(e))
             event = dict(x=1)
             observer(event)
             self.assertEqual(fileHandle.flushes, 1)
@@ -98,7 +89,7 @@ class TextFileLogObserverTests(TestCase):
     Tests for L{textFileLogObserver}.
     """
 
-    def test_returnsFileLogObserver(self):
+    def test_returnsFileLogObserver(self) -> None:
         """
         L{textFileLogObserver} returns a L{FileLogObserver}.
         """
@@ -106,8 +97,7 @@ class TextFileLogObserverTests(TestCase):
             observer = textFileLogObserver(fileHandle)
             self.assertIsInstance(observer, FileLogObserver)
 
-
-    def test_outFile(self):
+    def test_outFile(self) -> None:
         """
         Returned L{FileLogObserver} has the correct outFile.
         """
@@ -115,18 +105,16 @@ class TextFileLogObserverTests(TestCase):
             observer = textFileLogObserver(fileHandle)
             self.assertIs(observer._outFile, fileHandle)
 
-
-    def test_timeFormat(self):
+    def test_timeFormat(self) -> None:
         """
         Returned L{FileLogObserver} has the correct outFile.
         """
         with StringIO() as fileHandle:
-            observer = textFileLogObserver(fileHandle, timeFormat=u"%f")
-            observer(dict(log_format=u"XYZZY", log_time=112345.6))
-            self.assertEqual(fileHandle.getvalue(), u"600000 [-#-] XYZZY\n")
+            observer = textFileLogObserver(fileHandle, timeFormat="%f")
+            observer(dict(log_format="XYZZY", log_time=112345.6))
+            self.assertEqual(fileHandle.getvalue(), "600000 [-#-] XYZZY\n")
 
-
-    def test_observeFailure(self):
+    def test_observeFailure(self) -> None:
         """
         If the C{"log_failure"} key exists in an event, the observer appends
         the failure's traceback to the output.
@@ -142,11 +130,11 @@ class TextFileLogObserverTests(TestCase):
             event = dict(log_failure=failure)
             observer(event)
             output = fileHandle.getvalue()
-            self.assertTrue(output.split("\n")[1].startswith("\tTraceback "),
-                            msg=repr(output))
+            self.assertTrue(
+                output.split("\n")[1].startswith("\tTraceback "), msg=repr(output)
+            )
 
-
-    def test_observeFailureThatRaisesInGetTraceback(self):
+    def test_observeFailureThatRaisesInGetTraceback(self) -> None:
         """
         If the C{"log_failure"} key exists in an event, and contains an object
         that raises when you call its C{getTraceback()}, then the observer
@@ -157,43 +145,40 @@ class TextFileLogObserverTests(TestCase):
             event = dict(log_failure=object())  # object has no getTraceback()
             observer(event)
             output = fileHandle.getvalue()
-            expected = (
-                "(UNABLE TO OBTAIN TRACEBACK FROM EVENT)"
-            )
+            expected = "(UNABLE TO OBTAIN TRACEBACK FROM EVENT)"
             self.assertIn(expected, output)
 
 
-
-class DummyFile(object):
+class DummyFile:
     """
     File that counts writes and flushes.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.writes = 0
         self.flushes = 0
 
-
-    def write(self, data):
+    def write(self, data: AnyStr) -> None:
         """
         Write data.
 
         @param data: data
-        @type data: L{unicode} or L{bytes}
         """
         self.writes += 1
 
-
-    def flush(self):
+    def flush(self) -> None:
         """
         Flush buffers.
         """
         self.flushes += 1
 
-
-    def __enter__(self):
+    def __enter__(self) -> "DummyFile":
         return self
 
-
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
         pass

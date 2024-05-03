@@ -7,25 +7,25 @@ Tests for L{twisted.trial._dist.workertrial}.
 
 import errno
 import sys
-import os
-
 from io import BytesIO
 
+from twisted.internet.testing import StringTransport
 from twisted.protocols.amp import AMP
-from twisted.test.proto_helpers import StringTransport
-from twisted.trial.unittest import TestCase
-from twisted.trial._dist.workertrial import WorkerLogObserver, main, _setupPath
 from twisted.trial._dist import (
-    workertrial, _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT, workercommands,
-    managercommands)
-
+    _WORKER_AMP_STDIN,
+    _WORKER_AMP_STDOUT,
+    managercommands,
+    workercommands,
+    workertrial,
+)
+from twisted.trial._dist.workertrial import WorkerLogObserver, main
+from twisted.trial.unittest import TestCase
 
 
 class FakeAMP(AMP):
     """
     A fake amp protocol.
     """
-
 
 
 class WorkerLogObserverTests(TestCase):
@@ -39,16 +39,13 @@ class WorkerLogObserverTests(TestCase):
         """
         calls = []
 
-        class FakeClient(object):
-
+        class FakeClient:
             def callRemote(self, method, **kwargs):
                 calls.append((method, kwargs))
 
         observer = WorkerLogObserver(FakeClient())
-        observer.emit({'message': ['Some log']})
-        self.assertEqual(
-            calls, [(managercommands.TestWrite, {'out': 'Some log'})])
-
+        observer.emit({"message": ["Some log"]})
+        self.assertEqual(calls, [(managercommands.TestWrite, {"out": "Some log"})])
 
 
 class MainTests(TestCase):
@@ -59,11 +56,11 @@ class MainTests(TestCase):
     def setUp(self):
         self.readStream = BytesIO()
         self.writeStream = BytesIO()
-        self.patch(workertrial, 'startLoggingWithObserver',
-                   self.startLoggingWithObserver)
+        self.patch(
+            workertrial, "startLoggingWithObserver", self.startLoggingWithObserver
+        )
         self.addCleanup(setattr, sys, "argv", sys.argv)
         sys.argv = ["trial"]
-
 
     def fdopen(self, fd, mode=None):
         """
@@ -71,14 +68,13 @@ class MainTests(TestCase):
         the stdin fd and C{self.writeStream} for the stdout fd.
         """
         if fd == _WORKER_AMP_STDIN:
-            self.assertIdentical('rb', mode)
+            self.assertEqual("rb", mode)
             return self.readStream
         elif fd == _WORKER_AMP_STDOUT:
-            self.assertEqual('wb', mode)
+            self.assertEqual("wb", mode)
             return self.writeStream
         else:
-            raise AssertionError("Unexpected fd %r" % (fd,))
-
+            raise AssertionError(f"Unexpected fd {fd!r}")
 
     def startLoggingWithObserver(self, emit, setStdout):
         """
@@ -86,14 +82,12 @@ class MainTests(TestCase):
         """
         self.assertFalse(setStdout)
 
-
     def test_empty(self):
         """
         If no data is ever written, L{main} exits without writing data out.
         """
         main(self.fdopen)
-        self.assertEqual(b'', self.writeStream.getvalue())
-
+        self.assertEqual(b"", self.writeStream.getvalue())
 
     def test_forwardCommand(self):
         """
@@ -107,9 +101,9 @@ class MainTests(TestCase):
         self.readStream = clientTransport.io
         self.readStream.seek(0, 0)
         main(self.fdopen)
-        self.assertIn(
-            b"No module named 'doesntexist'", self.writeStream.getvalue())
-
+        # Just brazenly encode irrelevant implementation details here, why
+        # not.
+        self.assertIn(b"StreamOpen", self.writeStream.getvalue())
 
     def test_readInterrupted(self):
         """
@@ -118,22 +112,21 @@ class MainTests(TestCase):
         """
         excInfos = []
 
-        class FakeStream(object):
+        class FakeStream:
             count = 0
 
             def read(oself, size):
                 oself.count += 1
                 if oself.count == 1:
-                    raise IOError(errno.EINTR)
+                    raise OSError(errno.EINTR)
                 else:
                     excInfos.append(sys.exc_info())
-                return b''
+                return b""
 
         self.readStream = FakeStream()
         main(self.fdopen)
-        self.assertEqual(b'', self.writeStream.getvalue())
+        self.assertEqual(b"", self.writeStream.getvalue())
         self.assertEqual([(None, None, None)], excInfos)
-
 
     def test_otherReadError(self):
         """
@@ -141,44 +134,14 @@ class MainTests(TestCase):
         error pops out.
         """
 
-        class FakeStream(object):
+        class FakeStream:
             count = 0
 
             def read(oself, size):
                 oself.count += 1
                 if oself.count == 1:
-                    raise IOError("Something else")
-                return ''
+                    raise OSError("Something else")
+                return ""
 
         self.readStream = FakeStream()
         self.assertRaises(IOError, main, self.fdopen)
-
-
-
-class SetupPathTests(TestCase):
-    """
-    Tests for L{_setupPath} C{sys.path} manipulation.
-    """
-
-    def setUp(self):
-        self.addCleanup(setattr, sys, "path", sys.path[:])
-
-
-    def test_overridePath(self):
-        """
-        L{_setupPath} overrides C{sys.path} if B{TRIAL_PYTHONPATH} is specified
-        in the environment.
-        """
-        environ = {"TRIAL_PYTHONPATH": os.pathsep.join(["foo", "bar"])}
-        _setupPath(environ)
-        self.assertEqual(["foo", "bar"], sys.path)
-
-
-    def test_noVariable(self):
-        """
-        L{_setupPath} doesn't change C{sys.path} if B{TRIAL_PYTHONPATH} is not
-        present in the environment.
-        """
-        originalPath = sys.path[:]
-        _setupPath({})
-        self.assertEqual(originalPath, sys.path)

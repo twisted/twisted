@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
 import random
 
@@ -11,7 +10,7 @@ from zope.interface import implementer
 from twisted.internet import error, interfaces
 from twisted.names import client, dns
 from twisted.names.error import DNSNameError
-from twisted.python.compat import nativeString, unicode
+from twisted.python.compat import nativeString
 
 
 class _SRVConnector_ClientFactoryWrapper:
@@ -32,7 +31,6 @@ class _SRVConnector_ClientFactoryWrapper:
         return getattr(self.__wrappedFactory, key)
 
 
-
 @implementer(interfaces.IConnector)
 class SRVConnector:
     """
@@ -51,18 +49,24 @@ class SRVConnector:
     @type orderedServers: L{list} of L{dns.Record_SRV}
     """
 
-    stopAfterDNS=0
+    stopAfterDNS = 0
 
-    def __init__(self, reactor, service, domain, factory,
-                 protocol='tcp', connectFuncName='connectTCP',
-                 connectFuncArgs=(),
-                 connectFuncKwArgs={},
-                 defaultPort=None,
-                 ):
+    def __init__(
+        self,
+        reactor,
+        service,
+        domain,
+        factory,
+        protocol="tcp",
+        connectFuncName="connectTCP",
+        connectFuncArgs=(),
+        connectFuncKwArgs={},
+        defaultPort=None,
+    ):
         """
-        @param domain: The domain to connect to.  If passed as a unicode
+        @param domain: The domain to connect to.  If passed as a text
             string, it will be encoded using C{idna} encoding.
-        @type domain: L{bytes} or L{unicode}
+        @type domain: L{bytes} or L{str}
 
         @param defaultPort: Optional default port number to be used when SRV
             lookup fails and the service name is unknown. This should be the
@@ -72,9 +76,7 @@ class SRVConnector:
         """
         self.reactor = reactor
         self.service = service
-        if isinstance(domain, unicode):
-            domain = domain.encode('idna')
-        self.domain = nativeString(domain)
+        self.domain = None if domain is None else dns.domainString(domain)
         self.factory = factory
 
         self.protocol = protocol
@@ -85,7 +87,8 @@ class SRVConnector:
 
         self.connector = None
         self.servers = None
-        self.orderedServers = None # list of servers already used in this round
+        # list of servers already used in this round:
+        self.orderedServers = None
 
     def connect(self):
         """Start connection to remote server."""
@@ -94,12 +97,18 @@ class SRVConnector:
 
         if not self.servers:
             if self.domain is None:
-                self.connectionFailed(error.DNSLookupError("Domain is not defined."))
+                self.connectionFailed(
+                    error.DNSLookupError("Domain is not defined."),
+                )
                 return
-            d = client.lookupService('_%s._%s.%s' %
-                    (nativeString(self.service),
-                     nativeString(self.protocol),
-                     self.domain))
+            d = client.lookupService(
+                "_%s._%s.%s"
+                % (
+                    nativeString(self.service),
+                    nativeString(self.protocol),
+                    nativeString(self.domain),
+                ),
+            )
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
             if self._defaultPort:
@@ -122,12 +131,17 @@ class SRVConnector:
 
     def _cbGotServers(self, result):
         answers, auth, add = result
-        if len(answers) == 1 and answers[0].type == dns.SRV \
-                             and answers[0].payload \
-                             and answers[0].payload.target == dns.Name(b'.'):
+        if (
+            len(answers) == 1
+            and answers[0].type == dns.SRV
+            and answers[0].payload
+            and answers[0].payload.target == dns.Name(b".")
+        ):
             # decidedly not available
-            raise error.DNSLookupError("Service %s not available for domain %s."
-                                       % (repr(self.service), repr(self.domain)))
+            raise error.DNSLookupError(
+                "Service %s not available for domain %s."
+                % (repr(self.service), repr(self.domain))
+            )
 
         self.servers = []
         self.orderedServers = []
@@ -180,7 +194,7 @@ class SRVConnector:
 
         if not self.servers and not self.orderedServers:
             # no SRV record, fall back..
-            return self.domain, self.service
+            return nativeString(self.domain), self.service
 
         if not self.servers and self.orderedServers:
             # start new round
@@ -210,30 +224,32 @@ class SRVConnector:
 
                 return str(chosen.target), chosen.port
 
-        raise RuntimeError(
-            'Impossible %s pickServer result.' % (self.__class__.__name__,))
+        raise RuntimeError(f"Impossible {self.__class__.__name__} pickServer result.")
 
     def _reallyConnect(self):
         if self.stopAfterDNS:
-            self.stopAfterDNS=0
+            self.stopAfterDNS = 0
             return
 
         self.host, self.port = self.pickServer()
-        assert self.host is not None, 'Must have a host to connect to.'
-        assert self.port is not None, 'Must have a port to connect to.'
+        assert self.host is not None, "Must have a host to connect to."
+        assert self.port is not None, "Must have a port to connect to."
 
         connectFunc = getattr(self.reactor, self.connectFuncName)
-        self.connector=connectFunc(
-            self.host, self.port,
+        self.connector = connectFunc(
+            self.host,
+            self.port,
             _SRVConnector_ClientFactoryWrapper(self, self.factory),
-            *self.connectFuncArgs, **self.connectFuncKwArgs)
+            *self.connectFuncArgs,
+            **self.connectFuncKwArgs,
+        )
 
     def stopConnecting(self):
         """Stop attempting to connect."""
         if self.connector:
             self.connector.stopConnecting()
         else:
-            self.stopAfterDNS=1
+            self.stopAfterDNS = 1
 
     def disconnect(self):
         """Disconnect whatever our are state is."""

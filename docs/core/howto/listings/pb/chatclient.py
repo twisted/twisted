@@ -2,22 +2,20 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
-from twisted.spread import pb
-from twisted.internet import reactor
 from twisted.cred import credentials
+from twisted.internet import reactor
+from twisted.spread import pb
+
 
 class Client(pb.Referenceable):
-
     def remote_print(self, message):
         print(message)
 
     def connect(self):
         factory = pb.PBClientFactory()
         reactor.connectTCP("localhost", 8800, factory)
-        def1 = factory.login(credentials.UsernamePassword("alice", "1234"),
-                             client=self)
+        def1 = factory.login(credentials.UsernamePassword("alice", "1234"), client=self)
         def1.addCallback(self.connected)
         reactor.run()
 
@@ -41,4 +39,3 @@ class Client(pb.Referenceable):
 
 
 Client().connect()
-

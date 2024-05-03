@@ -23,20 +23,20 @@ expected and probably does not reflect on the reactor's ability to run
 real applications.
 """
 
-try:
-    from queue import Empty, Queue
-except ImportError:
-    from Queue import Empty, Queue
+from queue import Empty, Queue
 
 try:
-    from wx import PySimpleApp as wxPySimpleApp, CallAfter as wxCallAfter, \
-         Timer as wxTimer
+    from wx import (
+        CallAfter as wxCallAfter,
+        PySimpleApp as wxPySimpleApp,
+        Timer as wxTimer,
+    )
 except ImportError:
     # older version of wxPython:
     from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
 
-from twisted.python import log, runtime
 from twisted.internet import _threadedselect
+from twisted.python import log, runtime
 
 
 class ProcessEventsTimer(wxTimer):
@@ -46,17 +46,16 @@ class ProcessEventsTimer(wxTimer):
     This is necessary on macOS, probably due to a bug in wx, if we want
     wxCallAfters to be handled when modal dialogs, menus, etc.  are open.
     """
+
     def __init__(self, wxapp):
         wxTimer.__init__(self)
         self.wxapp = wxapp
-    
 
     def Notify(self):
         """
         Called repeatedly by wx event loop.
         """
         self.wxapp.ProcessPendingEvents()
-
 
 
 class WxReactor(_threadedselect.ThreadedSelectReactor):
@@ -74,7 +73,6 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         """
         self.wxapp = wxapp
 
-
     def _installSignalHandlersAgain(self):
         """
         wx sometimes removes our own signal handlers, so re-add them.
@@ -82,11 +80,11 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         try:
             # make _handleSignals happy:
             import signal
+
             signal.signal(signal.SIGINT, signal.default_int_handler)
         except ImportError:
             return
-        self._handleSignals()
-
+        self._signals.install()
 
     def stop(self):
         """
@@ -96,7 +94,6 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             return
         self._stopping = True
         _threadedselect.ThreadedSelectReactor.stop(self)
-
 
     def _runInMainThread(self, f):
         """
@@ -110,7 +107,6 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             # wx shutdown but twisted hasn't
             self._postQueue.put(f)
 
-
     def _stopWx(self):
         """
         Stop the wx event loop if it hasn't already been stopped.
@@ -120,34 +116,37 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
         if hasattr(self, "wxapp"):
             self.wxapp.ExitMainLoop()
 
-
     def run(self, installSignalHandlers=True):
         """
         Start the reactor.
         """
         self._postQueue = Queue()
         if not hasattr(self, "wxapp"):
-            log.msg("registerWxApp() was not called on reactor, "
-                    "registering my own wxApp instance.")
+            log.msg(
+                "registerWxApp() was not called on reactor, "
+                "registering my own wxApp instance."
+            )
             self.registerWxApp(wxPySimpleApp())
 
         # start select() thread:
-        self.interleave(self._runInMainThread,
-                        installSignalHandlers=installSignalHandlers)
+        self.interleave(
+            self._runInMainThread, installSignalHandlers=installSignalHandlers
+        )
         if installSignalHandlers:
             self.callLater(0, self._installSignalHandlersAgain)
 
         # add cleanup events:
         self.addSystemEventTrigger("after", "shutdown", self._stopWx)
-        self.addSystemEventTrigger("after", "shutdown",
-                                   lambda: self._postQueue.put(None))
+        self.addSystemEventTrigger(
+            "after", "shutdown", lambda: self._postQueue.put(None)
+        )
 
         # On macOS, work around wx bug by starting timer to ensure
         # wxCallAfter calls are always processed. We don't wake up as
         # often as we could since that uses too much CPU.
         if runtime.platform.isMacOSX():
             t = ProcessEventsTimer(self.wxapp)
-            t.Start(2) # wake up every 2ms
+            t.Start(2)  # wake up every 2ms
 
         self.wxapp.MainLoop()
         wxapp = self.wxapp
@@ -160,7 +159,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
             # unprocessed in wx, thus the ProcessPendingEvents()
             # below.
             self.stop()
-            wxapp.ProcessPendingEvents() # deal with any queued wxCallAfters
+            wxapp.ProcessPendingEvents()  # deal with any queued wxCallAfters
             while 1:
                 try:
                     f = self._postQueue.get(timeout=0.01)
@@ -171,7 +170,7 @@ class WxReactor(_threadedselect.ThreadedSelectReactor):
                         break
                     try:
                         f()
-                    except:
+                    except BaseException:
                         log.err()
 
 
@@ -181,8 +180,9 @@ def install():
     """
     reactor = WxReactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 
 
-__all__ = ['install']
+__all__ = ["install"]

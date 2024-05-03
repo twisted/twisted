@@ -6,15 +6,15 @@
 Tests for L{twisted.python.urlpath}.
 """
 
-from twisted.trial import unittest
 from twisted.python import urlpath
-from twisted.python.compat import _PY3
+from twisted.trial import unittest
 
 
-class _BaseURLPathTests(object):
+class _BaseURLPathTests:
     """
     Tests for instantiated L{urlpath.URLPath}s.
     """
+
     def test_partsAreBytes(self):
         """
         All of the attributes of L{urlpath.URLPath} should be L{bytes}.
@@ -25,54 +25,53 @@ class _BaseURLPathTests(object):
         self.assertIsInstance(self.path.query, bytes)
         self.assertIsInstance(self.path.fragment, bytes)
 
-
     def test_strReturnsStr(self):
         """
         Calling C{str()} with a L{URLPath} will always return a L{str}.
         """
         self.assertEqual(type(self.path.__str__()), str)
 
-
-    def test_mutabilityWithText(self, stringType=type(u"")):
+    def test_mutabilityWithText(self, stringType=str):
         """
         Setting attributes on L{urlpath.URLPath} should change the value
         returned by L{str}.
 
         @param stringType: a callable to parameterize this test for different
             text types.
-        @type stringType: 1-argument callable taking L{unicode} and returning
+        @type stringType: 1-argument callable taking L{str} and returning
             L{str} or L{bytes}.
         """
-        self.path.scheme = stringType(u"https")
+        self.path.scheme = stringType("https")
+        self.assertEqual(
+            str(self.path), "https://example.com/foo/bar?yes=no&no=yes#footer"
+        )
+        self.path.netloc = stringType("another.example.invalid")
         self.assertEqual(
             str(self.path),
-            "https://example.com/foo/bar?yes=no&no=yes#footer")
-        self.path.netloc = stringType(u"another.example.invalid")
+            "https://another.example.invalid/foo/bar?yes=no&no=yes#footer",
+        )
+        self.path.path = stringType("/hello")
         self.assertEqual(
-            str(self.path),
-            "https://another.example.invalid/foo/bar?yes=no&no=yes#footer")
-        self.path.path = stringType(u"/hello")
-        self.assertEqual(
-            str(self.path),
-            "https://another.example.invalid/hello?yes=no&no=yes#footer")
-        self.path.query = stringType(u"alpha=omega&opposites=same")
-        self.assertEqual(
-            str(self.path),
-            "https://another.example.invalid/hello?alpha=omega&opposites=same"
-            "#footer")
-        self.path.fragment = stringType(u"header")
+            str(self.path), "https://another.example.invalid/hello?yes=no&no=yes#footer"
+        )
+        self.path.query = stringType("alpha=omega&opposites=same")
         self.assertEqual(
             str(self.path),
             "https://another.example.invalid/hello?alpha=omega&opposites=same"
-            "#header")
-
+            "#footer",
+        )
+        self.path.fragment = stringType("header")
+        self.assertEqual(
+            str(self.path),
+            "https://another.example.invalid/hello?alpha=omega&opposites=same"
+            "#header",
+        )
 
     def test_mutabilityWithBytes(self):
         """
         Same as L{test_mutabilityWithText} but for bytes.
         """
         self.test_mutabilityWithText(lambda x: x.encode("ascii"))
-
 
     def test_allAttributesAreBytes(self):
         """
@@ -84,46 +83,50 @@ class _BaseURLPathTests(object):
         self.assertIsInstance(self.path.query, bytes)
         self.assertIsInstance(self.path.fragment, bytes)
 
-
     def test_stringConversion(self):
         """
         Calling C{str()} with a L{URLPath} will return the same URL that it was
         constructed with.
         """
-        self.assertEqual(str(self.path),
-                         "http://example.com/foo/bar?yes=no&no=yes#footer")
-
+        self.assertEqual(
+            str(self.path), "http://example.com/foo/bar?yes=no&no=yes#footer"
+        )
 
     def test_childString(self):
         """
         Calling C{str()} with a C{URLPath.child()} will return a URL which is
         the child of the URL it was instantiated with.
         """
-        self.assertEqual(str(self.path.child(b'hello')),
-                         "http://example.com/foo/bar/hello")
-        self.assertEqual(str(self.path.child(b'hello').child(b'')),
-                         "http://example.com/foo/bar/hello/")
-        self.assertEqual(str(self.path.child(b'hello', keepQuery=True)),
-                         "http://example.com/foo/bar/hello?yes=no&no=yes")
-
+        self.assertEqual(
+            str(self.path.child(b"hello")), "http://example.com/foo/bar/hello"
+        )
+        self.assertEqual(
+            str(self.path.child(b"hello").child(b"")),
+            "http://example.com/foo/bar/hello/",
+        )
+        self.assertEqual(
+            str(self.path.child(b"hello", keepQuery=True)),
+            "http://example.com/foo/bar/hello?yes=no&no=yes",
+        )
 
     def test_siblingString(self):
         """
         Calling C{str()} with a C{URLPath.sibling()} will return a URL which is
         the sibling of the URL it was instantiated with.
         """
-        self.assertEqual(str(self.path.sibling(b'baz')),
-                         'http://example.com/foo/baz')
-        self.assertEqual(str(self.path.sibling(b'baz', keepQuery=True)),
-                         "http://example.com/foo/baz?yes=no&no=yes")
+        self.assertEqual(str(self.path.sibling(b"baz")), "http://example.com/foo/baz")
+        self.assertEqual(
+            str(self.path.sibling(b"baz", keepQuery=True)),
+            "http://example.com/foo/baz?yes=no&no=yes",
+        )
 
         # The sibling of http://example.com/foo/bar/
         #     is http://example.comf/foo/bar/baz
         # because really we are constructing a sibling of
         # http://example.com/foo/bar/index.html
-        self.assertEqual(str(self.path.child(b'').sibling(b'baz')),
-                         'http://example.com/foo/bar/baz')
-
+        self.assertEqual(
+            str(self.path.child(b"").sibling(b"baz")), "http://example.com/foo/bar/baz"
+        )
 
     def test_parentString(self):
         """
@@ -132,18 +135,18 @@ class _BaseURLPathTests(object):
         """
         # .parent() should be equivalent to '..'
         # 'foo' is the current directory, '/' is the parent directory
-        self.assertEqual(str(self.path.parent()),
-                         'http://example.com/')
-        self.assertEqual(str(self.path.parent(keepQuery=True)),
-                         'http://example.com/?yes=no&no=yes')
-        self.assertEqual(str(self.path.child(b'').parent()),
-                         'http://example.com/foo/')
-        self.assertEqual(str(self.path.child(b'baz').parent()),
-                         'http://example.com/foo/')
+        self.assertEqual(str(self.path.parent()), "http://example.com/")
+        self.assertEqual(
+            str(self.path.parent(keepQuery=True)), "http://example.com/?yes=no&no=yes"
+        )
+        self.assertEqual(str(self.path.child(b"").parent()), "http://example.com/foo/")
+        self.assertEqual(
+            str(self.path.child(b"baz").parent()), "http://example.com/foo/"
+        )
         self.assertEqual(
             str(self.path.parent().parent().parent().parent().parent()),
-            'http://example.com/')
-
+            "http://example.com/",
+        )
 
     def test_hereString(self):
         """
@@ -152,12 +155,13 @@ class _BaseURLPathTests(object):
         fragment.
         """
         # .here() should be equivalent to '.'
-        self.assertEqual(str(self.path.here()), 'http://example.com/foo/')
-        self.assertEqual(str(self.path.here(keepQuery=True)),
-                         'http://example.com/foo/?yes=no&no=yes')
-        self.assertEqual(str(self.path.child(b'').here()),
-                         'http://example.com/foo/bar/')
-
+        self.assertEqual(str(self.path.here()), "http://example.com/foo/")
+        self.assertEqual(
+            str(self.path.here(keepQuery=True)), "http://example.com/foo/?yes=no&no=yes"
+        )
+        self.assertEqual(
+            str(self.path.child(b"").here()), "http://example.com/foo/bar/"
+        )
 
     def test_doubleSlash(self):
         """
@@ -167,9 +171,8 @@ class _BaseURLPathTests(object):
         """
         self.assertEqual(
             str(self.path.click(b"/hello/world")).encode("ascii"),
-            b"http://example.com/hello/world"
+            b"http://example.com/hello/world",
         )
-
 
     def test_pathList(self):
         """
@@ -177,7 +180,7 @@ class _BaseURLPathTests(object):
         """
         self.assertEqual(
             self.path.child(b"%00%01%02").pathList(),
-            [b"", b"foo", b"bar", b"%00%01%02"]
+            [b"", b"foo", b"bar", b"%00%01%02"],
         )
 
         # Just testing that the 'copy' argument exists for compatibility; it
@@ -186,23 +189,23 @@ class _BaseURLPathTests(object):
         # so it doesn't actually *do* anything any more.
         self.assertEqual(
             self.path.child(b"%00%01%02").pathList(copy=False),
-            [b"", b"foo", b"bar", b"%00%01%02"]
+            [b"", b"foo", b"bar", b"%00%01%02"],
         )
         self.assertEqual(
             self.path.child(b"%00%01%02").pathList(unquote=True),
-            [b"", b"foo", b"bar", b"\x00\x01\x02"]
+            [b"", b"foo", b"bar", b"\x00\x01\x02"],
         )
-
 
 
 class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
     """
     Tests for interacting with a L{URLPath} created with C{fromBytes}.
     """
+
     def setUp(self):
         self.path = urlpath.URLPath.fromBytes(
-            b"http://example.com/foo/bar?yes=no&no=yes#footer")
-
+            b"http://example.com/foo/bar?yes=no&no=yes#footer"
+        )
 
     def test_mustBeBytes(self):
         """
@@ -212,8 +215,7 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
             urlpath.URLPath.fromBytes(None)
 
         with self.assertRaises(ValueError):
-            urlpath.URLPath.fromBytes(u"someurl")
-
+            urlpath.URLPath.fromBytes("someurl")
 
     def test_withoutArguments(self):
         """
@@ -222,7 +224,6 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         """
         url = urlpath.URLPath()
         self.assertEqual(str(url), "http://localhost/")
-
 
     def test_partialArguments(self):
         """
@@ -239,7 +240,6 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         self.assertEqual(url.query, b"")
         self.assertEqual(str(url), "http://google.com/")
 
-
     def test_nonASCIIBytes(self):
         """
         L{URLPath.fromBytes} can interpret non-ASCII bytes as percent-encoded
@@ -248,43 +248,42 @@ class BytesURLPathTests(_BaseURLPathTests, unittest.TestCase):
         self.assertEqual(str(url), "http://example.com/%FF%00")
 
 
-
 class StringURLPathTests(_BaseURLPathTests, unittest.TestCase):
     """
     Tests for interacting with a L{URLPath} created with C{fromString} and a
     L{str} argument.
     """
+
     def setUp(self):
         self.path = urlpath.URLPath.fromString(
-            "http://example.com/foo/bar?yes=no&no=yes#footer")
-
+            "http://example.com/foo/bar?yes=no&no=yes#footer"
+        )
 
     def test_mustBeStr(self):
         """
-        C{URLPath.fromString} must take a L{str} or L{unicode} argument.
+        C{URLPath.fromString} must take a L{str} or L{str} argument.
         """
         with self.assertRaises(ValueError):
             urlpath.URLPath.fromString(None)
 
-        if _PY3:
-            with self.assertRaises(ValueError):
-                urlpath.URLPath.fromString(b"someurl")
-
+        with self.assertRaises(ValueError):
+            urlpath.URLPath.fromString(b"someurl")
 
 
 class UnicodeURLPathTests(_BaseURLPathTests, unittest.TestCase):
     """
     Tests for interacting with a L{URLPath} created with C{fromString} and a
-    L{unicode} argument.
+    L{str} argument.
     """
+
     def setUp(self):
         self.path = urlpath.URLPath.fromString(
-            u"http://example.com/foo/bar?yes=no&no=yes#footer")
-
+            "http://example.com/foo/bar?yes=no&no=yes#footer"
+        )
 
     def test_nonASCIICharacters(self):
         """
         L{URLPath.fromString} can load non-ASCII characters.
         """
-        url = urlpath.URLPath.fromString(u"http://example.com/\xff\x00")
+        url = urlpath.URLPath.fromString("http://example.com/\xff\x00")
         self.assertEqual(str(url), "http://example.com/%C3%BF%00")

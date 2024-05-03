@@ -8,14 +8,13 @@ Client which will talk to the server run by pbAnonServer.py, logging in
 either anonymously or with username/password credentials.
 """
 
-from __future__ import print_function
 
 from sys import stdout
 
-from twisted.python.log import err, startLogging
 from twisted.cred.credentials import Anonymous, UsernamePassword
 from twisted.internet import reactor
 from twisted.internet.defer import gatherResults
+from twisted.python.log import err, startLogging
 from twisted.spread.pb import PBClientFactory
 
 
@@ -68,5 +67,5 @@ def main():
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

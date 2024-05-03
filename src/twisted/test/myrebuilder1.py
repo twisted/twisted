@@ -1,12 +1,13 @@
-
 class A:
-    def a(self):
-        return 'a'
+    def a(self) -> str:
+        return "a"
 
-class B(A, object):
-    def b(self):
-        return 'b'
+
+class B(A):
+    def b(self) -> str:
+        return "b"
+
 
 class Inherit(A):
-    def a(self):
-        return 'c'
+    def a(self) -> str:
+        return "c"

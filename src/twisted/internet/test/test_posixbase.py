@@ -4,13 +4,14 @@
 """
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
+import os
 
-from __future__ import division, absolute_import
-
-from twisted.trial.unittest import TestCase
 from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReadDescriptor
 from twisted.internet.posixbase import PosixReactorBase, _Waker
 from twisted.internet.protocol import ServerFactory
+from twisted.python.runtime import platform
+from twisted.trial.unittest import TestCase
 
 skipSockets = None
 try:
@@ -19,10 +20,42 @@ try:
 except ImportError:
     skipSockets = "Platform does not support AF_UNIX sockets"
 
-from twisted.internet.tcp import Port
 from twisted.internet import reactor
+from twisted.internet.tcp import Port
 
 
+class WarningCheckerTestCase(TestCase):
+    """
+    A test case that will make sure that no warnings are left unchecked at the end of a test run.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # FIXME:
+        # https://twistedmatrix.com/trac/ticket/10332
+        # For now, try to start each test without previous warnings
+        # on Windows CI environment.
+        # We still want to see failures on local Windows development environment to make it easier to fix them,
+        # rather than ignoring the errors.
+        if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+            self.flushWarnings()
+
+    def tearDown(self):
+        try:
+            super().tearDown()
+        finally:
+            warnings = self.flushWarnings()
+            if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+                # FIXME:
+                # https://twistedmatrix.com/trac/ticket/10332
+                # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
+                # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
+                # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
+                # the warnings can be generated while another test is running.
+                return
+            self.assertEqual(
+                len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
+            )
 
 
 class TrivialReactor(PosixReactorBase):
@@ -31,25 +64,20 @@ class TrivialReactor(PosixReactorBase):
         self._writers = {}
         PosixReactorBase.__init__(self)
 
-
     def addReader(self, reader):
         self._readers[reader] = True
-
 
     def removeReader(self, reader):
         del self._readers[reader]
 
-
     def addWriter(self, writer):
         self._writers[writer] = True
-
 
     def removeWriter(self, writer):
         del self._writers[writer]
 
 
-
-class PosixReactorBaseTests(TestCase):
+class PosixReactorBaseTests(WarningCheckerTestCase):
     """
     Tests for L{PosixReactorBase}.
     """
@@ -59,7 +87,6 @@ class PosixReactorBaseTests(TestCase):
         self.assertIn(reactor.waker, reactor._internalReaders)
         self.assertIn(reactor.waker, reactor._readers)
 
-
     def test_wakerIsInternalReader(self):
         """
         When L{PosixReactorBase} is instantiated, it creates a waker and adds
@@ -68,10 +95,9 @@ class PosixReactorBaseTests(TestCase):
         reactor = TrivialReactor()
         self._checkWaker(reactor)
 
-
     def test_removeAllSkipsInternalReaders(self):
         """
-        Any L{IReadDescriptors} in L{PosixReactorBase._internalReaders} are
+        Any L{IReadDescriptor}s in L{PosixReactorBase._internalReaders} are
         left alone by L{PosixReactorBase._removeAll}.
         """
         reactor = TrivialReactor()
@@ -83,7 +109,6 @@ class PosixReactorBaseTests(TestCase):
         self.assertIn(extra, reactor._internalReaders)
         self.assertIn(extra, reactor._readers)
 
-
     def test_removeAllReturnsRemovedDescriptors(self):
         """
         L{PosixReactorBase._removeAll} returns a list of removed
@@ -94,15 +119,13 @@ class PosixReactorBaseTests(TestCase):
         writer = object()
         reactor.addReader(reader)
         reactor.addWriter(writer)
-        removed = reactor._removeAll(
-            reactor._readers, reactor._writers)
-        self.assertEqual(set(removed), set([reader, writer]))
+        removed = reactor._removeAll(reactor._readers, reactor._writers)
+        self.assertEqual(set(removed), {reader, writer})
         self.assertNotIn(reader, reactor._readers)
         self.assertNotIn(writer, reactor._writers)
 
 
-
-class TCPPortTests(TestCase):
+class TCPPortTests(WarningCheckerTestCase):
     """
     Tests for L{twisted.internet.tcp.Port}.
     """
@@ -121,25 +144,28 @@ class TCPPortTests(TestCase):
         return self.assertFailure(port.stopListening(), ZeroDivisionError)
 
 
-
 class TimeoutReportReactor(PosixReactorBase):
     """
     A reactor which is just barely runnable and which cannot monitor any
     readers or writers, and which fires a L{Deferred} with the timeout
     passed to its C{doIteration} method as soon as that method is invoked.
     """
+
     def __init__(self):
         PosixReactorBase.__init__(self)
         self.iterationTimeout = Deferred()
         self.now = 100
 
-
-    def addReader(self, reader):
+    def addReader(self, reader: IReadDescriptor) -> None:
         """
         Ignore the reader.  This is necessary because the waker will be
         added.  However, we won't actually monitor it for any events.
         """
 
+    def removeReader(self, reader: IReadDescriptor) -> None:
+        """
+        See L{addReader}.
+        """
 
     def removeAll(self):
         """
@@ -149,14 +175,12 @@ class TimeoutReportReactor(PosixReactorBase):
         """
         return []
 
-
     def seconds(self):
         """
         Override the real clock with a deterministic one that can be easily
         controlled in a unit test.
         """
         return self.now
-
 
     def doIteration(self, timeout):
         d = self.iterationTimeout
@@ -165,20 +189,19 @@ class TimeoutReportReactor(PosixReactorBase):
             d.callback(timeout)
 
 
-
-class IterationTimeoutTests(TestCase):
+class IterationTimeoutTests(WarningCheckerTestCase):
     """
     Tests for the timeout argument L{PosixReactorBase.run} calls
     L{PosixReactorBase.doIteration} with in the presence of various delayed
     calls.
     """
+
     def _checkIterationTimeout(self, reactor):
         timeout = []
         reactor.iterationTimeout.addCallback(timeout.append)
         reactor.iterationTimeout.addCallback(lambda ignored: reactor.stop())
         reactor.run()
         return timeout[0]
-
 
     def test_noCalls(self):
         """
@@ -188,7 +211,6 @@ class IterationTimeoutTests(TestCase):
         reactor = TimeoutReportReactor()
         timeout = self._checkIterationTimeout(reactor)
         self.assertIsNone(timeout)
-
 
     def test_delayedCall(self):
         """
@@ -201,7 +223,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 100)
 
-
     def test_timePasses(self):
         """
         If a delayed call is scheduled and then some time passes, the
@@ -213,7 +234,6 @@ class IterationTimeoutTests(TestCase):
         reactor.now += 25
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 75)
-
 
     def test_multipleDelayedCalls(self):
         """
@@ -228,7 +248,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 10)
 
-
     def test_resetDelayedCall(self):
         """
         If a delayed call is reset, the timeout passed to C{doIteration} is
@@ -241,7 +260,6 @@ class IterationTimeoutTests(TestCase):
         call.reset(15)
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 15)
-
 
     def test_delayDelayedCall(self):
         """
@@ -257,7 +275,6 @@ class IterationTimeoutTests(TestCase):
         timeout = self._checkIterationTimeout(reactor)
         self.assertEqual(timeout, 60)
 
-
     def test_cancelDelayedCall(self):
         """
         If the only delayed call is canceled, L{None} is the timeout passed
@@ -270,20 +287,20 @@ class IterationTimeoutTests(TestCase):
         self.assertIsNone(timeout)
 
 
-
-class ConnectedDatagramPortTests(TestCase):
+class ConnectedDatagramPortTests(WarningCheckerTestCase):
     """
     Test connected datagram UNIX sockets.
     """
+
     if skipSockets is not None:
         skip = skipSockets
-
 
     def test_connectionFailedDoesntCallLoseConnection(self):
         """
         L{ConnectedDatagramPort} does not call the deprecated C{loseConnection}
         in L{ConnectedDatagramPort.connectionFailed}.
         """
+
         def loseConnection():
             """
             Dummy C{loseConnection} method. C{loseConnection} is deprecated and
@@ -294,7 +311,6 @@ class ConnectedDatagramPortTests(TestCase):
         port = unix.ConnectedDatagramPort(None, ClientProto())
         port.loseConnection = loseConnection
         port.connectionFailed("goodbye")
-
 
     def test_connectionFailedCallsStopListening(self):
         """
@@ -314,3 +330,19 @@ class ConnectedDatagramPortTests(TestCase):
         port.stopListening = stopListening
         port.connectionFailed("goodbye")
         self.assertTrue(self.called)
+
+
+class WakerTests(WarningCheckerTestCase):
+    def test_noWakerConstructionWarnings(self):
+        """
+        No warnings are generated when constructing the waker.
+        """
+        waker = _Waker()
+
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, warnings)
+
+        # Explicitly close the waker to leave a clean state at the end of the test.
+        waker.connectionLost(None)
+        warnings = self.flushWarnings()
+        self.assertEqual(len(warnings), 0, warnings)

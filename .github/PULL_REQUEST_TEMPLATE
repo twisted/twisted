@@ -1,12 +1,25 @@
-## Remove this paragraph
+## Scope and purpose
 
-Please have a look at our developer documentation before submitting your Pull Request.
+Fixes #<!-- ISSUE-ID -->
 
-https://twistedmatrix.com/trac/wiki/TwistedDevelopment#SubmittingaPatch
+Add a few words about why this PR is needed and what is its scope.
+If the associate ticket(s) fully explain the need you can just refer to it/them.
+
+Add any comments about trade-offs (if any) made in this PR and the reasoning behind them.
+
+Add mentions of things that are not covered here and are planed to be done in separate PRs.
+
 
 ## Contributor Checklist:
 
-* [ ] There is an associated ticket in Trac. Create a new one at https://twistedmatrix.com/trac/newticket
-* [ ] The changes pass minimal style checks (see: https://twistedmatrix.com/trac/wiki/TwistedDevelopment#GettingYourPatchAccepted )
-* [ ] I have created a newsfragment in src/twisted/newsfragments/ (see: https://twistedmatrix.com/trac/wiki/ReviewProcess#Newsfiles )
-* [ ] I have updated the automated tests.
+This process applies to *all* pull requests - no matter how small.
+Have a look at [our developer documentation](https://docs.twisted.org/en/latest/core/development/dev-process.html) before submitting your Pull Request.
+
+Below is a non-exhaustive list (as a reminder):
+
+* The title of the PR should describe the changes and starts with the associated issue number, like “#1234 Brief description”.
+* A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
+* The automated tests were updated.
+* Once all checks are green, request a review by leaving a comment that contains exactly the string `please review`.
+  Our bot will trigger the review process, by applying the pending review label
+  and requesting a review from the Twisted dev team.

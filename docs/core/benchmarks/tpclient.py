@@ -1,8 +1,9 @@
 """Throughput test."""
-from __future__ import print_function
 
-import time, sys
-from twisted.internet import reactor, protocol
+import sys
+import time
+
+from twisted.internet import protocol, reactor
 from twisted.python import log
 
 TIMES = 10000
@@ -10,8 +11,8 @@ S = "0123456789" * 1240
 
 toReceive = len(S) * TIMES
 
-class Sender(protocol.Protocol):
 
+class Sender(protocol.Protocol):
     def connectionMade(self):
         start()
         self.numSent = 0
@@ -23,7 +24,7 @@ class Sender(protocol.Protocol):
 
     def pauseProducing(self):
         pass
-    
+
     def resumeProducing(self):
         self.numSent += 1
         self.transport.write(S)
@@ -37,9 +38,11 @@ class Sender(protocol.Protocol):
 
 started = None
 
+
 def start():
     global started
     started = time.time()
+
 
 def shutdown(success):
     if not success:
@@ -56,6 +59,6 @@ def main():
     reactor.run()
 
 
-if __name__ == '__main__':
-    #log.startLogging(sys.stdout)
+if __name__ == "__main__":
+    # log.startLogging(sys.stdout)
     main()

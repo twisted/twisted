@@ -6,28 +6,26 @@
 Utility methods.
 """
 
-from __future__ import division, absolute_import
 
-import sys, warnings
+import sys
+import warnings
 from functools import wraps
-
-from twisted.internet import protocol, defer
-from twisted.python import failure
-from twisted.python.compat import reraise
-
 from io import BytesIO
 
+from twisted.internet import defer, protocol
+from twisted.python import failure
 
 
-def _callProtocolWithDeferred(protocol, executable, args, env, path, reactor=None):
+def _callProtocolWithDeferred(
+    protocol, executable, args, env, path, reactor=None, protoArgs=()
+):
     if reactor is None:
         from twisted.internet import reactor
 
     d = defer.Deferred()
-    p = protocol(d)
-    reactor.spawnProcess(p, executable, (executable,)+tuple(args), env, path)
+    p = protocol(d, *protoArgs)
+    reactor.spawnProcess(p, executable, (executable,) + tuple(args), env, path)
     return d
-
 
 
 class _UnexpectedErrorOutput(IOError):
@@ -42,9 +40,8 @@ class _UnexpectedErrorOutput(IOError):
     """
 
     def __init__(self, text, processEnded):
-        IOError.__init__(self, "got stderr: %r" % (text,))
+        IOError.__init__(self, f"got stderr: {text!r}")
         self.processEnded = processEnded
-
 
 
 class _BackRelay(protocol.ProcessProtocol):
@@ -95,9 +92,7 @@ class _BackRelay(protocol.ProcessProtocol):
             self.onProcessEnded.errback(reason)
 
 
-
-def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
-                     errortoo=0):
+def getProcessOutput(executable, args=(), env={}, path=None, reactor=None, errortoo=0):
     """
     Spawn a process and return its output as a deferred returning a L{bytes}.
 
@@ -122,14 +117,12 @@ def getProcessOutput(executable, args=(), env={}, path=None, reactor=None,
         C{processEnded} attribute refers to a L{Deferred} which fires when the
         executed process ends.
     """
-    return _callProtocolWithDeferred(lambda d:
-                                        _BackRelay(d, errortoo=errortoo),
-                                     executable, args, env, path,
-                                     reactor)
+    return _callProtocolWithDeferred(
+        lambda d: _BackRelay(d, errortoo=errortoo), executable, args, env, path, reactor
+    )
 
 
 class _ValueGetter(protocol.ProcessProtocol):
-
     def __init__(self, deferred):
         self.deferred = deferred
 
@@ -139,18 +132,24 @@ class _ValueGetter(protocol.ProcessProtocol):
 
 def getProcessValue(executable, args=(), env={}, path=None, reactor=None):
     """Spawn a process and return its exit code as a Deferred."""
-    return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path,
-                                    reactor)
+    return _callProtocolWithDeferred(_ValueGetter, executable, args, env, path, reactor)
 
 
 class _EverythingGetter(protocol.ProcessProtocol):
-
-    def __init__(self, deferred):
+    def __init__(self, deferred, stdinBytes=None):
         self.deferred = deferred
         self.outBuf = BytesIO()
         self.errBuf = BytesIO()
         self.outReceived = self.outBuf.write
         self.errReceived = self.errBuf.write
+        self.stdinBytes = stdinBytes
+
+    def connectionMade(self):
+        if self.stdinBytes is not None:
+            self.transport.writeToChild(0, self.stdinBytes)
+            # The only compelling reason not to _always_ close stdin here is
+            # backwards compatibility.
+            self.transport.closeStdin()
 
     def processEnded(self, reason):
         out = self.outBuf.getvalue()
@@ -163,15 +162,23 @@ class _EverythingGetter(protocol.ProcessProtocol):
             self.deferred.callback((out, err, code))
 
 
-def getProcessOutputAndValue(executable, args=(), env={}, path=None,
-                             reactor=None):
+def getProcessOutputAndValue(
+    executable, args=(), env={}, path=None, reactor=None, stdinBytes=None
+):
     """Spawn a process and returns a Deferred that will be called back with
     its output (from stdout and stderr) and it's exit code as (out, err, code)
     If a signal is raised, the Deferred will errback with the stdout and
     stderr up to that point, along with the signal, as (out, err, signalNum)
     """
-    return _callProtocolWithDeferred(_EverythingGetter, executable, args, env, path,
-                                    reactor)
+    return _callProtocolWithDeferred(
+        _EverythingGetter,
+        executable,
+        args,
+        env,
+        path,
+        reactor,
+        protoArgs=(stdinBytes,),
+    )
 
 
 def _resetWarningFilters(passthrough, addedFilters):
@@ -184,21 +191,40 @@ def _resetWarningFilters(passthrough, addedFilters):
 
 
 def runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw):
-    """Run the function C{f}, but with some warnings suppressed.
+    """
+    Run the function I{f}, but with some warnings suppressed.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-                               Must be a sequence of 2-tuples (args, kwargs).
-    @param f: A callable, followed by its arguments and keyword arguments
+    This calls L{warnings.filterwarnings} to add warning filters before
+    invoking I{f}. If I{f} returns a L{Deferred} then the added filters are
+    removed once the deferred fires. Otherwise they are removed immediately.
+
+    Note that the list of warning filters is a process-wide resource, so
+    calling this function will affect all threads.
+
+    @param suppressedWarnings:
+        A list of arguments to pass to L{warnings.filterwarnings}, a sequence
+        of (args, kwargs) 2-tuples.
+
+    @param f: A callable, which may return a L{Deferred}.
+
+    @param a: Positional arguments passed to I{f}
+
+    @param kw: Keyword arguments passed to I{f}
+
+    @return: The result of C{f(*a, **kw)}
+
+    @seealso: L{twisted.python.util.runWithWarningsSuppressed}
+        functions similarly, but doesn't handled L{Deferred}s.
     """
     for args, kwargs in suppressedWarnings:
         warnings.filterwarnings(*args, **kwargs)
-    addedFilters = warnings.filters[:len(suppressedWarnings)]
+    addedFilters = warnings.filters[: len(suppressedWarnings)]
     try:
         result = f(*a, **kw)
-    except:
+    except BaseException:
         exc_info = sys.exc_info()
         _resetWarningFilters(None, addedFilters)
-        reraise(exc_info[1], exc_info[2])
+        raise exc_info[1].with_traceback(exc_info[2])
     else:
         if isinstance(result, defer.Deferred):
             result.addBoth(_resetWarningFilters, addedFilters)
@@ -213,13 +239,18 @@ def suppressWarnings(f, *suppressedWarnings):
     invoking C{f} and unsuppresses them afterwards.  If f returns a Deferred,
     warnings will remain suppressed until the Deferred fires.
     """
+
     @wraps(f)
     def warningSuppressingWrapper(*a, **kw):
         return runWithWarningsSuppressed(suppressedWarnings, f, *a, **kw)
+
     return warningSuppressingWrapper
 
 
 __all__ = [
-    "runWithWarningsSuppressed", "suppressWarnings",
-    "getProcessOutput", "getProcessValue", "getProcessOutputAndValue",
-    ]
+    "runWithWarningsSuppressed",
+    "suppressWarnings",
+    "getProcessOutput",
+    "getProcessValue",
+    "getProcessOutputAndValue",
+]

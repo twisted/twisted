@@ -2,8 +2,8 @@
 
 import sys
 
-from twisted.protocols.wire import Discard
 from twisted.internet import protocol, reactor
+from twisted.protocols.wire import Discard
 from twisted.python import log
 
 
@@ -14,6 +14,5 @@ def main():
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

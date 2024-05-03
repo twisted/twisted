@@ -9,12 +9,11 @@ Future Plans: This needs someway to specify which resolver answered
 the query, or someway to specify (authority|ttl|cache behavior|more?)
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 
 from twisted.internet import defer, interfaces
-from twisted.names import dns, common, error
+from twisted.names import common, dns, error
 
 
 class FailureHandler:
@@ -23,12 +22,10 @@ class FailureHandler:
         self.query = query
         self.timeout = timeout
 
-
     def __call__(self, failure):
         # AuthoritativeDomainErrors should halt resolution attempts
         failure.trap(dns.DomainError, defer.TimeoutError, NotImplementedError)
         return self.resolver(self.query, self.timeout)
-
 
 
 @implementer(interfaces.IResolver)
@@ -36,6 +33,7 @@ class ResolverChain(common.ResolverBase):
     """
     Lookup an address using multiple L{IResolver}s
     """
+
     def __init__(self, resolvers):
         """
         @type resolvers: L{list}
@@ -43,7 +41,6 @@ class ResolverChain(common.ResolverBase):
         """
         common.ResolverBase.__init__(self)
         self.resolvers = resolvers
-
 
     def _lookup(self, name, cls, type, timeout):
         """
@@ -78,11 +75,8 @@ class ResolverChain(common.ResolverBase):
         q = dns.Query(name, type, cls)
         d = self.resolvers[0].query(q, timeout)
         for r in self.resolvers[1:]:
-            d = d.addErrback(
-                FailureHandler(r.query, q, timeout)
-            )
+            d = d.addErrback(FailureHandler(r.query, q, timeout))
         return d
-
 
     def lookupAllRecords(self, name, timeout=None):
         # XXX: Why is this necessary? dns.ALL_RECORDS queries should
@@ -93,7 +87,5 @@ class ResolverChain(common.ResolverBase):
             return defer.fail(error.DomainError())
         d = self.resolvers[0].lookupAllRecords(name, timeout)
         for r in self.resolvers[1:]:
-            d = d.addErrback(
-                FailureHandler(r.lookupAllRecords, name, timeout)
-            )
+            d = d.addErrback(FailureHandler(r.lookupAllRecords, name, timeout))
         return d

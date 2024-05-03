@@ -3,21 +3,24 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
-from twisted.spread import pb, jelly
-from twisted.python import log
 from twisted.internet import reactor
+from twisted.python import log
+from twisted.spread import jelly, pb
+
 
 class LilyPond:
     def setStuff(self, color, numFrogs):
         self.color = color
         self.numFrogs = numFrogs
+
     def countFrogs(self):
         print("%d frogs" % self.numFrogs)
 
+
 class CopyPond(LilyPond, pb.Copyable):
     pass
+
 
 class Sender:
     def __init__(self, pond):
@@ -31,6 +34,7 @@ class Sender:
     def ok(self, response):
         print("pond arrived", response)
         reactor.stop()
+
     def notOk(self, failure):
         print("error during takePond:")
         if failure.type == jelly.InsecureJelly:
@@ -40,8 +44,10 @@ class Sender:
         reactor.stop()
         return None
 
+
 def main():
     from copy_sender import CopyPond  # so it's not __main__.CopyPond
+
     pond = CopyPond()
     pond.setStuff("green", 7)
     pond.countFrogs()
@@ -55,5 +61,6 @@ def main():
     deferred.addCallback(sender.got_obj)
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

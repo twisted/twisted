@@ -3,11 +3,11 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import print_function
 
-from twisted.spread import pb
-from twisted.internet import reactor
 from twisted.cred import credentials
+from twisted.internet import reactor
+from twisted.spread import pb
+
 
 def main():
     factory = pb.PBClientFactory()
@@ -16,9 +16,11 @@ def main():
     def1.addCallback(connected)
     reactor.run()
 
+
 def connected(perspective):
     print("got perspective1 ref:", perspective)
     print("asking it to foo(13)")
     perspective.callRemote("foo", 13)
+
 
 main()

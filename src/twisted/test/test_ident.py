@@ -6,23 +6,15 @@
 Test cases for twisted.protocols.ident module.
 """
 
+import builtins
 import struct
+from io import StringIO
 
+from twisted.internet import defer, error
+from twisted.internet.testing import StringTransport
 from twisted.protocols import ident
 from twisted.python import failure
-from twisted.internet import error
-from twisted.internet import defer
-from twisted.python.compat import NativeStringIO
-
 from twisted.trial import unittest
-from twisted.test.proto_helpers import StringTransport
-
-
-try:
-    import builtins
-except ImportError:
-    import __builtin__ as builtins
-
 
 
 class ClassParserTests(unittest.TestCase):
@@ -36,16 +28,14 @@ class ClassParserTests(unittest.TestCase):
         """
         self.client = ident.IdentClient()
 
-
     def test_indentError(self):
         """
         'UNKNOWN-ERROR' error should map to the L{ident.IdentError} exception.
         """
         d = defer.Deferred()
         self.client.queries.append((d, 123, 456))
-        self.client.lineReceived('123, 456 : ERROR : UNKNOWN-ERROR')
+        self.client.lineReceived("123, 456 : ERROR : UNKNOWN-ERROR")
         return self.assertFailure(d, ident.IdentError)
-
 
     def test_noUSerError(self):
         """
@@ -53,9 +43,8 @@ class ClassParserTests(unittest.TestCase):
         """
         d = defer.Deferred()
         self.client.queries.append((d, 234, 456))
-        self.client.lineReceived('234, 456 : ERROR : NO-USER')
+        self.client.lineReceived("234, 456 : ERROR : NO-USER")
         return self.assertFailure(d, ident.NoUser)
-
 
     def test_invalidPortError(self):
         """
@@ -63,9 +52,8 @@ class ClassParserTests(unittest.TestCase):
         """
         d = defer.Deferred()
         self.client.queries.append((d, 345, 567))
-        self.client.lineReceived('345, 567 :  ERROR : INVALID-PORT')
+        self.client.lineReceived("345, 567 :  ERROR : INVALID-PORT")
         return self.assertFailure(d, ident.InvalidPort)
-
 
     def test_hiddenUserError(self):
         """
@@ -73,9 +61,8 @@ class ClassParserTests(unittest.TestCase):
         """
         d = defer.Deferred()
         self.client.queries.append((d, 567, 789))
-        self.client.lineReceived('567, 789 : ERROR : HIDDEN-USER')
+        self.client.lineReceived("567, 789 : ERROR : HIDDEN-USER")
         return self.assertFailure(d, ident.HiddenUser)
-
 
     def test_lostConnection(self):
         """
@@ -88,11 +75,9 @@ class ClassParserTests(unittest.TestCase):
         return self.assertFailure(d, ident.IdentError)
 
 
-
 class TestIdentServer(ident.IdentServer):
     def lookup(self, serverAddress, clientAddress):
         return self.resultValue
-
 
 
 class TestErrorIdentServer(ident.IdentServer):
@@ -100,10 +85,8 @@ class TestErrorIdentServer(ident.IdentServer):
         raise self.exceptionType()
 
 
-
 class NewException(RuntimeError):
     pass
-
 
 
 class ServerParserTests(unittest.TestCase):
@@ -114,35 +97,38 @@ class ServerParserTests(unittest.TestCase):
         p.sendLine = L.append
 
         p.exceptionType = ident.IdentError
-        p.lineReceived('123, 345')
-        self.assertEqual(L[0], '123, 345 : ERROR : UNKNOWN-ERROR')
+        p.lineReceived("123, 345")
+        self.assertEqual(L[0], "123, 345 : ERROR : UNKNOWN-ERROR")
 
         p.exceptionType = ident.NoUser
-        p.lineReceived('432, 210')
-        self.assertEqual(L[1], '432, 210 : ERROR : NO-USER')
+        p.lineReceived("432, 210")
+        self.assertEqual(L[1], "432, 210 : ERROR : NO-USER")
 
         p.exceptionType = ident.InvalidPort
-        p.lineReceived('987, 654')
-        self.assertEqual(L[2], '987, 654 : ERROR : INVALID-PORT')
+        p.lineReceived("987, 654")
+        self.assertEqual(L[2], "987, 654 : ERROR : INVALID-PORT")
 
         p.exceptionType = ident.HiddenUser
-        p.lineReceived('756, 827')
-        self.assertEqual(L[3], '756, 827 : ERROR : HIDDEN-USER')
+        p.lineReceived("756, 827")
+        self.assertEqual(L[3], "756, 827 : ERROR : HIDDEN-USER")
 
         p.exceptionType = NewException
-        p.lineReceived('987, 789')
-        self.assertEqual(L[4], '987, 789 : ERROR : UNKNOWN-ERROR')
+        p.lineReceived("987, 789")
+        self.assertEqual(L[4], "987, 789 : ERROR : UNKNOWN-ERROR")
         errs = self.flushLoggedErrors(NewException)
         self.assertEqual(len(errs), 1)
 
         for port in -1, 0, 65536, 65537:
             del L[:]
-            p.lineReceived('%d, 5' % (port,))
-            p.lineReceived('5, %d' % (port,))
+            p.lineReceived("%d, 5" % (port,))
+            p.lineReceived("5, %d" % (port,))
             self.assertEqual(
-                L, ['%d, 5 : ERROR : INVALID-PORT' % (port,),
-                    '5, %d : ERROR : INVALID-PORT' % (port,)])
-
+                L,
+                [
+                    "%d, 5 : ERROR : INVALID-PORT" % (port,),
+                    "5, %d : ERROR : INVALID-PORT" % (port,),
+                ],
+            )
 
     def testSuccess(self):
         p = TestIdentServer()
@@ -150,67 +136,60 @@ class ServerParserTests(unittest.TestCase):
         L = []
         p.sendLine = L.append
 
-        p.resultValue = ('SYS', 'USER')
-        p.lineReceived('123, 456')
-        self.assertEqual(L[0], '123, 456 : USERID : SYS : USER')
+        p.resultValue = ("SYS", "USER")
+        p.lineReceived("123, 456")
+        self.assertEqual(L[0], "123, 456 : USERID : SYS : USER")
 
 
-if struct.pack('=L', 1)[0:1] == b'\x01':
-    _addr1 = '0100007F'
-    _addr2 = '04030201'
+if struct.pack("=L", 1)[0:1] == b"\x01":
+    _addr1 = "0100007F"
+    _addr2 = "04030201"
 else:
-    _addr1 = '7F000001'
-    _addr2 = '01020304'
-
+    _addr1 = "7F000001"
+    _addr2 = "01020304"
 
 
 class ProcMixinTests(unittest.TestCase):
-    line = ('4: %s:0019 %s:02FA 0A 00000000:00000000 '
-            '00:00000000 00000000     0        0 10927 1 f72a5b80 '
-            '3000 0 0 2 -1') % (_addr1, _addr2)
-    sampleFile = ('  sl  local_address rem_address   st tx_queue rx_queue tr '
-                  'tm->when retrnsmt   uid  timeout inode\n   ' + line)
-
+    line = (
+        "4: %s:0019 %s:02FA 0A 00000000:00000000 "
+        "00:00000000 00000000     0        0 10927 1 f72a5b80 "
+        "3000 0 0 2 -1"
+    ) % (_addr1, _addr2)
+    sampleFile = (
+        "  sl  local_address rem_address   st tx_queue rx_queue tr "
+        "tm->when retrnsmt   uid  timeout inode\n   " + line
+    )
 
     def testDottedQuadFromHexString(self):
         p = ident.ProcServerMixin()
-        self.assertEqual(p.dottedQuadFromHexString(_addr1), '127.0.0.1')
-
+        self.assertEqual(p.dottedQuadFromHexString(_addr1), "127.0.0.1")
 
     def testUnpackAddress(self):
         p = ident.ProcServerMixin()
-        self.assertEqual(p.unpackAddress(_addr1 + ':0277'),
-                          ('127.0.0.1', 631))
-
+        self.assertEqual(p.unpackAddress(_addr1 + ":0277"), ("127.0.0.1", 631))
 
     def testLineParser(self):
         p = ident.ProcServerMixin()
         self.assertEqual(
-            p.parseLine(self.line),
-            (('127.0.0.1', 25), ('1.2.3.4', 762), 0))
-
+            p.parseLine(self.line), (("127.0.0.1", 25), ("1.2.3.4", 762), 0)
+        )
 
     def testExistingAddress(self):
         username = []
         p = ident.ProcServerMixin()
         p.entries = lambda: iter([self.line])
-        p.getUsername = lambda uid: (username.append(uid), 'root')[1]
+        p.getUsername = lambda uid: (username.append(uid), "root")[1]
         self.assertEqual(
-            p.lookup(('127.0.0.1', 25), ('1.2.3.4', 762)),
-            (p.SYSTEM_NAME, 'root'))
+            p.lookup(("127.0.0.1", 25), ("1.2.3.4", 762)), (p.SYSTEM_NAME, "root")
+        )
         self.assertEqual(username, [0])
-
 
     def testNonExistingAddress(self):
         p = ident.ProcServerMixin()
         p.entries = lambda: iter([self.line])
-        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
-                                                  ('1.2.3.4', 762))
-        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25),
-                                                  ('1.2.3.5', 762))
-        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 25),
-                                                  ('1.2.3.4', 763))
-
+        self.assertRaises(ident.NoUser, p.lookup, ("127.0.0.1", 26), ("1.2.3.4", 762))
+        self.assertRaises(ident.NoUser, p.lookup, ("127.0.0.1", 25), ("1.2.3.5", 762))
+        self.assertRaises(ident.NoUser, p.lookup, ("127.0.0.1", 25), ("1.2.3.4", 763))
 
     def testLookupProcNetTcp(self):
         """
@@ -223,11 +202,10 @@ class ProcMixinTests(unittest.TestCase):
             Mock for the open call to prevent actually opening /proc/net/tcp.
             """
             open_calls.append((args, kwargs))
-            return NativeStringIO(self.sampleFile)
+            return StringIO(self.sampleFile)
 
-        self.patch(builtins, 'open', mocked_open)
+        self.patch(builtins, "open", mocked_open)
 
         p = ident.ProcServerMixin()
-        self.assertRaises(ident.NoUser, p.lookup, ('127.0.0.1', 26),
-                                                  ('1.2.3.4', 762))
-        self.assertEqual([(('/proc/net/tcp',), {})], open_calls)
+        self.assertRaises(ident.NoUser, p.lookup, ("127.0.0.1", 26), ("1.2.3.4", 762))
+        self.assertEqual([(("/proc/net/tcp",), {})], open_calls)

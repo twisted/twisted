@@ -4,28 +4,32 @@
 Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
-from __future__ import absolute_import, division
 
-import win32api
-import os
 import msvcrt
+import os
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import (IHalfCloseableProtocol, ITransport,
-                                         IConsumer, IPushProducer, IAddress)
+import win32api
 
 from twisted.internet import _pollingfile, main
+from twisted.internet.interfaces import (
+    IAddress,
+    IConsumer,
+    IHalfCloseableProtocol,
+    IPushProducer,
+    ITransport,
+)
 from twisted.python.failure import Failure
 
+
 @implementer(IAddress)
-class Win32PipeAddress(object):
+class Win32PipeAddress:
     pass
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
 class StandardIO(_pollingfile._PollingTimer):
-
     disconnecting = False
     disconnected = False
 
@@ -48,26 +52,23 @@ class StandardIO(_pollingfile._PollingTimer):
         hstdout = win32api.GetStdHandle(win32api.STD_OUTPUT_HANDLE)
 
         self.stdin = _pollingfile._PollableReadPipe(
-            hstdin, self.dataReceived, self.readConnectionLost)
+            hstdin, self.dataReceived, self.readConnectionLost
+        )
 
-        self.stdout = _pollingfile._PollableWritePipe(
-            hstdout, self.writeConnectionLost)
+        self.stdout = _pollingfile._PollableWritePipe(hstdout, self.writeConnectionLost)
 
         self._addPollableResource(self.stdin)
         self._addPollableResource(self.stdout)
 
         self.proto.makeConnection(self)
 
-
     def dataReceived(self, data):
         self.proto.dataReceived(data)
-
 
     def readConnectionLost(self):
         if IHalfCloseableProtocol.providedBy(self.proto):
             self.proto.readConnectionLost()
         self.checkConnLost()
-
 
     def writeConnectionLost(self):
         if IHalfCloseableProtocol.providedBy(self.proto):
@@ -75,7 +76,6 @@ class StandardIO(_pollingfile._PollingTimer):
         self.checkConnLost()
 
     connsLost = 0
-
 
     def checkConnLost(self):
         self.connsLost += 1
@@ -89,20 +89,16 @@ class StandardIO(_pollingfile._PollingTimer):
     def write(self, data):
         self.stdout.write(data)
 
-
     def writeSequence(self, seq):
-        self.stdout.write(b''.join(seq))
-
+        self.stdout.write(b"".join(seq))
 
     def loseConnection(self):
         self.disconnecting = True
         self.stdin.close()
         self.stdout.close()
 
-
     def getPeer(self):
         return Win32PipeAddress()
-
 
     def getHost(self):
         return Win32PipeAddress()
@@ -111,7 +107,6 @@ class StandardIO(_pollingfile._PollingTimer):
 
     def registerProducer(self, producer, streaming):
         return self.stdout.registerProducer(producer, streaming)
-
 
     def unregisterProducer(self):
         return self.stdout.unregisterProducer()
@@ -127,7 +122,6 @@ class StandardIO(_pollingfile._PollingTimer):
 
     def pauseProducing(self):
         self.stdin.pauseProducing()
-
 
     def resumeProducing(self):
         self.stdin.resumeProducing()

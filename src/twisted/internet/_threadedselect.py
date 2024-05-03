@@ -50,26 +50,20 @@ loop.  Shutdown functions that could be used in place of
 with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
 """
 
-from functools import partial
-from threading import Thread
-
-try:
-    from queue import Queue, Empty
-except ImportError:
-    from Queue import Queue, Empty
+import select
 import sys
+from errno import EBADF, EINTR
+from functools import partial
+from queue import Empty, Queue
+from threading import Thread
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
-from twisted.internet.posixbase import _NO_FILENO, _NO_FILEDESC
-from twisted.python import log, failure, threadable
-
-import select
-from errno import EINTR, EBADF
-
+from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.posixbase import _NO_FILEDESC, _NO_FILENO
 from twisted.internet.selectreactor import _select
+from twisted.python import failure, log, threadable
 
 
 def dictRemove(dct, value):
@@ -98,7 +92,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.workerThread = None
         self.mainWaker = None
         posixbase.PosixReactorBase.__init__(self)
-        self.addSystemEventTrigger('after', 'shutdown', self._mainLoopShutdown)
+        self.addSystemEventTrigger("after", "shutdown", self._mainLoopShutdown)
 
     def wakeUp(self):
         # we want to wake up from any thread
@@ -127,7 +121,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             for selectable in selList:
                 try:
                     select.select([selectable], [selectable], [selectable], 0)
-                except:
+                except BaseException:
                     log.msg("bad descriptor %s" % selectable)
                 else:
                     selDict[selectable] = 1
@@ -139,9 +133,9 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 fn(*args)
         except SystemExit:
             pass  # Exception indicates this thread should exit
-        except:
+        except BaseException:
             f = failure.Failure()
-            self._sendToMain('Failure', f)
+            self._sendToMain("Failure", f)
 
     def _doSelectInThread(self, timeout):
         """Run one iteration of the I/O monitor loop.
@@ -153,9 +147,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         writes = self.writes
         while 1:
             try:
-                r, w, ignored = _select(reads.keys(),
-                                        writes.keys(),
-                                        [], timeout)
+                r, w, ignored = _select(reads.keys(), writes.keys(), [], timeout)
                 break
             except ValueError:
                 # Possibly a file descriptor has gone negative?
@@ -166,7 +158,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 # result) was passed
                 log.err()
                 self._preenDescriptorsInThread()
-            except (select.error, IOError) as se:
+            except OSError as se:
                 # select(2) encountered an error
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
@@ -181,7 +173,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                 else:
                     # OK, I really don't know what's going on.  Blow up.
                     raise
-        self._sendToMain('Notify', r, w)
+        self._sendToMain("Notify", r, w)
 
     def _process_Notify(self, r, w):
         reads = self.reads
@@ -189,8 +181,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
         _drdw = self._doReadOrWrite
         _logrun = log.callWithLogger
-        for selectables, method, dct in (
-                (r, "doRead", reads), (w, "doWrite", writes)):
+        for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 if selectable not in dct:
@@ -212,7 +203,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self._sendToThread(self._doIterationInThread, timeout)
         self.ensureWorkerThread()
         msg, args = self.toMainThread.get()
-        getattr(self, '_process_' + msg)(*args)
+        getattr(self, "_process_" + msg)(*args)
 
     doIteration = doThreadIteration
 
@@ -224,7 +215,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             self._sendToThread(self._doIterationInThread, t)
             yield None
             msg, args = self.toMainThread.get_nowait()
-            getattr(self, '_process_' + msg)(*args)
+            getattr(self, "_process_" + msg)(*args)
 
     def interleave(self, waker, *args, **kw):
         """
@@ -263,7 +254,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             while 1:
                 fn, args = self.toThreadQueue.get_nowait()
                 if fn is self._doIterationInThread:
-                    log.msg('Iteration is still in the thread queue!')
+                    log.msg("Iteration is still in the thread queue!")
                 elif fn is raiseException and args[0] is SystemExit:
                     pass
                 else:
@@ -274,50 +265,43 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
     def _doReadOrWrite(self, selectable, method, dict):
         try:
             why = getattr(selectable, method)()
-            handfn = getattr(selectable, 'fileno', None)
+            handfn = getattr(selectable, "fileno", None)
             if not handfn:
                 why = _NO_FILENO
             elif handfn() == -1:
                 why = _NO_FILEDESC
-        except:
+        except BaseException:
             why = sys.exc_info()[1]
             log.err()
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
 
     def addReader(self, reader):
-        """Add a FileDescriptor for notification of data available to read.
-        """
+        """Add a FileDescriptor for notification of data available to read."""
         self._sendToThread(self.reads.__setitem__, reader, 1)
         self.wakeUp()
 
     def addWriter(self, writer):
-        """Add a FileDescriptor for notification of data available to write.
-        """
+        """Add a FileDescriptor for notification of data available to write."""
         self._sendToThread(self.writes.__setitem__, writer, 1)
         self.wakeUp()
 
     def removeReader(self, reader):
-        """Remove a Selectable for notification of data available to read.
-        """
+        """Remove a Selectable for notification of data available to read."""
         self._sendToThread(dictRemove, self.reads, reader)
 
     def removeWriter(self, writer):
-        """Remove a Selectable for notification of data available to write.
-        """
+        """Remove a Selectable for notification of data available to write."""
         self._sendToThread(dictRemove, self.writes, writer)
 
     def removeAll(self):
         return self._removeAll(self.reads, self.writes)
 
-
     def getReaders(self):
         return list(self.reads.keys())
 
-
     def getWriters(self):
         return list(self.writes.keys())
-
 
     def stop(self):
         """
@@ -326,7 +310,6 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """
         posixbase.PosixReactorBase.stop(self)
         self.wakeUp()
-
 
     def run(self, installSignalHandlers=True):
         self.startRunning(installSignalHandlers=installSignalHandlers)
@@ -343,12 +326,12 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
 
 def install():
-    """Configure the twisted mainloop to be run using the select() reactor.
-    """
+    """Configure the twisted mainloop to be run using the select() reactor."""
     reactor = ThreadedSelectReactor()
     from twisted.internet.main import installReactor
+
     installReactor(reactor)
     return reactor
 
 
-__all__ = ['install']
+__all__ = ["install"]

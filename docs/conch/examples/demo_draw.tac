@@ -20,19 +20,19 @@ keys move the cursor.
 
 from twisted.application import internet, service
 from twisted.conch.insults import insults
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol
-
 
 
 class Draw(insults.TerminalProtocol):
     """Protocol which accepts arrow key and spacebar input and places
     the requested characters onto the terminal.
     """
-    cursors = list('!@#$%^&*()_+-=')
+
+    cursors = list("!@#$%^&*()_+-=")
 
     def connectionMade(self):
         self.terminal.eraseDisplay()
@@ -48,29 +48,35 @@ class Draw(insults.TerminalProtocol):
             self.terminal.cursorBackward()
         elif keyID == self.terminal.RIGHT_ARROW:
             self.terminal.cursorForward()
-        elif keyID == ' ':
-            self.cursor = self.cursors[(self.cursors.index(self.cursor) + 1) % len(self.cursors)]
+        elif keyID == " ":
+            self.cursor = self.cursors[
+                (self.cursors.index(self.cursor) + 1) % len(self.cursors)
+            ]
         else:
             return
         self.terminal.write(self.cursor)
         self.terminal.cursorBackward()
 
+
 def makeService(args):
     checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(username=b"password")
 
     f = protocol.ServerFactory()
-    f.protocol = lambda: TelnetTransport(TelnetBootstrapProtocol,
-                                         insults.ServerProtocol,
-                                         args['protocolFactory'],
-                                         *args.get('protocolArgs', ()),
-                                         **args.get('protocolKwArgs', {}))
-    tsvc = internet.TCPServer(args['telnet'], f)
+    f.protocol = lambda: TelnetTransport(
+        TelnetBootstrapProtocol,
+        insults.ServerProtocol,
+        args["protocolFactory"],
+        *args.get("protocolArgs", ()),
+        **args.get("protocolKwArgs", {}),
+    )
+    tsvc = internet.TCPServer(args["telnet"], f)
 
     def chainProtocolFactory():
         return insults.ServerProtocol(
-            args['protocolFactory'],
-            *args.get('protocolArgs', ()),
-            **args.get('protocolKwArgs', {}))
+            args["protocolFactory"],
+            *args.get("protocolArgs", ()),
+            **args.get("protocolKwArgs", {}),
+        )
 
     rlm = TerminalRealm()
     rlm.chainedProtocolFactory = chainProtocolFactory
@@ -78,14 +84,15 @@ def makeService(args):
     f = ConchFactory(ptl)
     f.publicKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key.pub")
     f.privateKeys[b"ssh-rsa"] = keys.Key.fromFile("ssh-keys/ssh_host_rsa_key")
-    csvc = internet.TCPServer(args['ssh'], f)
+    csvc = internet.TCPServer(args["ssh"], f)
 
     m = service.MultiService()
     tsvc.setServiceParent(m)
     csvc.setServiceParent(m)
     return m
 
+
 application = service.Application("Insults Demo App")
-makeService({'protocolFactory': Draw,
-             'telnet': 6023,
-             'ssh': 6022}).setServiceParent(application)
+makeService({"protocolFactory": Draw, "telnet": 6023, "ssh": 6022}).setServiceParent(
+    application
+)

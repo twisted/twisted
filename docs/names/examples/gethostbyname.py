@@ -18,18 +18,16 @@ resolver, a chained resolver, which attempts to lookup a name from:
 
 import sys
 
-from twisted.names import client, error
 from twisted.internet.task import react
+from twisted.names import client, error
 from twisted.python import usage
 
 
-
 class Options(usage.Options):
-    synopsis = 'Usage: gethostbyname.py HOSTNAME'
+    synopsis = "Usage: gethostbyname.py HOSTNAME"
 
     def parseArgs(self, hostname):
-        self['hostname'] = hostname
-
+        self["hostname"] = hostname
 
 
 def printResult(address, hostname):
@@ -38,11 +36,9 @@ def printResult(address, hostname):
     found.
     """
     if address:
-        sys.stdout.write(address + '\n')
+        sys.stdout.write(address + "\n")
     else:
-        sys.stderr.write(
-            'ERROR: No IP addresses found for name %r\n' % (hostname,))
-
+        sys.stderr.write(f"ERROR: No IP addresses found for name {hostname!r}\n")
 
 
 def printError(failure, hostname):
@@ -51,8 +47,7 @@ def printError(failure, hostname):
     resolved.
     """
     failure.trap(error.DNSNameError)
-    sys.stderr.write('ERROR: hostname not found %r\n' % (hostname,))
-
+    sys.stderr.write(f"ERROR: hostname not found {hostname!r}\n")
 
 
 def main(reactor, *argv):
@@ -60,17 +55,16 @@ def main(reactor, *argv):
     try:
         options.parseOptions(argv)
     except usage.UsageError as errortext:
-        sys.stderr.write(str(options) + '\n')
-        sys.stderr.write('ERROR: %s\n' % (errortext,))
+        sys.stderr.write(str(options) + "\n")
+        sys.stderr.write(f"ERROR: {errortext}\n")
         raise SystemExit(1)
 
-    hostname = options['hostname']
+    hostname = options["hostname"]
     d = client.getHostByName(hostname)
     d.addCallback(printResult, hostname)
     d.addErrback(printError, hostname)
     return d
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     react(main, sys.argv[1:])

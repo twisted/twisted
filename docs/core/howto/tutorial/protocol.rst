@@ -26,7 +26,7 @@ features: the ability for users to set finger announces, and using our finger
 service to send those announcements on the web, on IRC and over XML-RPC.
 Resources and XML-RPC are introduced in the Web Applications portion of
 the :doc:`Twisted Web howto <../../../web/howto/index>` . More examples
-using :api:`twisted.words.protocols.irc <twisted.words.protocols.irc>` can be found
+using :py:mod:`twisted.words.protocols.irc` can be found
 in :doc:`Writing a TCP Client <../clients>` and
 the :doc:`Twisted Words examples <../../../words/examples/index>` .
 
@@ -68,9 +68,9 @@ our case. Testing it can be done by simply:
 
 This program has two protocol-factory-TCPServer pairs, which are
 both child services of the application.  Specifically,
-the :api:`twisted.application.service.Service.setServiceParent <setServiceParent>`
+the :py:meth:`setServiceParent <twisted.application.service.Service.setServiceParent>`
 method is used to define the two TCPServer services as children
-of ``application`` , which implements :api:`twisted.application.service.IServiceCollection <IServiceCollection>` .  Both
+of ``application`` , which implements :py:class:`IServiceCollection <twisted.application.service.IServiceCollection>` .  Both
 services are thus started with the application.
 
 
@@ -122,7 +122,7 @@ change until the end of the tutorial.
 
 
 
-As an application service, this new finger service implements the :api:`twisted.application.service.IService <IService>` interface and
+As an application service, this new finger service implements the :py:class:`IService <twisted.application.service.IService>` interface and
 can be started and stopped in a standardized manner. We'll make use of this in
 the next example.
 
@@ -135,7 +135,7 @@ the next example.
 .. literalinclude:: listings/finger/finger13.tac
 
 
-Most application services will want to use the :api:`twisted.application.service.Service <Service>` base class, which implements
+Most application services will want to use the :py:class:`Service <twisted.application.service.Service>` base class, which implements
 all the generic ``IService`` behavior.
 
 
@@ -170,8 +170,8 @@ nothing listening on port 1079.
 
 
 
-Here we override the standard :api:`twisted.application.service.Service.startService <startService>`
-and :api:`twisted.application.service.Service.stopService <stopService>` hooks in
+Here we override the standard :py:meth:`startService <twisted.application.service.Service.startService>`
+and :py:meth:`stopService <twisted.application.service.Service.stopService>` hooks in
 the Finger service, which is set up as a child service of the
 application in the last line of the code. ``startService``
 calls ``_read`` , the function responsible for reading the
@@ -242,7 +242,7 @@ function, ``getIRCbot`` , which returns
 a ``ClientFactory`` .  This factory in turn will
 instantiate the ``IRCReplyBot`` protocol.  The IRCBot is
 configured in the last line to connect
-to ``irc.freenode.org`` with a nickname
+to ``irc.libera.chat`` with a nickname
 of ``fingerbot`` .
 
 

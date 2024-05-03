@@ -5,13 +5,21 @@
 Windows implementation of local network interface enumeration.
 """
 
-from socket import socket, AF_INET6, SOCK_STREAM
-from ctypes import (
-    WinDLL, byref, create_string_buffer, create_unicode_buffer,
-    c_int, c_void_p,
-    POINTER, Structure, cast, wstring_at)
+from ctypes import (  # type: ignore[attr-defined]
+    POINTER,
+    Structure,
+    WinDLL,
+    byref,
+    c_int,
+    c_void_p,
+    cast,
+    create_string_buffer,
+    create_unicode_buffer,
+    wstring_at,
+)
+from socket import AF_INET6, SOCK_STREAM, socket
 
-WS2_32 = WinDLL('ws2_32')
+WS2_32 = WinDLL("ws2_32")
 
 SOCKET = c_int
 DWORD = c_int
@@ -37,8 +45,16 @@ LPWSAOVERLAPPED_COMPLETION_ROUTINE = c_void_p
 #       );
 WSAIoctl = WS2_32.WSAIoctl
 WSAIoctl.argtypes = [
-    SOCKET, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD,
-    LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE]
+    SOCKET,
+    DWORD,
+    LPVOID,
+    DWORD,
+    LPVOID,
+    DWORD,
+    LPDWORD,
+    LPWSAOVERLAPPED,
+    LPWSAOVERLAPPED_COMPLETION_ROUTINE,
+]
 WSAIoctl.restype = c_int
 
 # http://msdn.microsoft.com/en-us/library/ms741516(VS.85).aspx
@@ -50,26 +66,23 @@ WSAIoctl.restype = c_int
 #         __inout   LPDWORD lpdwAddressStringLength
 #       );
 WSAAddressToString = WS2_32.WSAAddressToStringW
-WSAAddressToString.argtypes = [
-    LPSOCKADDR, DWORD, LPWSAPROTOCOL_INFO, LPTSTR, LPDWORD]
+WSAAddressToString.argtypes = [LPSOCKADDR, DWORD, LPWSAPROTOCOL_INFO, LPTSTR, LPDWORD]
 WSAAddressToString.restype = c_int
 
 
 SIO_ADDRESS_LIST_QUERY = 0x48000016
 WSAEFAULT = 10014
 
-class SOCKET_ADDRESS(Structure):
-    _fields_ = [('lpSockaddr', c_void_p),
-                ('iSockaddrLength', c_int)]
 
+class SOCKET_ADDRESS(Structure):
+    _fields_ = [("lpSockaddr", c_void_p), ("iSockaddrLength", c_int)]
 
 
 def make_SAL(ln):
     class SOCKET_ADDRESS_LIST(Structure):
-        _fields_ = [('iAddressCount', c_int),
-                    ('Address', SOCKET_ADDRESS * ln)]
-    return SOCKET_ADDRESS_LIST
+        _fields_ = [("iAddressCount", c_int), ("Address", SOCKET_ADDRESS * ln)]
 
+    return SOCKET_ADDRESS_LIST
 
 
 def win32GetLinkLocalIPv6Addresses():
@@ -84,8 +97,8 @@ def win32GetLinkLocalIPv6Addresses():
     for i in range(2):
         buf = create_string_buffer(size)
         ret = WSAIoctl(
-            s.fileno(),
-            SIO_ADDRESS_LIST_QUERY, 0, 0, buf, size, byref(retBytes), 0, 0)
+            s.fileno(), SIO_ADDRESS_LIST_QUERY, 0, 0, buf, size, byref(retBytes), 0, 0
+        )
 
         # WSAIoctl might fail with WSAEFAULT, which means there was not enough
         # space in the buffer we gave it.  There's no way to check the errno
@@ -112,9 +125,13 @@ def win32GetLinkLocalIPv6Addresses():
         retBytes.value = addressStringBufLength
         address = addrList[0].Address[i]
         ret = WSAAddressToString(
-            address.lpSockaddr, address.iSockaddrLength, 0, addressStringBuf,
-            byref(retBytes))
+            address.lpSockaddr,
+            address.iSockaddrLength,
+            0,
+            addressStringBuf,
+            byref(retBytes),
+        )
         if ret:
             raise RuntimeError("WSAAddressToString failure")
         retList.append(wstring_at(addressStringBuf))
-    return [addr for addr in retList if '%' in addr]
+    return [addr for addr in retList if "%" in addr]

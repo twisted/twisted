@@ -6,21 +6,22 @@
 """
 IProxyParser implementation for version one of the PROXY protocol.
 """
+from typing import Tuple, Union
 
 from zope.interface import implementer
+
 from twisted.internet import address
-
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError, InvalidProxyHeader, InvalidNetworkProtocol,
-    MissingAddressData
+    InvalidNetworkProtocol,
+    InvalidProxyHeader,
+    MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
-
 
 
 @implementer(_interfaces.IProxyParser)
-class V1Parser(object):
+class V1Parser:
     """
     PROXY protocol version one header parser.
 
@@ -29,22 +30,23 @@ class V1Parser(object):
     relevant source and destination data.
     """
 
-    PROXYSTR = b'PROXY'
-    UNKNOWN_PROTO = b'UNKNOWN'
-    TCP4_PROTO = b'TCP4'
-    TCP6_PROTO = b'TCP6'
+    PROXYSTR = b"PROXY"
+    UNKNOWN_PROTO = b"UNKNOWN"
+    TCP4_PROTO = b"TCP4"
+    TCP6_PROTO = b"TCP6"
     ALLOWED_NET_PROTOS = (
         TCP4_PROTO,
         TCP6_PROTO,
         UNKNOWN_PROTO,
     )
-    NEWLINE = b'\r\n'
+    NEWLINE = b"\r\n"
 
-    def __init__(self):
-        self.buffer = b''
+    def __init__(self) -> None:
+        self.buffer = b""
 
-
-    def feed(self, data):
+    def feed(
+        self, data: bytes
+    ) -> Union[Tuple[_info.ProxyInfo, bytes], Tuple[None, None]]:
         """
         Consume a chunk of data and attempt to parse it.
 
@@ -65,15 +67,14 @@ class V1Parser(object):
         lines = (self.buffer).split(self.NEWLINE, 1)
         if not len(lines) > 1:
             return (None, None)
-        self.buffer = b''
+        self.buffer = b""
         remaining = lines.pop()
         header = lines.pop()
         info = self.parse(header)
         return (info, remaining)
 
-
     @classmethod
-    def parse(cls, line):
+    def parse(cls, line: bytes) -> _info.ProxyInfo:
         """
         Parse a bytestring as a full PROXY protocol header line.
 
@@ -101,43 +102,41 @@ class V1Parser(object):
         destPort = None
 
         with convertError(ValueError, InvalidProxyHeader):
-            proxyStr, line = line.split(b' ', 1)
+            proxyStr, line = line.split(b" ", 1)
 
         if proxyStr != cls.PROXYSTR:
             raise InvalidProxyHeader()
 
         with convertError(ValueError, InvalidNetworkProtocol):
-            networkProtocol, line = line.split(b' ', 1)
+            networkProtocol, line = line.split(b" ", 1)
 
         if networkProtocol not in cls.ALLOWED_NET_PROTOS:
             raise InvalidNetworkProtocol()
 
         if networkProtocol == cls.UNKNOWN_PROTO:
-
             return _info.ProxyInfo(originalLine, None, None)
 
         with convertError(ValueError, MissingAddressData):
-            sourceAddr, line = line.split(b' ', 1)
+            sourceAddr, line = line.split(b" ", 1)
 
         with convertError(ValueError, MissingAddressData):
-            destAddr, line = line.split(b' ', 1)
+            destAddr, line = line.split(b" ", 1)
 
         with convertError(ValueError, MissingAddressData):
-            sourcePort, line = line.split(b' ', 1)
+            sourcePort, line = line.split(b" ", 1)
 
         with convertError(ValueError, MissingAddressData):
-            destPort = line.split(b' ')[0]
+            destPort = line.split(b" ")[0]
 
         if networkProtocol == cls.TCP4_PROTO:
-
             return _info.ProxyInfo(
                 originalLine,
-                address.IPv4Address('TCP', sourceAddr, int(sourcePort)),
-                address.IPv4Address('TCP', destAddr, int(destPort)),
+                address.IPv4Address("TCP", sourceAddr.decode(), int(sourcePort)),
+                address.IPv4Address("TCP", destAddr.decode(), int(destPort)),
             )
 
         return _info.ProxyInfo(
             originalLine,
-            address.IPv6Address('TCP', sourceAddr, int(sourcePort)),
-            address.IPv6Address('TCP', destAddr, int(destPort)),
+            address.IPv6Address("TCP", sourceAddr.decode(), int(sourcePort)),
+            address.IPv6Address("TCP", destAddr.decode(), int(destPort)),
         )

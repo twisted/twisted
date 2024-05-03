@@ -7,27 +7,31 @@
 Message should only be printed second time around.
 """
 
-from __future__ import print_function
 
-from twisted.python import log
+import sys
+import warnings
+
 from twisted.internet import reactor
+from twisted.python import log
 
-import sys, warnings
 
 def test(i):
     print("printed", i)
-    log.msg("message {}".format(i))
-    warnings.warn("warning {}".format(i))
+    log.msg(f"message {i}")
+    warnings.warn(f"warning {i}")
     try:
-        raise RuntimeError("error {}".format(i))
-    except:
+        raise RuntimeError(f"error {i}")
+    except BaseException:
         log.err()
+
 
 def startlog():
     log.startLogging(sys.stdout)
 
+
 def end():
     reactor.stop()
+
 
 # pre-reactor run
 test(1)

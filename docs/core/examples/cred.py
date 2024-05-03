@@ -1,21 +1,16 @@
-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 
-from __future__ import print_function
-
 import sys
-from zope.interface import implementer, Interface
 
-from twisted.protocols import basic
+from zope.interface import Interface, implementer
+
+from twisted.cred import checkers, credentials, error, portal
 from twisted.internet import protocol
+from twisted.protocols import basic
 from twisted.python import log
 
-from twisted.cred import error
-from twisted.cred import portal
-from twisted.cred import checkers
-from twisted.cred import credentials
 
 class IProtocolUser(Interface):
     def getPrivileges():
@@ -23,6 +18,7 @@ class IProtocolUser(Interface):
 
     def logout():
         """Cleanup per-login resources allocated to this avatar"""
+
 
 @implementer(IProtocolUser)
 class AnonymousUser:
@@ -32,6 +28,7 @@ class AnonymousUser:
     def logout(self):
         print("Cleaning up anonymous user resources")
 
+
 @implementer(IProtocolUser)
 class RegularUser:
     def getPrivileges(self):
@@ -40,6 +37,7 @@ class RegularUser:
     def logout(self):
         print("Cleaning up regular user resources")
 
+
 @implementer(IProtocolUser)
 class Administrator:
     def getPrivileges(self):
@@ -47,6 +45,7 @@ class Administrator:
 
     def logout(self):
         print("Cleaning up administrator resources")
+
 
 class Protocol(basic.LineReceiver):
     user = None
@@ -63,29 +62,29 @@ class Protocol(basic.LineReceiver):
             self.logout()
             self.avatar = None
             self.logout = None
-    
+
     def lineReceived(self, line):
-        f = getattr(self, 'cmd_' + line.decode("ascii").upper().split()[0])
+        f = getattr(self, "cmd_" + line.decode("ascii").upper().split()[0])
         if f:
             try:
                 f(*line.split()[1:])
             except TypeError:
                 self.sendLine(b"Wrong number of arguments.")
-            except:
+            except BaseException:
                 self.sendLine(b"Server error (probably your fault)")
 
     def cmd_ANON(self):
         if self.portal:
-            self.portal.login(credentials.Anonymous(), None, IProtocolUser
-                ).addCallbacks(self._cbLogin, self._ebLogin
-                )
+            self.portal.login(
+                credentials.Anonymous(), None, IProtocolUser
+            ).addCallbacks(self._cbLogin, self._ebLogin)
         else:
             self.sendLine(b"DENIED")
-    
+
     def cmd_USER(self, name):
         self.user = name
         self.sendLine(b"Alright.  Now PASS?")
-    
+
     def cmd_PASS(self, password):
         if not self.user:
             self.sendLine(b"USER required before PASS")
@@ -94,15 +93,18 @@ class Protocol(basic.LineReceiver):
                 self.portal.login(
                     credentials.UsernamePassword(self.user, password),
                     None,
-                    IProtocolUser
-                ).addCallbacks(self._cbLogin, self._ebLogin
-                )
+                    IProtocolUser,
+                ).addCallbacks(self._cbLogin, self._ebLogin)
             else:
                 self.sendLine(b"DENIED")
 
     def cmd_PRIVS(self):
         self.sendLine(b"You have the following privileges: ")
-        self.sendLine(b" ".join([str(priv).encode("ascii") for priv in self.avatar.getPrivileges()]))
+        self.sendLine(
+            b" ".join(
+                [str(priv).encode("ascii") for priv in self.avatar.getPrivileges()]
+            )
+        )
 
     def _cbLogin(self, result):
         (interface, avatar, logout) = result
@@ -110,21 +112,23 @@ class Protocol(basic.LineReceiver):
         self.avatar = avatar
         self.logout = logout
         self.sendLine(b"Login successful.  Available commands: PRIVS")
-    
+
     def _ebLogin(self, failure):
         failure.trap(error.UnauthorizedLogin)
         self.sendLine(b"Login denied!  Go away.")
 
+
 class ServerFactory(protocol.ServerFactory):
     protocol = Protocol
-    
+
     def __init__(self, portal):
         self.portal = portal
-    
+
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
         p.portal = self.portal
         return p
+
 
 @implementer(portal.IRealm)
 class Realm:
@@ -138,7 +142,10 @@ class Realm:
             else:
                 av = RegularUser()
             return IProtocolUser, av, av.logout
-        raise NotImplementedError("Only IProtocolUser interface is supported by this realm")
+        raise NotImplementedError(
+            "Only IProtocolUser interface is supported by this realm"
+        )
+
 
 def main():
     r = Realm()
@@ -148,14 +155,16 @@ def main():
     c.addUser(b"SECONDUSER", b"secret")
     p.registerChecker(c)
     p.registerChecker(checkers.AllowAnonymousAccess())
-    
+
     f = ServerFactory(p)
 
     log.startLogging(sys.stdout)
 
     from twisted.internet import reactor
+
     reactor.listenTCP(4738, f)
     reactor.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

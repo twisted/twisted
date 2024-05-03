@@ -10,9 +10,11 @@ Web server.  It can parse HTTP 1.0 requests and supports many HTTP 1.1
 features as well.  Additionally, some functionality implemented here is
 also useful for HTTP clients (such as the chunked encoding parser).
 
-@var CACHED: A marker value to be returned from cache-related request methods to
-    indicate to the caller that a cached response will be usable and no response
-    body should be generated.
+@var CACHED: A marker value to be returned from cache-related request methods
+    to indicate to the caller that a cached response will be usable and no
+    response body should be generated.
+
+@var FOUND: An HTTP response code indicating a temporary redirect.
 
 @var NOT_MODIFIED: An HTTP response code indicating that a requested
     pre-condition (for example, the condition represented by an
@@ -23,121 +25,171 @@ also useful for HTTP clients (such as the chunked encoding parser).
     pre-condition (for example, the condition represented by an I{If-None-Match}
     header is present in the request) has failed.  This should typically
     indicate that the server has not taken the requested action.
-"""
 
-from __future__ import division, absolute_import
+@var maxChunkSizeLineLength: Maximum allowable length of the CRLF-terminated
+    line that indicates the size of a chunk and the extensions associated with
+    it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
+    This limits how much data may be buffered when decoding the line.
+"""
+from __future__ import annotations
 
 __all__ = [
-    'SWITCHING', 'OK', 'CREATED', 'ACCEPTED', 'NON_AUTHORITATIVE_INFORMATION',
-    'NO_CONTENT', 'RESET_CONTENT', 'PARTIAL_CONTENT', 'MULTI_STATUS',
+    "SWITCHING",
+    "OK",
+    "CREATED",
+    "ACCEPTED",
+    "NON_AUTHORITATIVE_INFORMATION",
+    "NO_CONTENT",
+    "RESET_CONTENT",
+    "PARTIAL_CONTENT",
+    "MULTI_STATUS",
+    "MULTIPLE_CHOICE",
+    "MOVED_PERMANENTLY",
+    "FOUND",
+    "SEE_OTHER",
+    "NOT_MODIFIED",
+    "USE_PROXY",
+    "TEMPORARY_REDIRECT",
+    "PERMANENT_REDIRECT",
+    "BAD_REQUEST",
+    "UNAUTHORIZED",
+    "PAYMENT_REQUIRED",
+    "FORBIDDEN",
+    "NOT_FOUND",
+    "NOT_ALLOWED",
+    "NOT_ACCEPTABLE",
+    "PROXY_AUTH_REQUIRED",
+    "REQUEST_TIMEOUT",
+    "CONFLICT",
+    "GONE",
+    "LENGTH_REQUIRED",
+    "PRECONDITION_FAILED",
+    "REQUEST_ENTITY_TOO_LARGE",
+    "REQUEST_URI_TOO_LONG",
+    "UNSUPPORTED_MEDIA_TYPE",
+    "REQUESTED_RANGE_NOT_SATISFIABLE",
+    "EXPECTATION_FAILED",
+    "IM_A_TEAPOT",
+    "INTERNAL_SERVER_ERROR",
+    "NOT_IMPLEMENTED",
+    "BAD_GATEWAY",
+    "SERVICE_UNAVAILABLE",
+    "GATEWAY_TIMEOUT",
+    "HTTP_VERSION_NOT_SUPPORTED",
+    "INSUFFICIENT_STORAGE_SPACE",
+    "NOT_EXTENDED",
+    "RESPONSES",
+    "CACHED",
+    "urlparse",
+    "parse_qs",
+    "datetimeToString",
+    "datetimeToLogString",
+    "timegm",
+    "stringToDatetime",
+    "toChunk",
+    "fromChunk",
+    "parseContentRange",
+    "StringTransport",
+    "HTTPClient",
+    "NO_BODY_CODES",
+    "Request",
+    "PotentialDataLoss",
+    "HTTPChannel",
+    "HTTPFactory",
+]
 
-    'MULTIPLE_CHOICE', 'MOVED_PERMANENTLY', 'FOUND', 'SEE_OTHER',
-    'NOT_MODIFIED', 'USE_PROXY', 'TEMPORARY_REDIRECT',
 
-    'BAD_REQUEST', 'UNAUTHORIZED', 'PAYMENT_REQUIRED', 'FORBIDDEN', 'NOT_FOUND',
-    'NOT_ALLOWED', 'NOT_ACCEPTABLE', 'PROXY_AUTH_REQUIRED', 'REQUEST_TIMEOUT',
-    'CONFLICT', 'GONE', 'LENGTH_REQUIRED', 'PRECONDITION_FAILED',
-    'REQUEST_ENTITY_TOO_LARGE', 'REQUEST_URI_TOO_LONG',
-    'UNSUPPORTED_MEDIA_TYPE', 'REQUESTED_RANGE_NOT_SATISFIABLE',
-    'EXPECTATION_FAILED',
-
-    'INTERNAL_SERVER_ERROR', 'NOT_IMPLEMENTED', 'BAD_GATEWAY',
-    'SERVICE_UNAVAILABLE', 'GATEWAY_TIMEOUT', 'HTTP_VERSION_NOT_SUPPORTED',
-    'INSUFFICIENT_STORAGE_SPACE', 'NOT_EXTENDED',
-
-    'RESPONSES', 'CACHED',
-
-    'urlparse', 'parse_qs', 'datetimeToString', 'datetimeToLogString', 'timegm',
-    'stringToDatetime', 'toChunk', 'fromChunk', 'parseContentRange',
-
-    'StringTransport', 'HTTPClient', 'NO_BODY_CODES', 'Request',
-    'PotentialDataLoss', 'HTTPChannel', 'HTTPFactory',
-    ]
-
-
-# system imports
-import tempfile
-import base64, binascii
-import cgi
-import math
-import time
+import base64
+import binascii
 import calendar
-import warnings
+import math
 import os
-from io import BytesIO as StringIO
-
-try:
-    from urlparse import (
-        ParseResult as ParseResultBytes, urlparse as _urlparse)
-    from urllib import unquote
-    from cgi import parse_header as _parseHeader
-except ImportError:
-    from urllib.parse import (
-        ParseResultBytes, urlparse as _urlparse, unquote_to_bytes as unquote)
-
-    def _parseHeader(line):
-        # cgi.parse_header requires a str
-        key, pdict = cgi.parse_header(line.decode('charmap'))
-
-        # We want the key as bytes, and cgi.parse_multipart (which consumes
-        # pdict) expects a dict of str keys but bytes values
-        key = key.encode('charmap')
-        pdict = {x:y.encode('charmap') for x, y in pdict.items()}
-        return (key, pdict)
-
+import re
+import tempfile
+import time
+import warnings
+from email import message_from_bytes
+from email.message import EmailMessage, Message
+from io import BytesIO
+from typing import AnyStr, Callable, Dict, List, Optional, Tuple
+from urllib.parse import (
+    ParseResultBytes,
+    unquote_to_bytes as unquote,
+    urlparse as _urlparse,
+)
 
 from zope.interface import Attribute, Interface, implementer, provider
 
-# twisted imports
-from twisted.python.compat import (
-    _PY3, long, unicode, intToBytes, networkString, nativeString, _PY37PLUS)
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.logger import Logger
-from twisted.python.failure import Failure
 from incremental import Version
-from twisted.python.components import proxyForInterface
-from twisted.internet import interfaces, protocol, address
+
+from twisted.internet import address, interfaces, protocol
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IProtocol
-from twisted.internet._producer_helpers import _PullToPush
-from twisted.protocols import policies, basic
-
-from twisted.web.iweb import (
-    IRequest, IAccessLogFormatter, INonQueuedRequestFactory)
+from twisted.logger import Logger
+from twisted.protocols import basic, policies
+from twisted.python import log
+from twisted.python.compat import nativeString, networkString
+from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import deprecated
+from twisted.python.failure import Failure
+from twisted.web._responses import (
+    ACCEPTED,
+    BAD_GATEWAY,
+    BAD_REQUEST,
+    CONFLICT,
+    CREATED,
+    EXPECTATION_FAILED,
+    FORBIDDEN,
+    FOUND,
+    GATEWAY_TIMEOUT,
+    GONE,
+    HTTP_VERSION_NOT_SUPPORTED,
+    IM_A_TEAPOT,
+    INSUFFICIENT_STORAGE_SPACE,
+    INTERNAL_SERVER_ERROR,
+    LENGTH_REQUIRED,
+    MOVED_PERMANENTLY,
+    MULTI_STATUS,
+    MULTIPLE_CHOICE,
+    NO_CONTENT,
+    NON_AUTHORITATIVE_INFORMATION,
+    NOT_ACCEPTABLE,
+    NOT_ALLOWED,
+    NOT_EXTENDED,
+    NOT_FOUND,
+    NOT_IMPLEMENTED,
+    NOT_MODIFIED,
+    OK,
+    PARTIAL_CONTENT,
+    PAYMENT_REQUIRED,
+    PERMANENT_REDIRECT,
+    PRECONDITION_FAILED,
+    PROXY_AUTH_REQUIRED,
+    REQUEST_ENTITY_TOO_LARGE,
+    REQUEST_TIMEOUT,
+    REQUEST_URI_TOO_LONG,
+    REQUESTED_RANGE_NOT_SATISFIABLE,
+    RESET_CONTENT,
+    RESPONSES,
+    SEE_OTHER,
+    SERVICE_UNAVAILABLE,
+    SWITCHING,
+    TEMPORARY_REDIRECT,
+    UNAUTHORIZED,
+    UNSUPPORTED_MEDIA_TYPE,
+    USE_PROXY,
+)
 from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
     from twisted.web._http2 import H2Connection
+
     H2_ENABLED = True
 except ImportError:
-    H2Connection = None
     H2_ENABLED = False
 
-
-from twisted.web._responses import (
-    SWITCHING,
-
-    OK, CREATED, ACCEPTED, NON_AUTHORITATIVE_INFORMATION, NO_CONTENT,
-    RESET_CONTENT, PARTIAL_CONTENT, MULTI_STATUS,
-
-    MULTIPLE_CHOICE, MOVED_PERMANENTLY, FOUND, SEE_OTHER, NOT_MODIFIED,
-    USE_PROXY, TEMPORARY_REDIRECT,
-
-    BAD_REQUEST, UNAUTHORIZED, PAYMENT_REQUIRED, FORBIDDEN, NOT_FOUND,
-    NOT_ALLOWED, NOT_ACCEPTABLE, PROXY_AUTH_REQUIRED, REQUEST_TIMEOUT,
-    CONFLICT, GONE, LENGTH_REQUIRED, PRECONDITION_FAILED,
-    REQUEST_ENTITY_TOO_LARGE, REQUEST_URI_TOO_LONG, UNSUPPORTED_MEDIA_TYPE,
-    REQUESTED_RANGE_NOT_SATISFIABLE, EXPECTATION_FAILED,
-
-    INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED, BAD_GATEWAY, SERVICE_UNAVAILABLE,
-    GATEWAY_TIMEOUT, HTTP_VERSION_NOT_SUPPORTED, INSUFFICIENT_STORAGE_SPACE,
-    NOT_EXTENDED,
-
-    RESPONSES)
-
-
-_intTypes = (int, long)
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -154,45 +206,101 @@ responses = RESPONSES
 
 
 # datetime parsing and formatting
-weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-monthname = [None,
-             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+monthname = [
+    None,
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+def _parseContentType(line: bytes) -> bytes:
+    """
+    Parse the Content-Type header.
+    """
+    msg = EmailMessage()
+    msg["content-type"] = line.decode("charmap")
+    key = msg.get_content_type()
+    encodedKey = key.encode("charmap")
+    return encodedKey
+
+
+class _MultiPartParseException(Exception):
+    """
+    Failed to parse the multipart/form-data payload.
+    """
+
+
+def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
+    """
+    Parse the content of a multipart/form-data request.
+    """
+    result = {}
+    multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
+    msg = message_from_bytes(multiPartHeaders + content)
+    if not msg.is_multipart():
+        raise _MultiPartParseException("Not a multipart.")
+
+    part: Message
+    # "per Python docs, a list of Message objects when is_multipart() is True,
+    # or a string when is_multipart() is False"
+    for part in msg.get_payload():  # type:ignore[assignment]
+        name: str | None = part.get_param(
+            "name", header="content-disposition"
+        )  # type:ignore[assignment]
+        if not name:
+            continue
+        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
+        result[name.encode("utf8")] = [payload]
+    return result
+
 
 def urlparse(url):
     """
     Parse an URL into six components.
 
-    This is similar to C{urlparse.urlparse}, but rejects C{unicode} input
+    This is similar to C{urlparse.urlparse}, but rejects C{str} input
     and always produces C{bytes} output.
 
     @type url: C{bytes}
 
-    @raise TypeError: The given url was a C{unicode} string instead of a
+    @raise TypeError: The given url was a C{str} string instead of a
         C{bytes}.
 
     @return: The scheme, net location, path, params, query string, and fragment
         of the URL - all as C{bytes}.
     @rtype: C{ParseResultBytes}
     """
-    if isinstance(url, unicode):
+    if isinstance(url, str):
         raise TypeError("url must be bytes, not unicode")
     scheme, netloc, path, params, query, fragment = _urlparse(url)
-    if isinstance(scheme, unicode):
-        scheme = scheme.encode('ascii')
-        netloc = netloc.encode('ascii')
-        path = path.encode('ascii')
-        query = query.encode('ascii')
-        fragment = fragment.encode('ascii')
+    if isinstance(scheme, str):
+        scheme = scheme.encode("ascii")
+        netloc = netloc.encode("ascii")
+        path = path.encode("ascii")
+        query = query.encode("ascii")
+        fragment = fragment.encode("ascii")
     return ParseResultBytes(scheme, netloc, path, params, query, fragment)
-
 
 
 def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     """
     Like C{cgi.parse_qs}, but with support for parsing byte strings on Python 3.
+
+    This was created to help with Python 2 to Python 3 migration.
+    Consider using L{urllib.parse.parse_qs}.
 
     @type qs: C{bytes}
     """
@@ -215,7 +323,6 @@ def parse_qs(qs, keep_blank_values=0, strict_parsing=0):
     return d
 
 
-
 def datetimeToString(msSinceEpoch=None):
     """
     Convert seconds since epoch to HTTP datetime string.
@@ -225,12 +332,11 @@ def datetimeToString(msSinceEpoch=None):
     if msSinceEpoch == None:
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = networkString("%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
-            weekdayname[wd],
-            day, monthname[month], year,
-            hh, mm, ss))
+    s = networkString(
+        "%s, %02d %3s %4d %02d:%02d:%02d GMT"
+        % (weekdayname[wd], day, monthname[month], year, hh, mm, ss)
+    )
     return s
-
 
 
 def datetimeToLogString(msSinceEpoch=None):
@@ -243,10 +349,14 @@ def datetimeToLogString(msSinceEpoch=None):
         msSinceEpoch = time.time()
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
     s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
-        day, monthname[month], year,
-        hh, mm, ss)
+        day,
+        monthname[month],
+        year,
+        hh,
+        mm,
+        ss,
+    )
     return s
-
 
 
 def timegm(year, month, day, hour, minute, second):
@@ -257,17 +367,16 @@ def timegm(year, month, day, hour, minute, second):
     if year < EPOCH:
         raise ValueError("Years prior to %d not supported" % (EPOCH,))
     assert 1 <= month <= 12
-    days = 365*(year-EPOCH) + calendar.leapdays(EPOCH, year)
+    days = 365 * (year - EPOCH) + calendar.leapdays(EPOCH, year)
     for i in range(1, month):
         days = days + calendar.mdays[i]
     if month > 2 and calendar.isleap(year):
         days = days + 1
     days = days + day - 1
-    hours = days*24 + hour
-    minutes = hours*60 + minute
-    seconds = minutes*60 + second
+    hours = days * 24 + hour
+    minutes = hours * 60 + minute
+    seconds = minutes * 60 + second
     return seconds
-
 
 
 def stringToDatetime(dateString):
@@ -276,7 +385,7 @@ def stringToDatetime(dateString):
 
     @type dateString: C{bytes}
     """
-    parts = nativeString(dateString).split()
+    parts = dateString.decode("ascii").split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
@@ -296,14 +405,14 @@ def stringToDatetime(dateString):
         month = parts[2]
         year = parts[3]
         time = parts[4]
-    elif (partlen == 3 or partlen == 4) and parts[1].find('-') != -1:
+    elif (partlen == 3 or partlen == 4) and parts[1].find("-") != -1:
         # 2nd date format: Sunday, 06-Nov-94 08:49:37 GMT
         # (Note: "GMT" is literal, not a variable timezone)
         # (also handles without without "GMT")
         # Two digit year, yucko.
-        day, month, year = parts[1].split('-')
+        day, month, year = parts[1].split("-")
         time = parts[2]
-        year=int(year)
+        year = int(year)
         if year < 69:
             year = year + 2000
         elif year < 100:
@@ -321,9 +430,8 @@ def stringToDatetime(dateString):
     day = int(day)
     month = int(monthname_lower.index(month.lower()))
     year = int(year)
-    hour, min, sec = map(int, time.split(':'))
+    hour, min, sec = map(int, time.split(":"))
     return int(timegm(year, month, day, hour, min, sec))
-
 
 
 def toChunk(data):
@@ -334,13 +442,41 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString('%x' % (len(data),)), b"\r\n", data, b"\r\n")
+    return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
+def _ishexdigits(b: bytes) -> bool:
+    """
+    Is the string case-insensitively hexidecimal?
 
-def fromChunk(data):
+    It must be composed of one or more characters in the ranges a-f, A-F
+    and 0-9.
+    """
+    for c in b:
+        if c not in b"0123456789abcdefABCDEF":
+            return False
+    return b != b""
+
+
+def _hexint(b: bytes) -> int:
+    """
+    Decode a hexadecimal integer.
+
+    Unlike L{int(b, 16)}, this raises L{ValueError} when the integer has
+    a prefix like C{b'0x'}, C{b'+'}, or C{b'-'}, which is desirable when
+    parsing network protocols.
+    """
+    if not _ishexdigits(b):
+        raise ValueError(b)
+    return int(b, 16)
+
+
+def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
     """
     Convert chunk to string.
+
+    Note that this function is not specification compliant: it doesn't handle
+    chunk extensions.
 
     @type data: C{bytes}
 
@@ -349,14 +485,13 @@ def fromChunk(data):
     @raise ValueError: If the given data is not a correctly formatted chunked
         byte string.
     """
-    prefix, rest = data.split(b'\r\n', 1)
-    length = int(prefix, 16)
+    prefix, rest = data.split(b"\r\n", 1)
+    length = _hexint(prefix)
     if length < 0:
         raise ValueError("Chunk length must be >= 0, not %d" % (length,))
-    if rest[length:length + 2] != b'\r\n':
+    if rest[length : length + 2] != b"\r\n":
         raise ValueError("chunk must end with CRLF")
-    return rest[:length], rest[length + 2:]
-
+    return rest[:length], rest[length + 2 :]
 
 
 def parseContentRange(header):
@@ -377,7 +512,6 @@ def parseContentRange(header):
     return (start, end, realLength)
 
 
-
 class _IDeprecatedHTTPChannelToRequestInterface(Interface):
     """
     The interface L{HTTPChannel} expects of L{Request}.
@@ -385,12 +519,13 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
     requestHeaders = Attribute(
         "A L{http_headers.Headers} instance giving all received HTTP request "
-        "headers.")
+        "headers."
+    )
 
     responseHeaders = Attribute(
         "A L{http_headers.Headers} instance holding all HTTP response "
-        "headers to be sent.")
-
+        "headers to be sent."
+    )
 
     def connectionLost(reason):
         """
@@ -400,7 +535,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
             the connection was lost.
         @type reason: L{twisted.python.failure.Failure}
         """
-
 
     def gotLength(length):
         """
@@ -412,7 +546,6 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
             and L{None} if it does not.
         """
 
-
     def handleContentChunk(data):
         """
         Deliver a received chunk of body data to the request.  Note
@@ -422,12 +555,10 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         @type data: L{bytes}
         """
 
-
     def parseCookies():
         """
         Parse the request's cookies out of received headers.
         """
-
 
     def requestReceived(command, path, version):
         """
@@ -445,8 +576,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         @type version: L{bytes}
         """
 
-
-    def __eq__(other):
+    def __eq__(other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -455,11 +585,9 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are the same object and L{False}
             when not.
-        @rtype: L{bool}
         """
 
-
-    def __ne__(other):
+    def __ne__(other: object) -> bool:
         """
         Determines if two requests are not the same object.
 
@@ -468,9 +596,7 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
 
         @return: L{True} when the two are not the same object and
             L{False} when they are.
-        @rtype: L{bool}
         """
-
 
     def __hash__():
         """
@@ -481,19 +607,20 @@ class _IDeprecatedHTTPChannelToRequestInterface(Interface):
         """
 
 
-
 class StringTransport:
     """
-    I am a StringIO wrapper that conforms for the transport API. I support
+    I am a BytesIO wrapper that conforms for the transport API. I support
     the `writeSequence' method.
     """
-    def __init__(self):
-        self.s = StringIO()
-    def writeSequence(self, seq):
-        self.s.write(b''.join(seq))
-    def __getattr__(self, attr):
-        return getattr(self.__dict__['s'], attr)
 
+    def __init__(self):
+        self.s = BytesIO()
+
+    def writeSequence(self, seq):
+        self.s.write(b"".join(seq))
+
+    def __getattr__(self, attr):
+        return getattr(self.__dict__["s"], attr)
 
 
 class HTTPClient(basic.LineReceiver):
@@ -511,18 +638,19 @@ class HTTPClient(basic.LineReceiver):
     @type firstLine: C{bool}
 
     @ivar __buffer: The buffer that stores the response to the HTTP request.
-    @type __buffer: A C{StringIO} object.
+    @type __buffer: A C{BytesIO} object.
 
     @ivar _header: Part or all of an HTTP request header.
     @type _header: C{bytes}
     """
+
     length = None
     firstLine = True
     __buffer = None
     _header = b""
 
     def sendCommand(self, command, path):
-        self.transport.writeSequence([command, b' ', path, b' HTTP/1.0\r\n'])
+        self.transport.writeSequence([command, b" ", path, b" HTTP/1.0\r\n"])
 
     def sendHeader(self, name, value):
         if not isinstance(value, bytes):
@@ -530,12 +658,10 @@ class HTTPClient(basic.LineReceiver):
             value = networkString(str(value))
         santizedName = _sanitizeLinearWhitespace(name)
         santizedValue = _sanitizeLinearWhitespace(value)
-        self.transport.writeSequence(
-            [santizedName, b': ', santizedValue, b'\r\n'])
+        self.transport.writeSequence([santizedName, b": ", santizedValue, b"\r\n"])
 
     def endHeaders(self):
-        self.transport.write(b'\r\n')
-
+        self.transport.write(b"\r\n")
 
     def extractHeader(self, header):
         """
@@ -546,12 +672,11 @@ class HTTPClient(basic.LineReceiver):
             'field-name: value'.
         @type header: C{bytes}
         """
-        key, val = header.split(b':', 1)
+        key, val = header.split(b":", 1)
         val = val.lstrip()
         self.handleHeader(key, val)
-        if key.lower() == b'content-length':
+        if key.lower() == b"content-length":
             self.length = int(val)
-
 
     def lineReceived(self, line):
         """
@@ -577,12 +702,12 @@ class HTTPClient(basic.LineReceiver):
             if self._header != b"":
                 # Only extract headers if there are any
                 self.extractHeader(self._header)
-            self.__buffer = StringIO()
+            self.__buffer = BytesIO()
             self.handleEndHeaders()
             self.setRawMode()
             return
 
-        if line.startswith(b'\t') or line.startswith(b' '):
+        if line.startswith(b"\t") or line.startswith(b" "):
             # This line is part of a multiline header. According to RFC 822, in
             # "unfolding" multiline headers you do not strip the leading
             # whitespace on the continuing line.
@@ -591,9 +716,8 @@ class HTTPClient(basic.LineReceiver):
             # This line starts a new header, so process the previous one.
             self.extractHeader(self._header)
             self._header = line
-        else: # First header
+        else:  # First header
             self._header = line
-
 
     def connectionLost(self, reason):
         self.handleResponseEnd()
@@ -635,18 +759,16 @@ class HTTPClient(basic.LineReceiver):
         Called when all headers have been received.
         """
 
-
     def rawDataReceived(self, data):
         if self.length is not None:
-            data, rest = data[:self.length], data[self.length:]
+            data, rest = data[: self.length], data[self.length :]
             self.length -= len(data)
         else:
-            rest = b''
+            rest = b""
         self.handleResponsePart(data)
         if self.length == 0:
             self.handleResponseEnd()
             self.setLineMode(rest)
-
 
 
 # response codes that must have empty bodies
@@ -657,8 +779,19 @@ NO_BODY_CODES = (204, 304)
 _QUEUED_SENTINEL = object()
 
 
-@implementer(interfaces.IConsumer,
-             _IDeprecatedHTTPChannelToRequestInterface)
+def _getContentFile(length):
+    """
+    Get a writeable file-like object to which request content can be written.
+    """
+    if length is not None and length < 100000:
+        return BytesIO()
+    return tempfile.TemporaryFile()
+
+
+_hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
+
+
+@implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
 class Request:
     """
     A HTTP request.
@@ -666,13 +799,28 @@ class Request:
     Subclasses should override the process() method to determine how
     the request will be processed.
 
-    @ivar method: The HTTP method that was used.
-    @ivar uri: The full URI that was requested (includes arguments).
-    @ivar path: The path only (arguments not included).
-    @ivar args: All of the arguments, including URL and POST arguments.
-    @type args: A mapping of strings (the argument names) to lists of values.
-                i.e., ?foo=bar&foo=baz&quux=spam results in
-                {'foo': ['bar', 'baz'], 'quux': ['spam']}.
+    @ivar method: The HTTP method that was used, e.g. C{b'GET'}.
+    @type method: L{bytes}
+
+    @ivar uri: The full encoded URI which was requested (including query
+        arguments), e.g. C{b'/a/b%20/c?q=v'}.
+    @type uri: L{bytes}
+
+    @ivar path: The encoded path of the request URI (not including query
+        arguments), e.g. C{b'/a/b%20/c'}.
+    @type path: L{bytes}
+
+    @ivar args: A mapping of decoded query argument names as L{bytes} to
+        corresponding query argument values as L{list}s of L{bytes}.
+        For example, for a URI with C{foo=bar&foo=baz&quux=spam}
+        as its query part C{args} will be C{{b'foo': [b'bar', b'baz'],
+        b'quux': [b'spam']}}.
+    @type args: L{dict} of L{bytes} to L{list} of L{bytes}
+
+    @ivar content: A file-like object giving the request body.  This may be
+        a file on disk, an L{io.BytesIO}, or some other type.  The
+        implementation is free to decide on a per-request basis.
+    @type content: L{typing.BinaryIO}
 
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}
@@ -683,7 +831,7 @@ class Request:
     @type responseHeaders: L{http_headers.Headers}
     @ivar responseHeaders: All HTTP response headers to be sent.
 
-    @ivar notifications: A C{list} of L{Deferred}s which are waiting for
+    @ivar notifications: A L{list} of L{Deferred}s which are waiting for
         notification that the response to this request has been finished
         (successfully or with an error).  Don't use this attribute directly,
         instead use the L{Request.notifyFinish} method.
@@ -691,21 +839,22 @@ class Request:
     @ivar _disconnected: A flag which is C{False} until the connection over
         which this request was received is closed and which is C{True} after
         that.
-    @type _disconnected: C{bool}
+    @type _disconnected: L{bool}
 
     @ivar _log: A logger instance for request related messages.
     @type _log: L{twisted.logger.Logger}
     """
+
     producer = None
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = "(no method yet)"
+    method = b"(no method yet)"
     clientproto = b"(no clientproto yet)"
-    uri = "(no uri yet)"
+    uri = b"(no uri yet)"
     startedWriting = 0
     chunked = 0
-    sentLength = 0 # content-length of response, or total bytes sent via chunking
+    sentLength = 0  # content-length of response, or total bytes sent via chunking
     etag = None
     lastModified = None
     args = None
@@ -715,13 +864,13 @@ class Request:
     _disconnected = False
     _log = Logger()
 
-    def __init__(self, channel, queued=_QUEUED_SENTINEL):
+    def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
         """
-        self.notifications = []
+        self.notifications: List[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -730,10 +879,10 @@ class Request:
         self.client = self.channel.getPeer()
         self.host = self.channel.getHost()
 
-        self.requestHeaders = Headers()
-        self.received_cookies = {}
-        self.responseHeaders = Headers()
-        self.cookies = [] # outgoing cookies
+        self.requestHeaders: Headers = Headers()
+        self.received_cookies: Dict[bytes, bytes] = {}
+        self.responseHeaders: Headers = Headers()
+        self.cookies: List[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport
 
         if queued is _QUEUED_SENTINEL:
@@ -741,19 +890,14 @@ class Request:
 
         self.queued = queued
 
-
     def _cleanup(self):
         """
         Called when have finished responding and are no longer queued.
         """
         if self.producer:
             self._log.failure(
-                '',
-                Failure(
-                    RuntimeError(
-                        "Producer was not unregistered for %s" % (self.uri,)
-                    )
-                )
+                "",
+                Failure(RuntimeError(f"Producer was not unregistered for {self.uri}")),
             )
             self.unregisterProducer()
         self.channel.requestDone(self)
@@ -771,6 +915,7 @@ class Request:
 
     # methods for channel - end users should not use these
 
+    @deprecated(Version("Twisted", 16, 3, 0))
     def noLongerQueued(self):
         """
         Notify the object that it is no longer queued.
@@ -784,7 +929,6 @@ class Request:
         """
         pass
 
-
     def gotLength(self, length):
         """
         Called when HTTP channel got length of content in this request.
@@ -795,11 +939,7 @@ class Request:
             request headers.  L{None} if the request headers do not indicate a
             length.
         """
-        if length is not None and length < 100000:
-            self.content = StringIO()
-        else:
-            self.content = tempfile.TemporaryFile()
-
+        self.content = _getContentFile(length)
 
     def parseCookies(self):
         """
@@ -814,14 +954,13 @@ class Request:
 
         for cookietxt in cookieheaders:
             if cookietxt:
-                for cook in cookietxt.split(b';'):
+                for cook in cookietxt.split(b";"):
                     cook = cook.lstrip()
                     try:
-                        k, v = cook.split(b'=', 1)
+                        k, v = cook.split(b"=", 1)
                         self.received_cookies[k] = v
                     except ValueError:
                         pass
-
 
     def handleContentChunk(self, data):
         """
@@ -830,7 +969,6 @@ class Request:
         This method is not intended for users.
         """
         self.content.write(data)
-
 
     def requestReceived(self, command, path, version):
         """
@@ -848,12 +986,13 @@ class Request:
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
-        self.content.seek(0,0)
+        clength = self.content.tell()
+        self.content.seek(0, 0)
         self.args = {}
 
         self.method, self.uri = command, path
         self.clientproto = version
-        x = self.uri.split(b'?', 1)
+        x = self.uri.split(b"?", 1)
 
         if len(x) == 1:
             self.path = self.uri
@@ -863,64 +1002,30 @@ class Request:
 
         # Argument processing
         args = self.args
-        ctype = self.requestHeaders.getRawHeaders(b'content-type')
-        clength = self.requestHeaders.getRawHeaders(b'content-length')
+        ctype = self.requestHeaders.getRawHeaders(b"content-type")
         if ctype is not None:
             ctype = ctype[0]
 
-        if clength is not None:
-            clength = clength[0]
-
         if self.method == b"POST" and ctype and clength:
-            mfd = b'multipart/form-data'
-            key, pdict = _parseHeader(ctype)
-            pdict["CONTENT-LENGTH"] = clength
-            if key == b'application/x-www-form-urlencoded':
+            mfd = b"multipart/form-data"
+            key = _parseContentType(ctype)
+            if key == b"application/x-www-form-urlencoded":
                 args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
-                    if _PY37PLUS:
-                        cgiArgs = cgi.parse_multipart(
-                            self.content, pdict, encoding='utf8',
-                            errors="surrogateescape")
-                    else:
-                        cgiArgs = cgi.parse_multipart(self.content, pdict)
-
-                    if not _PY37PLUS and _PY3:
-                        # The parse_multipart function on Python 3
-                        # decodes the header bytes as iso-8859-1 and
-                        # returns a str key -- we want bytes so encode
-                        # it back
-                        self.args.update({x.encode('iso-8859-1'): y
-                                          for x, y in cgiArgs.items()})
-                    elif _PY37PLUS:
-                        # The parse_multipart function on Python 3.7+
-                        # decodes the header bytes as iso-8859-1 and
-                        # decodes the body bytes as utf8 with
-                        # surrogateescape -- we want bytes
-                        self.args.update({
-                            x.encode('iso-8859-1'): \
-                            [z.encode('utf8', "surrogateescape")
-                             if isinstance(z, str) else z for z in y]
-                            for x, y in cgiArgs.items()})
-
-                    else:
-                        self.args.update(cgiArgs)
-                except Exception as e:
-                    # It was a bad request, or we got a signal.
+                    self.content.seek(0)
+                    content = self.content.read()
+                    self.args.update(_getMultiPartArgs(content, ctype))
+                except _MultiPartParseException:
+                    # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
-                    if isinstance(e, (TypeError, ValueError, KeyError)):
-                        return
-                    else:
-                        # If it's not a userspace error from CGI, reraise
-                        raise
+                    return
 
             self.content.seek(0, 0)
 
         self.process()
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string description of the request including such information
         as the request method and request URI.
@@ -928,13 +1033,13 @@ class Request:
         @return: A string loosely describing this L{Request} object.
         @rtype: L{str}
         """
-        return '<%s at 0x%x method=%s uri=%s clientproto=%s>' % (
+        return "<{} at 0x{:x} method={} uri={} clientproto={}>".format(
             self.__class__.__name__,
             id(self),
             nativeString(self.method),
             nativeString(self.uri),
-            nativeString(self.clientproto))
-
+            nativeString(self.clientproto),
+        )
 
     def process(self):
         """
@@ -943,7 +1048,6 @@ class Request:
         This method is not intended for users.
         """
         pass
-
 
     # consumer interface
 
@@ -954,7 +1058,8 @@ class Request:
         if self.producer:
             raise ValueError(
                 "registering producer %s before previous one (%s) was "
-                "unregistered" % (producer, self.producer))
+                "unregistered" % (producer, self.producer)
+            )
 
         self.streamingProducer = streaming
         self.producer = producer
@@ -967,33 +1072,39 @@ class Request:
         self.channel.unregisterProducer()
         self.producer = None
 
-
     # The following is the public interface that people should be
     # writing to.
-    def getHeader(self, key):
+    def getHeader(self, key: AnyStr) -> Optional[AnyStr]:
         """
         Get an HTTP request header.
 
-        @type key: C{bytes}
+        @type key: C{bytes} or C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{bytes} or L{None}
+        @rtype: C{bytes} or C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
-            was not present in the request.
+            was not present in the request. The string type of the result
+            matches the type of C{key}.
         """
         value = self.requestHeaders.getRawHeaders(key)
         if value is not None:
             return value[-1]
-
+        return None
 
     def getCookie(self, key):
         """
         Get a cookie that was sent from the network.
+
+        @type key: C{bytes}
+        @param key: The name of the cookie to get.
+
+        @rtype: C{bytes} or C{None}
+        @returns: The value of the specified cookie, or L{None} if that cookie
+            was not present in the request.
         """
         return self.received_cookies.get(key)
 
-
-    def notifyFinish(self):
+    def notifyFinish(self) -> Deferred[None]:
         """
         Notify when the response to this request has finished.
 
@@ -1036,7 +1147,6 @@ class Request:
         self.notifications.append(Deferred())
         return self.notifications[-1]
 
-
     def finish(self):
         """
         Indicate that all response data has been written to this L{Request}.
@@ -1044,28 +1154,27 @@ class Request:
         if self._disconnected:
             raise RuntimeError(
                 "Request.finish called on a request after its connection was lost; "
-                "use Request.notifyFinish to keep track of this.")
+                "use Request.notifyFinish to keep track of this."
+            )
         if self.finished:
             warnings.warn("Warning! request.finish called twice.", stacklevel=2)
             return
 
         if not self.startedWriting:
             # write headers
-            self.write(b'')
+            self.write(b"")
 
         if self.chunked:
             # write last chunk and closing CRLF
             self.channel.write(b"0\r\n\r\n")
 
         # log request
-        if (hasattr(self.channel, "factory") and
-                self.channel.factory is not None):
+        if hasattr(self.channel, "factory") and self.channel.factory is not None:
             self.channel.factory.log(self)
 
         self.finished = 1
         if not self.queued:
             self._cleanup()
-
 
     def write(self, data):
         """
@@ -1076,46 +1185,52 @@ class Request:
         @param data: Some bytes to be sent as part of the response body.
         """
         if self.finished:
-            raise RuntimeError('Request.write called on a request after '
-                               'Request.finish was called.')
+            raise RuntimeError(
+                "Request.write called on a request after " "Request.finish was called."
+            )
+
+        if self._disconnected:
+            # Don't attempt to write any data to a disconnected client.
+            # The RuntimeError exception will be thrown as usual when
+            # request.finish is called
+            return
+
         if not self.startedWriting:
             self.startedWriting = 1
             version = self.clientproto
-            code = intToBytes(self.code)
+            code = b"%d" % (self.code,)
             reason = self.code_message
-            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
             # persistent connections.
-            if ((version == b"HTTP/1.1") and
-                (self.responseHeaders.getRawHeaders(b'content-length') is None) and
-                self.method != b"HEAD" and self.code not in NO_BODY_CODES):
-                headers.append((b'Transfer-Encoding', b'chunked'))
+            if (
+                (version == b"HTTP/1.1")
+                and (self.responseHeaders.getRawHeaders(b"content-length") is None)
+                and self.method != b"HEAD"
+                and self.code not in NO_BODY_CODES
+            ):
+                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader(b'last-modified'):
+                if self.responseHeaders.hasHeader(b"last-modified"):
                     self._log.info(
                         "Warning: last-modified specified both in"
                         " header list and lastModified attribute."
                     )
                 else:
                     self.responseHeaders.setRawHeaders(
-                        b'last-modified',
-                        [datetimeToString(self.lastModified)])
+                        b"last-modified", [datetimeToString(self.lastModified)]
+                    )
 
             if self.etag is not None:
-                self.responseHeaders.setRawHeaders(b'ETag', [self.etag])
+                self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
-            for name, values in self.responseHeaders.getAllRawHeaders():
-                for value in values:
-                    headers.append((name, value))
+            if self.cookies:
+                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
-            for cookie in self.cookies:
-                headers.append((b'Set-Cookie', cookie))
-
-            self.channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -1134,9 +1249,19 @@ class Request:
             else:
                 self.channel.write(data)
 
-    def addCookie(self, k, v, expires=None, domain=None, path=None,
-                  max_age=None, comment=None, secure=None, httpOnly=False,
-                  sameSite=None):
+    def addCookie(
+        self,
+        k,
+        v,
+        expires=None,
+        domain=None,
+        path=None,
+        max_age=None,
+        comment=None,
+        secure=None,
+        httpOnly=False,
+        sameSite=None,
+    ):
         """
         Set an outgoing HTTP cookie.
 
@@ -1145,26 +1270,26 @@ class Request:
         L{twisted.web.server.Session} class for details.
 
         @param k: cookie name
-        @type k: L{bytes} or L{unicode}
+        @type k: L{bytes} or L{str}
 
         @param v: cookie value
-        @type v: L{bytes} or L{unicode}
+        @type v: L{bytes} or L{str}
 
         @param expires: cookie expire attribute value in
             "Wdy, DD Mon YYYY HH:MM:SS GMT" format
-        @type expires: L{bytes} or L{unicode}
+        @type expires: L{bytes} or L{str}
 
         @param domain: cookie domain
-        @type domain: L{bytes} or L{unicode}
+        @type domain: L{bytes} or L{str}
 
         @param path: cookie path
-        @type path: L{bytes} or L{unicode}
+        @type path: L{bytes} or L{str}
 
         @param max_age: cookie expiration in seconds from reception
-        @type max_age: L{bytes} or L{unicode}
+        @type max_age: L{bytes} or L{str}
 
         @param comment: cookie comment
-        @type comment: L{bytes} or L{unicode}
+        @type comment: L{bytes} or L{str}
 
         @param secure: direct browser to send the cookie on encrypted
             connections only
@@ -1178,18 +1303,17 @@ class Request:
             Direct browsers not to send this cookie on cross-origin requests.
             Please see:
             U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
-        @type sameSite: L{None}, L{bytes} or L{unicode}
+        @type sameSite: L{None}, L{bytes} or L{str}
 
-        @raises: L{DeprecationWarning} if an argument is not L{bytes} or
-            L{unicode}.
-            L{ValueError} if the value for C{sameSite} is not supported.
+        @raise ValueError: If the value for C{sameSite} is not supported.
         """
+
         def _ensureBytes(val):
             """
             Ensure that C{val} is bytes, encoding using UTF-8 if
             needed.
 
-            @param val: L{bytes} or L{unicode}
+            @param val: L{bytes} or L{str}
 
             @return: L{bytes}
             """
@@ -1200,23 +1324,19 @@ class Request:
             if isinstance(val, bytes):
                 return val
             else:
-                return val.encode('utf8')
-
+                return val.encode("utf8")
 
         def _sanitize(val):
-            """
+            r"""
             Replace linear whitespace (C{\r}, C{\n}, C{\r\n}) and
             semicolons C{;} in C{val} with a single space.
 
             @param val: L{bytes}
             @return: L{bytes}
             """
-            return _sanitizeLinearWhitespace(val).replace(b';', b' ')
+            return _sanitizeLinearWhitespace(val).replace(b";", b" ")
 
-        cookie = (
-            _sanitize(_ensureBytes(k)) +
-            b"=" +
-            _sanitize(_ensureBytes(v)))
+        cookie = _sanitize(_ensureBytes(k)) + b"=" + _sanitize(_ensureBytes(v))
         if expires is not None:
             cookie = cookie + b"; Expires=" + _sanitize(_ensureBytes(expires))
         if domain is not None:
@@ -1234,52 +1354,52 @@ class Request:
         if sameSite:
             sameSite = _ensureBytes(sameSite).lower()
             if sameSite not in [b"lax", b"strict"]:
-                raise ValueError(
-                    "Invalid value for sameSite: " + repr(sameSite))
+                raise ValueError("Invalid value for sameSite: " + repr(sameSite))
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code, message=None):
+    def setResponseCode(self, code: int, message: Optional[bytes] = None) -> None:
         """
         Set the HTTP response code.
 
-        @type code: C{int}
-        @type message: C{bytes}
+        @type code: L{int}
+        @type message: L{bytes}
         """
-        if not isinstance(code, _intTypes):
-            raise TypeError("HTTP response code must be int or long")
         self.code = code
-        if message:
-            if not isinstance(message, bytes):
-                raise TypeError("HTTP response status message must be bytes")
+        if message is not None:
             self.code_message = message
         else:
             self.code_message = RESPONSES.get(code, b"Unknown Status")
-
 
     def setHeader(self, name, value):
         """
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type name: C{bytes}
+        @type name: L{bytes} or L{str}
         @param name: The name of the header for which to set the value.
 
-        @type value: C{bytes}
-        @param value: The value to set for the named header.
+        @type value: L{bytes} or L{str}
+        @param value: The value to set for the named header. A L{str} will be
+            UTF-8 encoded, which may not interoperable with other
+            implementations. Avoid passing non-ASCII characters if possible.
         """
         self.responseHeaders.setRawHeaders(name, [value])
-
 
     def redirect(self, url):
         """
         Utility function that does a redirect.
 
-        The request should have finish() called after this.
+        Set the response code to L{FOUND} and the I{Location} header to the
+        given URL.
+
+        The request should have C{finish()} called after this.
+
+        @param url: I{Location} header value.
+        @type url: L{bytes} or L{str}
         """
         self.setResponseCode(FOUND)
         self.setHeader(b"location", url)
-
 
     def setLastModified(self, when):
         """
@@ -1295,7 +1415,7 @@ class Request:
         @param when: The last time the resource being returned was
             modified, in seconds since the epoch.
         @type when: number
-        @return: If I am a C{If-Modified-Since} conditional request and
+        @return: If I am a I{If-Modified-Since} conditional request and
             the time given is not newer than the condition, I return
             L{http.CACHED<CACHED>} to indicate that you should write no
             body.  Otherwise, I return a false value.
@@ -1306,9 +1426,9 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modifiedSince = self.getHeader(b'if-modified-since')
+        modifiedSince = self.getHeader(b"if-modified-since")
         if modifiedSince:
-            firstPart = modifiedSince.split(b';', 1)[0]
+            firstPart = modifiedSince.split(b";", 1)[0]
             try:
                 modifiedSince = stringToDatetime(firstPart)
             except ValueError:
@@ -1343,13 +1463,13 @@ class Request:
         tags = self.getHeader(b"if-none-match")
         if tags:
             tags = tags.split()
-            if (etag in tags) or (b'*' in tags):
-                self.setResponseCode(((self.method in (b"HEAD", b"GET"))
-                                      and NOT_MODIFIED)
-                                     or PRECONDITION_FAILED)
+            if (etag in tags) or (b"*" in tags):
+                self.setResponseCode(
+                    ((self.method in (b"HEAD", b"GET")) and NOT_MODIFIED)
+                    or PRECONDITION_FAILED
+                )
                 return CACHED
         return None
-
 
     def getAllHeaders(self):
         """
@@ -1364,24 +1484,22 @@ class Request:
             headers[k.lower()] = v[-1]
         return headers
 
-
     def getRequestHostname(self):
         """
-        Get the hostname that the user passed in to the request.
+        Get the hostname that the HTTP client passed in to the request.
 
-        This will either use the Host: header (if it is available) or the
-        host we are listening on if the header is unavailable.
+        @see: L{IRequest.getRequestHostname}
 
         @returns: the requested hostname
+
         @rtype: C{bytes}
         """
-        # XXX This method probably has no unit tests.  I changed it a ton and
-        # nothing failed.
-        host = self.getHeader(b'host')
-        if host:
-            return host.split(b':', 1)[0]
+        host = self.getHeader(b"host")
+        if host is not None:
+            match = _hostHeaderExpression.match(host)
+            if match is not None:
+                return match.group("host")
         return networkString(self.getHost().host)
-
 
     def getHost(self):
         """
@@ -1415,7 +1533,7 @@ class Request:
         @param ssl: A flag which, if C{True}, indicates that the request is
             considered secure (if C{True}, L{isSecure} will return C{True}).
         """
-        self._forceSSL = ssl # set first so isSecure will work
+        self._forceSSL = ssl  # set first so isSecure will work
         if self.isSecure():
             default = 443
         else:
@@ -1423,11 +1541,11 @@ class Request:
         if port == default:
             hostHeader = host
         else:
-            hostHeader = host + b":" + intToBytes(port)
+            hostHeader = b"%b:%d" % (host, port)
         self.requestHeaders.setRawHeaders(b"host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
-
+    @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self):
         """
         Return the IP address of the client who submitted this request.
@@ -1441,7 +1559,6 @@ class Request:
             return self.client.host
         else:
             return None
-
 
     def getClientAddress(self):
         """
@@ -1459,7 +1576,6 @@ class Request:
         """
         return self.client
 
-
     def isSecure(self):
         """
         Return L{True} if this request is using a secure transport.
@@ -1476,30 +1592,28 @@ class Request:
         """
         if self._forceSSL:
             return True
-        channel = getattr(self, 'channel', None)
+        channel = getattr(self, "channel", None)
         if channel is None:
             return False
         return channel.isSecure()
-
 
     def _authorize(self):
         # Authorization, (mostly) per the RFC
         try:
             authh = self.getHeader(b"Authorization")
             if not authh:
-                self.user = self.password = ''
+                self.user = self.password = b""
                 return
             bas, upw = authh.split()
             if bas.lower() != b"basic":
                 raise ValueError()
-            upw = base64.decodestring(upw)
-            self.user, self.password = upw.split(b':', 1)
+            upw = base64.b64decode(upw)
+            self.user, self.password = upw.split(b":", 1)
         except (binascii.Error, ValueError):
-            self.user = self.password = ""
-        except:
-            self._log.failure('')
-            self.user = self.password = ""
-
+            self.user = self.password = b""
+        except BaseException:
+            self._log.failure("")
+            self.user = self.password = b""
 
     def getUser(self):
         """
@@ -1512,11 +1626,10 @@ class Request:
         """
         try:
             return self.user
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.user
-
 
     def getPassword(self):
         """
@@ -1529,11 +1642,10 @@ class Request:
         """
         try:
             return self.password
-        except:
+        except BaseException:
             pass
         self._authorize()
         return self.password
-
 
     def connectionLost(self, reason):
         """
@@ -1548,15 +1660,14 @@ class Request:
             d.errback(reason)
         self.notifications = []
 
-
     def loseConnection(self):
         """
         Pass the loseConnection through to the underlying channel.
         """
-        self.channel.loseConnection()
+        if self.channel is not None:
+            self.channel.loseConnection()
 
-
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """
         Determines if two requests are the same object.
 
@@ -1576,28 +1687,6 @@ class Request:
             return self is other
         return NotImplemented
 
-
-    def __ne__(self, other):
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        @rtype: L{bool}
-        """
-        # When other is not an instance of request, return
-        # NotImplemented so that Python uses other.__ne__ to perform
-        # the comparison.  This ensures that a Request proxy generated
-        # by proxyForInterface can compare equal to an actual Request
-        # instance by turning request != proxy into proxy != request.
-        if isinstance(other, Request):
-            return self is not other
-        return NotImplemented
-
-
     def __hash__(self):
         """
         A C{Request} is hashable so that it can be used as a mapping key.
@@ -1605,16 +1694,6 @@ class Request:
         @return: A C{int} based on the instance's identity.
         """
         return id(self)
-
-
-
-Request.getClientIP = deprecated(
-    Version('Twisted', 18, 4, 0),
-    replacement="getClientAddress",
-)(Request.getClientIP)
-
-Request.noLongerQueued = deprecated(
-    Version("Twisted", 16, 3, 0))(Request.noLongerQueued)
 
 
 class _DataLoss(Exception):
@@ -1625,7 +1704,6 @@ class _DataLoss(Exception):
     specifically; any unexpected exception should be treated as having
     caused data loss.
     """
-
 
 
 class PotentialDataLoss(Exception):
@@ -1640,18 +1718,16 @@ class PotentialDataLoss(Exception):
     """
 
 
-
 class _MalformedChunkedDataError(Exception):
     """
-    C{_ChunkedTranferDecoder} raises L{_MalformedChunkedDataError} from its
+    C{_ChunkedTransferDecoder} raises L{_MalformedChunkedDataError} from its
     C{dataReceived} method when it encounters malformed data. This exception
     indicates a client-side error. If this exception is raised, the connection
     should be dropped with a 400 error.
     """
 
 
-
-class _IdentityTransferDecoder(object):
+class _IdentityTransferDecoder:
     """
     Protocol for accumulating bytes up to a specified length.  This handles the
     case where no I{Transfer-Encoding} is specified.
@@ -1667,11 +1743,11 @@ class _IdentityTransferDecoder(object):
         which were delivered to this protocol which came after the terminal
         chunk.
     """
+
     def __init__(self, contentLength, dataCallback, finishCallback):
         self.contentLength = contentLength
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
-
 
     def dataReceived(self, data):
         """
@@ -1684,7 +1760,8 @@ class _IdentityTransferDecoder(object):
         """
         if self.dataCallback is None:
             raise RuntimeError(
-                "_IdentityTransferDecoder cannot decode data after finishing")
+                "_IdentityTransferDecoder cannot decode data after finishing"
+            )
 
         if self.contentLength is None:
             self.dataCallback(data)
@@ -1704,7 +1781,6 @@ class _IdentityTransferDecoder(object):
             dataCallback(data[:contentLength])
             finishCallback(data[contentLength:])
 
-
     def noMoreData(self):
         """
         All data which will be delivered to this decoder has been.  Check to
@@ -1719,17 +1795,59 @@ class _IdentityTransferDecoder(object):
         finishCallback = self.finishCallback
         self.dataCallback = self.finishCallback = None
         if self.contentLength is None:
-            finishCallback(b'')
+            finishCallback(b"")
             raise PotentialDataLoss()
         elif self.contentLength != 0:
             raise _DataLoss()
 
 
+maxChunkSizeLineLength = 1024
 
-class _ChunkedTransferDecoder(object):
+_chunkExtChars = (
+    b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
+    b"abcdefghijklmnopqrstuvwxyz{|}~"
+    b"\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
+    b"\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
+    b"\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
+    b"\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
+    b"\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
+    b"\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
+    b"\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
+    b"\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
+)
+"""
+Characters that are valid in a chunk extension.
+
+See RFC 7230 section 4.1.1::
+
+     chunk-ext      = *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+
+     chunk-ext-name = token
+     chunk-ext-val  = token / quoted-string
+
+And section 3.2.6::
+
+     token          = 1*tchar
+
+     tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                    / DIGIT / ALPHA
+                    ; any VCHAR, except delimiters
+
+     quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
+     qdtext         = HTAB / SP /%x21 / %x23-5B / %x5D-7E / obs-text
+     obs-text       = %x80-FF
+
+We don't check if chunk extensions are well-formed beyond validating that they
+don't contain characters outside this range.
+"""
+
+
+class _ChunkedTransferDecoder:
     """
-    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 2616,
-    section 3.6.1.  This protocol can interpret the contents of a request or
+    Protocol for decoding I{chunked} Transfer-Encoding, as defined by RFC 7230,
+    section 4.1.  This protocol can interpret the contents of a request or
     response body which uses the I{chunked} Transfer-Encoding.  It cannot
     interpret any of the rest of the HTTP protocol.
 
@@ -1745,7 +1863,7 @@ class _ChunkedTransferDecoder(object):
     noticed. -exarkun
 
     @ivar dataCallback: A one-argument callable which will be invoked each
-        time application data is received.
+        time application data is received. This callback is not reentrant.
 
     @ivar finishCallback: A one-argument callable which will be invoked when
         the terminal chunk is received.  It will be invoked with all bytes
@@ -1763,101 +1881,213 @@ class _ChunkedTransferDecoder(object):
         read. For C{'BODY'}, the contents of a chunk are being read. For
         C{'FINISHED'}, the last chunk has been completely read and no more
         input is valid.
-    """
-    state = 'CHUNK_LENGTH'
 
-    def __init__(self, dataCallback, finishCallback):
+    @ivar _buffer: Accumulated received data for the current state. At each
+        state transition this is truncated at the front so that index 0 is
+        where the next state shall begin.
+
+    @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
+        tracks the index into the buffer at which search for CRLF should resume.
+        Resuming the search at this position avoids doing quadratic work if the
+        chunk length line arrives over many calls to C{dataReceived}.
+
+    @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
+        See https://github.com/twisted/twisted/issues/12014
+
+    @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
+        response.
+    @type _maxTrailerHeadersSize: C{int}
+
+    @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
+    @type _receivedTrailerHeadersSize: C{int}
+    """
+
+    state = "CHUNK_LENGTH"
+
+    def __init__(
+        self,
+        dataCallback: Callable[[bytes], None],
+        finishCallback: Callable[[bytes], None],
+    ) -> None:
         self.dataCallback = dataCallback
         self.finishCallback = finishCallback
-        self._buffer = b''
+        self._buffer = bytearray()
+        self._start = 0
+        self._trailerHeaders: List[bytearray] = []
+        self._maxTrailerHeadersSize = 2**16
+        self._receivedTrailerHeadersSize = 0
 
+    def _dataReceived_CHUNK_LENGTH(self) -> bool:
+        """
+        Read the chunk size line, ignoring any extensions.
 
-    def _dataReceived_CHUNK_LENGTH(self, data):
-        if b'\r\n' in data:
-            line, rest = data.split(b'\r\n', 1)
-            parts = line.split(b';')
-            try:
-                self.length = int(parts[0], 16)
-            except ValueError:
-                raise _MalformedChunkedDataError(
-                    "Chunk-size must be an integer.")
-            if self.length == 0:
-                self.state = 'TRAILER'
-            else:
-                self.state = 'BODY'
-            return rest
+        @returns: C{True} once the line has been read and removed from
+            C{self._buffer}.  C{False} when more data is required.
+
+        @raises _MalformedChunkedDataError: when the chunk size cannot be
+            decoded or the length of the line exceeds L{maxChunkSizeLineLength}.
+        """
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex >= maxChunkSizeLineLength or (
+            eolIndex == -1 and len(self._buffer) > maxChunkSizeLineLength
+        ):
+            raise _MalformedChunkedDataError(
+                "Chunk size line exceeds maximum of {} bytes.".format(
+                    maxChunkSizeLineLength
+                )
+            )
+
+        if eolIndex == -1:
+            # Restart the search upon receipt of more data at the start of the
+            # new data, minus one in case the last character of the buffer is
+            # CR.
+            self._start = len(self._buffer) - 1
+            return False
+
+        endOfLengthIndex = self._buffer.find(b";", 0, eolIndex)
+        if endOfLengthIndex == -1:
+            endOfLengthIndex = eolIndex
+        rawLength = self._buffer[0:endOfLengthIndex]
+        try:
+            length = _hexint(rawLength)
+        except ValueError:
+            raise _MalformedChunkedDataError("Chunk-size must be an integer.")
+
+        ext = self._buffer[endOfLengthIndex + 1 : eolIndex]
+        if ext and ext.translate(None, _chunkExtChars) != b"":
+            raise _MalformedChunkedDataError(
+                f"Invalid characters in chunk extensions: {ext!r}."
+            )
+
+        if length == 0:
+            self.state = "TRAILER"
         else:
-            self._buffer = data
-            return b''
+            self.state = "BODY"
 
+        self.length = length
+        del self._buffer[0 : eolIndex + 2]
+        self._start = 0
+        return True
 
-    def _dataReceived_CRLF(self, data):
-        if data.startswith(b'\r\n'):
-            self.state = 'CHUNK_LENGTH'
-            return data[2:]
-        else:
-            self._buffer = data
-            return b''
+    def _dataReceived_CRLF(self) -> bool:
+        """
+        Await the carriage return and line feed characters that are the end of
+        chunk marker that follow the chunk data.
 
+        @returns: C{True} when the CRLF have been read, otherwise C{False}.
 
-    def _dataReceived_TRAILER(self, data):
-        if data.startswith(b'\r\n'):
-            data = data[2:]
-            self.state = 'FINISHED'
-            self.finishCallback(data)
-        else:
-            self._buffer = data
-        return b''
+        @raises _MalformedChunkedDataError: when anything other than CRLF are
+            received.
+        """
+        if len(self._buffer) < 2:
+            return False
 
+        if not self._buffer.startswith(b"\r\n"):
+            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
 
-    def _dataReceived_BODY(self, data):
-        if len(data) >= self.length:
-            chunk, data = data[:self.length], data[self.length:]
+        self.state = "CHUNK_LENGTH"
+        del self._buffer[0:2]
+        return True
+
+    def _dataReceived_TRAILER(self) -> bool:
+        """
+        Collect trailer headers if received and finish at the terminal zero-length
+        chunk. Then invoke C{finishCallback} and switch to state C{'FINISHED'}.
+
+        @returns: C{False}, as there is either insufficient data to continue,
+            or no data remains.
+        """
+        if (
+            self._receivedTrailerHeadersSize + len(self._buffer)
+            > self._maxTrailerHeadersSize
+        ):
+            raise _MalformedChunkedDataError("Trailer headers data is too long.")
+
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex == -1:
+            # Still no end of network line marker found.
+            # Continue processing more data.
+            return False
+
+        if eolIndex > 0:
+            # A trailer header was detected.
+            self._trailerHeaders.append(self._buffer[0:eolIndex])
+            del self._buffer[0 : eolIndex + 2]
+            self._start = 0
+            self._receivedTrailerHeadersSize += eolIndex + 2
+            return True
+
+        # eolIndex in this part of code is equal to 0
+
+        data = memoryview(self._buffer)[2:].tobytes()
+
+        del self._buffer[:]
+        self.state = "FINISHED"
+        self.finishCallback(data)
+        return False
+
+    def _dataReceived_BODY(self) -> bool:
+        """
+        Deliver any available chunk data to the C{dataCallback}. When all the
+        remaining data for the chunk arrives, switch to state C{'CRLF'}.
+
+        @returns: C{True} to continue processing of any buffered data.
+        """
+        if len(self._buffer) >= self.length:
+            chunk = memoryview(self._buffer)[: self.length].tobytes()
+            del self._buffer[: self.length]
+            self.state = "CRLF"
             self.dataCallback(chunk)
-            self.state = 'CRLF'
-            return data
-        elif len(data) < self.length:
-            self.length -= len(data)
-            self.dataCallback(data)
-            return b''
+        else:
+            chunk = bytes(self._buffer)
+            self.length -= len(chunk)
+            del self._buffer[:]
+            self.dataCallback(chunk)
+        return True
 
-
-    def _dataReceived_FINISHED(self, data):
+    def _dataReceived_FINISHED(self) -> bool:
+        """
+        Once C{finishCallback} has been invoked receipt of additional data
+        raises L{RuntimeError} because it represents a programming error in
+        the caller.
+        """
         raise RuntimeError(
             "_ChunkedTransferDecoder.dataReceived called after last "
-            "chunk was processed")
+            "chunk was processed"
+        )
 
-
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Interpret data from a request or response body which uses the
         I{chunked} Transfer-Encoding.
         """
-        data = self._buffer + data
-        self._buffer = b''
-        while data:
-            data = getattr(self, '_dataReceived_%s' % (self.state,))(data)
+        self._buffer += data
+        goOn = True
+        while goOn and self._buffer:
+            goOn = getattr(self, "_dataReceived_" + self.state)()
 
-
-    def noMoreData(self):
+    def noMoreData(self) -> None:
         """
         Verify that all data has been received.  If it has not been, raise
         L{_DataLoss}.
         """
-        if self.state != 'FINISHED':
+        if self.state != "FINISHED":
             raise _DataLoss(
                 "Chunked decoder in %r state, still expecting more data to "
-                "get to 'FINISHED' state." % (self.state,))
-
+                "get to 'FINISHED' state." % (self.state,)
+            )
 
 
 @implementer(interfaces.IPushProducer)
-class _NoPushProducer(object):
+class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
     possibility that a L{HTTPChannel} transport does not provide
     L{IPushProducer}.
     """
+
     def pauseProducing(self):
         """
         Pause producing data.
@@ -1865,8 +2095,6 @@ class _NoPushProducer(object):
         Tells a producer that it has produced too much data to process for
         the time being, and to stop until resumeProducing() is called.
         """
-        pass
-
 
     def resumeProducing(self):
         """
@@ -1875,8 +2103,6 @@ class _NoPushProducer(object):
         This tells a producer to re-add itself to the main loop and produce
         more data for its consumer.
         """
-        pass
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -1885,20 +2111,19 @@ class _NoPushProducer(object):
         @param producer: The producer to register.
         @param streaming: Whether this is a streaming producer or not.
         """
-        pass
-
 
     def unregisterProducer(self):
         """
         Stop consuming data from a producer, without disconnecting.
         """
-        pass
+
+    def stopProducing(self):
+        """
+        IProducer.stopProducing
+        """
 
 
-
-@implementer(interfaces.ITransport,
-             interfaces.IPushProducer,
-             interfaces.IConsumer)
+@implementer(interfaces.ITransport, interfaces.IPushProducer, interfaces.IConsumer)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     """
     A receiver for HTTP requests.
@@ -2010,7 +2235,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     length = 0
     persistent = 1
-    __header = ''
+    __header = b""
     __first_line = 1
     __content = None
 
@@ -2034,7 +2259,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._dataBuffer = []
         self._transferDecoder = None
 
-
     def connectionMade(self):
         self.setTimeout(self.timeOut)
         self._networkProducer = interfaces.IPushProducer(
@@ -2042,16 +2266,17 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         self._networkProducer.registerProducer(self, True)
 
+    def dataReceived(self, data):
+        self.resetTimeout()
+        basic.LineReceiver.dataReceived(self, data)
 
     def lineReceived(self, line):
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        self.resetTimeout()
-
         self._receivedHeaderSize += len(line)
-        if (self._receivedHeaderSize > self.totalHeadersSize):
+        if self._receivedHeaderSize > self.totalHeadersSize:
             self._respondToBadRequestAndDisconnect()
             return
 
@@ -2091,7 +2316,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._command = command
             self._path = request
             self._version = version
-        elif line == b'':
+        elif line == b"":
             # End of headers.
             if self.__header:
                 ok = self.headerReceived(self.__header)
@@ -2099,15 +2324,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # with processing. We'll have sent a 400 anyway, so just stop.
                 if not ok:
                     return
-            self.__header = ''
+            self.__header = b""
             self.allHeadersReceived()
             if self.length == 0:
                 self.allContentReceived()
             else:
                 self.setRawMode()
-        elif line[0] in b' \t':
+        elif line[0] in b" \t":
             # Continuation of a multi line header.
-            self.__header = self.__header + '\n' + line
+            self.__header += b" " + line.lstrip(b" \t")
         # Regular header line.
         # Processing of header line is delayed to allow accumulating multi
         # line headers.
@@ -2116,11 +2341,56 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.headerReceived(self.__header)
             self.__header = line
 
-
     def _finishRequestBody(self, data):
         self.allContentReceived()
         self._dataBuffer.append(data)
 
+    def _maybeChooseTransferDecoder(self, header, data):
+        """
+        If the provided header is C{content-length} or
+        C{transfer-encoding}, choose the appropriate decoder if any.
+
+        Returns L{True} if the request can proceed and L{False} if not.
+        """
+
+        def fail():
+            self._respondToBadRequestAndDisconnect()
+            self.length = None
+            return False
+
+        # Can this header determine the length?
+        if header == b"content-length":
+            if not data.isdigit():
+                return fail()
+            try:
+                length = int(data)
+            except ValueError:
+                return fail()
+            newTransferDecoder = _IdentityTransferDecoder(
+                length, self.requests[-1].handleContentChunk, self._finishRequestBody
+            )
+        elif header == b"transfer-encoding":
+            # XXX Rather poorly tested code block, apparently only exercised by
+            # test_chunkedEncoding
+            if data.lower() == b"chunked":
+                length = None
+                newTransferDecoder = _ChunkedTransferDecoder(
+                    self.requests[-1].handleContentChunk, self._finishRequestBody
+                )
+            elif data.lower() == b"identity":
+                return True
+            else:
+                return fail()
+        else:
+            # It's not a length related header, so exit
+            return True
+
+        if self._transferDecoder is not None:
+            return fail()
+        else:
+            self.length = length
+            self._transferDecoder = newTransferDecoder
+            return True
 
     def headerReceived(self, line):
         """
@@ -2135,34 +2405,22 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @rtype: L{bool}
         """
         try:
-            header, data = line.split(b':', 1)
+            header, data = line.split(b":", 1)
         except ValueError:
             self._respondToBadRequestAndDisconnect()
             return False
 
+        if not header or header[-1:].isspace():
+            self._respondToBadRequestAndDisconnect()
+            return False
+
         header = header.lower()
-        data = data.strip()
-        if header == b'content-length':
-            try:
-                self.length = int(data)
-            except ValueError:
-                self._respondToBadRequestAndDisconnect()
-                self.length = None
-                return False
-            self._transferDecoder = _IdentityTransferDecoder(
-                self.length, self.requests[-1].handleContentChunk, self._finishRequestBody)
-        elif header == b'transfer-encoding' and data.lower() == b'chunked':
-            # XXX Rather poorly tested code block, apparently only exercised by
-            # test_chunkedEncoding
-            self.length = None
-            self._transferDecoder = _ChunkedTransferDecoder(
-                self.requests[-1].handleContentChunk, self._finishRequestBody)
-        reqHeaders = self.requests[-1].requestHeaders
-        values = reqHeaders.getRawHeaders(header)
-        if values is not None:
-            values.append(data)
-        else:
-            reqHeaders.setRawHeaders(header, [data])
+        data = data.strip(b" \t")
+
+        if not self._maybeChooseTransferDecoder(header, data):
+            return False
+
+        self.requests[-1].requestHeaders.addRawHeader(header, data)
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
@@ -2170,7 +2428,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         return True
-
 
     def allContentReceived(self):
         command = self._command
@@ -2192,39 +2449,54 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         self._handlingRequest = True
 
+        # We go into raw mode here even though we will be receiving lines next
+        # in the protocol; however, this data will be buffered and then passed
+        # back to line mode in the setLineMode call in requestDone.
+        self.setRawMode()
+
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
+    def rawDataReceived(self, data: bytes) -> None:
+        """
+        This is called when this HTTP/1.1 parser is in raw mode rather than
+        line mode.
 
-    def dataReceived(self, data):
+        It may be in raw mode for one of two reasons:
+
+            1. All the headers of a request have been received and this
+               L{HTTPChannel} is currently receiving its body.
+
+            2. The full content of a request has been received and is currently
+               being processed asynchronously, and this L{HTTPChannel} is
+               buffering the data of all subsequent requests to be parsed
+               later.
+
+        In the second state, the data will be played back later.
+
+        @note: This isn't really a public API, and should be invoked only by
+            L{LineReceiver}'s line parsing logic.  If you wish to drive an
+            L{HTTPChannel} from a custom data source, call C{dataReceived} on
+            it directly.
+
+        @see: L{LineReceive.rawDataReceived}
         """
-        Data was received from the network.  Process it.
-        """
-        # If we're currently handling a request, buffer this data.
         if self._handlingRequest:
             self._dataBuffer.append(data)
             if (
-                    (sum(map(len, self._dataBuffer)) >
-                     self._optimisticEagerReadSize)
-                    and not self._waitingForTransport
-            ):
+                sum(map(len, self._dataBuffer)) > self._optimisticEagerReadSize
+            ) and not self._waitingForTransport:
                 # If we received more data than a small limit while processing
                 # the head-of-line request, apply TCP backpressure to our peer
                 # to get them to stop sending more request data until we're
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-        return basic.LineReceiver.dataReceived(self, data)
-
-
-    def rawDataReceived(self, data):
-        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
             self._respondToBadRequestAndDisconnect()
-
 
     def allHeadersReceived(self):
         req = self.requests[-1]
@@ -2233,11 +2505,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.gotLength(self.length)
         # Handle 'Expect: 100-continue' with automated 100 response code,
         # a simplistic implementation of RFC 2686 8.2.3:
-        expectContinue = req.requestHeaders.getRawHeaders(b'expect')
-        if (expectContinue and expectContinue[0].lower() == b'100-continue' and
-            self._version == b'HTTP/1.1'):
+        expectContinue = req.requestHeaders.getRawHeaders(b"expect")
+        if (
+            expectContinue
+            and expectContinue[0].lower() == b"100-continue"
+            and self._version == b"HTTP/1.1"
+        ):
             self._send100Continue()
-
 
     def checkPersistence(self, request, version):
         """
@@ -2256,9 +2530,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             must be closed in order to indicate the completion of the response
             to C{request}.
         """
-        connection = request.requestHeaders.getRawHeaders(b'connection')
+        connection = request.requestHeaders.getRawHeaders(b"connection")
         if connection:
-            tokens = [t.lower() for t in connection[0].split(b' ')]
+            tokens = [t.lower() for t in connection[0].split(b" ")]
         else:
             tokens = []
 
@@ -2274,20 +2548,20 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         # This may not be worth the effort, though.  Just use HTTP 1.1, okay?
 
         if version == b"HTTP/1.1":
-            if b'close' in tokens:
-                request.responseHeaders.setRawHeaders(b'connection', [b'close'])
+            if b"close" in tokens:
+                request.responseHeaders.setRawHeaders(b"connection", [b"close"])
                 return False
             else:
                 return True
         else:
             return False
 
-
     def requestDone(self, request):
         """
         Called by first request in queue when it is done.
         """
-        if request != self.requests[0]: raise TypeError
+        if request != self.requests[0]:
+            raise TypeError
         del self.requests[0]
 
         # We should only resume the producer if we're not waiting for the
@@ -2302,25 +2576,20 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self.setTimeout(self._savedTimeOut)
 
             # Receive our buffered data, if any.
-            data = b''.join(self._dataBuffer)
+            data = b"".join(self._dataBuffer)
             self._dataBuffer = []
             self.setLineMode(data)
         else:
             self.loseConnection()
 
-
     def timeoutConnection(self):
-        self._log.info(
-            "Timing out client: {peer}",
-            peer=str(self.transport.getPeer())
-        )
+        self._log.info("Timing out client: {peer}", peer=str(self.transport.getPeer()))
         if self.abortTimeout is not None:
             # We use self.callLater because that's what TimeoutMixin does.
             self._abortingCall = self.callLater(
                 self.abortTimeout, self.forceAbortClient
             )
         self.loseConnection()
-
 
     def forceAbortClient(self):
         """
@@ -2330,14 +2599,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         to keep connections open.
         """
         self._log.info(
-            "Forcibly timing out client: {peer}",
-            peer=str(self.transport.getPeer())
+            "Forcibly timing out client: {peer}", peer=str(self.transport.getPeer())
         )
         # We want to lose track of the _abortingCall so that no-one tries to
         # cancel it.
         self._abortingCall = None
         self.transport.abortConnection()
-
 
     def connectionLost(self, reason):
         self.setTimeout(None)
@@ -2348,7 +2615,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self._abortingCall is not None:
             self._abortingCall.cancel()
             self._abortingCall = None
-
 
     def isSecure(self):
         """
@@ -2364,10 +2630,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return True
         return False
 
-
     def writeHeaders(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP headers to
+        """Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
 
         @param version: The HTTP version in use.
@@ -2380,22 +2644,27 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type reason: L{bytes}
 
         @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}
-        """
-        sanitizedHeaders = Headers()
-        for name, value in headers:
-            sanitizedHeaders.addRawHeader(name, value)
+        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+            compatibility purposes only) any iterable of two-tuples of
+            L{bytes}, representing header names and header values. The latter
+            option is not actually used by Twisted.
 
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(
-            name + b': ' + value + b"\r\n"
-            for name, values in sanitizedHeaders.getAllRawHeaders()
-            for value in values
-        )
+        """
+        if not isinstance(headers, Headers):
+            # Turn into Headers instance for security reasons, to make sure we
+            # quite and sanitize everything. This variant should be removed
+            # eventually, it's only here for backwards compatibility.
+            sanitizedHeaders = Headers()
+            for name, value in headers:
+                sanitizedHeaders.addRawHeader(name, value)
+            headers = sanitizedHeaders
+
+        headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
+        for name, values in headers.getAllRawHeaders():
+            for value in values:
+                headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
-
 
     def write(self, data):
         """
@@ -2408,18 +2677,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         self.transport.write(data)
 
-
     def writeSequence(self, iovec):
         """
         Write a list of strings to the HTTP response.
 
         @param iovec: A list of byte strings to write to the stream.
-        @type data: L{list} of L{bytes}
+        @type iovec: L{list} of L{bytes}
 
         @return: L{None}
         """
         self.transport.writeSequence(iovec)
-
 
     def getPeer(self):
         """
@@ -2429,7 +2696,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         return self.transport.getPeer()
 
-
     def getHost(self):
         """
         Get the local address of this connection.
@@ -2437,7 +2703,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @return: An L{IAddress} provider.
         """
         return self.transport.getHost()
-
 
     def loseConnection(self):
         """
@@ -2449,7 +2714,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         self._networkProducer.unregisterProducer()
         return self.transport.loseConnection()
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -2481,7 +2745,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self._requestProducer is not None:
             raise RuntimeError(
                 "Cannot register producer %s, because producer %s was never "
-                "unregistered." % (producer, self._requestProducer))
+                "unregistered." % (producer, self._requestProducer)
+            )
 
         if not streaming:
             producer = _PullToPush(producer, self)
@@ -2491,7 +2756,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         if not streaming:
             producer.startStreaming()
-
 
     def unregisterProducer(self):
         """
@@ -2508,7 +2772,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._requestProducer = None
         self._requestProducerStreaming = None
 
-
     def stopProducing(self):
         """
         Stop producing data.
@@ -2520,7 +2783,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         if self._requestProducer is not None:
             self._requestProducer.stopProducing()
-
 
     def pauseProducing(self):
         """
@@ -2557,7 +2819,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._handlingRequest:
             self._networkProducer.pauseProducing()
 
-
     def resumeProducing(self):
         """
         Resume producing data.
@@ -2577,14 +2838,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._handlingRequest:
             self._networkProducer.resumeProducing()
 
-
     def _send100Continue(self):
         """
         Sends a 100 Continue response, used to signal to clients that further
         processing will be performed.
         """
         self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
-
 
     def _respondToBadRequestAndDisconnect(self):
         """
@@ -2593,13 +2852,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         As described by HTTP standard we should be patient and accept the
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
-
-        @param transport: Transport handling connection to the client.
-        @type transport: L{interfaces.ITransport}
         """
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.loseConnection()
-
 
 
 def _escape(s):
@@ -2608,23 +2863,22 @@ def _escape(s):
     quotes were double quotes.
 
     @param s: The string to escape.
-    @type s: L{bytes} or L{unicode}
+    @type s: L{bytes} or L{str}
 
     @return: An escaped string.
-    @rtype: L{unicode}
+    @rtype: L{str}
     """
     if not isinstance(s, bytes):
         s = s.encode("ascii")
 
     r = repr(s)
-    if not isinstance(r, unicode):
+    if not isinstance(r, str):
         r = r.decode("ascii")
-    if r.startswith(u"b"):
+    if r.startswith("b"):
         r = r[1:]
-    if r.startswith(u"'"):
-        return r[1:-1].replace(u'"', u'\\"').replace(u"\\'", u"'")
+    if r.startswith("'"):
+        return r[1:-1].replace('"', '\\"').replace("\\'", "'")
     return r[1:-1]
-
 
 
 @provider(IAccessLogFormatter)
@@ -2635,32 +2889,34 @@ def combinedLogFormatter(timestamp, request):
     @see: L{IAccessLogFormatter}
     """
     clientAddr = request.getClientAddress()
-    if isinstance(clientAddr, (address.IPv4Address, address.IPv6Address,
-                               _XForwardedForAddress)):
+    if isinstance(
+        clientAddr, (address.IPv4Address, address.IPv6Address, _XForwardedForAddress)
+    ):
         ip = clientAddr.host
     else:
-        ip = b'-'
+        ip = b"-"
     referrer = _escape(request.getHeader(b"referer") or b"-")
     agent = _escape(request.getHeader(b"user-agent") or b"-")
     line = (
-        u'"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
-        u'%(code)d %(length)s "%(referrer)s" "%(agent)s"' % dict(
+        '"%(ip)s" - - %(timestamp)s "%(method)s %(uri)s %(protocol)s" '
+        '%(code)d %(length)s "%(referrer)s" "%(agent)s"'
+        % dict(
             ip=_escape(ip),
             timestamp=timestamp,
             method=_escape(request.method),
             uri=_escape(request.uri),
             protocol=_escape(request.clientproto),
             code=request.code,
-            length=request.sentLength or u"-",
+            length=request.sentLength or "-",
             referrer=referrer,
             agent=agent,
-            ))
+        )
+    )
     return line
 
 
-
 @implementer(interfaces.IAddress)
-class _XForwardedForAddress(object):
+class _XForwardedForAddress:
     """
     L{IAddress} which represents the client IP to log for a request, as gleaned
     from an X-Forwarded-For header.
@@ -2670,16 +2926,17 @@ class _XForwardedForAddress(object):
 
     @see: L{proxiedLogFormatter}
     """
+
     def __init__(self, host):
         self.host = host
 
 
-
-class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
+class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: ignore[misc]
     """
     Add a layer on top of another request that only uses the value of an
     X-Forwarded-For header as the result of C{getClientAddress}.
     """
+
     def getClientAddress(self):
         """
         The client address (the first address) in the value of the
@@ -2689,8 +2946,11 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
         @return: L{_XForwardedForAddress} which wraps the client address as
             expected by L{combinedLogFormatter}.
         """
-        host = self._request.requestHeaders.getRawHeaders(
-            b"x-forwarded-for", [b"-"])[0].split(b",")[0].strip()
+        host = (
+            self._request.requestHeaders.getRawHeaders(b"x-forwarded-for", [b"-"])[0]
+            .split(b",")[0]
+            .strip()
+        )
         return _XForwardedForAddress(host)
 
     # These are missing from the interface.  Forward them manually.
@@ -2719,7 +2979,6 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):
         return self._request.sentLength
 
 
-
 @provider(IAccessLogFormatter)
 def proxiedLogFormatter(timestamp, request):
     """
@@ -2732,8 +2991,7 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
+class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
     """
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.
@@ -2765,13 +3023,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
     @ivar _callLater: A value for the C{callLater} callback.
     @type _callLater: L{callable}
     """
+
     _negotiatedProtocol = None
     _requestFactory = Request
     _factory = None
     _site = None
     _timeOut = None
     _callLater = None
-
 
     @property
     def factory(self):
@@ -2780,12 +3038,10 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         """
         return self._channel.factory
 
-
     @factory.setter
     def factory(self, value):
         self._factory = value
         self._channel.factory = value
-
 
     @property
     def requestFactory(self):
@@ -2795,7 +3051,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         Retries the object from the current backing channel.
         """
         return self._channel.requestFactory
-
 
     @requestFactory.setter
     def requestFactory(self, value):
@@ -2811,7 +3066,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._requestFactory = value
         self._channel.requestFactory = value
 
-
     @property
     def site(self):
         """
@@ -2820,7 +3074,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         Returns the site object from the backing channel.
         """
         return self._channel.site
-
 
     @site.setter
     def site(self, value):
@@ -2836,14 +3089,12 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._site = value
         self._channel.site = value
 
-
     @property
     def timeOut(self):
         """
         The idle timeout for the backing channel.
         """
         return self._channel.timeOut
-
 
     @timeOut.setter
     def timeOut(self, value):
@@ -2859,7 +3110,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._timeOut = value
         self._channel.timeOut = value
 
-
     @property
     def callLater(self):
         """
@@ -2867,7 +3117,6 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
         """
         return self._channel.callLater
-
 
     @callLater.setter
     def callLater(self, value):
@@ -2881,30 +3130,31 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
         self._callLater = value
         self._channel.callLater = value
 
-
     def dataReceived(self, data):
         """
         An override of L{IProtocol.dataReceived} that checks what protocol we're
         using.
         """
         if self._negotiatedProtocol is None:
-            try:
-                negotiatedProtocol = self._channel.transport.negotiatedProtocol
-            except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b'http/1.1'
+            negotiatedProtocol = getattr(
+                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+            )
 
             if negotiatedProtocol is None:
-                negotiatedProtocol = b'http/1.1'
+                negotiatedProtocol = b"http/1.1"
 
-            if negotiatedProtocol == b'h2':
+            if negotiatedProtocol == b"h2":
                 if not H2_ENABLED:
                     raise ValueError("Negotiated HTTP/2 without support.")
 
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                self._channel._networkProducer.unregisterProducer()
+                networkProducer = self._channel._networkProducer
+                networkProducer.unregisterProducer()
+
+                # Cancel the old channel's timeout.
+                self._channel.setTimeout(None)
 
                 transport = self._channel.transport
                 self._channel = H2Connection()
@@ -2914,15 +3164,20 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):
                 self._channel.timeOut = self._timeOut
                 self._channel.callLater = self._callLater
                 self._channel.makeConnection(transport)
+
+                # Register the H2Connection as the transport's
+                # producer, so that the transport can apply back
+                # pressure.
+                networkProducer.registerProducer(self._channel, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
-                assert negotiatedProtocol == b'http/1.1', \
-                       "Unsupported protocol negotiated"
+                assert (
+                    negotiatedProtocol == b"http/1.1"
+                ), "Unsupported protocol negotiated"
 
             self._negotiatedProtocol = negotiatedProtocol
 
         return self._channel.dataReceived(data)
-
 
 
 def _genericHTTPChannelProtocolFactory(self):
@@ -2930,7 +3185,6 @@ def _genericHTTPChannelProtocolFactory(self):
     Returns an appropriately initialized _GenericHTTPChannelProtocol.
     """
     return _GenericHTTPChannelProtocol(HTTPChannel())
-
 
 
 class HTTPFactory(protocol.ServerFactory):
@@ -2952,18 +3206,23 @@ class HTTPFactory(protocol.ServerFactory):
         support writing to L{twisted.python.log} which, unfortunately, works
         with native strings.
 
-    @ivar _reactor: An L{IReactorTime} provider used to compute logging
-        timestamps.
+    @ivar reactor: An L{IReactorTime} provider used to manage connection
+        timeouts and compute logging timestamps.
     """
 
-    protocol = _genericHTTPChannelProtocolFactory
+    # We need to ignore the mypy error here, because
+    # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
+    # to a Protocol, instead of a concrete Protocol object, as expected in
+    # the protocol.Factory interface
+    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
 
     timeOut = _REQUEST_TIMEOUT
 
-    def __init__(self, logPath=None, timeout=_REQUEST_TIMEOUT,
-                 logFormatter=None, reactor=None):
+    def __init__(
+        self, logPath=None, timeout=_REQUEST_TIMEOUT, logFormatter=None, reactor=None
+    ):
         """
         @param logPath: File path to which access log messages will be written
             or C{None} to disable logging.
@@ -2978,12 +3237,13 @@ class HTTPFactory(protocol.ServerFactory):
             the access log.  L{combinedLogFormatter} when C{None} is passed.
         @type logFormatter: L{IAccessLogFormatter} provider
 
-        @param reactor: A L{IReactorTime} provider used to manage connection
-            timeouts and compute logging timestamps.
+        @param reactor: An L{IReactorTime} provider used to manage connection
+            timeouts and compute logging timestamps. Defaults to the global
+            reactor.
         """
         if not reactor:
             from twisted.internet import reactor
-        self._reactor = reactor
+        self.reactor = reactor
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -2997,14 +3257,12 @@ class HTTPFactory(protocol.ServerFactory):
         self._logDateTime = None
         self._logDateTimeCall = None
 
-
     def _updateLogDateTime(self):
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
-        self._logDateTime = datetimeToLogString(self._reactor.seconds())
-        self._logDateTimeCall = self._reactor.callLater(1, self._updateLogDateTime)
-
+        self._logDateTime = datetimeToLogString(self.reactor.seconds())
+        self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
     def buildProtocol(self, addr):
         p = protocol.ServerFactory.buildProtocol(self, addr)
@@ -3014,13 +3272,12 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self._reactor.callLater
+        p.callLater = self.reactor.callLater
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
         p.timeOut = self.timeOut
         return p
-
 
     def startFactory(self):
         """
@@ -3034,7 +3291,6 @@ class HTTPFactory(protocol.ServerFactory):
         else:
             self.logFile = log.logfile
 
-
     def stopFactory(self):
         if hasattr(self, "logFile"):
             if self.logFile != log.logfile:
@@ -3045,14 +3301,12 @@ class HTTPFactory(protocol.ServerFactory):
             self._logDateTimeCall.cancel()
             self._logDateTimeCall = None
 
-
     def _openLogFile(self, path):
         """
         Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
         f = open(path, "ab", 1)
         return f
-
 
     def log(self, request):
         """
@@ -3066,5 +3320,5 @@ class HTTPFactory(protocol.ServerFactory):
         except AttributeError:
             pass
         else:
-            line = self._logFormatter(self._logDateTime, request) + u"\n"
-            logFile.write(line.encode('utf8'))
+            line = self._logFormatter(self._logDateTime, request) + "\n"
+            logFile.write(line.encode("utf8"))

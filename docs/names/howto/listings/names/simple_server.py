@@ -14,7 +14,7 @@ def main():
     Run the server.
     """
     factory = server.DNSServerFactory(
-        clients=[client.Resolver(resolv='/etc/resolv.conf')]
+        clients=[client.Resolver(resolv="/etc/resolv.conf")]
     )
 
     protocol = dns.DNSDatagramProtocol(controller=factory)
@@ -25,5 +25,5 @@ def main():
     reactor.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())
