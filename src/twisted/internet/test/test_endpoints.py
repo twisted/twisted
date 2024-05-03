@@ -1353,6 +1353,7 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 factory,
                 listenArgs.get("backlog", 50),
                 listenArgs.get("interface", ""),
+                listenArgs.get("reusePort", False),
             ),
             address,
         )
@@ -1460,7 +1461,13 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
 
         return (
             endpoints.TCP6ServerEndpoint(reactor, address.port, **listenArgs),
-            (address.port, factory, listenArgs.get("backlog", 50), interface),
+            (
+                address.port,
+                factory,
+                listenArgs.get("backlog", 50),
+                interface,
+                listenArgs.get("reusePort", False),
+            ),
             address,
         )
 

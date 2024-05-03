@@ -686,6 +686,31 @@ class IResolver(IResolverSimple):
         """
 
 
+class IReactorTCPReusePort(Interface):
+    def listenTCPReusePort(port, factory, backlog=50, interface=""):
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port,
+        but allowing other sockets to open the same port on the interface.
+
+        @param port: a port number on which to listen
+
+        @param factory: a L{twisted.internet.protocol.ServerFactory} instance
+
+        @param backlog: size of the listen queue
+
+        @param interface: The local IPv4 or IPv6 address to which to bind;
+            defaults to '', ie all IPv4 addresses.  To bind to all IPv4 and IPv6
+            addresses, you must call this method twice.
+
+        @return: an object that provides L{IListeningPort}.
+
+        @raise CannotListenError: as defined here
+                                  L{twisted.internet.error.CannotListenError},
+                                  if it cannot listen on this port (e.g., it
+                                  cannot bind to the required port number)
+        """
+
+
 class IReactorTCP(Interface):
     def listenTCP(
         port: int, factory: "ServerFactory", backlog: int, interface: str
