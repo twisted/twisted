@@ -287,9 +287,11 @@ class _WSGIResponse:
 
         # All keys and values need to be native strings, i.e. of type str in
         # *both* Python 2 and Python 3, so says PEP-3333.
+        remotePeer = request.getClientAddress()
         self.environ = {
             "REQUEST_METHOD": _wsgiString(request.method),
-            "REMOTE_ADDR": _wsgiString(request.getClientAddress().host),
+            "REMOTE_ADDR": _wsgiString(remotePeer.host),
+            "REMOTE_PORT": _wsgiString(str(remotePeer.port)),
             "SCRIPT_NAME": _wsgiString(scriptName),
             "PATH_INFO": _wsgiString(pathInfo),
             "QUERY_STRING": _wsgiString(queryString),
@@ -534,6 +536,9 @@ class WSGIResource:
     """
     An L{IResource} implementation which delegates responsibility for all
     resources hierarchically inferior to it to a WSGI application.
+
+    The C{environ} argument passed to the application, includes the
+    C{REMOTE_PORT} key to complement the C{REMOTE_ADDR} key.
 
     @ivar _reactor: An L{IReactorThreads} provider which will be passed on to
         L{_WSGIResponse} to schedule calls in the I/O thread.
