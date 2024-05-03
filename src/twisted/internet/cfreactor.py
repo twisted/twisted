@@ -92,6 +92,32 @@ class _WakerPlus(_UnixWaker):
         return result
 
 
+def _1hzWakeUp() -> object:
+    def nothing(timer: object, extra: object) -> None:
+        print(f"1hz wakeup {time.time()}")
+
+    flags = 0
+    order = 0
+    interval = 1.0
+
+    timer = CFRunLoopTimerCreate(
+        kCFAllocatorDefault,
+        CFAbsoluteTimeGetCurrent(),
+        interval,
+        flags,
+        order,
+        nothing,
+        None,
+    )
+    loop = CFRunLoopGetCurrent()
+    CFAbsoluteTimeGetCurrent()
+    CFRunLoopAddTimer(loop, timer, kCFRunLoopCommonModes)
+    return timer
+
+
+_1hz = _1hzWakeUp()
+
+
 @implementer(IReactorFDSet)
 class CFReactor(PosixReactorBase):
     """
