@@ -43,7 +43,7 @@ The following optional dependencies are supported:
 * **http2** - packages needed for http2 support.
 * **conch** - packages for working with conch/SSH.
 * **serial** - package to work with serial data.
-* **all-non-platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **all-non-platform** - installs **tls**, **conch**, and **serial** options.
 * **macos-platform** - **all-non-platform** options and dependencies to work with macOS specific APIs.
 * **windows-platform** - **all-non-platform** options and dependencies to work with Windows's specific APIs.
 * **gtk-platform** - **all-non-platform** options and dependencies to work with the GTK API.
