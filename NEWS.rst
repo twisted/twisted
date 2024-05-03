@@ -8,6 +8,191 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 24.3.0 (2024-03-01)
+===========================
+
+This release supports PyPy v7.3.14.
+
+Bugfixes
+--------
+
+- twisted.logger.formatEvent now honors dotted method names, not just flat
+  function names, in format strings, as it has long been explicitly documented to
+  do.  So, you will now get the expected result from `formatEvent("here's the
+  result of calling a method at log-format time: {obj.method()}", obj=...)` (#9347)
+- twisted.web.http.HTTPChannel now ignores the trailer headers provided in the last chunk of a chunked encoded response, rather than raising an exception. (#11997)
+- twisted.protocols.tls.BufferingTLSTransport, used by default by twisted.protocols.tls.TLSMemoryBIOFactory, was refactored for improved performance when doing a high number of small writes. (#12011)
+- twisted.python.failure.Failure now throws exception for generators without triggering a deprecation warnings on Python 3.12. (#12026)
+- twisted.internet.process.Process, used by ``reactor.spawnProcess``, now copies the parent environment when the `env=None` argument is passed on Posix systems and ``os.posix_spawnp`` is used internally. (#12068)
+- twisted.internet.defer.inlineCallbacks.returnValue's stack introspection was adjusted for the latest PyPy 7.3.14 release, allowing legacy @inlineCallbacks to run on new PyPY versions. (#12084)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.reporter.TestRun.startTest() is no longer called for tests
+  with skip annotation or skip attribute for Python 3.12.1 or newer.
+  This is the result of upstream Python gh-106584 change.
+  The behavior is not change in 3.12.0 or older. (#12052)
+
+
+Misc
+----
+
+- #11902, #12018, #12023, #12031, #12032, #12052, #12056, #12067, #12076, #12078, #12087, #12095
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- The documentation for twisted.web.client.CookieAgent no longer references
+  long-deprecated ``cookielib`` and ``urllib2`` standard library modules. (#12044)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.http.Request now parses the `multipart/form-data` using `email.message_from_bytes`.
+  The usage of `cgi.parse_multipart` was removed as the `cgi` module will be removed in Python 3.13. (#11848)
+
+
+Misc
+~~~~
+
+- #12015
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- The documented IRC example was updated for Python3 usage. (#12070)
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
+Twisted 23.10.0 (2023-10-31)
+============================
+
+No changes since 23.10.0.rc1.
+
+
+Features
+--------
+
+- twisted.python.filepath.FilePath and related classes (twisted.python.filepath.IFilepath, twisted.python.filepath.AbstractFilePath, twisted.python.zippath.ZipPath, and twisted.python.zippath.ZipArchive) now have type annotations.  Additionally, FilePath is now generic, describing its mode, so you can annotate variables as FilePath[str] or FilePath[bytes] depending on the types that you wish to get back from the 'path' attribute and related methods like 'basename'. (#11822)
+- When using `CPython`, functions wrapped by `twisted.internet.defer.inlineCallbacks` can have their arguments and return values freed immediately after completion (due to there no longer being circular references). (#11885)
+
+
+Bugfixes
+--------
+
+- Fix TypeError on t.i.cfreactor due to 3.10 type annotation syntax (#11965)
+- Fix the type annotations of DeferredLock.run, DeferredSemaphore.run, maybeDeferred, ensureDeferred, inlineCallbacks and fromCoroutine that used to return Deferred[Any] to return the result of the passed Coroutine/Coroutine function (#11985)
+- Fixed significant performance overhead (CPU and bandwidth) when doing small writes to a TLS transport. Specifically, small writes to a TLS transport are now buffered until the next reactor iteration. (#11989)
+- fix mypy due to hypothesis 6.85 (#11995)
+
+
+Improved Documentation
+----------------------
+
+- The search and version navigation for the documentation hosted on
+  Read The Docs was fixed.
+  This was a regression introduced with 23.8.0. (#12012)
+
+
+Deprecations and Removals
+-------------------------
+
+- Drop support for Python 3.7. Remove twisted[contextvars] extra (contextvars are always available in Python 3.7+) (#11913)
+
+
+Misc
+----
+
+- #5206, #11583, #11787, #11871, #11912, #11921, #11922, #11926, #11932, #11934, #11936, #11938, #11940, #11942, #11945, #11948, #11952, #11953, #11955, #11957, #11959, #11961, #11964, #11973, #11977, #11980, #11982, #11993, #11999, #12004, #12005, #12009
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- In Twisted 16.3.0, we changed twisted.web to stop dispatching HTTP/1.1
+  pipelined requests to application code.  There was a bug in this change which
+  still allowed clients which could send multiple full HTTP requests in a single
+  TCP segment to trigger asynchronous processing of later requests, which could
+  lead to out-of-order responses.  This has now been corrected and twisted.web
+  should never process a pipelined request over HTTP/1.1 until the previous
+  request has fully completed. (CVE-2023-46137, GHSA-cq7q-gv5w-rwx2) (#11976)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.dom.microdom and twisted.web.domhelpers are now deprecated. (#3651)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Misc
+~~~~
+
+- #10115
+
 
 Twisted 23.8.0. (2023-08-28)
 ============================

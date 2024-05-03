@@ -25,15 +25,12 @@ from urllib.parse import quote as _quote
 
 from zope.interface import implementer
 
-from incremental import Version
-
 from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.logger import Logger
 from twisted.python import components, failure, reflect
 from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
@@ -50,23 +47,6 @@ __all__ = [
     "NOT_DONE_YET",
     "GzipEncoderFactory",
 ]
-
-
-# backwards compatibility
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.datetimeToString instead",
-    "twisted.web.server",
-    "date_time_string",
-)
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.stringToDatetime instead",
-    "twisted.web.server",
-    "string_date_time",
-)
-date_time_string = http.datetimeToString
-string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
@@ -101,8 +81,7 @@ class Request(Copyable, http.Request, components.Componentized):
         will be transmitted only over HTTPS.
     """
 
-    defaultContentType = b"text/html"
-
+    defaultContentType: Optional[bytes] = b"text/html"
     site = None
     appRootURL = None
     prepath: Optional[List[bytes]] = None

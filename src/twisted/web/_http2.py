@@ -21,12 +21,12 @@ from typing import List
 
 from zope.interface import implementer
 
-import h2.config  # type: ignore[import]
-import h2.connection  # type: ignore[import]
-import h2.errors  # type: ignore[import]
-import h2.events  # type: ignore[import]
-import h2.exceptions  # type: ignore[import]
-import priority  # type: ignore[import]
+import h2.config
+import h2.connection
+import h2.errors
+import h2.events
+import h2.exceptions
+import priority
 
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
@@ -1073,10 +1073,15 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type headers: Any iterable of two-tuples of L{bytes}, representing header
-            names and header values.
+        @type headers: L{twisted.web.http_headers.Headers}
         """
-        self._conn.writeHeaders(version, code, reason, headers, self.streamID)
+        self._conn.writeHeaders(
+            version,
+            code,
+            reason,
+            [(k, v) for (k, values) in headers.getAllRawHeaders() for v in values],
+            self.streamID,
+        )
 
     def requestDone(self, request):
         """
