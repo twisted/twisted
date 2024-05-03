@@ -1,9 +1,7 @@
 """Benchmarks for C{HTTP11ClientProtocol}."""
 
-import pytest
-
-from twisted.web._newclient import HTTP11ClientProtocol, Request
 from twisted.internet.testing import StringTransport
+from twisted.web._newclient import HTTP11ClientProtocol, Request
 from twisted.web.http_headers import Headers
 
 RESPONSE = """HTTP/1.1 200 OK
@@ -29,10 +27,10 @@ def test_http_client_small_response(benchmark):
             request = Request(
                 b"GET", b"/foo/bar", Headers({b"Host": [b"example.com"]}), None
             )
-            d = protocol.request(request)
+            response = protocol.request(request)
             protocol.dataReceived(RESPONSE)
-            l = []
-            d.addCallback(l.append)
-            assert l
+            result = []
+            response.addCallback(result.append)
+            assert result
 
     benchmark(go)

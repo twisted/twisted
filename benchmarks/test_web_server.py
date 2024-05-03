@@ -1,9 +1,7 @@
 """Benchmarks for the C{twisted.web} server."""
 
-import time
-
-from twisted.web import server, resource
 from twisted.internet.testing import StringTransport
+from twisted.web import resource, server
 
 
 class Data(resource.Resource):
