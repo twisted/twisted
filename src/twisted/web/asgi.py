@@ -1,13 +1,12 @@
 import attr
 
 from twisted.internet import defer
-from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET
 
 
 class Q:
     def __init__(self):
-
         self.deferreds = []
 
         self._add()
@@ -26,13 +25,12 @@ class Q:
             self.deferreds.append(defer.Deferred())
             self.deferreds[-1].callback(item)
 
+
 @attr.s
 class ASGIResource(Resource):
-
     _application = attr.ib()
 
     def render(self, request):
-
         queue = Q()
 
         scope = {
@@ -45,12 +43,12 @@ class ASGIResource(Resource):
         def _finish(res):
             async def _():
                 queue.add({"type": "http.disconnect"})
+
             return defer.ensureDeferred(_())
 
         request.notifyFinish().addCallback(_finish)
 
         async def write(content):
-
             if content["type"] == "http.response.start":
                 request.setResponseCode(content["status"])
                 for key, val in content.get("headers", []):
@@ -63,19 +61,15 @@ class ASGIResource(Resource):
 
         app = self._application(scope)
 
-
         async def read():
             print(queue.deferred)
-            res =  await queue.deferred
+            res = await queue.deferred
             return res
 
         async def _run():
             await app(read, write)
 
-        requestMessage = {
-            "type": "http.request",
-            "body": request.content.read()
-        }
+        requestMessage = {"type": "http.request", "body": request.content.read()}
 
         queue.add(requestMessage)
 
