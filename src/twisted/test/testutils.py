@@ -13,11 +13,9 @@ don't-use-it-outside-Twisted-we-won't-maintain-compatibility rule!
 """
 
 from io import BytesIO
-
 from xml.dom import minidom as dom
 
 from twisted.internet.protocol import FileWrapper
-
 
 
 class IOPump:
@@ -25,6 +23,7 @@ class IOPump:
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
+
     def __init__(self, client, server, clientIO, serverIO):
         self.client = client
         self.server = server
@@ -59,10 +58,8 @@ class IOPump:
             return 0
 
 
-
 def returnConnected(server, client):
-    """Take two Protocol instances and connect them.
-    """
+    """Take two Protocol instances and connect them."""
     cio = BytesIO()
     sio = BytesIO()
     client.makeConnection(FileWrapper(cio))
@@ -75,8 +72,7 @@ def returnConnected(server, client):
     return pump
 
 
-
-class XMLAssertionMixin(object):
+class XMLAssertionMixin:
     """
     Test mixin defining a method for comparing serialized XML documents.
 
@@ -94,38 +90,29 @@ class XMLAssertionMixin(object):
         @type second: L{bytes}
         """
         self.assertEqual(
-            dom.parseString(first).toxml(),
-            dom.parseString(second).toxml())
+            dom.parseString(first).toxml(), dom.parseString(second).toxml()
+        )
 
 
-
-class _Equal(object):
+class _Equal:
     """
     A class the instances of which are equal to anything and everything.
     """
-    def __eq__(self, other):
+
+    def __eq__(self, other: object) -> bool:
         return True
 
 
-    def __ne__(self, other):
-        return False
-
-
-
-class _NotEqual(object):
+class _NotEqual:
     """
     A class the instances of which are equal to nothing.
     """
-    def __eq__(self, other):
+
+    def __eq__(self, other: object) -> bool:
         return False
 
 
-    def __ne__(self, other):
-        return True
-
-
-
-class ComparisonTestsMixin(object):
+class ComparisonTestsMixin:
     """
     A mixin which defines a method for making assertions about the correctness
     of an implementation of C{==} and C{!=}.
@@ -138,8 +125,10 @@ class ComparisonTestsMixin(object):
           implement the comparison
         - The object implements not-equal as the opposite of equal
     """
-    def assertNormalEqualityImplementation(self, firstValueOne, secondValueOne,
-                                           valueTwo):
+
+    def assertNormalEqualityImplementation(
+        self, firstValueOne, secondValueOne, valueTwo
+    ):
         """
         Assert that C{firstValueOne} is equal to C{secondValueOne} but not
         equal to C{valueOne} and that it defines equality cooperatively with

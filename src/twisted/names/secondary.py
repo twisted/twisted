@@ -2,21 +2,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
-__all__ = ['SecondaryAuthority', 'SecondaryAuthorityService']
+__all__ = ["SecondaryAuthority", "SecondaryAuthorityService"]
 
-from twisted.internet import task, defer
-from twisted.names import dns
-from twisted.names import common
-from twisted.names import client
-from twisted.names import resolve
-from twisted.names.authority import FileAuthority
-
-from twisted.python import log, failure
-from twisted.python.compat import nativeString
 from twisted.application import service
-
+from twisted.internet import defer, task
+from twisted.names import client, common, dns, resolve
+from twisted.names.authority import FileAuthority
+from twisted.python import failure, log
+from twisted.python.compat import nativeString
 
 
 class SecondaryAuthorityService(service.Service):
@@ -30,6 +24,7 @@ class SecondaryAuthorityService(service.Service):
     @ivar domains: An authority for each domain mirrored from the master.
     @type domains: L{list} of L{SecondaryAuthority}
     """
+
     calls = None
 
     _port = 53
@@ -47,7 +42,6 @@ class SecondaryAuthorityService(service.Service):
         self.primary = nativeString(primary)
         self.domains = [SecondaryAuthority(primary, d) for d in domains]
 
-
     @classmethod
     def fromServerAddressAndDomains(cls, serverAddress, domains):
         """
@@ -60,7 +54,8 @@ class SecondaryAuthorityService(service.Service):
             C{int} giving a port number.  Together, these define where zone
             transfers will be attempted from.
 
-        @param domain: A C{bytes} giving the domain to transfer.
+        @param domains: Domain names for which to perform zone transfers.
+        @type domains: sequence of L{bytes}
 
         @return: A new instance of L{SecondaryAuthorityService}.
         """
@@ -69,9 +64,9 @@ class SecondaryAuthorityService(service.Service):
         service._port = port
         service.domains = [
             SecondaryAuthority.fromServerAddressAndDomain(serverAddress, d)
-            for d in domains]
+            for d in domains
+        ]
         return service
-
 
     def getAuthority(self):
         """
@@ -86,6 +81,7 @@ class SecondaryAuthorityService(service.Service):
         self.calls = [task.LoopingCall(d.transfer) for d in self.domains]
         i = 0
         from twisted.internet import reactor
+
         for c in self.calls:
             # XXX Add errbacks, respect proper timeouts
             reactor.callLater(i, c.start, 60 * 60)
@@ -97,21 +93,20 @@ class SecondaryAuthorityService(service.Service):
             c.stop()
 
 
-
 class SecondaryAuthority(FileAuthority):
     """
     An Authority that keeps itself updated by performing zone transfers.
 
     @ivar primary: The IP address of the server from which zone transfers will
     be attempted.
-    @type primary: C{str}
+    @type primary: L{str}
 
     @ivar _port: The port number of the server from which zone transfers will
     be attempted.
-    @type: C{int}
+    @type _port: L{int}
 
     @ivar domain: The domain for which this is the secondary authority.
-    @type: C{bytes}
+    @type domain: L{bytes}
 
     @ivar _reactor: The reactor to use to perform the zone transfers, or
     L{None} to use the global reactor.
@@ -135,7 +130,6 @@ class SecondaryAuthority(FileAuthority):
         self.primary = nativeString(primaryIP)
         self.domain = dns.domainString(domain)
 
-
     @classmethod
     def fromServerAddressAndDomain(cls, serverAddress, domain):
         """
@@ -158,7 +152,6 @@ class SecondaryAuthority(FileAuthority):
         secondary._port = port
         return secondary
 
-
     def transfer(self):
         """
         Attempt a zone transfer.
@@ -177,12 +170,13 @@ class SecondaryAuthority(FileAuthority):
             from twisted.internet import reactor
 
         resolver = client.Resolver(
-            servers=[(self.primary, self._port)], reactor=reactor)
-        return resolver.lookupZone(self.domain
-            ).addCallback(self._cbZone
-            ).addErrback(self._ebZone
-            )
-
+            servers=[(self.primary, self._port)], reactor=reactor
+        )
+        return (
+            resolver.lookupZone(self.domain)
+            .addCallback(self._cbZone)
+            .addErrback(self._ebZone)
+        )
 
     def _lookup(self, name, cls, type, timeout=None):
         if not self.soa or not self.records:
@@ -190,7 +184,6 @@ class SecondaryAuthority(FileAuthority):
             # the caller can try elsewhere.
             return defer.fail(failure.Failure(dns.DomainError(name)))
         return FileAuthority._lookup(self, name, cls, type, timeout)
-
 
     def _cbZone(self, zone):
         ans, _, _ = zone
@@ -201,21 +194,23 @@ class SecondaryAuthority(FileAuthority):
             else:
                 r.setdefault(rec.name.name.lower(), []).append(rec.payload)
 
-
     def _ebZone(self, failure):
-        log.msg("Updating %s from %s failed during zone transfer" % (self.domain, self.primary))
+        log.msg(
+            "Updating %s from %s failed during zone transfer"
+            % (self.domain, self.primary)
+        )
         log.err(failure)
-
 
     def update(self):
         self.transfer().addCallbacks(self._cbTransferred, self._ebTransferred)
 
-
     def _cbTransferred(self, result):
         self.transferring = False
 
-
     def _ebTransferred(self, failure):
         self.transferred = False
-        log.msg("Transferring %s from %s failed after zone transfer" % (self.domain, self.primary))
+        log.msg(
+            "Transferring %s from %s failed after zone transfer"
+            % (self.domain, self.primary)
+        )
         log.err(failure)

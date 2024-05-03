@@ -326,7 +326,7 @@ as the sender of the message.
    This technique also relies upon the fact that the 
    ``pb.Referenceable`` reference can *only* come from someone
    who holds a corresponding ``pb.RemoteReference`` . The design of the
-   serialization mechanism (implemented in :api:`twisted.spread.jelly <twisted.spread.jelly>` : pb, jelly, spread.. get it?  Look for "banana" , too.  What other networking framework
+   serialization mechanism (implemented in :py:mod:`twisted.spread.jelly` : pb, jelly, spread.. get it?  Look for "banana" , too.  What other networking framework
    can claim API names based on sandwich ingredients?) makes it impossible for
    a client to obtain a reference that they weren't explicitly given.
    References passed over the wire are given id numbers and recorded in a
@@ -834,8 +834,8 @@ Anonymous Clients
 
 pbAnonServer.py implements a server based on pb6server.py, extending it to
 permit anonymous logins in addition to authenticated logins. An 
-:api:`twisted.cred.checkers.AllowAnonymousAccess <AllowAnonymousAccess>` 
-checker and an :api:`twisted.cred.checkers.InMemoryUsernamePasswordDatabaseDontUse <InMemoryUsernamePasswordDatabaseDontUse>` 
+:py:class:`AllowAnonymousAccess <twisted.cred.checkers.AllowAnonymousAccess>` 
+checker and an :py:class:`InMemoryUsernamePasswordDatabaseDontUse <twisted.cred.checkers.InMemoryUsernamePasswordDatabaseDontUse>` 
 checker are registered and the
 client's choice of credentials object determines which is used to authenticate
 the login.  In either case, the realm will be called on to create an avatar for
@@ -845,8 +845,8 @@ the login.  ``AllowAnonymousAccess`` always produces an ``avatarId`` of ``twiste
 
 
 On the client side, the only change is the use of an instance of 
-:api:`twisted.cred.credentials.Anonymous <Anonymous>` when calling 
-:api:`twisted.spread.pb.PBClientFactory.login <PBClientFactory.login>` .
+:py:class:`Anonymous <twisted.cred.credentials.Anonymous>` when calling 
+:py:meth:`PBClientFactory.login <twisted.spread.pb.PBClientFactory.login>` .
 
 
 
@@ -1048,7 +1048,7 @@ Viewable
 
 
 Once you have ``IPerspective`` objects (i.e. the Avatar) to
-represent users, the :api:`twisted.spread.pb.Viewable <Viewable>` class can come into play. This
+represent users, the :py:class:`Viewable <twisted.spread.pb.Viewable>` class can come into play. This
 class behaves a lot like ``Referenceable`` : it turns into a 
 ``RemoteReference`` when sent over the wire, and certain methods
 can be invoked by the holder of that reference. However, the methods that

@@ -5,51 +5,48 @@
 Test cases for L{twisted.names.client}.
 """
 
-from __future__ import division, absolute_import
 
 import errno
 
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.python import failure
-from twisted.python.filepath import FilePath
-from twisted.python.runtime import platform
-
 from twisted.internet import defer
 from twisted.internet.error import CannotListenError, ConnectionRefusedError
 from twisted.internet.interfaces import IResolver
-from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.internet.task import Clock
-
-from twisted.names import error, client, dns, hosts, cache
-from twisted.names.error import DNSQueryTimeoutError
+from twisted.internet.test.modulehelpers import AlternateReactor
+from twisted.names import cache, client, dns, error, hosts
 from twisted.names.common import ResolverBase
-
-from twisted.names.test.test_hosts import GoodTempPathMixin
+from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.test import test_util
-
+from twisted.names.test.test_hosts import GoodTempPathMixin
+from twisted.python import failure
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.test import proto_helpers
-
 from twisted.trial import unittest
 
-if platform.isWindows():
-    windowsSkip = "These tests need more work before they'll work on Windows."
-else:
+if not platform.isWindows():
     windowsSkip = None
-
+else:
+    windowsSkip = "These tests need more work before they'll work on Windows."
 
 
 class FakeResolver(ResolverBase):
-
     def _lookup(self, name, cls, qtype, timeout):
         """
         The getHostByNameTest does a different type of query that requires it
         return an A record from an ALL_RECORDS lookup, so we accommodate that
         here.
         """
-        if name == b'getHostByNameTest':
-            rr = dns.RRHeader(name=name, type=dns.A, cls=cls, ttl=60,
-                    payload=dns.Record_A(address='127.0.0.1', ttl=60))
+        if name == b"getHostByNameTest":
+            rr = dns.RRHeader(
+                name=name,
+                type=dns.A,
+                cls=cls,
+                ttl=60,
+                payload=dns.Record_A(address="127.0.0.1", ttl=60),
+            )
         else:
             rr = dns.RRHeader(name=name, type=qtype, cls=cls, ttl=60)
 
@@ -59,8 +56,7 @@ class FakeResolver(ResolverBase):
         return defer.succeed((results, authority, additional))
 
 
-
-class StubPort(object):
+class StubPort:
     """
     A partial implementation of L{IListeningPort} which only keeps track of
     whether it has been stopped.
@@ -68,14 +64,14 @@ class StubPort(object):
     @ivar disconnected: A C{bool} which is C{False} until C{stopListening} is
         called, C{True} afterwards.
     """
+
     disconnected = False
 
     def stopListening(self):
         self.disconnected = True
 
 
-
-class StubDNSDatagramProtocol(object):
+class StubDNSDatagramProtocol:
     """
     L{dns.DNSDatagramProtocol}-alike.
 
@@ -83,10 +79,10 @@ class StubDNSDatagramProtocol(object):
         C{query} along with the L{defer.Deferred} which was returned from
         the call.
     """
+
     def __init__(self):
         self.queries = []
         self.transport = StubPort()
-
 
     def query(self, address, queries, timeout=10, id=None):
         """
@@ -98,13 +94,12 @@ class StubDNSDatagramProtocol(object):
         return result
 
 
-
 class GetResolverTests(unittest.TestCase):
     """
     Tests for L{client.getResolver}.
     """
-    if windowsSkip:
-        skip = windowsSkip
+
+    skip = windowsSkip
 
     def test_interface(self):
         """
@@ -113,7 +108,6 @@ class GetResolverTests(unittest.TestCase):
         with AlternateReactor(Clock()):
             resolver = client.getResolver()
         self.assertTrue(verifyObject(IResolver, resolver))
-
 
     def test_idempotent(self):
         """
@@ -126,19 +120,17 @@ class GetResolverTests(unittest.TestCase):
         self.assertIs(a, b)
 
 
-
 class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
     """
     Tests for L{client.createResolver}.
     """
-    if windowsSkip:
-        skip = windowsSkip
+
+    skip = windowsSkip
 
     def _hostsTest(self, resolver, filename):
         res = [r for r in resolver.resolvers if isinstance(r, hosts.Resolver)]
         self.assertEqual(1, len(res))
         self.assertEqual(res[0].file, filename)
-
 
     def test_defaultHosts(self):
         """
@@ -150,7 +142,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
             resolver = client.createResolver()
         self._hostsTest(resolver, b"/etc/hosts")
 
-
     def test_overrideHosts(self):
         """
         The I{hosts} parameter to L{client.createResolver} overrides the hosts
@@ -161,7 +152,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
             resolver = client.createResolver(hosts=b"/foo/bar")
         self._hostsTest(resolver, b"/foo/bar")
 
-
     def _resolvConfTest(self, resolver, filename):
         """
         Verify that C{resolver} has a L{client.Resolver} with a configuration
@@ -170,7 +160,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         res = [r for r in resolver.resolvers if isinstance(r, client.Resolver)]
         self.assertEqual(1, len(res))
         self.assertEqual(res[0].resolv, filename)
-
 
     def test_reactor(self):
         """
@@ -184,7 +173,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         self.assertEqual(1, len(res))
         self.assertIs(reactor, res[0]._reactor)
 
-
     def test_defaultResolvConf(self):
         """
         L{client.createResolver} returns a L{resolve.ResolverChain} including a
@@ -195,7 +183,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
             resolver = client.createResolver()
         self._resolvConfTest(resolver, b"/etc/resolv.conf")
 
-
     def test_overrideResolvConf(self):
         """
         The I{resolvconf} parameter to L{client.createResolver} overrides the
@@ -205,7 +192,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         with AlternateReactor(Clock()):
             resolver = client.createResolver(resolvconf=b"/foo/bar")
         self._resolvConfTest(resolver, b"/foo/bar")
-
 
     def test_defaultServers(self):
         """
@@ -221,7 +207,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         self.assertEqual([], res[0].servers)
         self.assertEqual([("127.1.2.3", 53)], res[0].dynServers)
 
-
     def test_overrideServers(self):
         """
         Servers passed to L{client.createResolver} are used in addition to any
@@ -231,12 +216,12 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
         resolvconf.setContent(b"nameserver 127.1.2.3\n")
         with AlternateReactor(Clock()):
             resolver = client.createResolver(
-                servers=[("127.3.2.1", 53)], resolvconf=resolvconf.path)
+                servers=[("127.3.2.1", 53)], resolvconf=resolvconf.path
+            )
         res = [r for r in resolver.resolvers if isinstance(r, client.Resolver)]
         self.assertEqual(1, len(res))
         self.assertEqual([("127.3.2.1", 53)], res[0].servers)
         self.assertEqual([("127.1.2.3", 53)], res[0].dynServers)
-
 
     def test_cache(self):
         """
@@ -247,8 +232,6 @@ class CreateResolverTests(unittest.TestCase, GoodTempPathMixin):
             resolver = client.createResolver()
         res = [r for r in resolver.resolvers if isinstance(r, cache.CacheResolver)]
         self.assertEqual(1, len(res))
-
-
 
 
 class ResolverTests(unittest.TestCase):
@@ -263,13 +246,11 @@ class ResolverTests(unittest.TestCase):
         """
         verifyObject(IResolver, client)
 
-
     def test_clientResolverProvidesIResolver(self):
         """
         L{client.Resolver} provides L{IResolver}.
         """
         verifyClass(IResolver, client.Resolver)
-
 
     def test_noServers(self):
         """
@@ -277,7 +258,6 @@ class ResolverTests(unittest.TestCase):
         servers nor a nameserver configuration file.
         """
         self.assertRaises(ValueError, client.Resolver)
-
 
     def test_missingConfiguration(self):
         """
@@ -288,7 +268,6 @@ class ResolverTests(unittest.TestCase):
         resolver = client.Resolver(resolv=self.mktemp(), reactor=Clock())
         self.assertEqual([("127.0.0.1", 53)], resolver.dynServers)
 
-
     def test_closesResolvConf(self):
         """
         As part of its constructor, C{StubResolver} opens C{/etc/resolv.conf};
@@ -296,14 +275,16 @@ class ResolverTests(unittest.TestCase):
         it.
         """
         handle = FilePath(self.mktemp())
-        resolvConf = handle.open(mode='w+')
+        resolvConf = handle.open(mode="w+")
+
         class StubResolver(client.Resolver):
             def _openFile(self, name):
                 return resolvConf
-        StubResolver(servers=["example.com", 53], resolv='/etc/resolv.conf',
-                     reactor=Clock())
-        self.assertTrue(resolvConf.closed)
 
+        StubResolver(
+            servers=["example.com", 53], resolv="/etc/resolv.conf", reactor=Clock()
+        )
+        self.assertTrue(resolvConf.closed)
 
     def test_domainEmptyArgument(self):
         """
@@ -314,7 +295,6 @@ class ResolverTests(unittest.TestCase):
         resolver.parseConfig([b"domain\n"])
         self.assertEqual(b"", resolver.domain)
 
-
     def test_searchEmptyArgument(self):
         """
         L{client.Resolver.parseConfig} treats a I{search} line without an
@@ -323,7 +303,6 @@ class ResolverTests(unittest.TestCase):
         resolver = client.Resolver(servers=[("127.0.0.1", 53)])
         resolver.parseConfig([b"search\n"])
         self.assertEqual([], resolver.search)
-
 
     def test_datagramQueryServerOrder(self):
         """
@@ -359,7 +338,6 @@ class ResolverTests(unittest.TestCase):
 
         return queryResult
 
-
     def test_singleConcurrentRequest(self):
         """
         L{client.Resolver.query} only issues one request at a time per query.
@@ -367,11 +345,11 @@ class ResolverTests(unittest.TestCase):
         are queued and given the same response as is given to the first one.
         """
         protocol = StubDNSDatagramProtocol()
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._connectedProtocol = lambda: protocol
         queries = protocol.queries
 
-        query = dns.Query(b'foo.example.com', dns.A, dns.IN)
+        query = dns.Query(b"foo.example.com", dns.A, dns.IN)
         # The first query should be passed to the underlying protocol.
         firstResult = resolver.query(query)
         self.assertEqual(len(queries), 1)
@@ -388,13 +366,14 @@ class ResolverTests(unittest.TestCase):
         queries.pop()[-1].callback(response)
 
         d = defer.gatherResults([firstResult, secondResult])
+
         def cbFinished(responses):
             firstResponse, secondResponse = responses
             self.assertEqual(firstResponse, ([answer], [], []))
             self.assertEqual(secondResponse, ([answer], [], []))
+
         d.addCallback(cbFinished)
         return d
-
 
     def test_multipleConcurrentRequests(self):
         """
@@ -402,27 +381,26 @@ class ResolverTests(unittest.TestCase):
         query.
         """
         protocol = StubDNSDatagramProtocol()
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._connectedProtocol = lambda: protocol
         queries = protocol.queries
 
         # The first query should be passed to the underlying protocol.
-        firstQuery = dns.Query(b'foo.example.com', dns.A)
+        firstQuery = dns.Query(b"foo.example.com", dns.A)
         resolver.query(firstQuery)
         self.assertEqual(len(queries), 1)
 
         # A query for a different name is also passed to the underlying
         # protocol.
-        secondQuery = dns.Query(b'bar.example.com', dns.A)
+        secondQuery = dns.Query(b"bar.example.com", dns.A)
         resolver.query(secondQuery)
         self.assertEqual(len(queries), 2)
 
         # A query for a different type is also passed to the underlying
         # protocol.
-        thirdQuery = dns.Query(b'foo.example.com', dns.A6)
+        thirdQuery = dns.Query(b"foo.example.com", dns.A6)
         resolver.query(thirdQuery)
         self.assertEqual(len(queries), 3)
-
 
     def test_multipleSequentialRequests(self):
         """
@@ -431,11 +409,11 @@ class ResolverTests(unittest.TestCase):
         results in a new network request.
         """
         protocol = StubDNSDatagramProtocol()
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._connectedProtocol = lambda: protocol
         queries = protocol.queries
 
-        query = dns.Query(b'foo.example.com', dns.A)
+        query = dns.Query(b"foo.example.com", dns.A)
 
         # The first query should be passed to the underlying protocol.
         resolver.query(query)
@@ -448,7 +426,6 @@ class ResolverTests(unittest.TestCase):
         resolver.query(query)
         self.assertEqual(len(queries), 1)
 
-
     def test_multipleConcurrentFailure(self):
         """
         If the result of a request is an error response, the Deferreds for all
@@ -456,11 +433,11 @@ class ResolverTests(unittest.TestCase):
         L{Failure}.
         """
         protocol = StubDNSDatagramProtocol()
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._connectedProtocol = lambda: protocol
         queries = protocol.queries
 
-        query = dns.Query(b'foo.example.com', dns.A)
+        query = dns.Query(b"foo.example.com", dns.A)
         firstResult = resolver.query(query)
         secondResult = resolver.query(query)
 
@@ -469,10 +446,12 @@ class ResolverTests(unittest.TestCase):
 
         queries.pop()[-1].errback(failure.Failure(ExpectedException()))
 
-        return defer.gatherResults([
+        return defer.gatherResults(
+            [
                 self.assertFailure(firstResult, ExpectedException),
-                self.assertFailure(secondResult, ExpectedException)])
-
+                self.assertFailure(secondResult, ExpectedException),
+            ]
+        )
 
     def test_connectedProtocol(self):
         """
@@ -480,20 +459,22 @@ class ResolverTests(unittest.TestCase):
         L{DNSDatagramProtocol} connected to a new address with a
         cryptographically secure random port number.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         firstProto = resolver._connectedProtocol()
         secondProto = resolver._connectedProtocol()
 
         self.assertIsNotNone(firstProto.transport)
         self.assertIsNotNone(secondProto.transport)
         self.assertNotEqual(
-            firstProto.transport.getHost().port,
-            secondProto.transport.getHost().port)
+            firstProto.transport.getHost().port, secondProto.transport.getHost().port
+        )
 
-        return defer.gatherResults([
+        return defer.gatherResults(
+            [
                 defer.maybeDeferred(firstProto.transport.stopListening),
-                defer.maybeDeferred(secondProto.transport.stopListening)])
-
+                defer.maybeDeferred(secondProto.transport.stopListening),
+            ]
+        )
 
     def test_resolverUsesOnlyParameterizedReactor(self):
         """
@@ -506,17 +487,16 @@ class ResolverTests(unittest.TestCase):
         proto = resolver._connectedProtocol()
         self.assertIs(proto._reactor, reactor)
 
-
     def test_differentProtocol(self):
         """
         L{client.Resolver._connectedProtocol} is called once each time a UDP
         request needs to be issued and the resulting protocol instance is used
         for that request.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocols = []
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -525,10 +505,9 @@ class ResolverTests(unittest.TestCase):
                 return defer.succeed(dns.Message())
 
         resolver._connectedProtocol = FakeProtocol
-        resolver.query(dns.Query(b'foo.example.com'))
-        resolver.query(dns.Query(b'bar.example.com'))
+        resolver.query(dns.Query(b"foo.example.com"))
+        resolver.query(dns.Query(b"bar.example.com"))
         self.assertEqual(len(set(protocols)), 2)
-
 
     def test_ipv6Resolver(self):
         """
@@ -536,13 +515,11 @@ class ResolverTests(unittest.TestCase):
         """
 
         fake = test_util.MemoryReactor()
-        resolver = client.Resolver(servers=[('::1', 53)],
-                                   reactor=fake)
-        resolver.query(dns.Query(b'foo.example.com'))
+        resolver = client.Resolver(servers=[("::1", 53)], reactor=fake)
+        resolver.query(dns.Query(b"foo.example.com"))
         [(proto, transport)] = fake.udpPorts.items()
         interface = transport.getHost().host
         self.assertEqual("::", interface)
-
 
     def test_disallowedPort(self):
         """
@@ -551,13 +528,13 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 if len(ports) == 1:
                     raise CannotListenError(None, port, None)
 
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._reactor = FakeReactor()
 
         resolver._connectedProtocol()
@@ -570,18 +547,17 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 raise CannotListenError(None, port, None)
 
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._reactor = FakeReactor()
 
         self.assertRaises(CannotListenError, resolver._connectedProtocol)
         # 1000 is a good round number. I like it.
         self.assertEqual(len(ports), 1000)
-
 
     def test_runOutOfFiles(self):
         """
@@ -590,13 +566,13 @@ class ResolverTests(unittest.TestCase):
         """
         ports = []
 
-        class FakeReactor(object):
+        class FakeReactor:
             def listenUDP(self, port, *args, **kwargs):
                 ports.append(port)
                 err = OSError(errno.EMFILE, "Out of files :(")
                 raise CannotListenError(None, port, err)
 
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         resolver._reactor = FakeReactor()
 
         exc = self.assertRaises(CannotListenError, resolver._connectedProtocol)
@@ -605,18 +581,19 @@ class ResolverTests(unittest.TestCase):
         self.assertEqual(exc.socketError.errno, errno.EMFILE)
         self.assertEqual(len(ports), 1)
 
-
     def test_differentProtocolAfterTimeout(self):
         """
         When a query issued by L{client.Resolver.query} times out, the retry
         uses a new protocol instance.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocols = []
-        results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
-                   defer.succeed(dns.Message())]
+        results = [
+            defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
+            defer.succeed(dns.Message()),
+        ]
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -625,9 +602,8 @@ class ResolverTests(unittest.TestCase):
                 return results.pop(0)
 
         resolver._connectedProtocol = FakeProtocol
-        resolver.query(dns.Query(b'foo.example.com'))
+        resolver.query(dns.Query(b"foo.example.com"))
         self.assertEqual(len(set(protocols)), 2)
-
 
     def test_protocolShutDown(self):
         """
@@ -635,11 +611,11 @@ class ResolverTests(unittest.TestCase):
         called back, the L{DNSDatagramProtocol} is disconnected from its
         transport.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocols = []
         result = defer.Deferred()
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -648,12 +624,11 @@ class ResolverTests(unittest.TestCase):
                 return result
 
         resolver._connectedProtocol = FakeProtocol
-        resolver.query(dns.Query(b'foo.example.com'))
+        resolver.query(dns.Query(b"foo.example.com"))
 
         self.assertFalse(protocols[0].transport.disconnected)
         result.callback(dns.Message())
         self.assertTrue(protocols[0].transport.disconnected)
-
 
     def test_protocolShutDownAfterTimeout(self):
         """
@@ -661,13 +636,12 @@ class ResolverTests(unittest.TestCase):
         also disconnected from its transport after the Deferred returned by its
         query method completes.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocols = []
         result = defer.Deferred()
-        results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))),
-                   result]
+        results = [defer.fail(failure.Failure(DNSQueryTimeoutError(None))), result]
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -676,12 +650,11 @@ class ResolverTests(unittest.TestCase):
                 return results.pop(0)
 
         resolver._connectedProtocol = FakeProtocol
-        resolver.query(dns.Query(b'foo.example.com'))
+        resolver.query(dns.Query(b"foo.example.com"))
 
         self.assertFalse(protocols[1].transport.disconnected)
         result.callback(dns.Message())
         self.assertTrue(protocols[1].transport.disconnected)
-
 
     def test_protocolShutDownAfterFailure(self):
         """
@@ -689,14 +662,15 @@ class ResolverTests(unittest.TestCase):
         a failure, the L{DNSDatagramProtocol} is still disconnected from its
         transport.
         """
+
         class ExpectedException(Exception):
             pass
 
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocols = []
         result = defer.Deferred()
 
-        class FakeProtocol(object):
+        class FakeProtocol:
             def __init__(self):
                 self.transport = StubPort()
 
@@ -705,7 +679,7 @@ class ResolverTests(unittest.TestCase):
                 return result
 
         resolver._connectedProtocol = FakeProtocol
-        queryResult = resolver.query(dns.Query(b'foo.example.com'))
+        queryResult = resolver.query(dns.Query(b"foo.example.com"))
 
         self.assertFalse(protocols[0].transport.disconnected)
         result.errback(failure.Failure(ExpectedException()))
@@ -713,13 +687,12 @@ class ResolverTests(unittest.TestCase):
 
         return self.assertFailure(queryResult, ExpectedException)
 
-
     def test_tcpDisconnectRemovesFromConnections(self):
         """
         When a TCP DNS protocol associated with a Resolver disconnects, it is
         removed from the Resolver's connection list.
         """
-        resolver = client.Resolver(servers=[('example.com', 53)])
+        resolver = client.Resolver(servers=[("example.com", 53)])
         protocol = resolver.factory.buildProtocol(None)
         protocol.makeConnection(None)
         self.assertIn(protocol, resolver.connections)
@@ -728,7 +701,6 @@ class ResolverTests(unittest.TestCase):
         protocol.connectionLost(None)
         self.assertNotIn(protocol, resolver.connections)
 
-
     def test_singleTCPQueryErrbackOnConnectionFailure(self):
         """
         The deferred returned by L{client.Resolver.queryTCP} will
@@ -736,21 +708,19 @@ class ResolverTests(unittest.TestCase):
         the connection failure is passed as the argument to errback.
         """
         reactor = proto_helpers.MemoryReactor()
-        resolver = client.Resolver(
-            servers=[('192.0.2.100', 53)],
-            reactor=reactor)
+        resolver = client.Resolver(servers=[("192.0.2.100", 53)], reactor=reactor)
 
-        d = resolver.queryTCP(dns.Query('example.com'))
+        d = resolver.queryTCP(dns.Query("example.com"))
         host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
 
         class SentinelException(Exception):
             pass
 
         factory.clientConnectionFailed(
-            reactor.connectors[0], failure.Failure(SentinelException()))
+            reactor.connectors[0], failure.Failure(SentinelException())
+        )
 
         self.failureResultOf(d, SentinelException)
-
 
     def test_multipleTCPQueryErrbackOnConnectionFailure(self):
         """
@@ -758,24 +728,22 @@ class ResolverTests(unittest.TestCase):
         with the same C{Failure} if the connection attempt fails.
         """
         reactor = proto_helpers.MemoryReactor()
-        resolver = client.Resolver(
-            servers=[('192.0.2.100', 53)],
-            reactor=reactor)
+        resolver = client.Resolver(servers=[("192.0.2.100", 53)], reactor=reactor)
 
-        d1 = resolver.queryTCP(dns.Query('example.com'))
-        d2 = resolver.queryTCP(dns.Query('example.net'))
+        d1 = resolver.queryTCP(dns.Query("example.com"))
+        d2 = resolver.queryTCP(dns.Query("example.net"))
         host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
 
         class SentinelException(Exception):
             pass
 
         factory.clientConnectionFailed(
-            reactor.connectors[0], failure.Failure(SentinelException()))
+            reactor.connectors[0], failure.Failure(SentinelException())
+        )
 
         f1 = self.failureResultOf(d1, SentinelException)
         f2 = self.failureResultOf(d2, SentinelException)
         self.assertIs(f1, f2)
-
 
     def test_reentrantTCPQueryErrbackOnConnectionFailure(self):
         """
@@ -783,11 +751,9 @@ class ResolverTests(unittest.TestCase):
         L{client.Resolver.queryTCP} may trigger another TCP query.
         """
         reactor = proto_helpers.MemoryReactor()
-        resolver = client.Resolver(
-            servers=[('127.0.0.1', 10053)],
-            reactor=reactor)
+        resolver = client.Resolver(servers=[("127.0.0.1", 10053)], reactor=reactor)
 
-        q = dns.Query('example.com')
+        q = dns.Query("example.com")
 
         # First query sent
         d = resolver.queryTCP(q)
@@ -796,6 +762,7 @@ class ResolverTests(unittest.TestCase):
         def reissue(e):
             e.trap(ConnectionRefusedError)
             return resolver.queryTCP(q)
+
         d.addErrback(reissue)
 
         self.assertEqual(len(reactor.tcpClients), 1)
@@ -805,9 +772,7 @@ class ResolverTests(unittest.TestCase):
 
         # First query fails
         f1 = failure.Failure(ConnectionRefusedError())
-        factory.clientConnectionFailed(
-            reactor.connectors[0],
-            f1)
+        factory.clientConnectionFailed(reactor.connectors[0], f1)
 
         # A second TCP connection is immediately attempted
         self.assertEqual(len(reactor.tcpClients), 2)
@@ -817,14 +782,11 @@ class ResolverTests(unittest.TestCase):
 
         # Second query fails
         f2 = failure.Failure(ConnectionRefusedError())
-        factory.clientConnectionFailed(
-            reactor.connectors[1],
-            f2)
+        factory.clientConnectionFailed(reactor.connectors[1], f2)
 
         # Original deferred now fires with the second failure
         f = self.failureResultOf(d, ConnectionRefusedError)
         self.assertIs(f, f2)
-
 
     def test_pendingEmptiedInPlaceOnError(self):
         """
@@ -833,11 +795,9 @@ class ResolverTests(unittest.TestCase):
         replaced with a new empty list.
         """
         reactor = proto_helpers.MemoryReactor()
-        resolver = client.Resolver(
-            servers=[('192.0.2.100', 53)],
-            reactor=reactor)
+        resolver = client.Resolver(servers=[("192.0.2.100", 53)], reactor=reactor)
 
-        d = resolver.queryTCP(dns.Query('example.com'))
+        d = resolver.queryTCP(dns.Query("example.com"))
 
         host, port, factory, timeout, bindAddress = reactor.tcpClients[0]
 
@@ -848,23 +808,22 @@ class ResolverTests(unittest.TestCase):
             pass
 
         factory.clientConnectionFailed(
-            reactor.connectors[0], failure.Failure(SentinelException()))
+            reactor.connectors[0], failure.Failure(SentinelException())
+        )
 
         self.failureResultOf(d, SentinelException)
         self.assertIs(resolver.pending, prePending)
         self.assertEqual(len(prePending), 0)
 
 
-
 class ClientTests(unittest.TestCase):
-
     def setUp(self):
         """
         Replace the resolver with a FakeResolver
         """
         client.theResolver = FakeResolver()
-        self.hostname = b'example.com'
-        self.hostnameForGetHostByName = b'getHostByNameTest'
+        self.hostname = b"example.com"
+        self.hostnameForGetHostByName = b"getHostByNameTest"
 
     def tearDown(self):
         """
@@ -886,7 +845,7 @@ class ClientTests(unittest.TestCase):
         """
         Test that the getHostByName query returns the 127.0.0.1 address.
         """
-        self.assertEqual(result, '127.0.0.1')
+        self.assertEqual(result, "127.0.0.1")
 
     def test_getHostByName(self):
         """
@@ -1058,7 +1017,6 @@ class ClientTests(unittest.TestCase):
         d.addCallback(self.checkResult, dns.SRV)
         return d
 
-
     def test_lookupZone(self):
         """
         See L{test_lookupAddress}
@@ -1066,7 +1024,6 @@ class ClientTests(unittest.TestCase):
         d = client.lookupZone(self.hostname)
         d.addCallback(self.checkResult, dns.AXFR)
         return d
-
 
     def test_lookupAllRecords(self):
         """
@@ -1076,7 +1033,6 @@ class ClientTests(unittest.TestCase):
         d.addCallback(self.checkResult, dns.ALL_RECORDS)
         return d
 
-
     def test_lookupNamingAuthorityPointer(self):
         """
         See L{test_lookupAddress}
@@ -1084,7 +1040,6 @@ class ClientTests(unittest.TestCase):
         d = client.lookupNamingAuthorityPointer(self.hostname)
         d.addCallback(self.checkResult, dns.NAPTR)
         return d
-
 
     def test_query(self):
         """
@@ -1099,17 +1054,16 @@ class ClientTests(unittest.TestCase):
         return d
 
 
-
 class FilterAnswersTests(unittest.TestCase):
     """
     Test L{twisted.names.client.Resolver.filterAnswers}'s handling of various
     error conditions it might encounter.
     """
+
     def setUp(self):
         # Create a resolver pointed at an invalid server - we won't be hitting
         # the network in any of these tests.
-        self.resolver = client.Resolver(servers=[('0.0.0.0', 0)])
-
+        self.resolver = client.Resolver(servers=[("0.0.0.0", 0)])
 
     def test_truncatedMessage(self):
         """
@@ -1117,27 +1071,25 @@ class FilterAnswersTests(unittest.TestCase):
         TCP.
         """
         m = dns.Message(trunc=True)
-        m.addQuery(b'example.com')
+        m.addQuery(b"example.com")
 
         def queryTCP(queries):
             self.assertEqual(queries, m.queries)
             response = dns.Message()
-            response.answers = ['answer']
-            response.authority = ['authority']
-            response.additional = ['additional']
+            response.answers = ["answer"]
+            response.authority = ["authority"]
+            response.additional = ["additional"]
             return defer.succeed(response)
+
         self.resolver.queryTCP = queryTCP
         d = self.resolver.filterAnswers(m)
-        d.addCallback(
-            self.assertEqual, (['answer'], ['authority'], ['additional']))
+        d.addCallback(self.assertEqual, (["answer"], ["authority"], ["additional"]))
         return d
-
 
     def _rcodeTest(self, rcode, exc):
         m = dns.Message(rCode=rcode)
         err = self.resolver.filterAnswers(m)
         err.trap(exc)
-
 
     def test_formatError(self):
         """
@@ -1146,13 +1098,11 @@ class FilterAnswersTests(unittest.TestCase):
         """
         return self._rcodeTest(dns.EFORMAT, error.DNSFormatError)
 
-
     def test_serverError(self):
         """
         Like L{test_formatError} but for C{ESERVER}/L{DNSServerError}.
         """
         return self._rcodeTest(dns.ESERVER, error.DNSServerError)
-
 
     def test_nameError(self):
         """
@@ -1160,20 +1110,17 @@ class FilterAnswersTests(unittest.TestCase):
         """
         return self._rcodeTest(dns.ENAME, error.DNSNameError)
 
-
     def test_notImplementedError(self):
         """
         Like L{test_formatError} but for C{ENOTIMP}/L{DNSNotImplementedError}.
         """
         return self._rcodeTest(dns.ENOTIMP, error.DNSNotImplementedError)
 
-
     def test_refusedError(self):
         """
         Like L{test_formatError} but for C{EREFUSED}/L{DNSQueryRefusedError}.
         """
         return self._rcodeTest(dns.EREFUSED, error.DNSQueryRefusedError)
-
 
     def test_refusedErrorUnknown(self):
         """
@@ -1183,8 +1130,7 @@ class FilterAnswersTests(unittest.TestCase):
         return self._rcodeTest(dns.EREFUSED + 1, error.DNSUnknownError)
 
 
-
-class FakeDNSDatagramProtocol(object):
+class FakeDNSDatagramProtocol:
     def __init__(self):
         self.queries = []
         self.transport = StubPort()
@@ -1198,16 +1144,12 @@ class FakeDNSDatagramProtocol(object):
         pass
 
 
-
 class RetryLogicTests(unittest.TestCase):
     """
     Tests for query retrying implemented by L{client.Resolver}.
     """
-    testServers = [
-        '1.2.3.4',
-        '4.3.2.1',
-        'a.b.c.d',
-        'z.y.x.w']
+
+    testServers = ["1.2.3.4", "4.3.2.1", "a.b.c.d", "z.y.x.w"]
 
     def test_roundRobinBackoff(self):
         """
@@ -1220,15 +1162,14 @@ class RetryLogicTests(unittest.TestCase):
         r = client.Resolver(resolv=None, servers=addrs)
         proto = FakeDNSDatagramProtocol()
         r._connectedProtocol = lambda: proto
-        return r.lookupAddress(b"foo.example.com"
-            ).addCallback(self._cbRoundRobinBackoff
-            ).addErrback(self._ebRoundRobinBackoff, proto
-            )
-
+        return (
+            r.lookupAddress(b"foo.example.com")
+            .addCallback(self._cbRoundRobinBackoff)
+            .addErrback(self._ebRoundRobinBackoff, proto)
+        )
 
     def _cbRoundRobinBackoff(self, result):
         self.fail("Lookup address succeeded, should have timed out")
-
 
     def _ebRoundRobinBackoff(self, failure, fakeProto):
         failure.trap(defer.TimeoutError)
@@ -1237,25 +1178,25 @@ class RetryLogicTests(unittest.TestCase):
         # before the timeout is increased and the attempts are repeated.
 
         for t in (1, 3, 11, 45):
-            tries = fakeProto.queries[:len(self.testServers)]
-            del fakeProto.queries[:len(self.testServers)]
+            tries = fakeProto.queries[: len(self.testServers)]
+            del fakeProto.queries[: len(self.testServers)]
 
             tries.sort()
             expected = list(self.testServers)
             expected.sort()
 
-            for ((addr, query, timeout, id), expectedAddr) in zip(tries, expected):
+            for (addr, query, timeout, id), expectedAddr in zip(tries, expected):
                 self.assertEqual(addr, (expectedAddr, 53))
                 self.assertEqual(timeout, t)
 
         self.assertFalse(fakeProto.queries)
 
 
-
 class ThreadedResolverTests(unittest.TestCase):
     """
     Tests for L{client.ThreadedResolver}.
     """
+
     def test_deprecated(self):
         """
         L{client.ThreadedResolver} is deprecated.  Instantiating it emits a
@@ -1264,9 +1205,10 @@ class ThreadedResolverTests(unittest.TestCase):
         client.ThreadedResolver()
         warnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
         self.assertEqual(
-            warnings[0]['message'],
+            warnings[0]["message"],
             "twisted.names.client.ThreadedResolver is deprecated since "
             "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
-            "instead.")
-        self.assertEqual(warnings[0]['category'], DeprecationWarning)
+            "instead.",
+        )
+        self.assertEqual(warnings[0]["category"], DeprecationWarning)
         self.assertEqual(len(warnings), 1)

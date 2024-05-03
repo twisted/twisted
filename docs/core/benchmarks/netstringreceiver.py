@@ -1,15 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
+
+import gc
+import math
+import os
+import sys
+import time
 
 from twisted.protocols.test import test_basic
 from twisted.python.compat import range, raw_input
 from twisted.test import proto_helpers
-import math
-import time
-import sys
-import os
-import gc
 
 NETSTRING_POSTFIX = b","
 USAGE = """\
@@ -24,7 +24,8 @@ You might want to start with a small number, maybe 10 or 12, and slowly
 increase it. Stop when the performance starts to deteriorate ;-).
 """
 
-class PerformanceTester(object):
+
+class PerformanceTester:
     """
     A class for testing the performance of some
     """
@@ -42,13 +43,13 @@ class PerformanceTester(object):
         not accept.
         """
         if os.path.isfile(filename):
-            response = raw_input(("A file named %s exists. "
-                                 "Overwrite it (y/n)? ") % filename)
+            response = raw_input(
+                ("A file named %s exists. " "Overwrite it (y/n)? ") % filename
+            )
             if response.lower() != "y":
                 print("Performance test cancelled.")
                 sys.exit(1)
         self.filename = filename
-
 
     def testPerformance(self, number):
         """
@@ -61,7 +62,6 @@ class PerformanceTester(object):
         for iteration in range(number):
             self.performTest(iteration)
 
-
     def performTest(self, iteration):
         """
         Performs one test iteration. Overwrite this.
@@ -73,7 +73,6 @@ class PerformanceTester(object):
             by the subclass.
         """
         raise NotImplementedError
-
 
     def createReport(self):
         """
@@ -93,15 +92,13 @@ class PerformanceTester(object):
         self.writeLineSeparator()
         print("The report was written to %s." % self.filename)
 
-
     def writeHeader(self):
         """
         Writes the table header for the report.
         """
         self.writeLineSeparator()
-        self.outputFile.write("| %s |\n" % (" | ".join(self.headers),))
+        self.outputFile.write("| {} |\n".format(" | ".join(self.headers)))
         self.writeLineSeparator()
-
 
     def writeLineSeparator(self):
         """
@@ -110,17 +107,15 @@ class PerformanceTester(object):
         dashes = ("-" * (len(header) + 2) for header in self.headers)
         self.outputFile.write("+%s+\n" % "+".join(dashes))
 
-
     def writePerformanceData(self):
         """
         Writes one line for each item in C{self.performanceData}.
         """
         for combination, elapsed in sorted(self.performanceData.items()):
             totalSize, chunkSize, numberOfChunks = combination
-            self.outputFile.write(self.lineFormat %
-                                  (totalSize, chunkSize, numberOfChunks,
-                                   elapsed))
-
+            self.outputFile.write(
+                self.lineFormat % (totalSize, chunkSize, numberOfChunks, elapsed)
+            )
 
 
 class NetstringPerformanceTester(PerformanceTester):
@@ -133,10 +128,10 @@ class NetstringPerformanceTester(PerformanceTester):
     data and time to process them.
     """
 
-    headers = ["Chunk size", "Number of chunks", "Total size",
-               "Time to receive" ]
-    lineFormat = ("| %%%dd | %%%dd | %%%dd | %%%d.4f |\n" %
-                  tuple([len(header) for header in headers]))
+    headers = ["Chunk size", "Number of chunks", "Total size", "Time to receive"]
+    lineFormat = "| %%%dd | %%%dd | %%%dd | %%%d.4f |\n" % tuple(
+        len(header) for header in headers
+    )
 
     def __init__(self, filename):
         """
@@ -151,7 +146,6 @@ class NetstringPerformanceTester(PerformanceTester):
         self.netstringReceiver = test_basic.TestNetstring()
         self.netstringReceiver.makeConnection(transport)
 
-
     def performTest(self, number):
         """
         Tests the performance of C{NetstringReceiver.dataReceived}.
@@ -164,12 +158,11 @@ class NetstringPerformanceTester(PerformanceTester):
             chunks to be checked.
         @type number: C{int}
         """
-        chunkSize = 2 ** number
+        chunkSize = 2**number
         numberOfChunks = chunkSize
         while numberOfChunks:
             self.testCombination(chunkSize, numberOfChunks)
             numberOfChunks = numberOfChunks // 2
-
 
     def testCombination(self, chunkSize, numberOfChunks):
         """
@@ -186,7 +179,6 @@ class NetstringPerformanceTester(PerformanceTester):
         elapsed = self.receiveData(chunk, numberOfChunks, dataSize)
         key = (chunkSize, numberOfChunks, dataSize)
         self.performanceData[key] = elapsed
-
 
     def configureCombination(self, chunkSize, numberOfChunks):
         """
@@ -212,11 +204,10 @@ class NetstringPerformanceTester(PerformanceTester):
         numberOfDigits = math.ceil(math.log10(dataSize)) + 1
         return chunk, dataSize
 
-
     def receiveData(self, chunk, numberOfChunks, dataSize):
         dr = self.netstringReceiver.dataReceived
         now = time.time()
-        dr("{}:".format(dataSize).encode("ascii"))
+        dr(f"{dataSize}:".encode("ascii"))
         for idx in range(numberOfChunks):
             dr(chunk)
         dr(NETSTRING_POSTFIX)
@@ -227,7 +218,7 @@ class NetstringPerformanceTester(PerformanceTester):
 
 def disableGarbageCollector():
     gc.disable()
-    print('Disabled Garbage Collector.')
+    print("Disabled Garbage Collector.")
 
 
 def main(number, filename):

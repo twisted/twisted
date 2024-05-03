@@ -9,40 +9,44 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 Maintainer: Paul Swartz
 """
 
-from __future__ import division, absolute_import
-
-from twisted.internet import protocol
-from twisted.python import log
-
-from twisted.conch import error
-from twisted.conch.ssh import (_kex, transport, userauth, connection)
 
 import random
+from itertools import chain
+from typing import Dict, List, Optional, Tuple
+
+from twisted.conch import error
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.logger import Logger
 
 
 class SSHFactory(protocol.Factory):
     """
     A Factory for SSH servers.
     """
+
+    primes: Optional[Dict[int, List[Tuple[int, int]]]]
+
+    _log = Logger()
     protocol = transport.SSHServerTransport
 
     services = {
-        b'ssh-userauth':userauth.SSHUserAuthServer,
-        b'ssh-connection':connection.SSHConnection
+        b"ssh-userauth": userauth.SSHUserAuthServer,
+        b"ssh-connection": connection.SSHConnection,
     }
-    def startFactory(self):
+
+    def startFactory(self) -> None:
         """
         Check for public and private keys.
         """
-        if not hasattr(self,'publicKeys'):
+        if not hasattr(self, "publicKeys"):
             self.publicKeys = self.getPublicKeys()
-        if not hasattr(self,'privateKeys'):
+        if not hasattr(self, "privateKeys"):
             self.privateKeys = self.getPrivateKeys()
         if not self.publicKeys or not self.privateKeys:
-            raise error.ConchError('no host keys, failing')
-        if not hasattr(self,'primes'):
+            raise error.ConchError("no host keys, failing")
+        if not hasattr(self, "primes"):
             self.primes = self.getPrimes()
-
 
     def buildProtocol(self, addr):
         """
@@ -55,16 +59,22 @@ class SSHFactory(protocol.Factory):
         @return: The built transport.
         """
         t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+        t.supportedPublicKeys = list(
+            chain.from_iterable(
+                key.supportedSignatureAlgorithms() for key in self.privateKeys.values()
+            )
+        )
         if not self.primes:
-            log.msg('disabling non-fixed-group key exchange algorithms '
-                    'because we cannot find moduli file')
+            self._log.info(
+                "disabling non-fixed-group key exchange algorithms "
+                "because we cannot find moduli file"
+            )
             t.supportedKeyExchanges = [
-                kexAlgorithm for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm) or
-                     _kex.isEllipticCurve(kexAlgorithm)]
+                kexAlgorithm
+                for kexAlgorithm in t.supportedKeyExchanges
+                if _kex.isFixedGroup(kexAlgorithm) or _kex.isEllipticCurve(kexAlgorithm)
+            ]
         return t
-
 
     def getPublicKeys(self):
         """
@@ -74,8 +84,7 @@ class SSHFactory(protocol.Factory):
 
         @rtype: L{dict}
         """
-        raise NotImplementedError('getPublicKeys unimplemented')
-
+        raise NotImplementedError("getPublicKeys unimplemented")
 
     def getPrivateKeys(self):
         """
@@ -85,31 +94,28 @@ class SSHFactory(protocol.Factory):
 
         @rtype: L{dict}
         """
-        raise NotImplementedError('getPrivateKeys unimplemented')
+        raise NotImplementedError("getPrivateKeys unimplemented")
 
-
-    def getPrimes(self):
+    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
         """
         Called when the factory is started to get Diffie-Hellman generators and
-        primes to use.  Returns a dictionary mapping number of bits to lists
-        of tuple of (generator, prime).
-
-        @rtype: L{dict}
+        primes to use.  Returns a dictionary mapping number of bits to lists of
+        tuple of (generator, prime).
         """
 
-
-    def getDHPrime(self, bits):
+    def getDHPrime(self, bits: int) -> Tuple[int, int]:
         """
         Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
-        close to bits bits as possible.
-
-        @type bits: L{int}
-        @rtype:     L{tuple}
+        close to C{bits} bits as possible.
         """
-        primesKeys = sorted(self.primes.keys(), key=lambda i: abs(i - bits))
+
+        def keyfunc(i: int) -> int:
+            return abs(i - bits)
+
+        assert self.primes is not None, "Factory should have been started by now."
+        primesKeys = sorted(self.primes.keys(), key=keyfunc)
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
-
 
     def getService(self, transport, service):
         """
@@ -119,5 +125,5 @@ class SSHFactory(protocol.Factory):
         @type service:      L{bytes}
         @rtype:             subclass of L{service.SSHService}
         """
-        if service == b'ssh-userauth' or hasattr(transport, 'avatar'):
+        if service == b"ssh-userauth" or hasattr(transport, "avatar"):
             return self.services[service]

@@ -29,24 +29,23 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-from __future__ import division, absolute_import, print_function
+
+from io import StringIO
+from typing import Dict
 
 # zope3 imports
-from zope.interface import interface, declarations
+from zope.interface import declarations, interface
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
-from twisted.python.compat import NativeStringIO
 from twisted.python import reflect
-from twisted.python._oldstyle import _oldStyle
-
-
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()
 
 # Attribute that registerAdapter looks at. Is this supposed to be public?
 ALLOW_DUPLICATES = 0
+
 
 def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """Register an adapter class.
@@ -67,9 +66,9 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     for interfaceClass in interfaceClasses:
         factory = self.registered([origInterface], interfaceClass)
         if factory is not None and not ALLOW_DUPLICATES:
-            raise ValueError("an adapter (%s) was already registered." % (factory, ))
+            raise ValueError(f"an adapter ({factory}) was already registered.")
     for interfaceClass in interfaceClasses:
-        self.register([origInterface], interfaceClass, '', adapterFactory)
+        self.register([origInterface], interfaceClass, "", adapterFactory)
 
 
 def getAdapterFactory(fromInterface, toInterface, default):
@@ -81,7 +80,7 @@ def getAdapterFactory(fromInterface, toInterface, default):
     self = globalRegistry
     if not isinstance(fromInterface, interface.InterfaceClass):
         fromInterface = declarations.implementedBy(fromInterface)
-    factory = self.lookup1(fromInterface, toInterface)
+    factory = self.lookup1(fromInterface, toInterface)  # type: ignore[attr-defined]
     if factory is None:
         factory = default
     return factory
@@ -97,12 +96,14 @@ def _addHook(registry):
     @return: The hook which was added, for later use with L{_removeHook}.
     """
     lookup = registry.lookup1
+
     def _hook(iface, ob):
         factory = lookup(declarations.providedBy(ob), iface)
         if factory is None:
             return None
         else:
             return factory(ob)
+
     interface.adapter_hooks.append(_hook)
     return _hook
 
@@ -116,6 +117,7 @@ def _removeHook(hook):
     """
     interface.adapter_hooks.remove(hook)
 
+
 # add global adapter lookup hook for our newly created registry
 _addHook(globalRegistry)
 
@@ -126,10 +128,11 @@ def getRegistry():
     """
     return globalRegistry
 
+
 # FIXME: deprecate attribute somehow?
 CannotAdapt = TypeError
 
-@_oldStyle
+
 class Adapter:
     """I am the default implementation of an Adapter for some interface.
 
@@ -153,8 +156,7 @@ class Adapter:
     multiComponent = 1
 
     def __init__(self, original):
-        """Set my 'original' attribute to be the object I am adapting.
-        """
+        """Set my 'original' attribute to be the object I am adapting."""
         self.original = original
 
     def __conform__(self, interface):
@@ -173,7 +175,6 @@ class Adapter:
         return self.original.isuper(iface, adapter)
 
 
-@_oldStyle
 class Componentized:
     """I am a mixin to allow you to be adapted in various ways persistently.
 
@@ -232,9 +233,10 @@ class Componentized:
         getComponent.
         """
         for iface in declarations.providedBy(component):
-            if (ignoreClass or
-                (self.locateAdapterClass(self.__class__, iface, None)
-                 == component.__class__)):
+            if ignoreClass or (
+                self.locateAdapterClass(self.__class__, iface, None)
+                == component.__class__
+            ):
                 self._adapterCache[reflect.qual(iface)] = component
 
     def unsetComponent(self, interfaceClass):
@@ -277,16 +279,14 @@ class Componentized:
         else:
             adapter = interface.__adapt__(self)
             if adapter is not None and not (
-                hasattr(adapter, "temporaryAdapter") and
-                adapter.temporaryAdapter):
+                hasattr(adapter, "temporaryAdapter") and adapter.temporaryAdapter
+            ):
                 self._adapterCache[k] = adapter
-                if (hasattr(adapter, "multiComponent") and
-                    adapter.multiComponent):
+                if hasattr(adapter, "multiComponent") and adapter.multiComponent:
                     self.addComponent(adapter)
             if adapter is None:
                 return default
             return adapter
-
 
     def __conform__(self, interface):
         return self.getComponent(interface)
@@ -296,15 +296,15 @@ class ReprableComponentized(Componentized):
     def __init__(self):
         Componentized.__init__(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         from pprint import pprint
-        sio = NativeStringIO()
+
+        sio = StringIO()
         pprint(self._adapterCache, sio)
         return sio.getvalue()
 
 
-
-def proxyForInterface(iface, originalAttribute='original'):
+def proxyForInterface(iface, originalAttribute="original"):
     """
     Create a class which proxies all method calls which adhere to an interface
     to another provider of that interface.
@@ -328,19 +328,21 @@ def proxyForInterface(iface, originalAttribute='original'):
     @return: A class whose constructor takes the original object as its only
         argument. Constructing the class creates the proxy.
     """
+
     def __init__(self, original):
         setattr(self, originalAttribute, original)
-    contents = {"__init__": __init__}
+
+    contents: Dict[str, object] = {"__init__": __init__}
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
-    proxy = type("(Proxy for %s)"
-                 % (reflect.qual(iface),), (object,), contents)
-    declarations.classImplements(proxy, iface)
+    proxy = type(f"(Proxy for {reflect.qual(iface)})", (object,), contents)
+    # mypy-zope declarations.classImplements only works when passing
+    # a concrete class type
+    declarations.classImplements(proxy, iface)  # type: ignore[misc]
     return proxy
 
 
-
-class _ProxiedClassMethod(object):
+class _ProxiedClassMethod:
     """
     A proxied class method.
 
@@ -356,10 +358,10 @@ class _ProxiedClassMethod(object):
         original object is stored.
     @type originalAttribute: L{str}
     """
+
     def __init__(self, methodName, originalAttribute):
         self.methodName = self.__name__ = methodName
         self.originalAttribute = originalAttribute
-
 
     def __call__(self, oself, *args, **kw):
         """
@@ -375,8 +377,7 @@ class _ProxiedClassMethod(object):
         return actualMethod(*args, **kw)
 
 
-
-class _ProxyDescriptor(object):
+class _ProxyDescriptor:
     """
     A descriptor which will proxy attribute access, mutation, and
     deletion to the L{_ProxyDescriptor.originalAttribute} of the
@@ -390,21 +391,19 @@ class _ProxyDescriptor(object):
         original object is stored.
     @type originalAttribute: C{str}
     """
+
     def __init__(self, attributeName, originalAttribute):
         self.attributeName = attributeName
         self.originalAttribute = originalAttribute
-
 
     def __get__(self, oself, type=None):
         """
         Retrieve the C{self.attributeName} property from I{oself}.
         """
         if oself is None:
-            return _ProxiedClassMethod(self.attributeName,
-                                       self.originalAttribute)
+            return _ProxiedClassMethod(self.attributeName, self.originalAttribute)
         original = getattr(oself, self.originalAttribute)
         return getattr(original, self.attributeName)
-
 
     def __set__(self, oself, value):
         """
@@ -412,7 +411,6 @@ class _ProxyDescriptor(object):
         """
         original = getattr(oself, self.originalAttribute)
         setattr(original, self.attributeName, value)
-
 
     def __delete__(self, oself):
         """
@@ -422,9 +420,12 @@ class _ProxyDescriptor(object):
         delattr(original, self.attributeName)
 
 
-
 __all__ = [
-    "registerAdapter", "getAdapterFactory",
-    "Adapter", "Componentized", "ReprableComponentized", "getRegistry",
+    "registerAdapter",
+    "getAdapterFactory",
+    "Adapter",
+    "Componentized",
+    "ReprableComponentized",
+    "getRegistry",
     "proxyForInterface",
 ]

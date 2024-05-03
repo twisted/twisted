@@ -1,25 +1,25 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from __future__ import print_function
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Avoid using any names defined in the "__main__" module.
     from pbecho import main
+
     raise SystemExit(main())
 
 from zope.interface import implementer
 
-from twisted.spread import pb
 from twisted.cred.portal import IRealm
+from twisted.spread import pb
+
 
 class DefinedError(pb.Error):
     pass
 
 
 class SimplePerspective(pb.Avatar):
-
     def perspective_echo(self, text):
-        print('echoing',text)
+        print("echoing", text)
         return text
 
     def perspective_error(self):
@@ -34,15 +34,16 @@ class SimpleRealm:
     def requestAvatar(self, avatarId, mind, *interfaces):
         if pb.IPerspective in interfaces:
             avatar = SimplePerspective()
-            return pb.IPerspective, avatar, avatar.logout 
+            return pb.IPerspective, avatar, avatar.logout
         else:
             raise NotImplementedError("no interface")
 
 
 def main():
-    from twisted.internet import reactor
-    from twisted.cred.portal import Portal
     from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+    from twisted.cred.portal import Portal
+    from twisted.internet import reactor
+
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()
     checker.addUser("guest", "guest")

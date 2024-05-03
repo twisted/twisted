@@ -19,12 +19,11 @@ A Very Quick Introduction To Templating In Python
 HTML templating is the process of transforming a template document (one which
 describes style and structure, but does not itself include any content) into
 some HTML output which includes information about objects in your application.
-There are many, many libraries for doing this in Python: to name a few, `jinja2 <http://jinja.pocoo.org/>`_ , `django templates <http://docs.djangoproject.com/en/dev/ref/templates/>`_ ,
-and `clearsilver <http://www.clearsilver.net/>`_ .  You can easily use
-any of these libraries in your Twisted Web application, either by running them
+There are many, many libraries for doing this in Python: to name a few, `Jinja2 <https://palletsprojects.com/p/jinja/>`_ and `Django templates <https://docs.djangoproject.com/en/dev/ref/templates/>`_.
+You can easily use any of these libraries in your Twisted Web application, either by running them
 as :doc:`WSGI applications <web-in-60/wsgi>` or by calling your
 preferred templating system's APIs to produce their output as strings, and then
-writing those strings to :api:`twisted.web.http.Request.write <Request.write>` .
+writing those strings to :py:meth:`Request.write <twisted.web.http.Request.write>` .
 
 
 
@@ -49,21 +48,21 @@ twisted.web.template - Why And How you Might Want to Use It
 
 
 
-Twisted includes a templating system, :api:`twisted.web.template <twisted.web.template>` .  This can be convenient for Twisted
+Twisted includes a templating system, :py:mod:`twisted.web.template` .  This can be convenient for Twisted
 applications that want to produce some basic HTML for a web interface without an
 additional dependency.
 
 
 
 ``twisted.web.template`` also includes
-support for :api:`twisted.internet.defer.Deferred <Deferred>` s, so
-you can incrementally render the output of a page based on the results of :api:`twisted.internet.defer.Deferred <Deferred>` s that your application
+support for :py:class:`Deferred <twisted.internet.defer.Deferred>` s, so
+you can incrementally render the output of a page based on the results of :py:class:`Deferred <twisted.internet.defer.Deferred>` s that your application
 has returned.  This feature is fairly unique among templating libraries.
 
 
 
 
-In :api:`twisted.web.template <twisted.web.template>` , templates are XHTML files
+In :py:mod:`twisted.web.template` , templates are XHTML files
 which also contain a special namespace for indicating dynamic portions of the
 document. For example:
 
@@ -74,10 +73,10 @@ document. For example:
 
 .. literalinclude:: listings/template-1.xml
 
-The basic unit of templating is :api:`twisted.web.template.Element <twisted.web.template.Element>` . An Element is given a way of
+The basic unit of templating is :py:class:`twisted.web.template.Element` . An Element is given a way of
 loading a bit of markup like the above example, and knows how to
 correlate ``render``  attributes within that markup to Python methods
-exposed with :api:`twisted.web.template.renderer <twisted.web.template.renderer>` :
+exposed with :py:func:`twisted.web.template.renderer` :
 
 
 :download:`element_1.py <listings/element_1.py>`
@@ -85,8 +84,8 @@ exposed with :api:`twisted.web.template.renderer <twisted.web.template.renderer>
 .. literalinclude:: listings/element_1.py
 
 In order to combine the two, we must render the element.  For this simple
-example, we can use the :api:`twisted.web.template.flattenString <flattenString>`  API, which will convert a
-single template object - such as an :api:`twisted.web.template.Element <Element>`  - into a :api:`twisted.internet.defer.Deferred <Deferred>`  which fires with a single string,
+example, we can use the :py:func:`flattenString <twisted.web.template.flattenString>`  API, which will convert a
+single template object - such as an :py:class:`Element <twisted.web.template.Element>`  - into a :py:class:`Deferred <twisted.internet.defer.Deferred>`  which fires with a single string,
 the HTML output of the rendering process.
 
 
@@ -95,14 +94,14 @@ the HTML output of the rendering process.
 .. literalinclude:: listings/render_1.py
 
 
-This short program cheats a little bit; we know that there are no :api:`twisted.internet.defer.Deferred <Deferred>` s in the template which
+This short program cheats a little bit; we know that there are no :py:class:`Deferred <twisted.internet.defer.Deferred>` s in the template which
 require the reactor to eventually fire; therefore, we can simply add a callback
 which outputs the result.  Also, none of the ``renderer`` functions
 require the ``request`` object, so it's acceptable to
 pass ``None`` through here.  (The 'request' object here is used only to
 relay information about the rendering process to each renderer, so you may
 always use whatever object makes sense for your application.  Note, however,
-that renderers from library code may require an :api:`twisted.web.iweb.IRequest <IRequest>` .)
+that renderers from library code may require an :py:class:`IRequest <twisted.web.iweb.IRequest>` .)
 
 
 
@@ -116,9 +115,9 @@ If you run it yourself, you can see that it produces the following output:
 
 .. literalinclude:: listings/output-1.html
 
-The third parameter to a renderer method is a :api:`twisted.web.template.Tag <Tag>`  object which represents the XML element
-with the ``t:render``  attribute in the template. Calling a :api:`twisted.web.template.Tag <Tag>`  adds children to the element
-in the DOM, which may be strings, more :api:`twisted.web.template.Tag <Tag>` s, or other renderables such as :api:`twisted.web.template.Element <Element>` s.
+The third parameter to a renderer method is a :py:class:`Tag <twisted.web.template.Tag>`  object which represents the XML element
+with the ``t:render``  attribute in the template. Calling a :py:class:`Tag <twisted.web.template.Tag>`  adds children to the element
+in the DOM, which may be strings, more :py:class:`Tag <twisted.web.template.Tag>` s, or other renderables such as :py:class:`Element <twisted.web.template.Element>` s.
 For example, to make the header and footer bold:
 
 
@@ -156,7 +155,7 @@ And this would produce the following page:
 
 Calling a tag mutates it, it and returns the tag itself, so you can pass it
 forward and call it multiple times if you have multiple children or attributes
-to add to it. :api:`twisted.web.template <twisted.web.template>` also exposes some
+to add to it. :py:mod:`twisted.web.template` also exposes some
 convenient objects for building more complex markup structures from within
 renderer methods in the ``tags`` object.  In the examples above, we've
 only used ``tags.p`` and ``tags.b`` , but there should be a ``tags.x`` for each *x* which is a valid HTML tag.  There may be
@@ -245,7 +244,7 @@ cloning ``tag`` in your renderer:
 This renderer works because a renderer can return anything that can be
 rendered, not just ``tag`` . In this case, we define a generator, which
 returns a thing that is iterable. We also could have returned
-a ``list`` . Anything that is iterable will be rendered by :api:`twisted.web.template <twisted.web.template>` rendering each item in it. In
+a ``list`` . Anything that is iterable will be rendered by :py:mod:`twisted.web.template` rendering each item in it. In
 this case, each item is a copy of the tag the renderer received, each filled
 with the name of a widget.
 
@@ -332,8 +331,8 @@ Quoting
 -------
 
 
-:api:`twisted.web.template <twisted.web.template>`  will quote any strings that place
-into the DOM.  This provides protection against `XSS attacks <http://en.wikipedia.org/wiki/Cross-site_scripting>`_ , in
+:py:mod:`twisted.web.template`  will quote any strings that place
+into the DOM.  This provides protection against `XSS attacks <https://en.wikipedia.org/wiki/Cross-site_scripting>`_ , in
 addition to just generally making it easy to put arbitrary strings onto a web
 page, without worrying about what they might have in them.  This can easily be
 demonstrated with an element using the same template from our earlier examples.
@@ -361,12 +360,12 @@ Deferreds
 ---------
 
 
-Finally, a simple demonstration of Deferred support, the unique feature of :api:`twisted.web.template <twisted.web.template>` .  Simply put, any renderer may
+Finally, a simple demonstration of Deferred support, the unique feature of :py:mod:`twisted.web.template` .  Simply put, any renderer may
 return a Deferred which fires with some template content instead of the template
-content itself.  As shown above, :api:`twisted.web.template.flattenString <flattenString>`  will return a Deferred that
+content itself.  As shown above, :py:func:`flattenString <twisted.web.template.flattenString>`  will return a Deferred that
 fires with the full content of the string.  But if there's a lot of content, you
 might not want to wait before starting to send some of it to your HTTP client:
-for that case, you can use :api:`twisted.web.template.flatten <flatten>` .
+for that case, you can use :py:func:`flatten <twisted.web.template.flatten>` .
 It's difficult to demonstrate this directly in a browser-based application;
 unless you insert very long delays before firing your Deferreds, it just looks
 like your browser is instantly displaying everything.  Here's an example that
@@ -392,7 +391,7 @@ This demonstrates that part of the output (everything up to
 But once it hits the Deferred, ``WaitForIt`` 's rendering needs to pause
 until ``.callback(...)``  is called on that Deferred.  You can see that
 no further output is produced until the message indicating that the Deferred is
-being fired is complete.  By returning Deferreds and using :api:`twisted.web.template.flatten <flatten>` , you can avoid buffering large
+being fired is complete.  By returning Deferreds and using :py:func:`flatten <twisted.web.template.flatten>` , you can avoid buffering large
 amounts of data.
 
 
@@ -403,11 +402,11 @@ A Brief Note on Formats and DOCTYPEs
 
 
 
-The goal of ``twisted.web.template`` is to emit both valid `HTML <http://whatwg.org/html>`_ or `XHTML <http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#the-xhtml-syntax>`_ .
+The goal of ``twisted.web.template`` is to emit both valid `HTML <https://html.spec.whatwg.org/multipage/>`_ or `XHTML <https://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#the-xhtml-syntax>`_ .
 However, in order to get the maximally standards-compliant output format you
 desire, you have to know which one you want, and take a few simple steps to emit
 it correctly.  Many browsers will probably work with most output if you ignore
-this section entirely, but `the    HTML specification recommends that you specify an appropriate DOCTYPE <http://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype>`_ .
+this section entirely, but `the HTML specification recommends that you specify an appropriate DOCTYPE <https://www.whatwg.org/specs/web-apps/current-work/multipage/syntax.html#the-doctype>`_ .
 
 
 

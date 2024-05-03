@@ -5,25 +5,23 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-from __future__ import division, absolute_import
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
 
+from twisted.python import deprecate
 
 
 class BindError(Exception):
-    """An error occurred binding to an interface"""
+    __doc__ = MESSAGE = "An error occurred binding to an interface"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class CannotListenError(BindError):
@@ -36,17 +34,18 @@ class CannotListenError(BindError):
     @ivar socketError: the exception I got when I tried to listen
     @type socketError: L{socket.error}
     """
+
     def __init__(self, interface, port, socketError):
         BindError.__init__(self, interface, port, socketError)
         self.interface = interface
         self.port = port
         self.socketError = socketError
 
-    def __str__(self):
-        iface = self.interface or 'any'
-        return "Couldn't listen on %s:%s: %s." % (iface, self.port,
-                                                 self.socketError)
-
+    def __str__(self) -> str:
+        iface = self.interface or "any"
+        return "Couldn't listen on {}:{}: {}.".format(
+            iface, self.port, self.socketError
+        )
 
 
 class MulticastJoinError(Exception):
@@ -55,29 +54,26 @@ class MulticastJoinError(Exception):
     """
 
 
-
 class MessageLengthError(Exception):
-    """Message is too long to send"""
+    __doc__ = MESSAGE = "Message is too long to send"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class DNSLookupError(IOError):
-    """DNS lookup failed"""
+    __doc__ = MESSAGE = "DNS lookup failed"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class ConnectInProgressError(Exception):
@@ -86,95 +82,79 @@ class ConnectInProgressError(Exception):
 
 # connection errors
 
+
 class ConnectError(Exception):
-    """An error occurred while connecting"""
+    __doc__ = MESSAGE = "An error occurred while connecting"
 
     def __init__(self, osError=None, string=""):
         self.osError = osError
         Exception.__init__(self, string)
 
-    def __str__(self):
-        s = self.__doc__ or self.__class__.__name__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.osError:
-            s = '%s: %s' % (s, self.osError)
+            s = f"{s}: {self.osError}"
         if self.args[0]:
-            s = '%s: %s' % (s, self.args[0])
-        s = '%s.' % s
+            s = f"{s}: {self.args[0]}"
+        s = "%s." % s
         return s
 
 
-
 class ConnectBindError(ConnectError):
-    """Couldn't bind"""
-
+    __doc__ = MESSAGE = "Couldn't bind"
 
 
 class UnknownHostError(ConnectError):
-    """Hostname couldn't be looked up"""
-
+    __doc__ = MESSAGE = "Hostname couldn't be looked up"
 
 
 class NoRouteError(ConnectError):
-    """No route to host"""
-
+    __doc__ = MESSAGE = "No route to host"
 
 
 class ConnectionRefusedError(ConnectError):
-    """Connection was refused by other side"""
-
+    __doc__ = MESSAGE = "Connection was refused by other side"
 
 
 class TCPTimedOutError(ConnectError):
-    """TCP connection timed out"""
-
+    __doc__ = MESSAGE = "TCP connection timed out"
 
 
 class BadFileError(ConnectError):
-    """File used for UNIX socket is no good"""
-
+    __doc__ = MESSAGE = "File used for UNIX socket is no good"
 
 
 class ServiceNameUnknownError(ConnectError):
-    """Service name given as port is unknown"""
-
+    __doc__ = MESSAGE = "Service name given as port is unknown"
 
 
 class UserError(ConnectError):
-    """User aborted connection"""
-
+    __doc__ = MESSAGE = "User aborted connection"
 
 
 class TimeoutError(UserError):
-    """User timeout caused connection failure"""
-
+    __doc__ = MESSAGE = "User timeout caused connection failure"
 
 
 class SSLError(ConnectError):
-    """An SSL error occurred"""
-
+    __doc__ = MESSAGE = "An SSL error occurred"
 
 
 class VerifyError(Exception):
-    """Could not verify something that was supposed to be signed.
-    """
-
+    __doc__ = MESSAGE = "Could not verify something that was supposed to be signed."
 
 
 class PeerVerifyError(VerifyError):
-    """The peer rejected our verify error.
-    """
-
+    __doc__ = MESSAGE = "The peer rejected our verify error."
 
 
 class CertificateError(Exception):
-    """
-    We did not find a certificate where we expected to find one.
-    """
-
+    __doc__ = MESSAGE = "We did not find a certificate where we expected to find one."
 
 
 try:
     import errno
+
     errnoMapping = {
         errno.ENETUNREACH: NoRouteError,
         errno.ECONNREFUSED: ConnectionRefusedError,
@@ -182,10 +162,9 @@ try:
     }
     if hasattr(errno, "WSAECONNREFUSED"):
         errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
-        errnoMapping[errno.WSAENETUNREACH] = NoRouteError
+        errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]
 except ImportError:
     errnoMapping = {}
-
 
 
 def getConnectError(e):
@@ -199,7 +178,7 @@ def getConnectError(e):
     except ValueError:
         return ConnectError(string=e)
 
-    if hasattr(socket, 'gaierror') and isinstance(e, socket.gaierror):
+    if hasattr(socket, "gaierror") and isinstance(e, socket.gaierror):
         # Only works in 2.2 in newer. Really that means always; #5978 covers
         # this and other weirdnesses in this function.
         klass = UnknownHostError
@@ -208,24 +187,24 @@ def getConnectError(e):
     return klass(number, string)
 
 
-
 class ConnectionClosed(Exception):
     """
     Connection was closed, whether cleanly or non-cleanly.
     """
 
 
-
 class ConnectionLost(ConnectionClosed):
-    """Connection to the other side was lost in a non-clean fashion"""
+    __doc__ = MESSAGE = """
+    Connection to the other side was lost in a non-clean fashion
+    """
 
-    def __str__(self):
-        s = self.__doc__.strip().splitlines()[0]
+    def __str__(self) -> str:
+        s = self.MESSAGE.strip().splitlines()[:1]
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
-        return s
-
+            s.append(": ")
+            s.append(" ".join(self.args))
+        s.append(".")
+        return "".join(s)
 
 
 class ConnectionAborted(ConnectionLost):
@@ -236,29 +215,18 @@ class ConnectionAborted(ConnectionLost):
     @since: 11.1
     """
 
-    def __str__(self):
-        s = [(
-            "Connection was aborted locally using"
-            " ITCPTransport.abortConnection"
-        )]
-        if self.args:
-            s.append(': ')
-            s.append(' '.join(self.args))
-        s.append('.')
-        return ''.join(s)
-
+    MESSAGE = "Connection was aborted locally using " "ITCPTransport.abortConnection"
 
 
 class ConnectionDone(ConnectionClosed):
-    """Connection was closed cleanly"""
+    __doc__ = MESSAGE = "Connection was closed cleanly"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class FileDescriptorOverrun(ConnectionLost):
@@ -272,35 +240,36 @@ class FileDescriptorOverrun(ConnectionLost):
     connection is closed with this exception.
     """
 
+    MESSAGE = (
+        "A mis-use of IUNIXTransport.sendFileDescriptor caused "
+        "the connection to be closed."
+    )
 
 
 class ConnectionFdescWentAway(ConnectionLost):
-    """Uh""" #TODO
-
+    __doc__ = MESSAGE = "Uh"  # TODO
 
 
 class AlreadyCalled(ValueError):
-    """Tried to cancel an already-called event"""
+    __doc__ = MESSAGE = "Tried to cancel an already-called event"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class AlreadyCancelled(ValueError):
-    """Tried to cancel an already-cancelled event"""
+    __doc__ = MESSAGE = "Tried to cancel an already-cancelled event"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class PotentialZombieWarning(Warning):
@@ -310,24 +279,27 @@ class PotentialZombieWarning(Warning):
 
     Deprecated in Twisted 10.0.
     """
+
     MESSAGE = (
         "spawnProcess called, but the SIGCHLD handler is not "
         "installed. This probably means you have not yet "
         "called reactor.run, or called "
         "reactor.run(installSignalHandler=0). You will probably "
         "never see this process finish, and it may become a "
-        "zombie process.")
+        "zombie process."
+    )
+
 
 deprecate.deprecatedModuleAttribute(
     Version("Twisted", 10, 0, 0),
     "There is no longer any potential for zombie process.",
     __name__,
-    "PotentialZombieWarning")
-
+    "PotentialZombieWarning",
+)
 
 
 class ProcessDone(ConnectionDone):
-    """A process has ended without apparent errors"""
+    __doc__ = MESSAGE = "A process has ended without apparent errors"
 
     def __init__(self, status):
         Exception.__init__(self, "process finished with exit code 0")
@@ -336,19 +308,19 @@ class ProcessDone(ConnectionDone):
         self.status = status
 
 
-
 class ProcessTerminated(ConnectionLost):
-    """
+    __doc__ = MESSAGE = """
     A process has ended with a probable error condition
 
     @ivar exitCode: See L{__init__}
     @ivar signal: See L{__init__}
     @ivar status: See L{__init__}
     """
+
     def __init__(self, exitCode=None, signal=None, status=None):
         """
         @param exitCode: The exit status of the process.  This is roughly like
-            the value you might pass to L{os.exit}.  This is L{None} if the
+            the value you might pass to L{os._exit}.  This is L{None} if the
             process exited due to a signal.
         @type exitCode: L{int} or L{None}
 
@@ -365,10 +337,11 @@ class ProcessTerminated(ConnectionLost):
         self.signal = signal
         self.status = status
         s = "process ended"
-        if exitCode is not None: s = s + " with exit code %s" % exitCode
-        if signal is not None: s = s + " by signal %s" % signal
+        if exitCode is not None:
+            s = s + " with exit code %s" % exitCode
+        if signal is not None:
+            s = s + " by signal %s" % signal
         Exception.__init__(self, s)
-
 
 
 class ProcessExitedAlready(Exception):
@@ -378,29 +351,28 @@ class ProcessExitedAlready(Exception):
     """
 
 
-
 class NotConnectingError(RuntimeError):
-    """The Connector was not connecting when it was asked to stop connecting"""
+    __doc__ = (
+        MESSAGE
+    ) = "The Connector was not connecting when it was asked to stop connecting"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class NotListeningError(RuntimeError):
-    """The Port was not listening when it was asked to stop listening"""
+    __doc__ = MESSAGE = "The Port was not listening when it was asked to stop listening"
 
-    def __str__(self):
-        s = self.__doc__
+    def __str__(self) -> str:
+        s = self.MESSAGE
         if self.args:
-            s = '%s: %s' % (s, ' '.join(self.args))
-        s = '%s.' % s
+            s = "{}: {}".format(s, " ".join(self.args))
+        s = "%s." % s
         return s
-
 
 
 class ReactorNotRunning(RuntimeError):
@@ -415,7 +387,6 @@ class ReactorNotRestartable(RuntimeError):
     """
 
 
-
 class ReactorAlreadyRunning(RuntimeError):
     """
     Error raised when trying to start the reactor multiple times.
@@ -426,7 +397,6 @@ class ReactorAlreadyInstalledError(AssertionError):
     """
     Could not install reactor because one is already installed.
     """
-
 
 
 class ConnectingCancelledError(Exception):
@@ -447,7 +417,6 @@ class ConnectingCancelledError(Exception):
         self.address = address
 
 
-
 class NoProtocol(Exception):
     """
     An C{Exception} that will be raised when the factory given to a
@@ -455,13 +424,11 @@ class NoProtocol(Exception):
     """
 
 
-
 class UnsupportedAddressFamily(Exception):
     """
     An attempt was made to use a socket with an address family (eg I{AF_INET},
     I{AF_INET6}, etc) which is not supported by the reactor.
     """
-
 
 
 class UnsupportedSocketType(Exception):
@@ -476,7 +443,6 @@ class AlreadyListened(Exception):
     An attempt was made to listen on a file descriptor which can only be
     listened on once.
     """
-
 
 
 class InvalidAddressError(ValueError):
@@ -500,18 +466,45 @@ class InvalidAddressError(ValueError):
         self.message = message
 
 
-
 __all__ = [
-    'BindError', 'CannotListenError', 'MulticastJoinError',
-    'MessageLengthError', 'DNSLookupError', 'ConnectInProgressError',
-    'ConnectError', 'ConnectBindError', 'UnknownHostError', 'NoRouteError',
-    'ConnectionRefusedError', 'TCPTimedOutError', 'BadFileError',
-    'ServiceNameUnknownError', 'UserError', 'TimeoutError', 'SSLError',
-    'VerifyError', 'PeerVerifyError', 'CertificateError',
-    'getConnectError', 'ConnectionClosed', 'ConnectionLost',
-    'ConnectionDone', 'ConnectionFdescWentAway', 'AlreadyCalled',
-    'AlreadyCancelled', 'PotentialZombieWarning', 'ProcessDone',
-    'ProcessTerminated', 'ProcessExitedAlready', 'NotConnectingError',
-    'NotListeningError', 'ReactorNotRunning', 'ReactorAlreadyRunning',
-    'ReactorAlreadyInstalledError', 'ConnectingCancelledError',
-    'UnsupportedAddressFamily', 'UnsupportedSocketType', 'InvalidAddressError']
+    "BindError",
+    "CannotListenError",
+    "MulticastJoinError",
+    "MessageLengthError",
+    "DNSLookupError",
+    "ConnectInProgressError",
+    "ConnectError",
+    "ConnectBindError",
+    "UnknownHostError",
+    "NoRouteError",
+    "ConnectionRefusedError",
+    "TCPTimedOutError",
+    "BadFileError",
+    "ServiceNameUnknownError",
+    "UserError",
+    "TimeoutError",
+    "SSLError",
+    "VerifyError",
+    "PeerVerifyError",
+    "CertificateError",
+    "getConnectError",
+    "ConnectionClosed",
+    "ConnectionLost",
+    "ConnectionDone",
+    "ConnectionFdescWentAway",
+    "AlreadyCalled",
+    "AlreadyCancelled",
+    "PotentialZombieWarning",
+    "ProcessDone",
+    "ProcessTerminated",
+    "ProcessExitedAlready",
+    "NotConnectingError",
+    "NotListeningError",
+    "ReactorNotRunning",
+    "ReactorAlreadyRunning",
+    "ReactorAlreadyInstalledError",
+    "ConnectingCancelledError",
+    "UnsupportedAddressFamily",
+    "UnsupportedSocketType",
+    "InvalidAddressError",
+]

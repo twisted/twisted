@@ -16,7 +16,6 @@ for resolvers to deal with.  Fix it.
 
 @author: Jp Calderone
 """
-from __future__ import division, absolute_import
 
 import time
 
@@ -62,10 +61,10 @@ class DNSServerFactory(protocol.ServerFactory):
     @type _messageFactory: C{callable}
     """
 
-    protocol = dns.DNSProtocol
+    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10004#ticket
+    protocol = dns.DNSProtocol  # type: ignore[assignment]
     cache = None
     _messageFactory = dns.Message
-
 
     def __init__(self, authorities=None, caches=None, clients=None, verbose=0):
         """
@@ -102,7 +101,6 @@ class DNSServerFactory(protocol.ServerFactory):
             self.cache = caches[-1]
         self.connections = []
 
-
     def _verboseLog(self, *args, **kwargs):
         """
         Log a message only if verbose logging is enabled.
@@ -113,12 +111,10 @@ class DNSServerFactory(protocol.ServerFactory):
         if self.verbose > 0:
             log.msg(*args, **kwargs)
 
-
     def buildProtocol(self, addr):
         p = self.protocol(self)
         p.factory = self
         return p
-
 
     def connectionMade(self, protocol):
         """
@@ -129,7 +125,6 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         self.connections.append(protocol)
 
-
     def connectionLost(self, protocol):
         """
         Stop tracking a no-longer connected L{DNSProtocol}.
@@ -139,7 +134,6 @@ class DNSServerFactory(protocol.ServerFactory):
         @type protocol: L{dns.DNSProtocol}
         """
         self.connections.remove(protocol)
-
 
     def sendReply(self, protocol, message, address):
         """
@@ -159,9 +153,9 @@ class DNSServerFactory(protocol.ServerFactory):
         @type address: L{tuple} or L{None}
         """
         if self.verbose > 1:
-            s = ' '.join([str(a.payload) for a in message.answers])
-            auth = ' '.join([str(a.payload) for a in message.authority])
-            add = ' '.join([str(a.payload) for a in message.additional])
+            s = " ".join([str(a.payload) for a in message.answers])
+            auth = " ".join([str(a.payload) for a in message.authority])
+            add = " ".join([str(a.payload) for a in message.additional])
             if not s:
                 log.msg("Replying with no answers")
             else:
@@ -175,12 +169,12 @@ class DNSServerFactory(protocol.ServerFactory):
             protocol.writeMessage(message, address)
 
         self._verboseLog(
-            "Processed query in %0.3f seconds" % (
-                time.time() - message.timeReceived))
+            "Processed query in %0.3f seconds" % (time.time() - message.timeReceived)
+        )
 
-
-    def _responseFromMessage(self, message, rCode=dns.OK,
-                             answers=None, authority=None, additional=None):
+    def _responseFromMessage(
+        self, message, rCode=dns.OK, answers=None, authority=None, additional=None
+    ):
         """
         Generate a L{Message} instance suitable for use as the response to
         C{message}.
@@ -241,13 +235,13 @@ class DNSServerFactory(protocol.ServerFactory):
             message=message,
             recAv=self.canRecurse,
             rCode=rCode,
-            auth=authoritativeAnswer
+            auth=authoritativeAnswer,
         )
 
         # XXX: Timereceived is a hack which probably shouldn't be tacked onto
         # the message. Use getattr here so that we don't have to set the
         # timereceived on every message in the tests. See #6957.
-        response.timeReceived = getattr(message, 'timeReceived', None)
+        response.timeReceived = getattr(message, "timeReceived", None)
 
         # XXX: This is another hack. dns.Message.decode sets maxSize=0 which
         # means that responses are never truncated. I'll maintain that behaviour
@@ -259,7 +253,6 @@ class DNSServerFactory(protocol.ServerFactory):
         response.additional = additional
 
         return response
-
 
     def gotResolverResponse(self, response, protocol, message, address):
         """
@@ -292,18 +285,15 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         ans, auth, add = response
         response = self._responseFromMessage(
-            message=message, rCode=dns.OK,
-            answers=ans, authority=auth, additional=add)
+            message=message, rCode=dns.OK, answers=ans, authority=auth, additional=add
+        )
         self.sendReply(protocol, response, address)
 
         l = len(ans) + len(auth) + len(add)
         self._verboseLog("Lookup found %d record%s" % (l, l != 1 and "s" or ""))
 
         if self.cache and l:
-            self.cache.cacheResult(
-                message.queries[0], (ans, auth, add)
-            )
-
+            self.cache.cacheResult(message.queries[0], (ans, auth, add))
 
     def gotResolverError(self, failure, protocol, message, address):
         """
@@ -342,7 +332,6 @@ class DNSServerFactory(protocol.ServerFactory):
         self.sendReply(protocol, response, address)
         self._verboseLog("Lookup failed")
 
-
     def handleQuery(self, message, protocol, address):
         """
         Called by L{DNSServerFactory.messageReceived} when a query message is
@@ -378,12 +367,11 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         query = message.queries[0]
 
-        return self.resolver.query(query).addCallback(
-            self.gotResolverResponse, protocol, message, address
-        ).addErrback(
-            self.gotResolverError, protocol, message, address
+        return (
+            self.resolver.query(query)
+            .addCallback(self.gotResolverResponse, protocol, message, address)
+            .addErrback(self.gotResolverError, protocol, message, address)
         )
-
 
     def handleInverseQuery(self, message, protocol, address):
         """
@@ -410,8 +398,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Inverse query from %r" % (address,))
-
+        self._verboseLog(f"Inverse query from {address!r}")
 
     def handleStatus(self, message, protocol, address):
         """
@@ -438,8 +425,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Status request from %r" % (address,))
-
+        self._verboseLog(f"Status request from {address!r}")
 
     def handleNotify(self, message, protocol, address):
         """
@@ -466,8 +452,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog("Notify message from %r" % (address,))
-
+        self._verboseLog(f"Notify message from {address!r}")
 
     def handleOther(self, message, protocol, address):
         """
@@ -494,9 +479,7 @@ class DNSServerFactory(protocol.ServerFactory):
         """
         message.rCode = dns.ENOTIMP
         self.sendReply(protocol, message, address)
-        self._verboseLog(
-            "Unknown op code (%d) from %r" % (message.opCode, address))
-
+        self._verboseLog("Unknown op code (%d) from %r" % (message.opCode, address))
 
     def messageReceived(self, message, proto, address=None):
         """
@@ -534,18 +517,15 @@ class DNSServerFactory(protocol.ServerFactory):
 
         if self.verbose:
             if self.verbose > 1:
-                s = ' '.join([str(q) for q in message.queries])
+                s = " ".join([str(q) for q in message.queries])
             else:
-                s = ' '.join([dns.QUERY_TYPES.get(q.type, 'UNKNOWN')
-                              for q in message.queries])
+                s = " ".join(
+                    [dns.QUERY_TYPES.get(q.type, "UNKNOWN") for q in message.queries]
+                )
             if not len(s):
-                log.msg(
-                    "Empty query from %r" % (
-                        (address or proto.transport.getPeer()),))
+                log.msg(f"Empty query from {address or proto.transport.getPeer()!r}")
             else:
-                log.msg(
-                    "%s query from %r" % (
-                        s, address or proto.transport.getPeer()))
+                log.msg(f"{s} query from {address or proto.transport.getPeer()!r}")
 
         if not self.allowQuery(message, proto, address):
             message.rCode = dns.EREFUSED
@@ -560,7 +540,6 @@ class DNSServerFactory(protocol.ServerFactory):
             self.handleNotify(message, proto, address)
         else:
             self.handleOther(message, proto, address)
-
 
     def allowQuery(self, message, protocol, address):
         """

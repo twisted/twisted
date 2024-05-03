@@ -1,7 +1,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-# 
+#
 
 """
 Twisted inetd.
@@ -14,23 +14,24 @@ correctly yet.
 
 import os
 
-from twisted.internet import process, reactor, fdesc
+from twisted.internet import fdesc, process, reactor
 from twisted.internet.protocol import Protocol, ServerFactory
 from twisted.protocols import wire
 
 # A dict of known 'internal' services (i.e. those that don't involve spawning
 # another process.
 internalProtocols = {
-    'echo': wire.Echo,
-    'chargen': wire.Chargen,
-    'discard': wire.Discard,
-    'daytime': wire.Daytime,
-    'time': wire.Time,
+    "echo": wire.Echo,
+    "chargen": wire.Chargen,
+    "discard": wire.Discard,
+    "daytime": wire.Daytime,
+    "time": wire.Time,
 }
-            
+
 
 class InetdProtocol(Protocol):
     """Forks a child process on connectionMade, passing the socket as fd 0."""
+
     def connectionMade(self):
         sockFD = self.transport.fileno()
         childFDs = {0: sockFD, 1: sockFD}
@@ -55,16 +56,25 @@ class InetdProtocol(Protocol):
         if gid == os.getgid():
             gid = None
 
-        process.Process(None, service.program, service.programArgs, os.environ,
-                        None, None, uid, gid, childFDs)
+        process.Process(
+            None,
+            service.program,
+            service.programArgs,
+            os.environ,
+            None,
+            None,
+            uid,
+            gid,
+            childFDs,
+        )
 
         reactor.removeReader(self.transport)
         reactor.removeWriter(self.transport)
-                        
+
 
 class InetdFactory(ServerFactory):
     protocol = InetdProtocol
     stderrFile = None
-    
+
     def __init__(self, service):
         self.service = service

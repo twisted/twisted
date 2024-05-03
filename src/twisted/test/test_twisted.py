@@ -6,10 +6,8 @@ Tests for miscellaneous behaviors of the top-level L{twisted} package (ie, for
 the code in C{twisted/__init__.py}.
 """
 
-from __future__ import division, absolute_import
 
 import sys
-
 from types import ModuleType
 
 from twisted.trial.unittest import TestCase
@@ -17,41 +15,37 @@ from twisted.trial.unittest import TestCase
 
 # This is somewhat generally useful and should probably be part of a public API
 # somewhere.  See #5977.
-class SetAsideModule(object):
+class SetAsideModule:
     """
     L{SetAsideModule} is a context manager for temporarily removing a module
     from C{sys.modules}.
 
     @ivar name: The name of the module to remove.
     """
+
     def __init__(self, name):
         self.name = name
-
 
     def _unimport(self, name):
         """
         Find the given module and all of its hierarchically inferior modules in
         C{sys.modules}, remove them from it, and return whatever was found.
         """
-        modules = dict([
-                (moduleName, module)
-                for (moduleName, module)
-                in list(sys.modules.items())
-                if (moduleName == self.name or
-                    moduleName.startswith(self.name + "."))])
+        modules = {
+            moduleName: module
+            for (moduleName, module) in list(sys.modules.items())
+            if (moduleName == self.name or moduleName.startswith(self.name + "."))
+        }
         for name in modules:
             del sys.modules[name]
         return modules
 
-
     def __enter__(self):
         self.modules = self._unimport(self.name)
-
 
     def __exit__(self, excType, excValue, traceback):
         self._unimport(self.name)
         sys.modules.update(self.modules)
-
 
 
 def _install(modules):
@@ -93,7 +87,6 @@ def _install(modules):
     sys.modules.update(result)
 
 
-
 def _makePackages(parent, attributes, result):
     """
     Construct module objects (for either modules or packages).
@@ -114,7 +107,7 @@ def _makePackages(parent, attributes, result):
     @see: L{_install}.
     """
     attrs = {}
-    for (name, value) in list(attributes.items()):
+    for name, value in list(attributes.items()):
         if parent is None:
             if isinstance(value, dict):
                 module = ModuleType(name)
@@ -124,14 +117,13 @@ def _makePackages(parent, attributes, result):
                 result[name] = value
         else:
             if isinstance(value, dict):
-                module = ModuleType(parent.__name__ + '.' + name)
+                module = ModuleType(parent.__name__ + "." + name)
                 module.__dict__.update(_makePackages(module, value, result))
-                result[parent.__name__ + '.' + name] = module
+                result[parent.__name__ + "." + name] = module
                 attrs[name] = module
             else:
                 attrs[name] = value
     return attrs
-
 
 
 class MakePackagesTests(TestCase):
@@ -139,15 +131,15 @@ class MakePackagesTests(TestCase):
     Tests for L{_makePackages}, a helper for populating C{sys.modules} with
     fictional modules.
     """
+
     def test_nonModule(self):
         """
         A non-C{dict} value in the attributes dictionary passed to L{_makePackages}
         is preserved unchanged in the return value.
         """
         modules = {}
-        _makePackages(None, dict(reactor='reactor'), modules)
-        self.assertEqual(modules, dict(reactor='reactor'))
-
+        _makePackages(None, dict(reactor="reactor"), modules)
+        self.assertEqual(modules, dict(reactor="reactor"))
 
     def test_moduleWithAttribute(self):
         """
@@ -156,12 +148,11 @@ class MakePackagesTests(TestCase):
         the items of that C{dict} value.
         """
         modules = {}
-        _makePackages(None, dict(twisted=dict(version='123')), modules)
+        _makePackages(None, dict(twisted=dict(version="123")), modules)
         self.assertIsInstance(modules, dict)
-        self.assertIsInstance(modules['twisted'], ModuleType)
-        self.assertEqual('twisted', modules['twisted'].__name__)
-        self.assertEqual('123', modules['twisted'].version)
-
+        self.assertIsInstance(modules["twisted"], ModuleType)
+        self.assertEqual("twisted", modules["twisted"].__name__)
+        self.assertEqual("123", modules["twisted"].version)
 
     def test_packageWithModule(self):
         """
@@ -169,10 +160,10 @@ class MakePackagesTests(TestCase):
         it contains may itself contain a C{dict} value to the same effect.
         """
         modules = {}
-        _makePackages(None, dict(twisted=dict(web=dict(version='321'))), modules)
+        _makePackages(None, dict(twisted=dict(web=dict(version="321"))), modules)
         self.assertIsInstance(modules, dict)
-        self.assertIsInstance(modules['twisted'], ModuleType)
-        self.assertEqual('twisted', modules['twisted'].__name__)
-        self.assertIsInstance(modules['twisted'].web, ModuleType)
-        self.assertEqual('twisted.web', modules['twisted'].web.__name__)
-        self.assertEqual('321', modules['twisted'].web.version)
+        self.assertIsInstance(modules["twisted"], ModuleType)
+        self.assertEqual("twisted", modules["twisted"].__name__)
+        self.assertIsInstance(modules["twisted"].web, ModuleType)
+        self.assertEqual("twisted.web", modules["twisted"].web.__name__)
+        self.assertEqual("321", modules["twisted"].web.version)

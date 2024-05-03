@@ -6,25 +6,37 @@
 Scheduling utility methods and classes.
 """
 
-from __future__ import division, absolute_import
-
-__metaclass__ = type
 
 import sys
 import time
 import warnings
+from typing import (
+    Callable,
+    Coroutine,
+    Iterable,
+    Iterator,
+    List,
+    NoReturn,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from zope.interface import implementer
 
-from twisted.python import log
-from twisted.python import reflect
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.failure import Failure
 from incremental import Version
 
-from twisted.internet import base, defer
-from twisted.internet.interfaces import IReactorTime
+from twisted.internet.base import DelayedCall
+from twisted.internet.defer import Deferred, ensureDeferred, maybeDeferred
 from twisted.internet.error import ReactorNotRunning
+from twisted.internet.interfaces import IDelayedCall, IReactorCore, IReactorTime
+from twisted.python import log, reflect
+from twisted.python.deprecate import _getDeprecationWarningString
+from twisted.python.failure import Failure
+
+_T = TypeVar("_T")
 
 
 class LoopingCall:
@@ -42,38 +54,37 @@ class LoopingCall:
         something else, but it probably ought to be set *before*
         calling L{start}.
 
-    @type running: C{bool}
     @ivar running: A flag which is C{True} while C{f} is scheduled to be called
         (or is currently being called). It is set to C{True} when L{start} is
         called and set to C{False} when L{stop} is called or if C{f} raises an
         exception. In either case, it will be C{False} by the time the
         C{Deferred} returned by L{start} fires its callback or errback.
 
-    @type _realLastTime: C{float}
     @ivar _realLastTime: When counting skips, the time at which the skip
         counter was last invoked.
 
-    @type _runAtStart: C{bool}
     @ivar _runAtStart: A flag indicating whether the 'now' argument was passed
         to L{LoopingCall.start}.
     """
 
-    call = None
+    call: Optional[IDelayedCall] = None
     running = False
-    _deferred = None
-    interval = None
+    _deferred: Optional[Deferred["LoopingCall"]] = None
+    interval: Optional[float] = None
     _runAtStart = False
-    starttime = None
+    starttime: Optional[float] = None
+    _realLastTime: Optional[float] = None
 
-    def __init__(self, f, *a, **kw):
+    def __init__(self, f: Callable[..., object], *a: object, **kw: object) -> None:
         self.f = f
         self.a = a
         self.kw = kw
         from twisted.internet import reactor
-        self.clock = reactor
+
+        self.clock = cast(IReactorTime, reactor)
 
     @property
-    def deferred(self):
+    def deferred(self) -> Optional[Deferred["LoopingCall"]]:
         """
         DEPRECATED. L{Deferred} fired when loop stops or fails.
 
@@ -82,12 +93,14 @@ class LoopingCall:
         warningString = _getDeprecationWarningString(
             "twisted.internet.task.LoopingCall.deferred",
             Version("Twisted", 16, 0, 0),
-            replacement='the deferred returned by start()')
+            replacement="the deferred returned by start()",
+        )
         warnings.warn(warningString, DeprecationWarning, stacklevel=2)
 
         return self._deferred
 
-    def withCount(cls, countCallable):
+    @classmethod
+    def withCount(cls, countCallable: Callable[[int], object]) -> "LoopingCall":
         """
         An alternate constructor for L{LoopingCall} that makes available the
         number of calls which should have occurred since it was last invoked.
@@ -103,23 +116,19 @@ class LoopingCall:
         elapsed, or if the callable itself blocks for longer than an interval,
         preventing I{itself} from being called.
 
-        When running with an interval if 0, count will be always 1.
+        When running with an interval of 0, count will be always 1.
 
         @param countCallable: A callable that will be invoked each time the
             resulting LoopingCall is run, with an integer specifying the number
             of calls that should have been invoked.
 
-        @type countCallable: 1-argument callable which takes an C{int}
-
         @return: An instance of L{LoopingCall} with call counting enabled,
             which provides the count as the first positional argument.
-
-        @rtype: L{LoopingCall}
 
         @since: 9.0
         """
 
-        def counter():
+        def counter() -> object:
             now = self.clock.seconds()
 
             if self.interval == 0:
@@ -128,8 +137,14 @@ class LoopingCall:
 
             lastTime = self._realLastTime
             if lastTime is None:
+                assert (
+                    self.starttime is not None
+                ), "LoopingCall called before it was started"
                 lastTime = self.starttime
                 if self._runAtStart:
+                    assert (
+                        self.interval is not None
+                    ), "Looping call called with None interval"
                     lastTime -= self.interval
             lastInterval = self._intervalOf(lastTime)
             thisInterval = self._intervalOf(now)
@@ -138,16 +153,13 @@ class LoopingCall:
                 self._realLastTime = now
                 return countCallable(count)
 
-        self = cls(counter)
+            return None
 
-        self._realLastTime = None
+        self = cls(counter)
 
         return self
 
-    withCount = classmethod(withCount)
-
-
-    def _intervalOf(self, t):
+    def _intervalOf(self, t: float) -> int:
         """
         Determine the number of intervals passed as of the given point in
         time.
@@ -158,12 +170,13 @@ class LoopingCall:
         @return: The C{int} number of intervals which have passed as of the
             given point in time.
         """
+        assert self.starttime is not None
+        assert self.interval is not None
         elapsedTime = t - self.starttime
         intervalNum = int(elapsedTime / self.interval)
         return intervalNum
 
-
-    def start(self, interval, now=True):
+    def start(self, interval: float, now: bool = True) -> Deferred["LoopingCall"]:
         """
         Start running function every interval seconds.
 
@@ -179,14 +192,13 @@ class LoopingCall:
         invoked when the function raises an exception or returned a
         deferred that has its errback invoked.
         """
-        assert not self.running, ("Tried to start an already running "
-                                  "LoopingCall.")
+        assert not self.running, "Tried to start an already running " "LoopingCall."
         if interval < 0:
             raise ValueError("interval must be >= 0")
         self.running = True
         # Loop might fail to start and then self._deferred will be cleared.
         # This why the local C{deferred} variable is used.
-        deferred = self._deferred = defer.Deferred()
+        deferred = self._deferred = Deferred()
         self.starttime = self.clock.seconds()
         self.interval = interval
         self._runAtStart = now
@@ -196,58 +208,58 @@ class LoopingCall:
             self._scheduleFrom(self.starttime)
         return deferred
 
-    def stop(self):
-        """Stop running function.
-        """
-        assert self.running, ("Tried to stop a LoopingCall that was "
-                              "not running.")
+    def stop(self) -> None:
+        """Stop running function."""
+        assert self.running, "Tried to stop a LoopingCall that was " "not running."
         self.running = False
         if self.call is not None:
             self.call.cancel()
             self.call = None
             d, self._deferred = self._deferred, None
+            assert d is not None
             d.callback(self)
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Skip the next iteration and reset the timer.
 
         @since: 11.1
         """
-        assert self.running, ("Tried to reset a LoopingCall that was "
-                              "not running.")
+        assert self.running, "Tried to reset a LoopingCall that was " "not running."
         if self.call is not None:
             self.call.cancel()
             self.call = None
             self.starttime = self.clock.seconds()
             self._scheduleFrom(self.starttime)
 
-    def __call__(self):
-        def cb(result):
+    def __call__(self) -> None:
+        def cb(result: object) -> None:
             if self.running:
                 self._scheduleFrom(self.clock.seconds())
             else:
                 d, self._deferred = self._deferred, None
+                assert d is not None
                 d.callback(self)
 
-        def eb(failure):
+        def eb(failure: Failure) -> None:
             self.running = False
             d, self._deferred = self._deferred, None
+            assert d is not None
             d.errback(failure)
 
         self.call = None
-        d = defer.maybeDeferred(self.f, *self.a, **self.kw)
+        d = maybeDeferred(self.f, *self.a, **self.kw)
         d.addCallback(cb)
         d.addErrback(eb)
 
-
-    def _scheduleFrom(self, when):
+    def _scheduleFrom(self, when: float) -> None:
         """
         Schedule the next iteration of this looping call.
 
         @param when: The present time from whence the call is scheduled.
         """
-        def howLong():
+
+        def howLong() -> float:
             # How long should it take until the next invocation of our
             # callable?  Split out into a function because there are multiple
             # places we want to 'return' out of this.
@@ -257,8 +269,10 @@ class LoopingCall:
                 return 0
             # Compute the time until the next interval; how long has this call
             # been running for?
+            assert self.starttime is not None
             runningFor = when - self.starttime
             # And based on that start time, when does the current interval end?
+            assert self.interval is not None
             untilNextInterval = self.interval - (runningFor % self.interval)
             # Now that we know how long it would be, we have to tell if the
             # number is effectively zero.  However, we can't just test against
@@ -273,23 +287,28 @@ class LoopingCall:
             # Finally, if everything else is normal, we just return the
             # computed delay.
             return untilNextInterval
+
         self.call = self.clock.callLater(howLong(), self)
 
-
-    def __repr__(self):
-        if hasattr(self.f, '__qualname__'):
-            func = self.f.__qualname__
-        elif hasattr(self.f, '__name__'):
-            func = self.f.__name__
-            if hasattr(self.f, 'im_class'):
-                func = self.f.im_class.__name__ + '.' + func
-        else:
+    def __repr__(self) -> str:
+        # This code should be replaced by a utility function in reflect;
+        # see ticket #6066:
+        func = getattr(self.f, "__qualname__", None)
+        if func is None:
+            func = getattr(self.f, "__name__", None)
+            if func is not None:
+                imClass = getattr(self.f, "im_class", None)
+                if imClass is not None:
+                    func = f"{imClass}.{func}"
+        if func is None:
             func = reflect.safe_repr(self.f)
 
-        return 'LoopingCall<%r>(%s, *%s, **%s)' % (
-            self.interval, func, reflect.safe_repr(self.a),
-            reflect.safe_repr(self.kw))
-
+        return "LoopingCall<{!r}>({}, *{}, **{})".format(
+            self.interval,
+            func,
+            reflect.safe_repr(self.a),
+            reflect.safe_repr(self.kw),
+        )
 
 
 class SchedulerError(Exception):
@@ -301,13 +320,11 @@ class SchedulerError(Exception):
     """
 
 
-
 class SchedulerStopped(SchedulerError):
     """
     The operation could not complete because the scheduler was stopped in
     progress or was already stopped.
     """
-
 
 
 class TaskFinished(SchedulerError):
@@ -317,19 +334,16 @@ class TaskFinished(SchedulerError):
     """
 
 
-
 class TaskDone(TaskFinished):
     """
     The operation could not complete because the task was already completed.
     """
 
 
-
 class TaskStopped(TaskFinished):
     """
     The operation could not complete because the task was stopped.
     """
-
 
 
 class TaskFailed(TaskFinished):
@@ -339,7 +353,6 @@ class TaskFailed(TaskFinished):
     """
 
 
-
 class NotPaused(SchedulerError):
     """
     This exception is raised when a task is resumed which was not previously
@@ -347,25 +360,29 @@ class NotPaused(SchedulerError):
     """
 
 
-
-class _Timer(object):
+class _Timer:
     MAX_SLICE = 0.01
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.end = time.time() + self.MAX_SLICE
 
-
-    def __call__(self):
+    def __call__(self) -> bool:
         return time.time() >= self.end
 
 
-
 _EPSILON = 0.00000001
-def _defaultScheduler(x):
+
+
+def _defaultScheduler(callable: Callable[[], None]) -> IDelayedCall:
     from twisted.internet import reactor
-    return reactor.callLater(_EPSILON, x)
+
+    return cast(IReactorTime, reactor).callLater(_EPSILON, callable)
 
 
-class CooperativeTask(object):
+_TaskResultT = TypeVar("_TaskResultT")
+
+
+class CooperativeTask:
     """
     A L{CooperativeTask} is a task object inside a L{Cooperator}, which can be
     paused, resumed, and stopped.  It can also have its completion (or
@@ -379,17 +396,11 @@ class CooperativeTask(object):
     @ivar _cooperator: the L{Cooperator} that this L{CooperativeTask}
         participates in, which is used to re-insert it upon resume.
 
-    @ivar _deferreds: the list of L{defer.Deferred}s to fire when this task
+    @ivar _deferreds: the list of L{Deferred}s to fire when this task
         completes, fails, or finishes.
-
-    @type _deferreds: C{list}
-
-    @type _cooperator: L{Cooperator}
 
     @ivar _pauseCount: the number of times that this L{CooperativeTask} has
         been paused; if 0, it is running.
-
-    @type _pauseCount: C{int}
 
     @ivar _completionState: The completion-state of this L{CooperativeTask}.
         L{None} if the task is not yet completed, an instance of L{TaskStopped}
@@ -397,45 +408,44 @@ class CooperativeTask(object):
         application code in the iterator raised an exception which caused it to
         terminate, and of L{TaskDone} if it terminated normally via raising
         C{StopIteration}.
-
-    @type _completionState: L{TaskFinished}
     """
 
-    def __init__(self, iterator, cooperator):
+    def __init__(
+        self, iterator: Iterator[_TaskResultT], cooperator: "Cooperator"
+    ) -> None:
         """
         A private constructor: to create a new L{CooperativeTask}, see
         L{Cooperator.cooperate}.
         """
         self._iterator = iterator
         self._cooperator = cooperator
-        self._deferreds = []
+        self._deferreds: List[Deferred[Iterator[_TaskResultT]]] = []
         self._pauseCount = 0
-        self._completionState = None
-        self._completionResult = None
+        self._completionState: Optional[SchedulerError] = None
+        self._completionResult: Optional[Union[Iterator[_TaskResultT], Failure]] = None
         cooperator._addTask(self)
 
-
-    def whenDone(self):
+    def whenDone(self) -> Deferred[Iterator[_TaskResultT]]:
         """
-        Get a L{defer.Deferred} notification of when this task is complete.
+        Get a L{Deferred} notification of when this task is complete.
 
-        @return: a L{defer.Deferred} that fires with the C{iterator} that this
+        @return: a L{Deferred} that fires with the C{iterator} that this
             L{CooperativeTask} was created with when the iterator has been
             exhausted (i.e. its C{next} method has raised C{StopIteration}), or
             fails with the exception raised by C{next} if it raises some other
             exception.
 
-        @rtype: L{defer.Deferred}
+        @rtype: L{Deferred}
         """
-        d = defer.Deferred()
+        d: Deferred[Iterator[_TaskResultT]] = Deferred()
         if self._completionState is None:
             self._deferreds.append(d)
         else:
+            assert self._completionResult is not None
             d.callback(self._completionResult)
         return d
 
-
-    def pause(self):
+    def pause(self) -> None:
         """
         Pause this L{CooperativeTask}.  Stop doing work until
         L{CooperativeTask.resume} is called.  If C{pause} is called more than
@@ -449,8 +459,7 @@ class CooperativeTask(object):
         if self._pauseCount == 1:
             self._cooperator._removeTask(self)
 
-
-    def resume(self):
+    def resume(self) -> None:
         """
         Resume processing of a paused L{CooperativeTask}.
 
@@ -462,10 +471,13 @@ class CooperativeTask(object):
         if self._pauseCount == 0 and self._completionState is None:
             self._cooperator._addTask(self)
 
-
-    def _completeWith(self, completionState, deferredResult):
+    def _completeWith(
+        self,
+        completionState: SchedulerError,
+        deferredResult: Union[Iterator[_TaskResultT], Failure],
+    ) -> None:
         """
-        @param completionState: a L{TaskFinished} exception or a subclass
+        @param completionState: a L{SchedulerError} exception or a subclass
             thereof, indicating what exception should be raised when subsequent
             operations are performed.
 
@@ -486,8 +498,7 @@ class CooperativeTask(object):
         for d in self._deferreds:
             d.callback(deferredResult)
 
-
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop further processing of this task.
 
@@ -497,8 +508,7 @@ class CooperativeTask(object):
         self._checkFinish()
         self._completeWith(TaskStopped(), Failure(TaskStopped()))
 
-
-    def _checkFinish(self):
+    def _checkFinish(self) -> None:
         """
         If this task has been stopped, raise the appropriate subclass of
         L{TaskFinished}.
@@ -506,38 +516,37 @@ class CooperativeTask(object):
         if self._completionState is not None:
             raise self._completionState
 
-
-    def _oneWorkUnit(self):
+    def _oneWorkUnit(self) -> None:
         """
         Perform one unit of work for this task, retrieving one item from its
         iterator, stopping if there are no further items in the iterator, and
-        pausing if the result was a L{defer.Deferred}.
+        pausing if the result was a L{Deferred}.
         """
         try:
             result = next(self._iterator)
         except StopIteration:
             self._completeWith(TaskDone(), self._iterator)
-        except:
+        except BaseException:
             self._completeWith(TaskFailed(), Failure())
         else:
-            if isinstance(result, defer.Deferred):
+            if isinstance(result, Deferred):
                 self.pause()
-                def failLater(f):
-                    self._completeWith(TaskFailed(), f)
-                result.addCallbacks(lambda result: self.resume(),
-                                    failLater)
+
+                def failLater(failure: Failure) -> None:
+                    self._completeWith(TaskFailed(), failure)
+
+                result.addCallbacks(lambda result: self.resume(), failLater)
 
 
-
-class Cooperator(object):
+class Cooperator:
     """
     Cooperative task scheduler.
 
     A cooperative task is an iterator where each iteration represents an
     atomic unit of work.  When the iterator yields, it allows the
     L{Cooperator} to decide which of its tasks to execute next.  If the
-    iterator yields a L{defer.Deferred} then work will pause until the
-    L{defer.Deferred} fires and completes its callback chain.
+    iterator yields a L{Deferred} then work will pause until the
+    L{Deferred} fires and completes its callback chain.
 
     When a L{Cooperator} has more than one task, it distributes work between
     all tasks.
@@ -547,14 +556,14 @@ class Cooperator(object):
     L{CooperativeTask}, which can be L{paused<CooperativeTask.pause>},
     L{resumed<CooperativeTask.resume>} and L{waited
     on<CooperativeTask.whenDone>}.  L{coiterate} has the same effect, but
-    returns only a L{defer.Deferred} that fires when the task is done.
+    returns only a L{Deferred} that fires when the task is done.
 
     L{Cooperator} can be used for many things, including but not limited to:
 
       - running one or more computationally intensive tasks without blocking
       - limiting parallelism by running a subset of the total tasks
         simultaneously
-      - doing one thing, waiting for a L{Deferred<defer.Deferred>} to fire,
+      - doing one thing, waiting for a L{Deferred} to fire,
         doing the next thing, repeat (i.e. serializing a sequence of
         asynchronous tasks)
 
@@ -562,10 +571,12 @@ class Cooperator(object):
     cases you should use the L{global cooperator<task.cooperate>}.
     """
 
-    def __init__(self,
-                 terminationPredicateFactory=_Timer,
-                 scheduler=_defaultScheduler,
-                 started=True):
+    def __init__(
+        self,
+        terminationPredicateFactory: Callable[[], Callable[[], bool]] = _Timer,
+        scheduler: Callable[[Callable[[], None]], IDelayedCall] = _defaultScheduler,
+        started: bool = True,
+    ):
         """
         Create a scheduler-like object to which iterators may be added.
 
@@ -583,21 +594,24 @@ class Cooperator(object):
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks = []
-        self._metarator = iter(())
+        self._tasks: List[CooperativeTask] = []
+        self._metarator: Iterator[CooperativeTask] = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
-        self._delayedCall = None
+        self._delayedCall: Optional[IDelayedCall] = None
         self._stopped = False
         self._started = started
 
-
-    def coiterate(self, iterator, doneDeferred=None):
+    def coiterate(
+        self,
+        iterator: Iterator[_TaskResultT],
+        doneDeferred: Optional[Deferred[Iterator[_TaskResultT]]] = None,
+    ) -> Deferred[Iterator[_TaskResultT]]:
         """
         Add an iterator to the list of iterators this L{Cooperator} is
         currently running.
 
-        Equivalent to L{cooperate}, but returns a L{defer.Deferred} that will
+        Equivalent to L{cooperate}, but returns a L{Deferred} that will
         be fired when the task is done.
 
         @param doneDeferred: If specified, this will be the Deferred used as
@@ -607,12 +621,14 @@ class Cooperator(object):
         @return: a Deferred that will fire when the iterator finishes.
         """
         if doneDeferred is None:
-            doneDeferred = defer.Deferred()
-        CooperativeTask(iterator, self).whenDone().chainDeferred(doneDeferred)
+            doneDeferred = Deferred()
+        whenDone: Deferred[Iterator[_TaskResultT]] = CooperativeTask(
+            iterator, self
+        ).whenDone()
+        whenDone.chainDeferred(doneDeferred)
         return doneDeferred
 
-
-    def cooperate(self, iterator):
+    def cooperate(self, iterator: Iterator[_TaskResultT]) -> CooperativeTask:
         """
         Start running the given iterator as a long-running cooperative task, by
         calling next() on it as a periodic timed event.
@@ -623,21 +639,19 @@ class Cooperator(object):
         """
         return CooperativeTask(iterator, self)
 
-
-    def _addTask(self, task):
+    def _addTask(self, task: CooperativeTask) -> None:
         """
         Add a L{CooperativeTask} object to this L{Cooperator}.
         """
         if self._stopped:
-            self._tasks.append(task) # XXX silly, I know, but _completeWith
-                                     # does the inverse
+            self._tasks.append(task)  # XXX silly, I know, but _completeWith
+            # does the inverse
             task._completeWith(SchedulerStopped(), Failure(SchedulerStopped()))
         else:
             self._tasks.append(task)
             self._reschedule()
 
-
-    def _removeTask(self, task):
+    def _removeTask(self, task: CooperativeTask) -> None:
         """
         Remove a L{CooperativeTask} from this L{Cooperator}.
         """
@@ -647,8 +661,7 @@ class Cooperator(object):
             self._delayedCall.cancel()
             self._delayedCall = None
 
-
-    def _tasksWhileNotStopped(self):
+    def _tasksWhileNotStopped(self) -> Iterable[CooperativeTask]:
         """
         Yield all L{CooperativeTask} objects in a loop as long as this
         L{Cooperator}'s termination condition has not been met.
@@ -661,8 +674,7 @@ class Cooperator(object):
                     return
             self._metarator = iter(self._tasks)
 
-
-    def _tick(self):
+    def _tick(self) -> None:
         """
         Run one scheduler tick.
         """
@@ -671,17 +683,16 @@ class Cooperator(object):
             taskObj._oneWorkUnit()
         self._reschedule()
 
-
     _mustScheduleOnStart = False
-    def _reschedule(self):
+
+    def _reschedule(self) -> None:
         if not self._started:
             self._mustScheduleOnStart = True
             return
         if self._delayedCall is None and self._tasks:
             self._delayedCall = self._scheduler(self._tick)
 
-
-    def start(self):
+    def start(self) -> None:
         """
         Begin scheduling steps.
         """
@@ -691,37 +702,34 @@ class Cooperator(object):
             del self._mustScheduleOnStart
             self._reschedule()
 
-
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop scheduling steps.  Errback the completion Deferreds of all
         iterators which have been added and forget about them.
         """
         self._stopped = True
         for taskObj in self._tasks:
-            taskObj._completeWith(SchedulerStopped(),
-                                  Failure(SchedulerStopped()))
+            taskObj._completeWith(SchedulerStopped(), Failure(SchedulerStopped()))
         self._tasks = []
         if self._delayedCall is not None:
             self._delayedCall.cancel()
             self._delayedCall = None
 
-
     @property
-    def running(self):
+    def running(self) -> bool:
         """
         Is this L{Cooperator} is currently running?
 
         @return: C{True} if the L{Cooperator} is running, C{False} otherwise.
         @rtype: C{bool}
         """
-        return (self._started and not self._stopped)
-
+        return self._started and not self._stopped
 
 
 _theCooperator = Cooperator()
 
-def coiterate(iterator):
+
+def coiterate(iterator: Iterator[_T]) -> Deferred[Iterator[_T]]:
     """
     Cooperatively iterate over the given iterator, dividing runtime between it
     and all other iterators which have been passed to this function and not yet
@@ -734,8 +742,7 @@ def coiterate(iterator):
     return _theCooperator.coiterate(iterator)
 
 
-
-def cooperate(iterator):
+def cooperate(iterator: Iterator[_T]) -> CooperativeTask:
     """
     Start running the given iterator as a long-running cooperative task, by
     calling next() on it as a periodic timed event.
@@ -753,7 +760,6 @@ def cooperate(iterator):
     return _theCooperator.cooperate(iterator)
 
 
-
 @implementer(IReactorTime)
 class Clock:
     """
@@ -764,56 +770,55 @@ class Clock:
 
     rightNow = 0.0
 
-    def __init__(self):
-        self.calls = []
+    def __init__(self) -> None:
+        self.calls: List[DelayedCall] = []
 
-
-    def seconds(self):
+    def seconds(self) -> float:
         """
         Pretend to be time.time().  This is used internally when an operation
         such as L{IDelayedCall.reset} needs to determine a time value
         relative to the current time.
 
-        @rtype: C{float}
         @return: The time which should be considered the current time.
         """
         return self.rightNow
 
-
-    def _sortCalls(self):
+    def _sortCalls(self) -> None:
         """
         Sort the pending calls according to the time they are scheduled.
         """
         self.calls.sort(key=lambda a: a.getTime())
 
-
-    def callLater(self, when, what, *a, **kw):
+    def callLater(
+        self, delay: float, callable: Callable[..., object], *args: object, **kw: object
+    ) -> IDelayedCall:
         """
         See L{twisted.internet.interfaces.IReactorTime.callLater}.
         """
-        dc = base.DelayedCall(self.seconds() + when,
-                               what, a, kw,
-                               self.calls.remove,
-                               lambda c: None,
-                               self.seconds)
+        dc = DelayedCall(
+            self.seconds() + delay,
+            callable,
+            args,
+            kw,
+            self.calls.remove,
+            lambda c: None,
+            self.seconds,
+        )
         self.calls.append(dc)
         self._sortCalls()
         return dc
 
-
-    def getDelayedCalls(self):
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
         """
         See L{twisted.internet.interfaces.IReactorTime.getDelayedCalls}
         """
         return self.calls
 
-
-    def advance(self, amount):
+    def advance(self, amount: float) -> None:
         """
         Move time on this clock forward by the given amount and run whatever
         pending calls should be run.
 
-        @type amount: C{float}
         @param amount: The number of seconds which to advance this clock's
         time.
         """
@@ -825,53 +830,64 @@ class Clock:
             call.func(*call.args, **call.kw)
             self._sortCalls()
 
-
-    def pump(self, timings):
+    def pump(self, timings: Iterable[float]) -> None:
         """
         Advance incrementally by the given set of times.
-
-        @type timings: iterable of C{float}
         """
         for amount in timings:
             self.advance(amount)
 
 
-
-def deferLater(clock, delay, callable=None, *args, **kw):
+def deferLater(
+    clock: IReactorTime,
+    delay: float,
+    callable: Optional[Callable[..., _T]] = None,
+    *args: object,
+    **kw: object,
+) -> Deferred[_T]:
     """
     Call the given function after a certain period of time has passed.
 
-    @type clock: L{IReactorTime} provider
     @param clock: The object which will be used to schedule the delayed
         call.
 
-    @type delay: C{float} or C{int}
     @param delay: The number of seconds to wait before calling the function.
 
-    @param callable: The object to call after the delay.
+    @param callable: The callable to call after the delay, or C{None}.
 
-    @param *args: The positional arguments to pass to C{callable}.
+    @param args: The positional arguments to pass to C{callable}.
 
-    @param **kw: The keyword arguments to pass to C{callable}.
-
-    @rtype: L{defer.Deferred}
+    @param kw: The keyword arguments to pass to C{callable}.
 
     @return: A deferred that fires with the result of the callable when the
         specified time has elapsed.
     """
-    def deferLaterCancel(deferred):
+
+    def deferLaterCancel(deferred: Deferred[object]) -> None:
         delayedCall.cancel()
-    d = defer.Deferred(deferLaterCancel)
-    if callable is not None:
-        d.addCallback(lambda ignored: callable(*args, **kw))
+
+    def cb(result: object) -> _T:
+        if callable is None:
+            return None  # type: ignore[return-value]
+        return callable(*args, **kw)
+
+    d: Deferred[_T] = Deferred(deferLaterCancel)
+    d.addCallback(cb)
     delayedCall = clock.callLater(delay, d.callback, None)
     return d
 
 
-
-def react(main, argv=(), _reactor=None):
+def react(
+    main: Callable[
+        ...,
+        Union[Deferred[_T], Coroutine["Deferred[_T]", object, _T]],
+    ],
+    argv: Iterable[object] = (),
+    _reactor: Optional[IReactorCore] = None,
+) -> NoReturn:
     """
-    Call C{main} and run the reactor until the L{Deferred} it returns fires.
+    Call C{main} and run the reactor until the L{Deferred} it returns fires or
+    the coroutine it returns completes.
 
     This is intended as the way to start up an application with a well-defined
     completion condition.  Use it to write clients or one-off asynchronous
@@ -887,14 +903,15 @@ def react(main, argv=(), _reactor=None):
 
     The following demonstrates the signature of a C{main} function which can be
     used with L{react}::
-          def main(reactor, username, password):
-              return defer.succeed('ok')
 
-          task.react(main, ('alice', 'secret'))
+      async def main(reactor, username, password):
+          return "ok"
 
-    @param main: A callable which returns a L{Deferred}. It should
-        take the reactor as its first parameter, followed by the elements of
-        C{argv}.
+      task.react(main, ("alice", "secret"))
+
+    @param main: A callable which returns a L{Deferred} or
+        coroutine. It should take the reactor as its first
+        parameter, followed by the elements of C{argv}.
 
     @param argv: A list of arguments to pass to C{main}. If omitted the
         callable will be invoked with no additional arguments.
@@ -905,44 +922,55 @@ def react(main, argv=(), _reactor=None):
     @since: 12.3
     """
     if _reactor is None:
-        from twisted.internet import reactor as _reactor
-    finished = main(_reactor, *argv)
-    codes = [0]
+        from twisted.internet import reactor
 
-    stopping = []
-    _reactor.addSystemEventTrigger('before', 'shutdown', stopping.append, True)
+        _reactor = cast(IReactorCore, reactor)
 
-    def stop(result, stopReactor):
+    finished = ensureDeferred(main(_reactor, *argv))
+    code = 0
+
+    stopping = False
+
+    def onShutdown() -> None:
+        nonlocal stopping
+        stopping = True
+
+    _reactor.addSystemEventTrigger("before", "shutdown", onShutdown)
+
+    def stop(result: object, stopReactor: bool) -> None:
         if stopReactor:
+            assert _reactor is not None
             try:
                 _reactor.stop()
             except ReactorNotRunning:
                 pass
 
         if isinstance(result, Failure):
+            nonlocal code
             if result.check(SystemExit) is not None:
                 code = result.value.code
             else:
                 log.err(result, "main function encountered error")
                 code = 1
-            codes[0] = code
 
-    def cbFinish(result):
+    def cbFinish(result: object) -> None:
         if stopping:
             stop(result, False)
         else:
+            assert _reactor is not None
             _reactor.callWhenRunning(stop, result, True)
 
     finished.addBoth(cbFinish)
     _reactor.run()
-    sys.exit(codes[0])
+    sys.exit(code)
 
 
 __all__ = [
-    'LoopingCall',
-
-    'Clock',
-
-    'SchedulerStopped', 'Cooperator', 'coiterate',
-
-    'deferLater', 'react']
+    "LoopingCall",
+    "Clock",
+    "SchedulerStopped",
+    "Cooperator",
+    "coiterate",
+    "deferLater",
+    "react",
+]

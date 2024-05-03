@@ -16,26 +16,23 @@ Future plans: Proper nameserver acquisition on Windows/MacOS,
 better caching, respect timeouts
 """
 
-import os
 import errno
+import os
 import warnings
 
 from zope.interface import moduleProvides
 
+from twisted.internet import defer, error, interfaces, protocol
+from twisted.internet.abstract import isIPv6Address
+from twisted.names import cache, common, dns, hosts as hostsModule, resolve, root
+from twisted.python import failure, log
+
 # Twisted imports
 from twisted.python.compat import nativeString
-from twisted.python.runtime import platform
 from twisted.python.filepath import FilePath
-from twisted.internet import error, defer, interfaces, protocol
-from twisted.python import log, failure
-from twisted.names import (
-    dns, common, resolve, cache, root, hosts as hostsModule)
-from twisted.internet.abstract import isIPv6Address
-
-
+from twisted.python.runtime import platform
 
 moduleProvides(interfaces.IResolver)
-
 
 
 class Resolver(common.ResolverBase):
@@ -52,6 +49,7 @@ class Resolver(common.ResolverBase):
         L{IReactorTime} which will be used to set up network resources and
         track timeouts.
     """
+
     index = 0
     timeout = None
 
@@ -114,7 +112,7 @@ class Resolver(common.ResolverBase):
             raise ValueError("No nameservers specified")
 
         self.factory = DNSClientFactory(self, timeout)
-        self.factory.noisy = 0   # Be quiet by default
+        self.factory.noisy = 0  # Be quiet by default
 
         self.connections = []
         self.pending = []
@@ -123,18 +121,15 @@ class Resolver(common.ResolverBase):
 
         self.maybeParseConfig()
 
-
     def __getstate__(self):
         d = self.__dict__.copy()
-        d['connections'] = []
-        d['_parseCall'] = None
+        d["connections"] = []
+        d["_parseCall"] = None
         return d
-
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.maybeParseConfig()
-
 
     def _openFile(self, path):
         """
@@ -143,7 +138,6 @@ class Resolver(common.ResolverBase):
         """
         return FilePath(path).open()
 
-
     def maybeParseConfig(self):
         if self.resolv is None:
             # Don't try to parse it, don't set up a call loop
@@ -151,7 +145,7 @@ class Resolver(common.ResolverBase):
 
         try:
             resolvConf = self._openFile(self.resolv)
-        except IOError as e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 # Missing resolv.conf is treated the same as an empty resolv.conf
                 self.parseConfig(())
@@ -161,36 +155,35 @@ class Resolver(common.ResolverBase):
             with resolvConf:
                 mtime = os.fstat(resolvConf.fileno()).st_mtime
                 if mtime != self._lastResolvTime:
-                    log.msg('%s changed, reparsing' % (self.resolv,))
+                    log.msg(f"{self.resolv} changed, reparsing")
                     self._lastResolvTime = mtime
                     self.parseConfig(resolvConf)
 
         # Check again in a little while
         self._parseCall = self._reactor.callLater(
-            self._resolvReadInterval, self.maybeParseConfig)
-
+            self._resolvReadInterval, self.maybeParseConfig
+        )
 
     def parseConfig(self, resolvConf):
         servers = []
         for L in resolvConf:
             L = L.strip()
-            if L.startswith(b'nameserver'):
+            if L.startswith(b"nameserver"):
                 resolver = (nativeString(L.split()[1]), dns.PORT)
                 servers.append(resolver)
-                log.msg("Resolver added %r to server list" % (resolver,))
-            elif L.startswith(b'domain'):
+                log.msg(f"Resolver added {resolver!r} to server list")
+            elif L.startswith(b"domain"):
                 try:
                     self.domain = L.split()[1]
                 except IndexError:
-                    self.domain = b''
+                    self.domain = b""
                 self.search = None
-            elif L.startswith(b'search'):
+            elif L.startswith(b"search"):
                 self.search = L.split()[1:]
                 self.domain = None
         if not servers:
-            servers.append(('127.0.0.1', dns.PORT))
+            servers.append(("127.0.0.1", dns.PORT))
         self.dynServers = servers
-
 
     def pickServer(self):
         """
@@ -205,14 +198,13 @@ class Resolver(common.ResolverBase):
         dynL = len(self.dynServers)
 
         self.index += 1
-        self.index %= (serverL + dynL)
+        self.index %= serverL + dynL
         if self.index < serverL:
             return self.servers[self.index]
         else:
             return self.dynServers[self.index - serverL]
 
-
-    def _connectedProtocol(self, interface=''):
+    def _connectedProtocol(self, interface=""):
         """
         Return a new L{DNSDatagramProtocol} bound to a randomly selected port
         number.
@@ -222,13 +214,14 @@ class Resolver(common.ResolverBase):
 
         while True:
             try:
-                self._reactor.listenUDP(dns.randomSource(), proto,
-                                        interface=interface)
+                self._reactor.listenUDP(dns.randomSource(), proto, interface=interface)
             except error.CannotListenError as e:
                 failures += 1
 
-                if (hasattr(e.socketError, "errno") and
-                   e.socketError.errno == errno.EMFILE):
+                if (
+                    hasattr(e.socketError, "errno")
+                    and e.socketError.errno == errno.EMFILE
+                ):
                     # We've run out of file descriptors. Stop trying.
                     raise
 
@@ -240,16 +233,14 @@ class Resolver(common.ResolverBase):
             else:
                 return proto
 
-
     def connectionMade(self, protocol):
         """
         Called by associated L{dns.DNSProtocol} instances when they connect.
         """
         self.connections.append(protocol)
-        for (d, q, t) in self.pending:
+        for d, q, t in self.pending:
             self.queryTCP(q, t).chainDeferred(d)
         del self.pending[:]
-
 
     def connectionLost(self, protocol):
         """
@@ -258,10 +249,8 @@ class Resolver(common.ResolverBase):
         if protocol in self.connections:
             self.connections.remove(protocol)
 
-
-    def messageReceived(self, message, protocol, address = None):
+    def messageReceived(self, message, protocol, address=None):
         log.msg("Unexpected message (%d) received from %r" % (message.id, address))
-
 
     def _query(self, *args):
         """
@@ -269,25 +258,26 @@ class Resolver(common.ResolverBase):
         issue a query to it using C{*args}, and arrange for it to be
         disconnected from its transport after the query completes.
 
-        @param *args: Positional arguments to be passed to
+        @param args: Positional arguments to be passed to
             L{DNSDatagramProtocol.query}.
 
         @return: A L{Deferred} which will be called back with the result of the
             query.
         """
         if isIPv6Address(args[0][0]):
-            protocol = self._connectedProtocol(interface='::')
+            protocol = self._connectedProtocol(interface="::")
         else:
             protocol = self._connectedProtocol()
         d = protocol.query(*args)
+
         def cbQueried(result):
             protocol.transport.stopListening()
             return result
+
         d.addBoth(cbQueried)
         return d
 
-
-    def queryUDP(self, queries, timeout = None):
+    def queryUDP(self, queries, timeout=None):
         """
         Make a number of DNS queries via UDP.
 
@@ -318,7 +308,6 @@ class Resolver(common.ResolverBase):
         d.addErrback(self._reissue, addresses, [used], queries, timeout)
         return d
 
-
     def _reissue(self, reason, addressesLeft, addressesUsed, query, timeout):
         reason.trap(dns.DNSQueryTimeoutError)
 
@@ -348,8 +337,7 @@ class Resolver(common.ResolverBase):
         d.addErrback(self._reissue, addressesLeft, addressesUsed, query, timeout)
         return d
 
-
-    def queryTCP(self, queries, timeout = 10):
+    def queryTCP(self, queries, timeout=10):
         """
         Make a number of DNS queries via TCP.
 
@@ -372,7 +360,6 @@ class Resolver(common.ResolverBase):
         else:
             return self.connections[0].query(queries, timeout)
 
-
     def filterAnswers(self, message):
         """
         Extract results from the given message.
@@ -391,7 +378,6 @@ class Resolver(common.ResolverBase):
         if message.rCode != dns.OK:
             return failure.Failure(self.exceptionForCode(message.rCode)(message))
         return (message.answers, message.authority, message.additional)
-
 
     def _lookup(self, name, cls, type, timeout):
         """
@@ -414,10 +400,12 @@ class Resolver(common.ResolverBase):
         if waiting is None:
             self._waiting[key] = []
             d = self.queryUDP([dns.Query(name, type, cls)], timeout)
+
             def cbResult(result):
                 for d in self._waiting.pop(key):
                     d.callback(result)
                 return result
+
             d.addCallback(self.filterAnswers)
             d.addBoth(cbResult)
         else:
@@ -425,43 +413,42 @@ class Resolver(common.ResolverBase):
             waiting.append(d)
         return d
 
-
     # This one doesn't ever belong on UDP
     def lookupZone(self, name, timeout=10):
         address = self.pickServer()
         if address is None:
-            return defer.fail(IOError('No domain name servers available'))
+            return defer.fail(IOError("No domain name servers available"))
         host, port = address
         d = defer.Deferred()
         controller = AXFRController(name, d)
         factory = DNSClientFactory(controller, timeout)
-        factory.noisy = False #stfu
+        factory.noisy = False  # stfu
 
         connector = self._reactor.connectTCP(host, port, factory)
         controller.timeoutCall = self._reactor.callLater(
-            timeout or 10, self._timeoutZone, d, controller,
-            connector, timeout or 10)
+            timeout or 10, self._timeoutZone, d, controller, connector, timeout or 10
+        )
 
         def eliminateTimeout(failure):
             controller.timeoutCall.cancel()
             controller.timeoutCall = None
             return failure
 
-        return d.addCallbacks(self._cbLookupZone, eliminateTimeout,
-                              callbackArgs=(connector,))
-
+        return d.addCallbacks(
+            self._cbLookupZone, eliminateTimeout, callbackArgs=(connector,)
+        )
 
     def _timeoutZone(self, d, controller, connector, seconds):
         connector.disconnect()
         controller.timeoutCall = None
         controller.deferred = None
-        d.errback(error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,)))
-
+        d.errback(
+            error.TimeoutError("Zone lookup timed out after %d seconds" % (seconds,))
+        )
 
     def _cbLookupZone(self, result, connector):
         connector.disconnect()
         return (result, [], [])
-
 
 
 class AXFRController:
@@ -474,18 +461,15 @@ class AXFRController:
         self.records = []
         self.pending = [(deferred,)]
 
-
     def connectionMade(self, protocol):
         # dig saids recursion-desired to 0, so I will too
         message = dns.Message(protocol.pickID(), recDes=0)
         message.queries = [dns.Query(self.name, dns.AXFR, dns.IN)]
         protocol.writeMessage(message)
 
-
     def connectionLost(self, protocol):
         # XXX Do something here - see #3428
         pass
-
 
     def messageReceived(self, message, protocol):
         # Caveat: We have to handle two cases: All records are in 1
@@ -499,10 +483,10 @@ class AXFRController:
             return
         if not self.soa:
             if self.records[0].type == dns.SOA:
-                #print "first SOA!"
+                # print "first SOA!"
                 self.soa = self.records[0]
         if len(self.records) > 1 and self.records[-1].type == dns.SOA:
-            #print "It's the second SOA! We're done."
+            # print "It's the second SOA! We're done."
             if self.timeoutCall is not None:
                 self.timeoutCall.cancel()
                 self.timeoutCall = None
@@ -511,8 +495,8 @@ class AXFRController:
                 self.deferred = None
 
 
-
 from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl
+
 
 class ThreadedResolver(_ThreadedResolverImpl):
     def __init__(self, reactor=None):
@@ -523,19 +507,18 @@ class ThreadedResolver(_ThreadedResolverImpl):
             "twisted.names.client.ThreadedResolver is deprecated since "
             "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
             "instead.",
-            category=DeprecationWarning, stacklevel=2)
-
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
 
 
 class DNSClientFactory(protocol.ClientFactory):
-    def __init__(self, controller, timeout = 10):
+    def __init__(self, controller, timeout=10):
         self.controller = controller
         self.timeout = timeout
 
-
     def clientConnectionLost(self, connector, reason):
         pass
-
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -563,16 +546,14 @@ class DNSClientFactory(protocol.ClientFactory):
             d = pendingState[0]
             d.errback(reason)
 
-
     def buildProtocol(self, addr):
         p = dns.DNSProtocol(self.controller)
         p.factory = self
         return p
 
 
-
 def createResolver(servers=None, resolvconf=None, hosts=None):
-    """
+    r"""
     Create and return a Resolver.
 
     @type servers: C{list} of C{(str, int)} or L{None}
@@ -593,17 +574,18 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
 
     @rtype: C{IResolver}
     """
-    if platform.getType() == 'posix':
+    if platform.getType() == "posix":
         if resolvconf is None:
-            resolvconf = b'/etc/resolv.conf'
+            resolvconf = b"/etc/resolv.conf"
         if hosts is None:
-            hosts = b'/etc/hosts'
+            hosts = b"/etc/hosts"
         theResolver = Resolver(resolvconf, servers)
         hostResolver = hostsModule.Resolver(hosts)
     else:
         if hosts is None:
-            hosts = r'c:\windows\hosts'
+            hosts = r"c:\windows\hosts"
         from twisted.internet import reactor
+
         bootstrap = _ThreadedResolverImpl(reactor)
         hostResolver = hostsModule.Resolver(hosts)
         theResolver = root.bootstrap(bootstrap, resolverFactory=Resolver)
@@ -612,8 +594,9 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
     return resolve.ResolverChain(L)
 
 
-
 theResolver = None
+
+
 def getResolver():
     """
     Get a Resolver instance.
@@ -628,9 +611,8 @@ def getResolver():
         try:
             theResolver = createResolver()
         except ValueError:
-            theResolver = createResolver(servers=[('127.0.0.1', 53)])
+            theResolver = createResolver(servers=[("127.0.0.1", 53)])
     return theResolver
-
 
 
 def getHostByName(name, timeout=None, effort=10):
@@ -656,120 +638,96 @@ def getHostByName(name, timeout=None, effort=10):
     return getResolver().getHostByName(name, timeout, effort)
 
 
-
 def query(query, timeout=None):
     return getResolver().query(query, timeout)
-
 
 
 def lookupAddress(name, timeout=None):
     return getResolver().lookupAddress(name, timeout)
 
 
-
 def lookupIPV6Address(name, timeout=None):
     return getResolver().lookupIPV6Address(name, timeout)
-
 
 
 def lookupAddress6(name, timeout=None):
     return getResolver().lookupAddress6(name, timeout)
 
 
-
 def lookupMailExchange(name, timeout=None):
     return getResolver().lookupMailExchange(name, timeout)
-
 
 
 def lookupNameservers(name, timeout=None):
     return getResolver().lookupNameservers(name, timeout)
 
 
-
 def lookupCanonicalName(name, timeout=None):
     return getResolver().lookupCanonicalName(name, timeout)
-
 
 
 def lookupMailBox(name, timeout=None):
     return getResolver().lookupMailBox(name, timeout)
 
 
-
 def lookupMailGroup(name, timeout=None):
     return getResolver().lookupMailGroup(name, timeout)
-
 
 
 def lookupMailRename(name, timeout=None):
     return getResolver().lookupMailRename(name, timeout)
 
 
-
 def lookupPointer(name, timeout=None):
     return getResolver().lookupPointer(name, timeout)
-
 
 
 def lookupAuthority(name, timeout=None):
     return getResolver().lookupAuthority(name, timeout)
 
 
-
 def lookupNull(name, timeout=None):
     return getResolver().lookupNull(name, timeout)
-
 
 
 def lookupWellKnownServices(name, timeout=None):
     return getResolver().lookupWellKnownServices(name, timeout)
 
 
-
 def lookupService(name, timeout=None):
     return getResolver().lookupService(name, timeout)
-
 
 
 def lookupHostInfo(name, timeout=None):
     return getResolver().lookupHostInfo(name, timeout)
 
 
-
 def lookupMailboxInfo(name, timeout=None):
     return getResolver().lookupMailboxInfo(name, timeout)
-
 
 
 def lookupText(name, timeout=None):
     return getResolver().lookupText(name, timeout)
 
 
-
 def lookupSenderPolicy(name, timeout=None):
     return getResolver().lookupSenderPolicy(name, timeout)
-
 
 
 def lookupResponsibility(name, timeout=None):
     return getResolver().lookupResponsibility(name, timeout)
 
 
-
 def lookupAFSDatabase(name, timeout=None):
     return getResolver().lookupAFSDatabase(name, timeout)
-
 
 
 def lookupZone(name, timeout=None):
     return getResolver().lookupZone(name, timeout)
 
 
-
 def lookupAllRecords(name, timeout=None):
     return getResolver().lookupAllRecords(name, timeout)
-
 
 
 def lookupNamingAuthorityPointer(name, timeout=None):

@@ -2,39 +2,36 @@
 # See LICENSE for details.
 
 """
-Test cases for Ltwisted.mail.pop3} module.
+Test cases for L{twisted.mail.pop3} module.
 """
 
-from __future__ import print_function
 
-import hmac
 import base64
+import hmac
 import itertools
-
 from collections import OrderedDict
+from hashlib import md5
 from io import BytesIO
 
 from zope.interface import implementer
+from zope.interface.verify import verifyClass
 
-from twisted import cred
-from twisted import internet
-from twisted import mail
-from twisted.internet import defer
-from twisted.mail import pop3
-from twisted.protocols import loopback
-from twisted.python import failure
-from twisted.python.compat import intToBytes
-from twisted.test.proto_helpers import LineSendingProtocol
-from twisted.trial import unittest, util
 import twisted.cred.checkers
-import twisted.cred.credentials
 import twisted.cred.portal
 import twisted.internet.protocol
 import twisted.mail.pop3
 import twisted.mail.protocols
+from twisted import cred, internet, mail
+from twisted.cred.credentials import IUsernameHashedPassword
+from twisted.internet import defer
+from twisted.internet.testing import LineSendingProtocol
+from twisted.mail import pop3
+from twisted.protocols import loopback
+from twisted.python import failure
+from twisted.trial import unittest, util
 
 
-class UtilityTests(unittest.TestCase):
+class UtilityTests(unittest.SynchronousTestCase):
     """
     Test the various helper functions and classes used by the POP3 server
     protocol implementation.
@@ -47,7 +44,7 @@ class UtilityTests(unittest.TestCase):
         the writer.
         """
         output = []
-        input = iter(itertools.cycle(['012', '345', '6', '7', '8', '9']))
+        input = iter(itertools.cycle(["012", "345", "6", "7", "8", "9"]))
         c = pop3._IteratorBuffer(output.extend, input, 6)
         i = iter(c)
         self.assertEqual(output, [])  # Nothing is buffer
@@ -56,12 +53,10 @@ class UtilityTests(unittest.TestCase):
         next(i)
         self.assertEqual(output, [])  # '012345' is buffered
         next(i)
-        self.assertEqual(output, ['012', '345', '6'])  # Nothing is buffered
+        self.assertEqual(output, ["012", "345", "6"])  # Nothing is buffered
         for n in range(5):
             next(i)
-        self.assertEqual(output, ['012', '345', '6', '7', '8', '9', '012',
-                                  '345'])
-
+        self.assertEqual(output, ["012", "345", "6", "7", "8", "9", "012", "345"])
 
     def test_FinishLineBuffering(self):
         """
@@ -69,33 +64,28 @@ class UtilityTests(unittest.TestCase):
         exhausted, and itself raises StopIteration.
         """
         output = []
-        input = iter(['a', 'b', 'c'])
+        input = iter(["a", "b", "c"])
         c = pop3._IteratorBuffer(output.extend, input, 5)
         for i in c:
             pass
-        self.assertEqual(output, ['a', 'b', 'c'])
-
+        self.assertEqual(output, ["a", "b", "c"])
 
     def test_SuccessResponseFormatter(self):
         """
         Test that the thing that spits out POP3 'success responses' works
         right.
         """
-        self.assertEqual(
-            pop3.successResponse(b'Great.'),
-            b'+OK Great.\r\n')
-
+        self.assertEqual(pop3.successResponse(b"Great."), b"+OK Great.\r\n")
 
     def test_StatLineFormatter(self):
         """
         Test that the function which formats stat lines does so appropriately.
         """
         statLine = list(pop3.formatStatResponse([]))[-1]
-        self.assertEqual(statLine, b'+OK 0 0\r\n')
+        self.assertEqual(statLine, b"+OK 0 0\r\n")
 
         statLine = list(pop3.formatStatResponse([10, 31, 0, 10101]))[-1]
-        self.assertEqual(statLine, b'+OK 4 10142\r\n')
-
+        self.assertEqual(statLine, b"+OK 4 10142\r\n")
 
     def test_ListLineFormatter(self):
         """
@@ -103,47 +93,38 @@ class UtilityTests(unittest.TestCase):
         command does so appropriately.
         """
         listLines = list(pop3.formatListResponse([]))
-        self.assertEqual(
-            listLines,
-            [b'+OK 0\r\n', b'.\r\n'])
+        self.assertEqual(listLines, [b"+OK 0\r\n", b".\r\n"])
 
         listLines = list(pop3.formatListResponse([1, 2, 3, 100]))
         self.assertEqual(
             listLines,
-            [b'+OK 4\r\n', b'1 1\r\n', b'2 2\r\n', b'3 3\r\n', b'4 100\r\n',
-             b'.\r\n'])
-
+            [b"+OK 4\r\n", b"1 1\r\n", b"2 2\r\n", b"3 3\r\n", b"4 100\r\n", b".\r\n"],
+        )
 
     def test_UIDListLineFormatter(self):
         """
         Test that the function which formats lines in response to a UIDL
         command does so appropriately.
         """
-        uids = ['abc', 'def', 'ghi']
+        uids = ["abc", "def", "ghi"]
         listLines = list(pop3.formatUIDListResponse([], uids.__getitem__))
-        self.assertEqual(
-            listLines,
-            [b'+OK \r\n', b'.\r\n'])
+        self.assertEqual(listLines, [b"+OK \r\n", b".\r\n"])
 
-        listLines = list(pop3.formatUIDListResponse([123, 431, 591],
-                         uids.__getitem__))
+        listLines = list(pop3.formatUIDListResponse([123, 431, 591], uids.__getitem__))
         self.assertEqual(
-            listLines,
-            [b'+OK \r\n', b'1 abc\r\n', b'2 def\r\n', b'3 ghi\r\n', b'.\r\n'])
+            listLines, [b"+OK \r\n", b"1 abc\r\n", b"2 def\r\n", b"3 ghi\r\n", b".\r\n"]
+        )
 
-        listLines = list(pop3.formatUIDListResponse([0, None, 591],
-                         uids.__getitem__))
-        self.assertEqual(
-            listLines,
-            [b'+OK \r\n', b'1 abc\r\n', b'3 ghi\r\n', b'.\r\n'])
-
+        listLines = list(pop3.formatUIDListResponse([0, None, 591], uids.__getitem__))
+        self.assertEqual(listLines, [b"+OK \r\n", b"1 abc\r\n", b"3 ghi\r\n", b".\r\n"])
 
 
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
     """
     A virtual-domain-supporting POP3 server.
     """
-    magic = b'<moshez>'
+
+    magic = b"<moshez>"
 
     def authenticateUserAPOP(self, user, digest):
         """
@@ -157,9 +138,9 @@ class MyVirtualPOP3(mail.protocols.VirtualPOP3):
             by C{user}.
         """
         user, domain = self.lookupDomain(user)
-        return self.service.domains[b'baz.com'].authenticateUserAPOP(
-            user, digest, self.magic, domain)
-
+        return self.service.domains[b"baz.com"].authenticateUserAPOP(
+            user, digest, self.magic, domain
+        )
 
 
 class DummyDomain:
@@ -170,7 +151,6 @@ class DummyDomain:
     def __init__(self):
         self.users = {}
 
-
     def addUser(self, name):
         """
         Create a mailbox for a new user.
@@ -178,7 +158,6 @@ class DummyDomain:
         @param name: The username.
         """
         self.users[name] = []
-
 
     def addMessage(self, name, message):
         """
@@ -188,7 +167,6 @@ class DummyDomain:
         @param message: The contents of the message.
         """
         self.users[name].append(message)
-
 
     def authenticateUserAPOP(self, name, digest, magic, domain):
         """
@@ -206,17 +184,16 @@ class DummyDomain:
         return pop3.IMailbox, ListMailbox(self.users[name]), lambda: None
 
 
-
 class ListMailbox:
     """
     A simple in-memory list implementation of L{IMailbox}.
     """
+
     def __init__(self, list):
         """
         @param list: The messages.
         """
         self.list = list
-
 
     def listMessages(self, i=None):
         """
@@ -229,7 +206,6 @@ class ListMailbox:
             return [len(l) for l in self.list]
         return len(self.list[i])
 
-
     def getMessage(self, i):
         """
         Get the message content.
@@ -238,7 +214,6 @@ class ListMailbox:
         @return: See L{pop3.IMailbox.getMessage}.
         """
         return BytesIO(self.list[i])
-
 
     def getUidl(self, i):
         """
@@ -249,15 +224,13 @@ class ListMailbox:
         """
         return i
 
-
     def deleteMessage(self, i):
         """
         Wipe the message at the given index.
 
         @param i: See L{pop3.IMailbox.deleteMessage}.
         """
-        self.list[i] = b''
-
+        self.list[i] = b""
 
     def sync(self):
         """
@@ -267,11 +240,11 @@ class ListMailbox:
         """
 
 
-
 class MyPOP3Downloader(pop3.POP3Client):
     """
     A POP3 client which downloads all messages from the server.
     """
+
     def handle_WELCOME(self, line):
         """
         Authenticate.
@@ -279,8 +252,7 @@ class MyPOP3Downloader(pop3.POP3Client):
         @param line: The welcome response.
         """
         pop3.POP3Client.handle_WELCOME(self, line)
-        self.apop(b'hello@baz.com', b'world')
-
+        self.apop(b"hello@baz.com", b"world")
 
     def handle_APOP(self, line):
         """
@@ -290,11 +262,10 @@ class MyPOP3Downloader(pop3.POP3Client):
         """
         parts = line.split()
         code = parts[0]
-        if code != b'+OK':
-            raise AssertionError('code is: %s , parts is: %s ' % (code, parts))
+        if code != b"+OK":
+            raise AssertionError(f"code is: {code} , parts is: {parts} ")
         self.lines = []
         self.retr(1)
-
 
     def handle_RETR_continue(self, line):
         """
@@ -304,14 +275,12 @@ class MyPOP3Downloader(pop3.POP3Client):
         """
         self.lines.append(line)
 
-
     def handle_RETR_end(self):
         """
         Record the received message information.
         """
-        self.message = b'\n'.join(self.lines) + b'\n'
+        self.message = b"\n".join(self.lines) + b"\n"
         self.quit()
-
 
     def handle_QUIT(self, line):
         """
@@ -319,9 +288,8 @@ class MyPOP3Downloader(pop3.POP3Client):
 
         @param line: The I{QUIT} response.
         """
-        if line[:3] != b'+OK':
-            raise AssertionError(b'code is ' + line)
-
+        if line[:3] != b"+OK":
+            raise AssertionError(b"code is " + line)
 
 
 class POP3Tests(unittest.TestCase):
@@ -329,25 +297,27 @@ class POP3Tests(unittest.TestCase):
     Tests for L{pop3.POP3}.
     """
 
-    message = b'''\
+    message = b"""\
 Subject: urgent
 
 Someone set up us the bomb!
-'''
+"""
 
-    expectedOutput = (b'''\
+    expectedOutput = b"""\
 +OK <moshez>\015
 +OK Authentication succeeded\015
 +OK \015
 1 0\015
 .\015
-+OK ''' + intToBytes(len(message)) + b'''\015
++OK %d\015
 Subject: urgent\015
 \015
 Someone set up us the bomb!\015
 .\015
 +OK \015
-''')
+""" % (
+        len(message),
+    )
 
     def setUp(self):
         """
@@ -355,28 +325,30 @@ Someone set up us the bomb!\015
         """
         self.factory = internet.protocol.Factory()
         self.factory.domains = {}
-        self.factory.domains[b'baz.com'] = DummyDomain()
-        self.factory.domains[b'baz.com'].addUser(b'hello')
-        self.factory.domains[b'baz.com'].addMessage(b'hello', self.message)
-
+        self.factory.domains[b"baz.com"] = DummyDomain()
+        self.factory.domains[b"baz.com"].addUser(b"hello")
+        self.factory.domains[b"baz.com"].addMessage(b"hello", self.message)
 
     def test_messages(self):
         """
         Messages can be downloaded over a loopback TCP connection.
         """
-        client = LineSendingProtocol([
-            b'APOP hello@baz.com world',
-            b'UIDL',
-            b'RETR 1',
-            b'QUIT',
-        ])
+        client = LineSendingProtocol(
+            [
+                b"APOP hello@baz.com world",
+                b"UIDL",
+                b"RETR 1",
+                b"QUIT",
+            ]
+        )
         server = MyVirtualPOP3()
         server.service = self.factory
-        def check(ignored):
-            output = b'\r\n'.join(client.response) + b'\r\n'
-            self.assertEqual(output, self.expectedOutput)
-        return loopback.loopbackTCP(server, client).addCallback(check)
 
+        def check(ignored):
+            output = b"\r\n".join(client.response) + b"\r\n"
+            self.assertEqual(output, self.expectedOutput)
+
+        return loopback.loopbackTCP(server, client).addCallback(check)
 
     def test_loopback(self):
         """
@@ -385,15 +357,19 @@ Someone set up us the bomb!\015
         protocol = MyVirtualPOP3()
         protocol.service = self.factory
         clientProtocol = MyPOP3Downloader()
+
         def check(ignored):
             self.assertEqual(clientProtocol.message, self.message)
             protocol.connectionLost(
-                failure.Failure(Exception("Test harness disconnect")))
+                failure.Failure(Exception("Test harness disconnect"))
+            )
+
         d = loopback.loopbackAsync(protocol, clientProtocol)
         return d.addCallback(check)
-    test_loopback.suppress = [util.suppress(
-         message="twisted.mail.pop3.POP3Client is deprecated")]
 
+    test_loopback.suppress = [  # type: ignore[attr-defined]
+        util.suppress(message="twisted.mail.pop3.POP3Client is deprecated")
+    ]
 
     def test_incorrectDomain(self):
         """
@@ -401,21 +377,22 @@ Someone set up us the bomb!\015
         """
         factory = internet.protocol.Factory()
         factory.domains = {}
-        factory.domains[b'twistedmatrix.com'] = DummyDomain()
+        factory.domains[b"twistedmatrix.com"] = DummyDomain()
 
         server = MyVirtualPOP3()
         server.service = factory
-        exc = self.assertRaises(pop3.POP3Error,
-            server.authenticateUserAPOP, b'nobody@baz.com', b'password')
-        self.assertEqual(exc.args[0], 'no such domain baz.com')
-
+        exc = self.assertRaises(
+            pop3.POP3Error, server.authenticateUserAPOP, b"nobody@baz.com", b"password"
+        )
+        self.assertEqual(exc.args[0], "no such domain baz.com")
 
 
 class DummyPOP3(pop3.POP3):
     """
     A simple POP3 server with a hard-coded mailbox for any user.
     """
-    magic = b'<moshez>'
+
+    magic = b"<moshez>"
 
     def authenticateUserAPOP(self, user, password):
         """
@@ -430,17 +407,16 @@ class DummyPOP3(pop3.POP3):
         return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
 
 
-
 class DummyPOP3Auth(DummyPOP3):
     """
     Class to test successful authentication in twisted.mail.pop3.POP3.
     """
+
     def __init__(self, user, password):
         self.portal = cred.portal.Portal(TestRealm())
         ch = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
         ch.addUser(user, password)
         self.portal.registerChecker(ch)
-
 
 
 class DummyMailbox(pop3.Mailbox):
@@ -453,12 +429,12 @@ class DummyMailbox(pop3.Mailbox):
     @ivar exceptionType: The type of exception to raise when an out-of-bounds
         index is addressed.
     """
-    messages = [b'From: moshe\nTo: moshe\n\nHow are you, friend?\n']
+
+    messages = [b"From: moshe\nTo: moshe\n\nHow are you, friend?\n"]
 
     def __init__(self, exceptionType):
         self.messages = DummyMailbox.messages[:]
         self.exceptionType = exceptionType
-
 
     def listMessages(self, i=None):
         """
@@ -473,7 +449,6 @@ class DummyMailbox(pop3.Mailbox):
             raise self.exceptionType()
         return len(self.messages[i])
 
-
     def getMessage(self, i):
         """
         Get the message content.
@@ -482,7 +457,6 @@ class DummyMailbox(pop3.Mailbox):
         @return: See L{pop3.IMailbox.getMessage}.
         """
         return BytesIO(self.messages[i])
-
 
     def getUidl(self, i):
         """
@@ -494,8 +468,7 @@ class DummyMailbox(pop3.Mailbox):
         """
         if i >= len(self.messages):
             raise self.exceptionType()
-        return intToBytes(i)
-
+        return b"%d" % (i,)
 
     def deleteMessage(self, i):
         """
@@ -503,14 +476,14 @@ class DummyMailbox(pop3.Mailbox):
 
         @param i: See L{pop3.IMailbox.deleteMessage}.
         """
-        self.messages[i] = b''
-
+        self.messages[i] = b""
 
 
 class AnotherPOP3Tests(unittest.TestCase):
     """
     Additional L{pop3.POP3} tests.
     """
+
     def runTest(self, lines, expectedOutput, protocolInstance=None):
         """
         Assert that when C{lines} are delivered to L{pop3.POP3} it responds
@@ -533,14 +506,10 @@ class AnotherPOP3Tests(unittest.TestCase):
         d = loopback.loopbackAsync(dummy, client)
         return d.addCallback(self._cbRunTest, client, dummy, expectedOutput)
 
-
     def _cbRunTest(self, ignored, client, dummy, expectedOutput):
-        self.assertEqual(b'\r\n'.join(expectedOutput),
-                         b'\r\n'.join(client.response))
-        dummy.connectionLost(failure.Failure(
-                             Exception("Test harness disconnect")))
+        self.assertEqual(b"\r\n".join(expectedOutput), b"\r\n".join(client.response))
+        dummy.connectionLost(failure.Failure(Exception("Test harness disconnect")))
         return ignored
-
 
     def test_buffer(self):
         """
@@ -552,65 +521,64 @@ class AnotherPOP3Tests(unittest.TestCase):
         split it into a number of smaller, more focused tests.
         """
         return self.runTest(
-            [b"APOP moshez dummy",
-             b"LIST",
-             b"UIDL",
-             b"RETR 1",
-             b"RETR 2",
-             b"DELE 1",
-             b"RETR 1",
-             b"QUIT"],
-            [b'+OK <moshez>',
-             b'+OK Authentication succeeded',
-             b'+OK 1',
-             b'1 44',
-             b'.',
-             b'+OK ',
-             b'1 0',
-             b'.',
-             b'+OK 44',
-             b'From: moshe',
-             b'To: moshe',
-             b'',
-             b'How are you, friend?',
-             b'.',
-             b'-ERR Bad message number argument',
-             b'+OK ',
-             b'-ERR message deleted',
-             b'+OK '])
-
+            [
+                b"APOP moshez dummy",
+                b"LIST",
+                b"UIDL",
+                b"RETR 1",
+                b"RETR 2",
+                b"DELE 1",
+                b"RETR 1",
+                b"QUIT",
+            ],
+            [
+                b"+OK <moshez>",
+                b"+OK Authentication succeeded",
+                b"+OK 1",
+                b"1 44",
+                b".",
+                b"+OK ",
+                b"1 0",
+                b".",
+                b"+OK 44",
+                b"From: moshe",
+                b"To: moshe",
+                b"",
+                b"How are you, friend?",
+                b".",
+                b"-ERR Bad message number argument",
+                b"+OK ",
+                b"-ERR message deleted",
+                b"+OK ",
+            ],
+        )
 
     def test_noop(self):
         """
         Test the no-op command.
         """
         return self.runTest(
-            [b'APOP spiv dummy',
-             b'NOOP',
-             b'QUIT'],
-            [b'+OK <moshez>',
-             b'+OK Authentication succeeded',
-             b'+OK ',
-             b'+OK '])
-
+            [b"APOP spiv dummy", b"NOOP", b"QUIT"],
+            [b"+OK <moshez>", b"+OK Authentication succeeded", b"+OK ", b"+OK "],
+        )
 
     def test_badUTF8CharactersInCommand(self):
         """
         Sending a command with invalid UTF-8 characters
         will raise a L{pop3.POP3Error}.
         """
-        error = b'not authenticated yet: cannot do \x81PASS'
+        error = b"not authenticated yet: cannot do \x81PASS"
         d = self.runTest(
-            [b'\x81PASS',
-             b'QUIT'],
-            [b'+OK <moshez>',
-             b"-ERR bad protocol or server: POP3Error: " +
-             error,
-             b'+OK '])
+            [b"\x81PASS", b"QUIT"],
+            [
+                b"+OK <moshez>",
+                b"-ERR bad protocol or server: POP3Error: " + error,
+                b"+OK ",
+            ],
+        )
         errors = self.flushLoggedErrors(pop3.POP3Error)
         self.assertEqual(len(errors), 1)
         return d
-
 
     def test_authListing(self):
         """
@@ -619,27 +587,33 @@ class AnotherPOP3Tests(unittest.TestCase):
         """
         p = DummyPOP3()
         p.factory = internet.protocol.Factory()
-        p.factory.challengers = {b'Auth1': None, b'secondAuth': None,
-                                 b'authLast': None}
-        client = LineSendingProtocol([
-            b"AUTH",
-            b"QUIT",
-        ])
+        p.factory.challengers = {b"Auth1": None, b"secondAuth": None, b"authLast": None}
+        client = LineSendingProtocol(
+            [
+                b"AUTH",
+                b"QUIT",
+            ]
+        )
 
         d = loopback.loopbackAsync(p, client)
         return d.addCallback(self._cbTestAuthListing, client)
 
-
     def _cbTestAuthListing(self, ignored, client):
-        self.assertTrue(client.response[1].startswith(b'+OK'))
-        self.assertEqual(sorted(client.response[2:5]),
-                         [b"AUTH1", b"AUTHLAST", b"SECONDAUTH"])
+        self.assertTrue(client.response[1].startswith(b"+OK"))
+        self.assertEqual(
+            sorted(client.response[2:5]), [b"AUTH1", b"AUTHLAST", b"SECONDAUTH"]
+        )
         self.assertEqual(client.response[5], b".")
 
-
-    def run_PASS(self, real_user, real_password,
-                 tried_user=None, tried_password=None,
-                 after_auth_input=[], after_auth_output=[]):
+    def run_PASS(
+        self,
+        real_user,
+        real_password,
+        tried_user=None,
+        tried_password=None,
+        after_auth_input=[],
+        after_auth_output=[],
+    ):
         """
         Test a login with PASS.
 
@@ -671,24 +645,30 @@ class AnotherPOP3Tests(unittest.TestCase):
             tried_user = real_user
         if not tried_password:
             tried_password = real_password
-        response = [b'+OK <moshez>',
-                    b'+OK USER accepted, send PASS',
-                    b'-ERR Authentication failed']
+        response = [
+            b"+OK <moshez>",
+            b"+OK USER accepted, send PASS",
+            b"-ERR Authentication failed",
+        ]
         if real_user == tried_user and real_password == tried_password:
-            response = [b'+OK <moshez>',
-                        b'+OK USER accepted, send PASS',
-                        b'+OK Authentication succeeded']
-        fullInput = [b' '.join([b'USER', tried_user]),
-                     b' '.join([b'PASS', tried_password])]
+            response = [
+                b"+OK <moshez>",
+                b"+OK USER accepted, send PASS",
+                b"+OK Authentication succeeded",
+            ]
+        fullInput = [
+            b" ".join([b"USER", tried_user]),
+            b" ".join([b"PASS", tried_password]),
+        ]
 
-        fullInput += after_auth_input + [b'QUIT']
-        response += after_auth_output + [b'+OK ']
+        fullInput += after_auth_input + [b"QUIT"]
+        response += after_auth_output + [b"+OK "]
 
         return self.runTest(
             fullInput,
             response,
-            protocolInstance=DummyPOP3Auth(real_user, real_password))
-
+            protocolInstance=DummyPOP3Auth(real_user, real_password),
+        )
 
     def run_PASS_before_USER(self, password):
         """
@@ -697,136 +677,122 @@ class AnotherPOP3Tests(unittest.TestCase):
         @param password: A password to test.
         """
         return self.runTest(
-            [b' '.join([b'PASS', password]),
-             b'QUIT'],
-            [b'+OK <moshez>',
-             b'-ERR USER required before PASS',
-             b'+OK '])
-
+            [b" ".join([b"PASS", password]), b"QUIT"],
+            [b"+OK <moshez>", b"-ERR USER required before PASS", b"+OK "],
+        )
 
     def test_illegal_PASS_before_USER(self):
         """
         Test PASS before USER with a wrong password.
         """
-        return self.run_PASS_before_USER(b'fooz')
-
+        return self.run_PASS_before_USER(b"fooz")
 
     def test_empty_PASS_before_USER(self):
         """
         Test PASS before USER with an empty password.
         """
-        return self.run_PASS_before_USER(b'')
-
+        return self.run_PASS_before_USER(b"")
 
     def test_one_space_PASS_before_USER(self):
         """
         Test PASS before USER with an password that is a space.
         """
-        return self.run_PASS_before_USER(b' ')
-
+        return self.run_PASS_before_USER(b" ")
 
     def test_space_PASS_before_USER(self):
         """
         Test PASS before USER with a password containing a space.
         """
-        return self.run_PASS_before_USER(b'fooz barz')
-
+        return self.run_PASS_before_USER(b"fooz barz")
 
     def test_multiple_spaces_PASS_before_USER(self):
         """
         Test PASS before USER with a password containing multiple spaces.
         """
-        return self.run_PASS_before_USER(b'fooz barz asdf')
-
+        return self.run_PASS_before_USER(b"fooz barz asdf")
 
     def test_other_whitespace_PASS_before_USER(self):
         """
         Test PASS before USER with a password containing tabs and spaces.
         """
-        return self.run_PASS_before_USER(b'fooz barz\tcrazy@! \t ')
-
+        return self.run_PASS_before_USER(b"fooz barz\tcrazy@! \t ")
 
     def test_good_PASS(self):
         """
         Test PASS with a good password.
         """
-        return self.run_PASS(b'testuser', b'fooz')
-
+        return self.run_PASS(b"testuser", b"fooz")
 
     def test_space_PASS(self):
         """
         Test PASS with a password containing a space.
         """
-        return self.run_PASS(b'testuser', b'fooz barz')
-
+        return self.run_PASS(b"testuser", b"fooz barz")
 
     def test_multiple_spaces_PASS(self):
         """
         Test PASS with a password containing a space.
         """
-        return self.run_PASS(b'testuser', b'fooz barz asdf')
-
+        return self.run_PASS(b"testuser", b"fooz barz asdf")
 
     def test_other_whitespace_PASS(self):
         """
         Test PASS with a password containing tabs and spaces.
         """
-        return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
-
+        return self.run_PASS(b"testuser", b"fooz barz\tcrazy@! \t ")
 
     def test_pass_wrong_user(self):
         """
         Test PASS with a wrong user.
         """
-        return self.run_PASS(b'testuser', b'fooz',
-                             tried_user=b'wronguser')
-
+        return self.run_PASS(b"testuser", b"fooz", tried_user=b"wronguser")
 
     def test_wrong_PASS(self):
         """
         Test PASS with a wrong password.
         """
-        return self.run_PASS(b'testuser', b'fooz',
-                             tried_password=b'barz')
-
+        return self.run_PASS(b"testuser", b"fooz", tried_password=b"barz")
 
     def test_wrong_space_PASS(self):
         """
         Test PASS with a password containing a space.
         """
-        return self.run_PASS(b'testuser', b'fooz barz',
-                             tried_password=b'foozbarz ')
-
+        return self.run_PASS(b"testuser", b"fooz barz", tried_password=b"foozbarz ")
 
     def test_wrong_multiple_spaces_PASS(self):
         """
         Test PASS with a password containing a space.
         """
-        return self.run_PASS(b'testuser', b'fooz barz asdf',
-                             tried_password=b'foozbarz   ')
-
+        return self.run_PASS(
+            b"testuser", b"fooz barz asdf", tried_password=b"foozbarz   "
+        )
 
     def test_wrong_other_whitespace_PASS(self):
         """
         Test PASS with a password containing tabs and spaces.
         """
-        return self.run_PASS(b'testuser', b'fooz barz\tcrazy@! \t ')
-
+        return self.run_PASS(b"testuser", b"fooz barz\tcrazy@! \t ")
 
     def test_wrong_command(self):
         """
         After logging in, test a dummy command that is not defined.
         """
-        extra_input = [b'DUMMY COMMAND']
-        extra_output = [b' '.join([b'-ERR bad protocol or server: POP3Error:',
-                                   b'Unknown protocol command: DUMMY'])]
+        extra_input = [b"DUMMY COMMAND"]
+        extra_output = [
+            b" ".join(
+                [
+                    b"-ERR bad protocol or server: POP3Error:",
+                    b"Unknown protocol command: DUMMY",
+                ]
+            )
+        ]
 
-        return self.run_PASS(b'testuser', b'testpassword',
-                             after_auth_input=extra_input,
-                             after_auth_output=extra_output,
-                             ).addCallback(self.flushLoggedErrors,
-                                           pop3.POP3Error)
-
+        return self.run_PASS(
+            b"testuser",
+            b"testpassword",
+            after_auth_input=extra_input,
+            after_auth_output=extra_output,
+        ).addCallback(self.flushLoggedErrors, pop3.POP3Error)
 
 
 @implementer(pop3.IServerFactory)
@@ -837,6 +803,7 @@ class TestServerFactory:
     other behavior based on values hard-coded both here and in some test
     methods.
     """
+
     def cap_IMPLEMENTATION(self):
         """
         Return the hard-coded value.
@@ -844,7 +811,6 @@ class TestServerFactory:
         @return: L{pop3.IServerFactory}
         """
         return "Test Implementation String"
-
 
     def cap_EXPIRE(self):
         """
@@ -865,6 +831,7 @@ class TestServerFactory:
         return 120
 
     pue = True
+
     def perUserExpiration(self):
         """
         Return the hard-coded value.
@@ -874,6 +841,7 @@ class TestServerFactory:
         return self.pue
 
     puld = True
+
     def perUserLoginDelay(self):
         """
         Return the hard-coded value.
@@ -881,7 +849,6 @@ class TestServerFactory:
         @return: L{pop3.IServerFactory}
         """
         return self.puld
-
 
 
 class TestMailbox:
@@ -893,9 +860,9 @@ class TestMailbox:
     This is useful for testing the server's per-user capability
     implementation.
     """
+
     loginDelay = 100
     messageExpiration = 25
-
 
 
 def contained(testcase, s, *caps):
@@ -915,11 +882,11 @@ def contained(testcase, s, *caps):
         testcase.assertIn(s, c)
 
 
-
 class CapabilityTests(unittest.TestCase):
     """
     Tests for L{pop3.POP3}'s per-user capability handling.
     """
+
     def setUp(self):
         """
         Create a POP3 server with some capabilities.
@@ -942,13 +909,11 @@ class CapabilityTests(unittest.TestCase):
         self.lpcaps = s.getvalue().splitlines()
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
-
     def test_UIDL(self):
         """
         The server can advertise the I{UIDL} capability.
         """
         contained(self, b"UIDL", self.caps, self.pcaps, self.lpcaps)
-
 
     def test_TOP(self):
         """
@@ -956,13 +921,11 @@ class CapabilityTests(unittest.TestCase):
         """
         contained(self, b"TOP", self.caps, self.pcaps, self.lpcaps)
 
-
     def test_USER(self):
         """
         The server can advertise the I{USER} capability.
         """
         contained(self, b"USER", self.caps, self.pcaps, self.lpcaps)
-
 
     def test_EXPIRE(self):
         """
@@ -972,7 +935,6 @@ class CapabilityTests(unittest.TestCase):
         contained(self, b"EXPIRE 60 USER", self.caps, self.pcaps)
         contained(self, b"EXPIRE 25", self.lpcaps)
 
-
     def test_IMPLEMENTATION(self):
         """
         The server can advertise its implementation string.
@@ -980,20 +942,16 @@ class CapabilityTests(unittest.TestCase):
         contained(
             self,
             b"IMPLEMENTATION Test Implementation String",
-            self.caps, self.pcaps, self.lpcaps
+            self.caps,
+            self.pcaps,
+            self.lpcaps,
         )
-
 
     def test_SASL(self):
         """
         The server can advertise the SASL schemes it supports.
         """
-        contained(
-            self,
-            b"SASL SCHEME_1 SCHEME_2",
-            self.caps, self.pcaps, self.lpcaps
-        )
-
+        contained(self, b"SASL SCHEME_1 SCHEME_2", self.caps, self.pcaps, self.lpcaps)
 
     def test_LOGIN_DELAY(self):
         """
@@ -1004,11 +962,11 @@ class CapabilityTests(unittest.TestCase):
         self.assertIn(b"LOGIN-DELAY 100", self.lpcaps)
 
 
-
 class GlobalCapabilitiesTests(unittest.TestCase):
     """
     Tests for L{pop3.POP3}'s global capability handling.
     """
+
     def setUp(self):
         """
         Create a POP3 server with some capabilities.
@@ -1032,13 +990,11 @@ class GlobalCapabilitiesTests(unittest.TestCase):
         self.lpcaps = s.getvalue().splitlines()
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
 
-
     def test_EXPIRE(self):
         """
         I{EXPIRE} is in the server's advertised capabilities.
         """
         contained(self, b"EXPIRE 60", self.caps, self.pcaps, self.lpcaps)
-
 
     def test_LOGIN_DELAY(self):
         """
@@ -1047,11 +1003,11 @@ class GlobalCapabilitiesTests(unittest.TestCase):
         contained(self, b"LOGIN-DELAY 120", self.caps, self.pcaps, self.lpcaps)
 
 
-
 class TestRealm:
     """
     An L{IRealm} which knows about a single test account's mailbox.
     """
+
     def requestAvatar(self, avatarId, mind, *interfaces):
         """
         Retrieve a mailbox for I{testuser} or fail.
@@ -1063,16 +1019,16 @@ class TestRealm:
         @raises: L{AssertionError} when requesting an C{avatarId} other than
             I{testuser}.
         """
-        if avatarId == b'testuser':
+        if avatarId == b"testuser":
             return pop3.IMailbox, DummyMailbox(ValueError), lambda: None
         assert False
-
 
 
 class SASLTests(unittest.TestCase):
     """
     Tests for L{pop3.POP3}'s SASL implementation.
     """
+
     def test_ValidLogin(self):
         """
         A CRAM-MD5-based SASL login attempt succeeds if it uses a username and
@@ -1080,11 +1036,10 @@ class SASLTests(unittest.TestCase):
         """
         p = pop3.POP3()
         p.factory = TestServerFactory()
-        p.factory.challengers = {b'CRAM-MD5':
-                                 cred.credentials.CramMD5Credentials}
+        p.factory.challengers = {b"CRAM-MD5": cred.credentials.CramMD5Credentials}
         p.portal = cred.portal.Portal(TestRealm())
         ch = cred.checkers.InMemoryUsernamePasswordDatabaseDontUse()
-        ch.addUser(b'testuser', b'testpassword')
+        ch.addUser(b"testuser", b"testpassword")
         p.portal.registerChecker(ch)
 
         s = BytesIO()
@@ -1096,15 +1051,15 @@ class SASLTests(unittest.TestCase):
 
         p.lineReceived(b"AUTH CRAM-MD5")
         chal = s.getvalue().splitlines()[-1][2:]
-        chal = base64.decodestring(chal)
-        response = hmac.HMAC(b'testpassword', chal).hexdigest().encode("ascii")
+        chal = base64.b64decode(chal)
+        response = (
+            hmac.HMAC(b"testpassword", chal, digestmod=md5).hexdigest().encode("ascii")
+        )
 
-        p.lineReceived(
-            base64.encodestring(b'testuser ' + response).rstrip(b'\n'))
+        p.lineReceived(base64.b64encode(b"testuser " + response))
         self.assertTrue(p.mbox)
         self.assertTrue(s.getvalue().splitlines()[-1].find(b"+OK") >= 0)
         p.connectionLost(failure.Failure(Exception("Test harness disconnect")))
-
 
 
 class CommandMixin:
@@ -1112,13 +1067,12 @@ class CommandMixin:
     Tests for all the commands a POP3 server is allowed to receive.
     """
 
-    extraMessage = b'''\
+    extraMessage = b"""\
 From: guy
 To: fellow
 
 More message text for you.
-'''
-
+"""
 
     def setUp(self):
         """
@@ -1137,15 +1091,14 @@ More message text for you.
         s.truncate(0)
         self.pop3Transport = s
 
-
     def tearDown(self):
         """
         Disconnect the server protocol so it can clean up anything it might
         need to clean up.
         """
-        self.pop3Server.connectionLost(failure.Failure(
-                                       Exception("Test harness disconnect")))
-
+        self.pop3Server.connectionLost(
+            failure.Failure(Exception("Test harness disconnect"))
+        )
 
     def _flush(self):
         """
@@ -1154,7 +1107,6 @@ More message text for you.
         """
         # Oh man FileWrapper is pooh.
         self.pop3Server.transport._checkProducer()
-
 
     def test_LIST(self):
         """
@@ -1175,7 +1127,6 @@ More message text for you.
         self._flush()
         self.assertEqual(s.getvalue(), b"+OK 1\r\n1 44\r\n.\r\n")
 
-
     def test_LISTWithBadArgument(self):
         """
         Test that non-integers and out-of-bound integers produce appropriate
@@ -1185,26 +1136,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived(b"LIST a")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Invalid message-number: a\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Invalid message-number: a\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"LIST 0")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Invalid message-number: 0\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Invalid message-number: 0\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"LIST 2")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Invalid message-number: 2\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Invalid message-number: 2\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_UIDL(self):
         """
@@ -1223,7 +1167,6 @@ More message text for you.
         self._flush()
         self.assertEqual(s.getvalue(), b"+OK \r\n1 0\r\n.\r\n")
 
-
     def test_UIDLWithBadArgument(self):
         """
         Test that UIDL with a non-integer or an out-of-bounds integer produces
@@ -1233,26 +1176,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived(b"UIDL a")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"UIDL 0")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"UIDL 2")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_STAT(self):
         """
@@ -1265,7 +1201,6 @@ More message text for you.
         p.lineReceived(b"STAT")
         self._flush()
         self.assertEqual(s.getvalue(), b"+OK 1 44\r\n")
-
 
     def test_RETR(self):
         """
@@ -1283,10 +1218,10 @@ More message text for you.
             b"To: moshe\r\n"
             b"\r\n"
             b"How are you, friend?\r\n"
-            b".\r\n")
+            b".\r\n",
+        )
         s.seek(0)
         s.truncate(0)
-
 
     def test_RETRWithBadArgument(self):
         """
@@ -1298,26 +1233,19 @@ More message text for you.
         s = self.pop3Transport
 
         p.lineReceived(b"RETR a")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"RETR 0")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"RETR 2")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_TOP(self):
         """
@@ -1335,8 +1263,8 @@ More message text for you.
             b"From: moshe\r\n"
             b"To: moshe\r\n"
             b"\r\n"
-            b".\r\n")
-
+            b".\r\n",
+        )
 
     def test_TOPWithBadArgument(self):
         """
@@ -1350,40 +1278,29 @@ More message text for you.
         p.mbox.messages.append(self.extraMessage)
 
         p.lineReceived(b"TOP 1 a")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad line count argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad line count argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 1 -1")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad line count argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad line count argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP a 1")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 0 1")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
 
         p.lineReceived(b"TOP 3 1")
-        self.assertEqual(
-            s.getvalue(),
-            b"-ERR Bad message number argument\r\n")
+        self.assertEqual(s.getvalue(), b"-ERR Bad message number argument\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_LAST(self):
         """
@@ -1394,13 +1311,10 @@ More message text for you.
         s = self.pop3Transport
         p.mbox.messages.append(self.extraMessage)
 
-        p.lineReceived(b'LAST')
-        self.assertEqual(
-            s.getvalue(),
-            b"+OK 0\r\n")
+        p.lineReceived(b"LAST")
+        self.assertEqual(s.getvalue(), b"+OK 0\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_RetrieveUpdatesHighest(self):
         """
@@ -1410,17 +1324,14 @@ More message text for you.
         s = self.pop3Transport
         p.mbox.messages.append(self.extraMessage)
 
-        p.lineReceived(b'RETR 2')
+        p.lineReceived(b"RETR 2")
         self._flush()
         s.seek(0)
         s.truncate(0)
-        p.lineReceived(b'LAST')
-        self.assertEqual(
-            s.getvalue(),
-            b'+OK 2\r\n')
+        p.lineReceived(b"LAST")
+        self.assertEqual(s.getvalue(), b"+OK 2\r\n")
         s.seek(0)
         s.truncate(0)
-
 
     def test_TopUpdatesHighest(self):
         """
@@ -1430,15 +1341,12 @@ More message text for you.
         s = self.pop3Transport
         p.mbox.messages.append(self.extraMessage)
 
-        p.lineReceived(b'TOP 2 10')
+        p.lineReceived(b"TOP 2 10")
         self._flush()
         s.seek(0)
         s.truncate(0)
-        p.lineReceived(b'LAST')
-        self.assertEqual(
-            s.getvalue(),
-            b'+OK 2\r\n')
-
+        p.lineReceived(b"LAST")
+        self.assertEqual(s.getvalue(), b"+OK 2\r\n")
 
     def test_HighestOnlyProgresses(self):
         """
@@ -1449,17 +1357,14 @@ More message text for you.
         s = self.pop3Transport
         p.mbox.messages.append(self.extraMessage)
 
-        p.lineReceived(b'RETR 2')
+        p.lineReceived(b"RETR 2")
         self._flush()
-        p.lineReceived(b'TOP 1 10')
+        p.lineReceived(b"TOP 1 10")
         self._flush()
         s.seek(0)
         s.truncate(0)
-        p.lineReceived(b'LAST')
-        self.assertEqual(
-            s.getvalue(),
-            b'+OK 2\r\n')
-
+        p.lineReceived(b"LAST")
+        self.assertEqual(s.getvalue(), b"+OK 2\r\n")
 
     def test_ResetClearsHighest(self):
         """
@@ -1469,33 +1374,33 @@ More message text for you.
         s = self.pop3Transport
         p.mbox.messages.append(self.extraMessage)
 
-        p.lineReceived(b'RETR 2')
+        p.lineReceived(b"RETR 2")
         self._flush()
-        p.lineReceived(b'RSET')
+        p.lineReceived(b"RSET")
         s.seek(0)
         s.truncate(0)
-        p.lineReceived(b'LAST')
-        self.assertEqual(
-            s.getvalue(),
-            b'+OK 0\r\n')
-
+        p.lineReceived(b"LAST")
+        self.assertEqual(s.getvalue(), b"+OK 0\r\n")
 
 
 _listMessageDeprecation = (
     "twisted.mail.pop3.IMailbox.listMessages may not "
     "raise IndexError for out-of-bounds message numbers: "
-    "raise ValueError instead.")
+    "raise ValueError instead."
+)
 _listMessageSuppression = util.suppress(
-    message=_listMessageDeprecation,
-    category=PendingDeprecationWarning)
+    message=_listMessageDeprecation, category=PendingDeprecationWarning
+)
 
 _getUidlDeprecation = (
     "twisted.mail.pop3.IMailbox.getUidl may not "
     "raise IndexError for out-of-bounds message numbers: "
-    "raise ValueError instead.")
+    "raise ValueError instead."
+)
 _getUidlSuppression = util.suppress(
-    message=_getUidlDeprecation,
-    category=PendingDeprecationWarning)
+    message=_getUidlDeprecation, category=PendingDeprecationWarning
+)
+
 
 class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
     """
@@ -1503,6 +1408,7 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
     when an out of bounds request is made.  This behavior will be deprecated
     shortly and then removed.
     """
+
     exceptionType = IndexError
     mailboxType = DummyMailbox
 
@@ -1513,8 +1419,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_LISTWithBadArgument(self)
-    test_LISTWithBadArgument.suppress = [_listMessageSuppression]
 
+    test_LISTWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_UIDLWithBadArgument(self):
         """
@@ -1523,8 +1429,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_UIDLWithBadArgument(self)
-    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]
 
+    test_UIDLWithBadArgument.suppress = [_getUidlSuppression]  # type: ignore[attr-defined]
 
     def test_TOPWithBadArgument(self):
         """
@@ -1533,8 +1439,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_TOPWithBadArgument(self)
-    test_TOPWithBadArgument.suppress = [_listMessageSuppression]
 
+    test_TOPWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
     def test_RETRWithBadArgument(self):
         """
@@ -1543,8 +1449,8 @@ class IndexErrorCommandTests(CommandMixin, unittest.TestCase):
         L{IndexError}.
         """
         return CommandMixin.test_RETRWithBadArgument(self)
-    test_RETRWithBadArgument.suppress = [_listMessageSuppression]
 
+    test_RETRWithBadArgument.suppress = [_listMessageSuppression]  # type: ignore[attr-defined]
 
 
 class ValueErrorCommandTests(CommandMixin, unittest.TestCase):
@@ -1554,9 +1460,9 @@ class ValueErrorCommandTests(CommandMixin, unittest.TestCase):
     after support for mailboxes which raise IndexError is removed, this will
     become just C{CommandTestCase}.
     """
+
     exceptionType = ValueError
     mailboxType = DummyMailbox
-
 
 
 class SyncDeferredMailbox(DummyMailbox):
@@ -1564,6 +1470,7 @@ class SyncDeferredMailbox(DummyMailbox):
     Mailbox which has a listMessages implementation which returns a Deferred
     which has already fired.
     """
+
     def listMessages(self, n=None):
         """
         Synchronously list messages.
@@ -1576,14 +1483,13 @@ class SyncDeferredMailbox(DummyMailbox):
         return defer.succeed(DummyMailbox.listMessages(self, n))
 
 
-
 class IndexErrorSyncDeferredCommandTests(IndexErrorCommandTests):
     """
     Run all of the L{IndexErrorCommandTests} tests with a
     synchronous-Deferred returning IMailbox implementation.
     """
-    mailboxType = SyncDeferredMailbox
 
+    mailboxType = SyncDeferredMailbox
 
 
 class ValueErrorSyncDeferredCommandTests(ValueErrorCommandTests):
@@ -1591,8 +1497,8 @@ class ValueErrorSyncDeferredCommandTests(ValueErrorCommandTests):
     Run all of the L{ValueErrorCommandTests} tests with a
     synchronous-Deferred returning IMailbox implementation.
     """
-    mailboxType = SyncDeferredMailbox
 
+    mailboxType = SyncDeferredMailbox
 
 
 class AsyncDeferredMailbox(DummyMailbox):
@@ -1600,10 +1506,10 @@ class AsyncDeferredMailbox(DummyMailbox):
     Mailbox which has a listMessages implementation which returns a Deferred
     which has not yet fired.
     """
+
     def __init__(self, *a, **kw):
         self.waiting = []
         DummyMailbox.__init__(self, *a, **kw)
-
 
     def listMessages(self, n=None):
         """
@@ -1620,12 +1526,12 @@ class AsyncDeferredMailbox(DummyMailbox):
         return d
 
 
-
 class IndexErrorAsyncDeferredCommandTests(IndexErrorCommandTests):
     """
     Run all of the L{IndexErrorCommandTests} tests with an
     asynchronous-Deferred returning IMailbox implementation.
     """
+
     mailboxType = AsyncDeferredMailbox
 
     def _flush(self):
@@ -1638,12 +1544,12 @@ class IndexErrorAsyncDeferredCommandTests(IndexErrorCommandTests):
         IndexErrorCommandTests._flush(self)
 
 
-
 class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
     """
     Run all of the L{IndexErrorCommandTests} tests with an
     asynchronous-Deferred returning IMailbox implementation.
     """
+
     mailboxType = AsyncDeferredMailbox
 
     def _flush(self):
@@ -1656,12 +1562,12 @@ class ValueErrorAsyncDeferredCommandTests(ValueErrorCommandTests):
         ValueErrorCommandTests._flush(self)
 
 
-
-class POP3MiscTests(unittest.TestCase):
+class POP3MiscTests(unittest.SynchronousTestCase):
     """
     Miscellaneous tests more to do with module/package structure than
     anything to do with the Post Office Protocol.
     """
+
     def test_all(self):
         """
         This test checks that all names listed in
@@ -1670,3 +1576,38 @@ class POP3MiscTests(unittest.TestCase):
         mod = twisted.mail.pop3
         for attr in mod.__all__:
             self.assertTrue(hasattr(mod, attr))
+
+
+class POP3ClientDeprecationTests(unittest.SynchronousTestCase):
+    """
+    Tests for the now deprecated L{twisted.mail.pop3client} module.
+    """
+
+    def test_deprecation(self):
+        """
+        A deprecation warning is emitted when directly importing the now
+        deprected pop3client module.
+
+        This test might fail is some other code has already imported it.
+        No code should use the deprected module.
+        """
+        from twisted.mail import pop3client
+
+        warningsShown = self.flushWarnings(offendingFunctions=[self.test_deprecation])
+        self.assertEqual(warningsShown[0]["category"], DeprecationWarning)
+        self.assertEqual(
+            warningsShown[0]["message"],
+            "twisted.mail.pop3client was deprecated in Twisted 21.2.0. "
+            "Use twisted.mail.pop3 instead.",
+        )
+        self.assertEqual(len(warningsShown), 1)
+        pop3client  # Fake usage to please pyflakes.
+
+
+class APOPCredentialsTests(unittest.SynchronousTestCase):
+    def test_implementsIUsernamePassword(self):
+        """
+        L{APOPCredentials} implements
+        L{twisted.cred.credentials.IUsernameHashedPassword}.
+        """
+        self.assertTrue(verifyClass(IUsernameHashedPassword, pop3.APOPCredentials))

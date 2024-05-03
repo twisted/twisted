@@ -2,7 +2,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from __future__ import absolute_import, division
 
 import random
 
@@ -14,28 +13,22 @@ from twisted.names.error import DNSNameError
 from twisted.python.compat import nativeString
 
 
-
 class _SRVConnector_ClientFactoryWrapper:
     def __init__(self, connector, wrappedFactory):
         self.__connector = connector
         self.__wrappedFactory = wrappedFactory
 
-
     def startedConnecting(self, connector):
         self.__wrappedFactory.startedConnecting(self.__connector)
-
 
     def clientConnectionFailed(self, connector, reason):
         self.__connector.connectionFailed(reason)
 
-
     def clientConnectionLost(self, connector, reason):
         self.__connector.connectionLost(reason)
 
-
     def __getattr__(self, key):
         return getattr(self.__wrappedFactory, key)
-
 
 
 @implementer(interfaces.IConnector)
@@ -58,12 +51,18 @@ class SRVConnector:
 
     stopAfterDNS = 0
 
-    def __init__(self, reactor, service, domain, factory,
-                 protocol='tcp', connectFuncName='connectTCP',
-                 connectFuncArgs=(),
-                 connectFuncKwArgs={},
-                 defaultPort=None,
-                 ):
+    def __init__(
+        self,
+        reactor,
+        service,
+        domain,
+        factory,
+        protocol="tcp",
+        connectFuncName="connectTCP",
+        connectFuncArgs=(),
+        connectFuncKwArgs={},
+        defaultPort=None,
+    ):
         """
         @param domain: The domain to connect to.  If passed as a text
             string, it will be encoded using C{idna} encoding.
@@ -91,7 +90,6 @@ class SRVConnector:
         # list of servers already used in this round:
         self.orderedServers = None
 
-
     def connect(self):
         """Start connection to remote server."""
         self.factory.doStart()
@@ -103,10 +101,13 @@ class SRVConnector:
                     error.DNSLookupError("Domain is not defined."),
                 )
                 return
-            d = client.lookupService('_%s._%s.%s' % (
-                nativeString(self.service),
-                nativeString(self.protocol),
-                nativeString(self.domain)),
+            d = client.lookupService(
+                "_%s._%s.%s"
+                % (
+                    nativeString(self.service),
+                    nativeString(self.protocol),
+                    nativeString(self.domain),
+                ),
             )
             d.addCallbacks(self._cbGotServers, self._ebGotServers)
             d.addCallback(lambda x, self=self: self._reallyConnect())
@@ -118,7 +119,6 @@ class SRVConnector:
         else:
             self.connector.connect()
 
-
     def _ebGotServers(self, failure):
         failure.trap(DNSNameError)
 
@@ -129,15 +129,19 @@ class SRVConnector:
         self.servers = []
         self.orderedServers = []
 
-
     def _cbGotServers(self, result):
         answers, auth, add = result
-        if len(answers) == 1 and answers[0].type == dns.SRV \
-                             and answers[0].payload \
-                             and answers[0].payload.target == dns.Name(b'.'):
+        if (
+            len(answers) == 1
+            and answers[0].type == dns.SRV
+            and answers[0].payload
+            and answers[0].payload.target == dns.Name(b".")
+        ):
             # decidedly not available
-            raise error.DNSLookupError("Service %s not available for domain %s."
-                                       % (repr(self.service), repr(self.domain)))
+            raise error.DNSLookupError(
+                "Service %s not available for domain %s."
+                % (repr(self.service), repr(self.domain))
+            )
 
         self.servers = []
         self.orderedServers = []
@@ -146,7 +150,6 @@ class SRVConnector:
                 continue
 
             self.orderedServers.append(a.payload)
-
 
     def _ebServiceUnknown(self, failure):
         """
@@ -161,7 +164,6 @@ class SRVConnector:
         self.servers = [dns.Record_SRV(0, 0, self._defaultPort, self.domain)]
         self.orderedServers = []
         self.connect()
-
 
     def pickServer(self):
         """
@@ -222,9 +224,7 @@ class SRVConnector:
 
                 return str(chosen.target), chosen.port
 
-        raise RuntimeError(
-            'Impossible %s pickServer result.' % (self.__class__.__name__,))
-
+        raise RuntimeError(f"Impossible {self.__class__.__name__} pickServer result.")
 
     def _reallyConnect(self):
         if self.stopAfterDNS:
@@ -232,15 +232,17 @@ class SRVConnector:
             return
 
         self.host, self.port = self.pickServer()
-        assert self.host is not None, 'Must have a host to connect to.'
-        assert self.port is not None, 'Must have a port to connect to.'
+        assert self.host is not None, "Must have a host to connect to."
+        assert self.port is not None, "Must have a port to connect to."
 
         connectFunc = getattr(self.reactor, self.connectFuncName)
         self.connector = connectFunc(
-            self.host, self.port,
+            self.host,
+            self.port,
             _SRVConnector_ClientFactoryWrapper(self, self.factory),
-            *self.connectFuncArgs, **self.connectFuncKwArgs)
-
+            *self.connectFuncArgs,
+            **self.connectFuncKwArgs,
+        )
 
     def stopConnecting(self):
         """Stop attempting to connect."""
@@ -249,7 +251,6 @@ class SRVConnector:
         else:
             self.stopAfterDNS = 1
 
-
     def disconnect(self):
         """Disconnect whatever our are state is."""
         if self.connector is not None:
@@ -257,16 +258,13 @@ class SRVConnector:
         else:
             self.stopConnecting()
 
-
     def getDestination(self):
         assert self.connector
         return self.connector.getDestination()
 
-
     def connectionFailed(self, reason):
         self.factory.clientConnectionFailed(self, reason)
         self.factory.doStop()
-
 
     def connectionLost(self, reason):
         self.factory.clientConnectionLost(self, reason)

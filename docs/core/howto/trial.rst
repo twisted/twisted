@@ -4,11 +4,11 @@ Test-driven development with Twisted
 Writing good code is hard, or at least it can be.
 A major challenge is to ensure that your code remains correct as you add new functionality.
 
-`Unit testing <http://en.wikipedia.org/wiki/Unit_test>`_ is a modern, light-weight testing methodology in widespread use in many programming languages.
-Development that relies on unit tests is often referred to as Test-Driven Development (`TDD <http://en.wikipedia.org/wiki/Test-driven_development>`_ ).
+`Unit testing <https://en.wikipedia.org/wiki/Unit_test>`_ is a modern, light-weight testing methodology in widespread use in many programming languages.
+Development that relies on unit tests is often referred to as Test-Driven Development (`TDD <https://en.wikipedia.org/wiki/Test-driven_development>`_ ).
 Most Twisted code is tested using TDD.
 
-To gain a solid understanding of unit testing in Python, you should read the `unittest -- Unit testing framework chapter <http://docs.python.org/library/unittest.html>`_ of the `Python LibraryReference <http://docs.python.org/library/index.html>`_.
+To gain a solid understanding of unit testing in Python, you should read the :mod:`unittest -- Unit testing framework chapter <unittest>` of the `Python Library Reference <https://docs.python.org/3/library/>`_.
 There is a lot of information available online and in books.
 
 
@@ -272,7 +272,7 @@ Twisted specific testing
 
 Up to this point we've been doing fairly standard Python unit testing.
 With only a few cosmetic changes (most importantly, directly importing
-``unittest`` instead of using Twisted's :api:`twisted.trial.unittest <unittest>` version) we could make the
+``unittest`` instead of using Twisted's :py:mod:`unittest <twisted.trial.unittest>` version) we could make the
 above tests run using Python's standard library unit testing framework.
 
 Here we will assume a basic familiarity with Twisted's network I/O, timing,
@@ -346,7 +346,7 @@ following into ``calculus/remote_1.py`` :
 .. literalinclude:: listings/trial/calculus/remote_1.py
 
 
-As mentioned, this server creates a protocol that inherits from :api:`twisted.protocols.basic.LineReceiver <basic.LineReceiver>` , and then a
+As mentioned, this server creates a protocol that inherits from :py:class:`basic.LineReceiver <twisted.protocols.basic.LineReceiver>` , and then a
 factory that uses it as protocol. The only trick is the ``CalculationProxy`` object, which calls ``Calculation`` methods through ``remote_*`` methods. This pattern is used frequently in
 Twisted, because it is very explicit about what methods you are making
 accessible.
@@ -414,7 +414,7 @@ More good practices
 Testing scheduling
 ~~~~~~~~~~~~~~~~~~
 
-When testing code that involves the passage of time, waiting e.g. for a two hour timeout to occur in a test is not very realistic. Twisted provides a solution to this, the :api:`twisted.internet.task.Clock <Clock>` class that allows one to simulate the passage of time.
+When testing code that involves the passage of time, waiting e.g. for a two hour timeout to occur in a test is not very realistic. Twisted provides a solution to this, the :py:class:`Clock <twisted.internet.task.Clock>` class that allows one to simulate the passage of time.
 
 As an example we'll test the code for client request timeout: since our client
 uses TCP it can hang for a long time (firewall, connectivity problems, etc...).
@@ -595,9 +595,9 @@ example.  Because we were careful to use ``Clock`` , we
 don't need the global reactor to run in our tests.  Instead of returning the
 Deferred with a callback attached to it which performs the necessary assertions,
 we can use a testing helper,
-:api:`twisted.trial.unittest.SynchronousTestCase.successResultOf <successResultOf>` (and
+:py:meth:`successResultOf <twisted.trial._synctest._Assertions.successResultOf>` (and
 the corresponding error-case helper
-:api:`twisted.trial.unittest.SynchronousTestCase.failureResultOf <failureResultOf>` ), to
+:py:meth:`failureResultOf <twisted.trial._synctest._Assertions.failureResultOf>` ), to
 extract its result and make assertions against it directly.  Compared to
 returning a Deferred, this avoids the problem of forgetting to return the
 Deferred, improves the stack trace reported when the assertion fails, and avoids
@@ -625,7 +625,7 @@ result.  Similarly, ``failureResultOf`` will raise an exception (also
 failing the test) if the ``Deferred`` passed to it does not have a
 result, or has a success result.  There is a third helper method for testing the
 final case,
-:api:`twisted.trial.unittest.SynchronousTestCase.assertNoResult <assertNoResult>` ,
+:py:meth:`assertNoResult <twisted.trial._synctest._Assertions.assertNoResult>` ,
 which only raises an exception (failing the test) if the ``Deferred`` passed
 to it *has* a result (either success or failure).
 
@@ -636,7 +636,7 @@ Dropping into a debugger
 In the course of writing and running your tests, it is often helpful to
 employ the use of a debugger. This can be particularly helpful in tracking down
 where the source of a troublesome bug is in your code. Python's standard library
-includes a debugger in the form of the `pdb <http://docs.python.org/library/pdb.html>`_ module.
+includes a debugger in the form of the :mod:`pdb` module.
 Running your tests with ``pdb`` is as simple as invoking
 twisted with the ``--debug`` option, which will start ``pdb`` at the beginning of the execution of your test
 suite.
@@ -646,7 +646,7 @@ run your test suite using another debugger instead. To specify a debugger other
 than ``pdb`` , pass in the fully-qualified name of an
 object that provides the same interface as ``pdb`` .
 Most third-party debuggers tend to implement an interface similar to ``pdb`` , or at least provide a wrapper object that
-does. For example, invoking Trial with the extra arguments ``--debug --debugger pudb`` will open the `PuDB <http://pypi.python.org/pypi/pudb>`_ debugger instead, provided
+does. For example, invoking Trial with the extra arguments ``--debug --debugger pudb`` will open the `PuDB <https://pypi.org/project/pudb>`_ debugger instead, provided
 it is properly installed.
 
 
@@ -683,4 +683,4 @@ So what did you learn in this document?
 - And some small tips you can't live without.
 
 If one of the topics still looks cloudy to you, please give us your feedback!
-You can file tickets to improve this document - learn how to contribute `on the Twisted web site <http://twistedmatrix.com/trac/wiki/TwistedDevelopment/>`_.
+You can file tickets to improve this document - learn how to contribute `on the Twisted web site <https://twistedmatrix.com/trac/wiki/TwistedDevelopment/>`_.

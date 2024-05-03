@@ -3,8 +3,4 @@
 
 from twisted.application.service import ServiceMaker
 
-TwistedFTP = ServiceMaker(
-    "Twisted FTP",
-    "twisted.tap.ftp",
-    "An FTP server.",
-    "ftp")
+TwistedFTP = ServiceMaker("Twisted FTP", "twisted.tap.ftp", "An FTP server.", "ftp")

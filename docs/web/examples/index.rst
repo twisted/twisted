@@ -17,8 +17,9 @@ twisted.web.client
 XML-RPC
 -------
 
-- :download:`xmlrpc.py` XML-RPC server with several methods, including echoing, faulting, returning deferreds and failed deferreds
+- :download:`xmlrpcserver.py` XML-RPC server with several methods, including echoing, faulting, returning deferreds and failed deferreds
 - :download:`xmlrpcclient.py` - use ``twisted.web.xmlrpc.Proxy`` to call remote XML-RPC methods
+- :download:`xmlrpc-debug.py` - use ``xmlrpc.Proxy``'s ``queryFactory`` to debug raw XML-RPC traffic
 - :download:`advogato.py` - use ``twisted.web.xmlrpc`` to post a diary entry to advogato.org; requires an advogato account
 
 
@@ -35,10 +36,10 @@ Virtual hosts and proxies
 .rpys and ResourceTemplate
 --------------------------
 
-- :download:`hello.rpy.py` - use ``twisted.web.static`` to create a static resource to serve
-- :download:`fortune.rpy.py` - create a resource that returns the output of a process run on the server
-- :download:`report.rpy.py` - display various properties of a resource, including path, host, and port
-- :download:`users.rpy.py` - use ``twisted.web.distrib`` to publish user directories as for a "community web site"
+- :download:`hello.rpy` - use ``twisted.web.static`` to create a static resource to serve
+- :download:`fortune.rpy` - create a resource that returns the output of a process run on the server
+- :download:`report.rpy` - display various properties of a resource, including path, host, and port
+- :download:`users.rpy` - use ``twisted.web.distrib`` to publish user directories as for a "community web site"
 - :download:`simple.rtl` - example use of ``twisted.web.resource.ResourceTemplate``
 
 

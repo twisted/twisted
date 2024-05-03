@@ -19,18 +19,19 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 @since: 14.0
 """
 
-from __future__ import absolute_import, division
 
-import operator
 import datetime
+import operator
+from functools import reduce
 
 from zope.interface import implementer
-from constantly import Values, ValueConstant
 
-from twisted.positioning import base, ipositioning, _sentence
+from constantly import ValueConstant, Values
+
+from twisted.positioning import _sentence, base, ipositioning
 from twisted.positioning.base import Angles
 from twisted.protocols.basic import LineReceiver
-from twisted.python.compat import reduce, izip, nativeString, iterbytes
+from twisted.python.compat import iterbytes, nativeString
 
 
 class GPGGAFixQualities(Values):
@@ -62,6 +63,7 @@ class GPGGAFixQualities(Values):
         positioning method.
     @cvar SIMULATED: There is no real fix, but instead it is being simulated.
     """
+
     INVALID_FIX = "0"
     GPS_FIX = "1"
     DGPS_FIX = "2"
@@ -71,7 +73,6 @@ class GPGGAFixQualities(Values):
     DEAD_RECKONING = "6"
     MANUAL = "7"
     SIMULATED = "8"
-
 
 
 class GPGLLGPRMCFixQualities(Values):
@@ -85,9 +86,9 @@ class GPGLLGPRMCFixQualities(Values):
     @cvar ACTIVE: The data is okay.
     @cvar VOID: The data is void, and should not be used.
     """
+
     ACTIVE = ValueConstant("A")
     VOID = ValueConstant("V")
-
 
 
 class GPGSAFixTypes(Values):
@@ -98,10 +99,10 @@ class GPGSAFixTypes(Values):
     @cvar GSA_2D_FIX: The sentence reports a 2D fix: position but no altitude.
     @cvar GSA_3D_FIX: The sentence reports a 3D fix: position with altitude.
     """
+
     GSA_NO_FIX = ValueConstant("1")
     GSA_2D_FIX = ValueConstant("2")
     GSA_3D_FIX = ValueConstant("3")
-
 
 
 def _split(sentence):
@@ -115,13 +116,12 @@ def _split(sentence):
     @param sentence: The NMEA sentence to split.
     @type sentence: C{bytes}
     """
-    if sentence[-3:-2] == b"*": # Sentence with checksum
-        return sentence[1:-3].split(b',')
-    elif sentence[-1:] == b"*": # Sentence without checksum
-        return sentence[1:-1].split(b',')
+    if sentence[-3:-2] == b"*":  # Sentence with checksum
+        return sentence[1:-3].split(b",")
+    elif sentence[-1:] == b"*":  # Sentence without checksum
+        return sentence[1:-1].split(b",")
     else:
-        raise base.InvalidSentence("malformed sentence %s" % (sentence,))
-
+        raise base.InvalidSentence(f"malformed sentence {sentence}")
 
 
 def _validateChecksum(sentence):
@@ -136,12 +136,11 @@ def _validateChecksum(sentence):
     Simply returns on sentences that either don't have a checksum,
     or have a valid checksum.
     """
-    if sentence[-3:-2] == b'*':  # Sentence has a checksum
+    if sentence[-3:-2] == b"*":  # Sentence has a checksum
         reference, source = int(sentence[-2:], 16), sentence[1:-3]
         computed = reduce(operator.xor, [ord(x) for x in iterbytes(source)])
         if computed != reference:
-            raise base.InvalidChecksum("%02x != %02x" % (computed, reference))
-
+            raise base.InvalidChecksum(f"{computed:02x} != {reference:02x}")
 
 
 class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
@@ -157,13 +156,14 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
     @cvar _SENTENCE_CONTENTS: Has the field names in an NMEA sentence for each
         sentence type (in order, obviously).
     @type _SENTENCE_CONTENTS: C{dict} of bytestrings to C{list}s of C{str}
-    @param _receiver: A receiver for NMEAProtocol sentence objects.
-    @type _receiver: L{INMEAReceiver}
-    @param _sentenceCallback: A function that will be called with a new
+    @param receiver: A receiver for NMEAProtocol sentence objects.
+    @type receiver: L{INMEAReceiver}
+    @param sentenceCallback: A function that will be called with a new
         L{NMEASentence} when it is created. Useful for massaging data from
         particularly misbehaving NMEA receivers.
-    @type _sentenceCallback: unary callable
+    @type sentenceCallback: unary callable
     """
+
     def __init__(self, receiver, sentenceCallback=None):
         """
         Initializes an NMEAProtocol.
@@ -177,7 +177,6 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
         """
         self._receiver = receiver
         self._sentenceCallback = sentenceCallback
-
 
     def lineReceived(self, rawSentence):
         """
@@ -200,7 +199,7 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
             raise ValueError("unknown sentence type %s" % sentenceType)
 
         sentenceData = {"type": sentenceType}
-        for key, value in izip(keys, contents):
+        for key, value in zip(keys, contents):
             if key is not None and value != "":
                 sentenceData[key] = value
 
@@ -211,129 +210,102 @@ class NMEAProtocol(LineReceiver, _sentence._PositioningSentenceProducerMixin):
 
         self._receiver.sentenceReceived(sentence)
 
-
     _SENTENCE_CONTENTS = {
-        'GPGGA': [
-            'timestamp',
-
-            'latitudeFloat',
-            'latitudeHemisphere',
-            'longitudeFloat',
-            'longitudeHemisphere',
-
-            'fixQuality',
-            'numberOfSatellitesSeen',
-            'horizontalDilutionOfPrecision',
-
-            'altitude',
-            'altitudeUnits',
-            'heightOfGeoidAboveWGS84',
-            'heightOfGeoidAboveWGS84Units',
-
+        "GPGGA": [
+            "timestamp",
+            "latitudeFloat",
+            "latitudeHemisphere",
+            "longitudeFloat",
+            "longitudeHemisphere",
+            "fixQuality",
+            "numberOfSatellitesSeen",
+            "horizontalDilutionOfPrecision",
+            "altitude",
+            "altitudeUnits",
+            "heightOfGeoidAboveWGS84",
+            "heightOfGeoidAboveWGS84Units",
             # The next parts are DGPS information, currently unused.
-            None, # Time since last DGPS update
-            None, # DGPS reference source id
+            None,  # Time since last DGPS update
+            None,  # DGPS reference source id
         ],
-
-        'GPRMC': [
-            'timestamp',
-
-            'dataMode',
-
-            'latitudeFloat',
-            'latitudeHemisphere',
-            'longitudeFloat',
-            'longitudeHemisphere',
-
-            'speedInKnots',
-
-            'trueHeading',
-
-            'datestamp',
-
-            'magneticVariation',
-            'magneticVariationDirection',
+        "GPRMC": [
+            "timestamp",
+            "dataMode",
+            "latitudeFloat",
+            "latitudeHemisphere",
+            "longitudeFloat",
+            "longitudeHemisphere",
+            "speedInKnots",
+            "trueHeading",
+            "datestamp",
+            "magneticVariation",
+            "magneticVariationDirection",
         ],
-
-        'GPGSV': [
-            'numberOfGSVSentences',
-            'GSVSentenceIndex',
-
-            'numberOfSatellitesSeen',
-
-            'satellitePRN_0',
-            'elevation_0',
-            'azimuth_0',
-            'signalToNoiseRatio_0',
-
-            'satellitePRN_1',
-            'elevation_1',
-            'azimuth_1',
-            'signalToNoiseRatio_1',
-
-            'satellitePRN_2',
-            'elevation_2',
-            'azimuth_2',
-            'signalToNoiseRatio_2',
-
-            'satellitePRN_3',
-            'elevation_3',
-            'azimuth_3',
-            'signalToNoiseRatio_3',
+        "GPGSV": [
+            "numberOfGSVSentences",
+            "GSVSentenceIndex",
+            "numberOfSatellitesSeen",
+            "satellitePRN_0",
+            "elevation_0",
+            "azimuth_0",
+            "signalToNoiseRatio_0",
+            "satellitePRN_1",
+            "elevation_1",
+            "azimuth_1",
+            "signalToNoiseRatio_1",
+            "satellitePRN_2",
+            "elevation_2",
+            "azimuth_2",
+            "signalToNoiseRatio_2",
+            "satellitePRN_3",
+            "elevation_3",
+            "azimuth_3",
+            "signalToNoiseRatio_3",
         ],
-
-        'GPGLL': [
-            'latitudeFloat',
-            'latitudeHemisphere',
-            'longitudeFloat',
-            'longitudeHemisphere',
-            'timestamp',
-            'dataMode',
+        "GPGLL": [
+            "latitudeFloat",
+            "latitudeHemisphere",
+            "longitudeFloat",
+            "longitudeHemisphere",
+            "timestamp",
+            "dataMode",
         ],
-
-        'GPHDT': [
-            'trueHeading',
+        "GPHDT": [
+            "trueHeading",
         ],
-
-        'GPTRF': [
-            'datestamp',
-            'timestamp',
-
-            'latitudeFloat',
-            'latitudeHemisphere',
-            'longitudeFloat',
-            'longitudeHemisphere',
-
-            'elevation',
-            'numberOfIterations',  # Unused
-            'numberOfDopplerIntervals',  # Unused
-            'updateDistanceInNauticalMiles',  # Unused
-            'satellitePRN',
+        "GPTRF": [
+            "datestamp",
+            "timestamp",
+            "latitudeFloat",
+            "latitudeHemisphere",
+            "longitudeFloat",
+            "longitudeHemisphere",
+            "elevation",
+            "numberOfIterations",  # Unused
+            "numberOfDopplerIntervals",  # Unused
+            "updateDistanceInNauticalMiles",  # Unused
+            "satellitePRN",
         ],
-
-        'GPGSA': [
-            'dataMode',
-            'fixType',
-
-            'usedSatellitePRN_0',
-            'usedSatellitePRN_1',
-            'usedSatellitePRN_2',
-            'usedSatellitePRN_3',
-            'usedSatellitePRN_4',
-            'usedSatellitePRN_5',
-            'usedSatellitePRN_6',
-            'usedSatellitePRN_7',
-            'usedSatellitePRN_8',
-            'usedSatellitePRN_9',
-            'usedSatellitePRN_10',
-            'usedSatellitePRN_11',
-
-            'positionDilutionOfPrecision',
-            'horizontalDilutionOfPrecision',
-            'verticalDilutionOfPrecision',
-        ]
+        "GPGSA": [
+            "dataMode",
+            "fixType",
+            "usedSatellitePRN_0",
+            "usedSatellitePRN_1",
+            "usedSatellitePRN_2",
+            "usedSatellitePRN_3",
+            "usedSatellitePRN_4",
+            "usedSatellitePRN_5",
+            "usedSatellitePRN_6",
+            "usedSatellitePRN_7",
+            "usedSatellitePRN_8",
+            "usedSatellitePRN_9",
+            "usedSatellitePRN_10",
+            "usedSatellitePRN_11",
+            "positionDilutionOfPrecision",
+            "horizontalDilutionOfPrecision",
+            "verticalDilutionOfPrecision",
+        ],
     }
-
 
 
 class NMEASentence(_sentence._BaseSentence):
@@ -397,6 +369,7 @@ class NMEASentence(_sentence._BaseSentence):
     @ivar usedSatellitePRN_N: Where C{int(N) in range(12)}. The PRN
         of a satellite used in computing the fix.
     """
+
     ALLOWED_ATTRIBUTES = NMEAProtocol.getSentenceAttributes()
 
     def _isFirstGSVSentence(self):
@@ -408,7 +381,6 @@ class NMEASentence(_sentence._BaseSentence):
         """
         return self.GSVSentenceIndex == "1"
 
-
     def _isLastGSVSentence(self):
         """
         Tests if this current GSV sentence is the final one in a sequence.
@@ -419,9 +391,8 @@ class NMEASentence(_sentence._BaseSentence):
         return self.GSVSentenceIndex == self.numberOfGSVSentences
 
 
-
 @implementer(ipositioning.INMEAReceiver)
-class NMEAAdapter(object):
+class NMEAAdapter:
     """
     An adapter from NMEAProtocol receivers to positioning receivers.
 
@@ -458,6 +429,7 @@ class NMEAAdapter(object):
     @ivar _receiver: The positioning receiver that will receive parsed data.
     @type _receiver: L{ipositioning.IPositioningReceiver}
     """
+
     def __init__(self, receiver):
         """
         Initializes a new NMEA adapter.
@@ -469,19 +441,16 @@ class NMEAAdapter(object):
         self._sentenceData = {}
         self._receiver = receiver
 
-
     def _fixTimestamp(self):
         """
         Turns the NMEAProtocol timestamp notation into a datetime.time object.
         The time in this object is expressed as Zulu time.
         """
-        timestamp = self.currentSentence.timestamp.split('.')[0]
-        timeObject = datetime.datetime.strptime(timestamp, '%H%M%S').time()
-        self._sentenceData['_time'] = timeObject
-
+        timestamp = self.currentSentence.timestamp.split(".")[0]
+        timeObject = datetime.datetime.strptime(timestamp, "%H%M%S").time()
+        self._sentenceData["_time"] = timeObject
 
     yearThreshold = 1980
-
 
     def _fixDatestamp(self):
         """
@@ -497,8 +466,7 @@ class NMEAAdapter(object):
         if year < self.yearThreshold:
             year += 100
 
-        self._sentenceData['_date'] = datetime.date(year, month, day)
-
+        self._sentenceData["_date"] = datetime.date(year, month, day)
 
     def _fixCoordinateFloat(self, coordinateType):
         """
@@ -509,17 +477,16 @@ class NMEAAdapter(object):
         """
         if coordinateType is Angles.LATITUDE:
             coordinateName = "latitude"
-        else: # coordinateType is Angles.LONGITUDE
+        else:  # coordinateType is Angles.LONGITUDE
             coordinateName = "longitude"
         nmeaCoordinate = getattr(self.currentSentence, coordinateName + "Float")
 
-        left, right = nmeaCoordinate.split('.')
+        left, right = nmeaCoordinate.split(".")
 
-        degrees, minutes = int(left[:-2]), float("%s.%s" % (left[-2:], right))
-        angle = degrees + minutes/60
+        degrees, minutes = int(left[:-2]), float(f"{left[-2:]}.{right}")
+        angle = degrees + minutes / 60
         coordinate = base.Coordinate(angle, coordinateType)
         self._sentenceData[coordinateName] = coordinate
-
 
     def _fixHemisphereSign(self, coordinateType, sentenceDataKey=None):
         """
@@ -544,7 +511,6 @@ class NMEAAdapter(object):
         sign = self._getHemisphereSign(coordinateType)
         self._sentenceData[sentenceDataKey].setSign(sign)
 
-
     def _getHemisphereSign(self, coordinateType):
         """
         Returns the hemisphere sign for a given coordinate type.
@@ -560,9 +526,9 @@ class NMEAAdapter(object):
         elif coordinateType is Angles.LONGITUDE:
             hemisphereKey = "longitudeHemisphere"
         elif coordinateType is Angles.VARIATION:
-            hemisphereKey = 'magneticVariationDirection'
+            hemisphereKey = "magneticVariationDirection"
         else:
-            raise ValueError("unknown coordinate type %s" % (coordinateType,))
+            raise ValueError(f"unknown coordinate type {coordinateType}")
 
         hemisphere = getattr(self.currentSentence, hemisphereKey).upper()
 
@@ -571,8 +537,7 @@ class NMEAAdapter(object):
         elif hemisphere in "SW":
             return -1
         else:
-            raise ValueError("bad hemisphere/direction: %s" % (hemisphere,))
-
+            raise ValueError(f"bad hemisphere/direction: {hemisphere}")
 
     def _convert(self, key, converter):
         """
@@ -587,23 +552,34 @@ class NMEAAdapter(object):
         currentValue = getattr(self.currentSentence, key)
         self._sentenceData[key] = converter(currentValue)
 
-
     _STATEFUL_UPDATE = {
         # sentenceKey: (stateKey, factory, attributeName, converter),
-        'trueHeading': ('heading', base.Heading, '_angle', float),
-        'magneticVariation':
-            ('heading', base.Heading, 'variation',
-             lambda angle: base.Angle(float(angle), Angles.VARIATION)),
-
-        'horizontalDilutionOfPrecision':
-            ('positionError', base.PositionError, 'hdop', float),
-        'verticalDilutionOfPrecision':
-            ('positionError', base.PositionError, 'vdop', float),
-        'positionDilutionOfPrecision':
-            ('positionError', base.PositionError, 'pdop', float),
-
+        "trueHeading": ("heading", base.Heading, "_angle", float),
+        "magneticVariation": (
+            "heading",
+            base.Heading,
+            "variation",
+            lambda angle: base.Angle(float(angle), Angles.VARIATION),
+        ),
+        "horizontalDilutionOfPrecision": (
+            "positionError",
+            base.PositionError,
+            "hdop",
+            float,
+        ),
+        "verticalDilutionOfPrecision": (
+            "positionError",
+            base.PositionError,
+            "vdop",
+            float,
+        ),
+        "positionDilutionOfPrecision": (
+            "positionError",
+            base.PositionError,
+            "pdop",
+            float,
+        ),
     }
-
 
     def _statefulUpdate(self, sentenceKey):
         """
@@ -629,22 +605,19 @@ class NMEAAdapter(object):
         if key not in self._sentenceData:
             try:
                 self._sentenceData[key] = self._state[key]
-            except KeyError: # state does not have this partial data yet
+            except KeyError:  # state does not have this partial data yet
                 self._sentenceData[key] = factory()
 
         newValue = converter(getattr(self.currentSentence, sentenceKey))
         setattr(self._sentenceData[key], attr, newValue)
 
-
-    _ACCEPTABLE_UNITS = frozenset(['M'])
+    _ACCEPTABLE_UNITS = frozenset(["M"])
     _UNIT_CONVERTERS = {
-        'N': lambda inKnots: base.Speed(float(inKnots) * base.MPS_PER_KNOT),
-        'K': lambda inKPH: base.Speed(float(inKPH) * base.MPS_PER_KPH),
+        "N": lambda inKnots: base.Speed(float(inKnots) * base.MPS_PER_KNOT),
+        "K": lambda inKPH: base.Speed(float(inKPH) * base.MPS_PER_KPH),
     }
 
-
-    def _fixUnits(self, unitKey=None, valueKey=None, sourceKey=None,
-        unit=None):
+    def _fixUnits(self, unitKey=None, valueKey=None, sourceKey=None, unit=None):
         """
         Fixes the units of a certain value. If the units are already
         acceptable (metric), does nothing.
@@ -685,7 +658,6 @@ class NMEAAdapter(object):
             currentValue = getattr(self.currentSentence, sourceKey)
             self._sentenceData[valueKey] = converter(currentValue)
 
-
     def _fixGSV(self):
         """
         Parses partial visible satellite information from a GSV sentence.
@@ -693,12 +665,14 @@ class NMEAAdapter(object):
         # To anyone who knows NMEA, this method's name should raise a chuckle's
         # worth of schadenfreude. 'Fix' GSV? Hah! Ludicrous.
         beaconInformation = base.BeaconInformation()
-        self._sentenceData['_partialBeaconInformation'] = beaconInformation
+        self._sentenceData["_partialBeaconInformation"] = beaconInformation
 
         keys = "satellitePRN", "azimuth", "elevation", "signalToNoiseRatio"
         for index in range(4):
-            prn, azimuth, elevation, snr = [getattr(self.currentSentence, attr)
-                for attr in ("%s_%i" % (key, index) for key in keys)]
+            prn, azimuth, elevation, snr = (
+                getattr(self.currentSentence, attr)
+                for attr in ("%s_%i" % (key, index) for key in keys)
+            )
 
             if prn is None or snr is None:
                 # The peephole optimizer optimizes the jump away, meaning that
@@ -711,7 +685,6 @@ class NMEAAdapter(object):
             satellite = base.Satellite(prn, azimuth, elevation, snr)
             beaconInformation.seenBeacons.add(satellite)
 
-
     def _fixGSA(self):
         """
         Extracts the information regarding which satellites were used in
@@ -721,18 +694,16 @@ class NMEAAdapter(object):
         sentence data (C{self._sentenceData} will contain a set of the
         currently used PRNs (under the key C{_usedPRNs}.
         """
-        self._sentenceData['_usedPRNs'] = set()
+        self._sentenceData["_usedPRNs"] = set()
         for key in ("usedSatellitePRN_%d" % (x,) for x in range(12)):
             prn = getattr(self.currentSentence, key, None)
             if prn is not None:
-                self._sentenceData['_usedPRNs'].add(int(prn))
-
+                self._sentenceData["_usedPRNs"].add(int(prn))
 
     _SPECIFIC_SENTENCE_FIXES = {
-        'GPGSV': _fixGSV,
-        'GPGSA': _fixGSA,
+        "GPGSV": _fixGSV,
+        "GPGSA": _fixGSA,
     }
-
 
     def _sentenceSpecificFix(self):
         """
@@ -742,60 +713,47 @@ class NMEAAdapter(object):
         if fixer is not None:
             fixer(self)
 
-
     _FIXERS = {
-        'type':
-            lambda self: self._sentenceSpecificFix(),
-
-        'timestamp':
-            lambda self: self._fixTimestamp(),
-        'datestamp':
-            lambda self: self._fixDatestamp(),
-
-        'latitudeFloat':
-            lambda self: self._fixCoordinateFloat(Angles.LATITUDE),
-        'latitudeHemisphere':
-            lambda self: self._fixHemisphereSign(Angles.LATITUDE, 'latitude'),
-        'longitudeFloat':
-            lambda self: self._fixCoordinateFloat(Angles.LONGITUDE),
-        'longitudeHemisphere':
-            lambda self: self._fixHemisphereSign(Angles.LONGITUDE, 'longitude'),
-
-        'altitude':
-            lambda self: self._convert('altitude',
-                converter=lambda strRepr: base.Altitude(float(strRepr))),
-        'altitudeUnits':
-            lambda self: self._fixUnits(unitKey='altitudeUnits'),
-
-        'heightOfGeoidAboveWGS84':
-            lambda self: self._convert('heightOfGeoidAboveWGS84',
-                converter=lambda strRepr: base.Altitude(float(strRepr))),
-        'heightOfGeoidAboveWGS84Units':
-            lambda self: self._fixUnits(
-                unitKey='heightOfGeoidAboveWGS84Units'),
-
-        'trueHeading':
-            lambda self: self._statefulUpdate('trueHeading'),
-        'magneticVariation':
-            lambda self: self._statefulUpdate('magneticVariation'),
-
-        'magneticVariationDirection':
-            lambda self: self._fixHemisphereSign(Angles.VARIATION,
-                                            'heading'),
-
-        'speedInKnots':
-            lambda self: self._fixUnits(valueKey='speed',
-                                   sourceKey='speedInKnots',
-                                   unit='N'),
-
-        'positionDilutionOfPrecision':
-            lambda self: self._statefulUpdate('positionDilutionOfPrecision'),
-        'horizontalDilutionOfPrecision':
-            lambda self: self._statefulUpdate('horizontalDilutionOfPrecision'),
-        'verticalDilutionOfPrecision':
-            lambda self: self._statefulUpdate('verticalDilutionOfPrecision'),
+        "type": lambda self: self._sentenceSpecificFix(),
+        "timestamp": lambda self: self._fixTimestamp(),
+        "datestamp": lambda self: self._fixDatestamp(),
+        "latitudeFloat": lambda self: self._fixCoordinateFloat(Angles.LATITUDE),
+        "latitudeHemisphere": lambda self: self._fixHemisphereSign(
+            Angles.LATITUDE, "latitude"
+        ),
+        "longitudeFloat": lambda self: self._fixCoordinateFloat(Angles.LONGITUDE),
+        "longitudeHemisphere": lambda self: self._fixHemisphereSign(
+            Angles.LONGITUDE, "longitude"
+        ),
+        "altitude": lambda self: self._convert(
+            "altitude", converter=lambda strRepr: base.Altitude(float(strRepr))
+        ),
+        "altitudeUnits": lambda self: self._fixUnits(unitKey="altitudeUnits"),
+        "heightOfGeoidAboveWGS84": lambda self: self._convert(
+            "heightOfGeoidAboveWGS84",
+            converter=lambda strRepr: base.Altitude(float(strRepr)),
+        ),
+        "heightOfGeoidAboveWGS84Units": lambda self: self._fixUnits(
+            unitKey="heightOfGeoidAboveWGS84Units"
+        ),
+        "trueHeading": lambda self: self._statefulUpdate("trueHeading"),
+        "magneticVariation": lambda self: self._statefulUpdate("magneticVariation"),
+        "magneticVariationDirection": lambda self: self._fixHemisphereSign(
+            Angles.VARIATION, "heading"
+        ),
+        "speedInKnots": lambda self: self._fixUnits(
+            valueKey="speed", sourceKey="speedInKnots", unit="N"
+        ),
+        "positionDilutionOfPrecision": lambda self: self._statefulUpdate(
+            "positionDilutionOfPrecision"
+        ),
+        "horizontalDilutionOfPrecision": lambda self: self._statefulUpdate(
+            "horizontalDilutionOfPrecision"
+        ),
+        "verticalDilutionOfPrecision": lambda self: self._statefulUpdate(
+            "verticalDilutionOfPrecision"
+        ),
     }
-
 
     def clear(self):
         """
@@ -805,7 +763,6 @@ class NMEAAdapter(object):
         """
         self._state = {}
         self._sentenceData = {}
-
 
     def sentenceReceived(self, sentence):
         """
@@ -831,16 +788,16 @@ class NMEAAdapter(object):
         self._updateState()
         self._fireSentenceCallbacks()
 
-
     def _validateCurrentSentence(self):
         """
         Tests if a sentence contains a valid fix.
         """
-        if (self.currentSentence.fixQuality is GPGGAFixQualities.INVALID_FIX
+        if (
+            self.currentSentence.fixQuality is GPGGAFixQualities.INVALID_FIX
             or self.currentSentence.dataMode is GPGLLGPRMCFixQualities.VOID
-            or self.currentSentence.fixType is GPGSAFixTypes.GSA_NO_FIX):
+            or self.currentSentence.fixType is GPGSAFixTypes.GSA_NO_FIX
+        ):
             raise base.InvalidSentence("bad sentence")
-
 
     def _cleanCurrentSentence(self):
         """
@@ -852,7 +809,6 @@ class NMEAAdapter(object):
             if fixer is not None:
                 fixer(self)
 
-
     def _updateState(self):
         """
         Updates the current state with the new information from the sentence.
@@ -861,12 +817,11 @@ class NMEAAdapter(object):
         self._combineDateAndTime()
         self._state.update(self._sentenceData)
 
-
     def _updateBeaconInformation(self):
         """
         Updates existing beacon information state with new data.
         """
-        new = self._sentenceData.get('_partialBeaconInformation')
+        new = self._sentenceData.get("_partialBeaconInformation")
         if new is None:
             return
 
@@ -876,10 +831,9 @@ class NMEAAdapter(object):
         if self.currentSentence._isLastGSVSentence():
             if not self.currentSentence._isFirstGSVSentence():
                 # not a 1-sentence sequence, get rid of partial information
-                del self._state['_partialBeaconInformation']
-            bi = self._sentenceData.pop('_partialBeaconInformation')
-            self._sentenceData['beaconInformation'] = bi
-
+                del self._state["_partialBeaconInformation"]
+            bi = self._sentenceData.pop("_partialBeaconInformation")
+            self._sentenceData["beaconInformation"] = bi
 
     def _updateUsedBeacons(self, beaconInformation):
         """
@@ -904,7 +858,6 @@ class NMEAAdapter(object):
             if beacon.identifier in usedPRNs:
                 beaconInformation.usedBeacons.add(beacon)
 
-
     def _mergeBeaconInformation(self, newBeaconInformation):
         """
         Merges beacon information in the adapter state (if it exists) into
@@ -913,17 +866,16 @@ class NMEAAdapter(object):
 
         If the adapter state has no beacon information, does nothing.
 
-        @param beaconInformation: The beacon information object that beacon
+        @param newBeaconInformation: The beacon information object that beacon
             information will be merged into (if necessary).
-        @type beaconInformation: L{twisted.positioning.base.BeaconInformation}
+        @type newBeaconInformation: L{twisted.positioning.base.BeaconInformation}
         """
-        old = self._state.get('_partialBeaconInformation')
+        old = self._state.get("_partialBeaconInformation")
         if old is None:
             return
 
         for attr in ["seenBeacons", "usedBeacons"]:
             getattr(newBeaconInformation, attr).update(getattr(old, attr))
-
 
     def _combineDateAndTime(self):
         """
@@ -937,15 +889,16 @@ class NMEAAdapter(object):
             # nothing new to combine here.
             return
 
-        date, time = [self._sentenceData.get(key) or self._state.get(key)
-                      for key in ('_date', '_time')]
+        date, time = (
+            self._sentenceData.get(key) or self._state.get(key)
+            for key in ("_date", "_time")
+        )
 
         if date is None or time is None:
             return
 
         dt = datetime.datetime.combine(date, time)
-        self._sentenceData['time'] = dt
-
+        self._sentenceData["time"] = dt
 
     def _fireSentenceCallbacks(self):
         """
@@ -976,9 +929,4 @@ class NMEAAdapter(object):
                 callback(**kwargs)
 
 
-
-__all__ = [
-    "NMEAProtocol",
-    "NMEASentence",
-    "NMEAAdapter"
-]
+__all__ = ["NMEAProtocol", "NMEASentence", "NMEAAdapter"]

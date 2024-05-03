@@ -6,24 +6,22 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.internet import reactor, defer, task
+from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
 
 
-
-class FakeDelayedCall(object):
+class FakeDelayedCall:
     """
     Fake delayed call which lets us simulate the scheduler.
     """
+
     def __init__(self, func):
         """
         A function to run, later.
         """
         self.func = func
         self.cancelled = False
-
 
     def cancel(self):
         """
@@ -32,17 +30,16 @@ class FakeDelayedCall(object):
         self.cancelled = True
 
 
-
-class FakeScheduler(object):
+class FakeScheduler:
     """
     A fake scheduler for testing against.
     """
+
     def __init__(self):
         """
         Create a fake scheduler with a list of work to do.
         """
         self.work = []
-
 
     def __call__(self, thunk):
         """
@@ -51,7 +48,6 @@ class FakeScheduler(object):
         unit = FakeDelayedCall(thunk)
         self.work.append(unit)
         return unit
-
 
     def pump(self):
         """
@@ -63,33 +59,30 @@ class FakeScheduler(object):
                 unit.func()
 
 
-
 class CooperatorTests(unittest.TestCase):
-    RESULT = 'done'
+    RESULT = "done"
 
     def ebIter(self, err):
         err.trap(task.SchedulerStopped)
         return self.RESULT
 
-
     def cbIter(self, ign):
         self.fail()
-
 
     def testStoppedRejectsNewTasks(self):
         """
         Test that Cooperators refuse new tasks when they have been stopped.
         """
+
         def testwith(stuff):
             c = task.Cooperator()
             c.stop()
             d = c.coiterate(iter(()), stuff)
             d.addCallback(self.cbIter)
             d.addErrback(self.ebIter)
-            return d.addCallback(lambda result:
-                                 self.assertEqual(result, self.RESULT))
-        return testwith(None).addCallback(lambda ign: testwith(defer.Deferred()))
+            return d.addCallback(lambda result: self.assertEqual(result, self.RESULT))
 
+        return testwith(None).addCallback(lambda ign: testwith(defer.Deferred()))
 
     def testStopRunning(self):
         """
@@ -97,20 +90,22 @@ class CooperatorTests(unittest.TestCase):
         cooperator is stopped.
         """
         c = task.Cooperator()
+
         def myiter():
-            for myiter.value in range(3):
-                yield myiter.value
+            yield from range(3)
+
         myiter.value = -1
         d = c.coiterate(myiter())
         d.addCallback(self.cbIter)
         d.addErrback(self.ebIter)
         c.stop()
+
         def doasserts(result):
             self.assertEqual(result, self.RESULT)
             self.assertEqual(myiter.value, -1)
+
         d.addCallback(doasserts)
         return d
-
 
     def testStopOutstanding(self):
         """
@@ -120,34 +115,36 @@ class CooperatorTests(unittest.TestCase):
         """
         testControlD = defer.Deferred()
         outstandingD = defer.Deferred()
+
         def myiter():
             reactor.callLater(0, testControlD.callback, None)
             yield outstandingD
             self.fail()
+
         c = task.Cooperator()
         d = c.coiterate(myiter())
+
         def stopAndGo(ign):
             c.stop()
-            outstandingD.callback('arglebargle')
+            outstandingD.callback("arglebargle")
 
         testControlD.addCallback(stopAndGo)
         d.addCallback(self.cbIter)
         d.addErrback(self.ebIter)
 
-        return d.addCallback(
-            lambda result: self.assertEqual(result, self.RESULT))
-
+        return d.addCallback(lambda result: self.assertEqual(result, self.RESULT))
 
     def testUnexpectedError(self):
         c = task.Cooperator()
+
         def myiter():
-            if 0:
+            if False:
                 yield None
             else:
                 raise RuntimeError()
+
         d = c.coiterate(myiter())
         return self.assertFailure(d, RuntimeError)
-
 
     def testUnexpectedErrorActuallyLater(self):
         def myiter():
@@ -159,7 +156,6 @@ class CooperatorTests(unittest.TestCase):
         d = c.coiterate(myiter())
         return self.assertFailure(d, RuntimeError)
 
-
     def testUnexpectedErrorNotActuallyLater(self):
         def myiter():
             yield defer.fail(RuntimeError())
@@ -168,15 +164,15 @@ class CooperatorTests(unittest.TestCase):
         d = c.coiterate(myiter())
         return self.assertFailure(d, RuntimeError)
 
-
     def testCooperation(self):
         L = []
+
         def myiter(things):
             for th in things:
                 L.append(th)
                 yield None
 
-        groupsOfThings = ['abc', (1, 2, 3), 'def', (4, 5, 6)]
+        groupsOfThings = ["abc", (1, 2, 3), "def", (4, 5, 6)]
 
         c = task.Cooperator()
         tasks = []
@@ -184,11 +180,12 @@ class CooperatorTests(unittest.TestCase):
             tasks.append(c.coiterate(myiter(stuff)))
 
         return defer.DeferredList(tasks).addCallback(
-            lambda ign: self.assertEqual(tuple(L), sum(zip(*groupsOfThings), ())))
-
+            lambda ign: self.assertEqual(tuple(L), sum(zip(*groupsOfThings), ()))
+        )
 
     def testResourceExhaustion(self):
         output = []
+
         def myiter():
             for i in range(100):
                 output.append(i)
@@ -198,6 +195,7 @@ class CooperatorTests(unittest.TestCase):
 
         class _TPF:
             stopped = False
+
             def __call__(self):
                 return self.stopped
 
@@ -210,7 +208,6 @@ class CooperatorTests(unittest.TestCase):
         c.stop()
         self.assertTrue(_TPF.stopped)
         self.assertEqual(output, list(range(10)))
-
 
     def testCallbackReCoiterate(self):
         """
@@ -225,18 +222,21 @@ class CooperatorTests(unittest.TestCase):
             def __init__(self, func):
                 self.func = func
 
-            def __repr__(self):
-                return '<FakeCall %r>' % (self.func,)
+            def __repr__(self) -> str:
+                return f"<FakeCall {self.func!r}>"
 
         def sched(f):
             self.assertFalse(calls, repr(calls))
             calls.append(FakeCall(f))
             return calls[-1]
 
-        c = task.Cooperator(scheduler=sched, terminationPredicateFactory=lambda: lambda: True)
+        c = task.Cooperator(
+            scheduler=sched, terminationPredicateFactory=lambda: lambda: True
+        )
         d = c.coiterate(iter(()))
 
         done = []
+
         def anotherTask(ign):
             c.coiterate(iter(())).addBoth(done.append)
 
@@ -251,7 +251,6 @@ class CooperatorTests(unittest.TestCase):
             if work > 50:
                 self.fail("Cooperator took too long")
 
-
     def test_removingLastTaskStopsScheduledCall(self):
         """
         If the last task in a Cooperator is removed, the scheduled call for
@@ -261,9 +260,11 @@ class CooperatorTests(unittest.TestCase):
         no reactor state behind when they're done.
         """
         calls = [None]
+
         def sched(f):
             calls[0] = FakeDelayedCall(f)
             return calls[0]
+
         coop = task.Cooperator(scheduler=sched)
 
         # Add two task; this should schedule the tick:
@@ -286,7 +287,6 @@ class CooperatorTests(unittest.TestCase):
         self.assertFalse(calls[0].cancelled)
         self.assertEqual(coop._delayedCall, calls[0])
 
-
     def test_runningWhenStarted(self):
         """
         L{Cooperator.running} reports C{True} if the L{Cooperator}
@@ -295,7 +295,6 @@ class CooperatorTests(unittest.TestCase):
         c = task.Cooperator()
         self.assertTrue(c.running)
 
-
     def test_runningWhenNotStarted(self):
         """
         L{Cooperator.running} reports C{False} if the L{Cooperator}
@@ -303,7 +302,6 @@ class CooperatorTests(unittest.TestCase):
         """
         c = task.Cooperator(started=False)
         self.assertFalse(c.running)
-
 
     def test_runningWhenRunning(self):
         """
@@ -314,7 +312,6 @@ class CooperatorTests(unittest.TestCase):
         c.start()
         self.addCleanup(c.stop)
         self.assertTrue(c.running)
-
 
     def test_runningWhenStopped(self):
         """
@@ -327,12 +324,10 @@ class CooperatorTests(unittest.TestCase):
         self.assertFalse(c.running)
 
 
-
 class UnhandledException(Exception):
     """
     An exception that should go unhandled.
     """
-
 
 
 class AliasTests(unittest.TestCase):
@@ -346,16 +341,17 @@ class AliasTests(unittest.TestCase):
         L{twisted.internet.task.cooperate} ought to run the generator that it is
         """
         d = defer.Deferred()
+
         def doit():
             yield 1
             yield 2
             yield 3
             d.callback("yay")
+
         it = doit()
         theTask = task.cooperate(it)
         self.assertIn(theTask, task._theCooperator._tasks)
         return d
-
 
 
 class RunStateTests(unittest.TestCase):
@@ -379,10 +375,10 @@ class RunStateTests(unittest.TestCase):
             scheduler=self.scheduler,
             # Always stop after one iteration of work (return a function which
             # returns a function which always returns True)
-            terminationPredicateFactory=lambda: lambda: True)
+            terminationPredicateFactory=lambda: lambda: True,
+        )
         self.task = self.cooperator.cooperate(self.worker())
         self.cooperator.start()
-
 
     def worker(self):
         """
@@ -405,7 +401,6 @@ class RunStateTests(unittest.TestCase):
                 self.work.append(i)
                 yield i
 
-
     def tearDown(self):
         """
         Drop references to interesting parts of the fixture to allow Deferred
@@ -414,13 +409,11 @@ class RunStateTests(unittest.TestCase):
         del self.task
         del self.scheduler
 
-
     def deferNext(self):
         """
         Defer the next result from my worker iterator.
         """
         self._doDeferNext = True
-
 
     def stopNext(self):
         """
@@ -429,17 +422,17 @@ class RunStateTests(unittest.TestCase):
         """
         self._doStopNext = True
 
-
     def dieNext(self):
         """
         Make the next result from my worker iterator be raising an
         L{UnhandledException}.
         """
+
         def ignoreUnhandled(failure):
             failure.trap(UnhandledException)
             return None
-        self._doDieNext = True
 
+        self._doDieNext = True
 
     def test_pauseResume(self):
         """
@@ -463,7 +456,6 @@ class RunStateTests(unittest.TestCase):
         # But when the scheduler rolls around again...
         self.assertEqual(self.work, [1, 2, 3])
 
-
     def test_resumeNotPaused(self):
         """
         L{CooperativeTask.resume} should raise a L{TaskNotPaused} exception if
@@ -474,7 +466,6 @@ class RunStateTests(unittest.TestCase):
         self.task.pause()
         self.task.resume()
         self.assertRaises(task.NotPaused, self.task.resume)
-
 
     def test_pauseTwice(self):
         """
@@ -497,7 +488,6 @@ class RunStateTests(unittest.TestCase):
         self.task.resume()
         self.scheduler.pump()
         self.assertEqual(self.work, [1])
-
 
     def test_pauseWhileDeferred(self):
         """
@@ -522,7 +512,6 @@ class RunStateTests(unittest.TestCase):
         self.scheduler.pump()
         self.assertEqual(len(self.work), 2)
         self.assertEqual(self.work[1], 2)
-
 
     def test_whenDone(self):
         """
@@ -567,7 +556,6 @@ class RunStateTests(unittest.TestCase):
         self.assertEqual(final1, [1])
         self.assertEqual(final2, [2])
 
-
     def test_whenDoneError(self):
         """
         L{CooperativeTask.whenDone} returns a L{defer.Deferred} that will fail
@@ -582,7 +570,6 @@ class RunStateTests(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].check(UnhandledException), UnhandledException)
 
-
     def test_whenDoneStop(self):
         """
         L{CooperativeTask.whenDone} returns a L{defer.Deferred} that fails with
@@ -596,7 +583,6 @@ class RunStateTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].check(task.TaskStopped), task.TaskStopped)
 
-
     def test_whenDoneAlreadyDone(self):
         """
         L{CooperativeTask.whenDone} will return a L{defer.Deferred} that will
@@ -607,7 +593,6 @@ class RunStateTests(unittest.TestCase):
         results = []
         self.task.whenDone().addCallback(results.append)
         self.assertEqual(results, [self.task._iterator])
-
 
     def test_stopStops(self):
         """
@@ -624,7 +609,6 @@ class RunStateTests(unittest.TestCase):
         self.scheduler.pump()
         self.assertEqual(self.work, [])
 
-
     def test_pauseStopResume(self):
         """
         C{resume()}ing a paused, stopped task should be a no-op; it should not
@@ -636,7 +620,6 @@ class RunStateTests(unittest.TestCase):
         self.task.resume()
         self.scheduler.pump()
         self.assertEqual(self.work, [])
-
 
     def test_stopDeferred(self):
         """
@@ -664,7 +647,6 @@ class RunStateTests(unittest.TestCase):
         # But more importantly, no further work should have happened.
         self.assertEqual(self.work, [])
 
-
     def test_stopExhausted(self):
         """
         C{stop()}ping a L{CooperativeTask} whose iterator has been exhausted
@@ -674,7 +656,6 @@ class RunStateTests(unittest.TestCase):
         self.scheduler.pump()
         self.assertRaises(task.TaskDone, self.task.stop)
 
-
     def test_stopErrored(self):
         """
         C{stop()}ping a L{CooperativeTask} whose iterator has encountered an
@@ -683,7 +664,6 @@ class RunStateTests(unittest.TestCase):
         self.dieNext()
         self.scheduler.pump()
         self.assertRaises(task.TaskFailed, self.task.stop)
-
 
     def test_stopCooperatorReentrancy(self):
         """
@@ -695,6 +675,7 @@ class RunStateTests(unittest.TestCase):
         L{CoooperativeTask}.
         """
         callbackPhases = []
+
         def stopit(result):
             callbackPhases.append(result)
             self.cooperator.stop()
@@ -702,10 +683,8 @@ class RunStateTests(unittest.TestCase):
             # way through the callback; i.e. stop() shouldn't be raising an
             # exception due to the stopped-ness of our main task.
             callbackPhases.append("done")
+
         self.task.whenDone().addCallback(stopit)
         self.stopNext()
         self.scheduler.pump()
         self.assertEqual(callbackPhases, [self.task._iterator, "done"])
-
-
-

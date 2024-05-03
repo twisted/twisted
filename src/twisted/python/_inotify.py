@@ -11,7 +11,9 @@ required.
 
 import ctypes
 import ctypes.util
+from typing import Any, cast
 
+from twisted.python.filepath import FilePath
 
 
 class INotifyError(Exception):
@@ -20,40 +22,32 @@ class INotifyError(Exception):
     """
 
 
-
-def init():
+def init() -> int:
     """
     Create an inotify instance and return the associated file descriptor.
     """
-    fd = libc.inotify_init()
+    fd = cast(int, libc.inotify_init())
     if fd < 0:
         raise INotifyError("INotify initialization error.")
     return fd
 
 
-
-def add(fd, path, mask):
+def add(fd: int, path: FilePath[Any], mask: int) -> int:
     """
     Add a watch for the given path to the inotify file descriptor, and return
     the watch descriptor.
 
     @param fd: The file descriptor returned by C{libc.inotify_init}.
-    @type fd: L{int}
-
     @param path: The path to watch via inotify.
-    @type path: L{twisted.python.filepath.FilePath}
-
     @param mask: Bitmask specifying the events that inotify should monitor.
-    @type mask: L{int}
     """
-    wd = libc.inotify_add_watch(fd, path.asBytesMode().path, mask)
+    wd = cast(int, libc.inotify_add_watch(fd, path.asBytesMode().path, mask))
     if wd < 0:
-        raise INotifyError("Failed to add watch on '%r' - (%r)" % (path, wd))
+        raise INotifyError(f"Failed to add watch on '{path!r}' - ({wd!r})")
     return wd
 
 
-
-def remove(fd, wd):
+def remove(fd: int, wd: int) -> None:
     """
     Remove the given watch descriptor from the inotify file descriptor.
     """
@@ -80,8 +74,7 @@ def remove(fd, wd):
     libc.inotify_rm_watch(fd, wd)
 
 
-
-def initializeModule(libc):
+def initializeModule(libc: ctypes.CDLL) -> None:
     """
     Initialize the module, checking if the expected APIs exist and setting the
     argtypes and restype for C{inotify_init}, C{inotify_add_watch}, and
@@ -93,17 +86,14 @@ def initializeModule(libc):
     libc.inotify_init.argtypes = []
     libc.inotify_init.restype = ctypes.c_int
 
-    libc.inotify_rm_watch.argtypes = [
-        ctypes.c_int, ctypes.c_int]
+    libc.inotify_rm_watch.argtypes = [ctypes.c_int, ctypes.c_int]
     libc.inotify_rm_watch.restype = ctypes.c_int
 
-    libc.inotify_add_watch.argtypes = [
-        ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
+    libc.inotify_add_watch.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_uint32]
     libc.inotify_add_watch.restype = ctypes.c_int
 
 
-
-name = ctypes.util.find_library('c')
+name = ctypes.util.find_library("c")
 if not name:
     raise ImportError("Can't find C library.")
 libc = ctypes.cdll.LoadLibrary(name)

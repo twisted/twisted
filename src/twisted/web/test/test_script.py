@@ -7,10 +7,11 @@ Tests for L{twisted.web.script}.
 
 import os
 
-from twisted.trial.unittest import TestCase
+from twisted.internet import defer
 from twisted.python.filepath import FilePath
+from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
-from twisted.web.script import ResourceScriptDirectory, PythonScript
+from twisted.web.script import PythonScript, ResourceScriptDirectory
 from twisted.web.test._util import _render
 from twisted.web.test.requesthelper import DummyRequest
 
@@ -19,21 +20,22 @@ class ResourceScriptDirectoryTests(TestCase):
     """
     Tests for L{ResourceScriptDirectory}.
     """
-    def test_renderNotFound(self):
+
+    def test_renderNotFound(self) -> defer.Deferred[None]:
         """
         L{ResourceScriptDirectory.render} sets the HTTP response code to I{NOT
         FOUND}.
         """
         resource = ResourceScriptDirectory(self.mktemp())
-        request = DummyRequest([b''])
+        request = DummyRequest([b""])
         d = _render(resource, request)
-        def cbRendered(ignored):
+
+        def cbRendered(ignored: object) -> None:
             self.assertEqual(request.responseCode, NOT_FOUND)
-        d.addCallback(cbRendered)
-        return d
 
+        return d.addCallback(cbRendered)
 
-    def test_notFoundChild(self):
+    def test_notFoundChild(self) -> defer.Deferred[None]:
         """
         L{ResourceScriptDirectory.getChild} returns a resource which renders an
         response with the HTTP I{NOT FOUND} status code if the indicated child
@@ -43,16 +45,16 @@ class ResourceScriptDirectoryTests(TestCase):
         path = self.mktemp()
         os.makedirs(path)
         resource = ResourceScriptDirectory(path)
-        request = DummyRequest([b'foo'])
+        request = DummyRequest([b"foo"])
         child = resource.getChild("foo", request)
         d = _render(child, request)
-        def cbRendered(ignored):
+
+        def cbRendered(ignored: object) -> None:
             self.assertEqual(request.responseCode, NOT_FOUND)
-        d.addCallback(cbRendered)
-        return d
 
+        return d.addCallback(cbRendered)
 
-    def test_render(self):
+    def test_render(self) -> defer.Deferred[None]:
         """
         L{ResourceScriptDirectory.getChild} returns a resource which renders a
         response with the HTTP 200 status code and the content of the rpy's
@@ -60,43 +62,46 @@ class ResourceScriptDirectoryTests(TestCase):
         """
         tmp = FilePath(self.mktemp())
         tmp.makedirs()
-        tmp.child("test.rpy").setContent(b"""
+        tmp.child("test.rpy").setContent(
+            b"""
 from twisted.web.resource import Resource
 class TestResource(Resource):
     isLeaf = True
     def render_GET(self, request):
         return b'ok'
-resource = TestResource()""")
+resource = TestResource()"""
+        )
         resource = ResourceScriptDirectory(tmp._asBytesPath())
-        request = DummyRequest([b''])
+        request = DummyRequest([b""])
         child = resource.getChild(b"test.rpy", request)
         d = _render(child, request)
-        def cbRendered(ignored):
-            self.assertEqual(b"".join(request.written), b"ok")
-        d.addCallback(cbRendered)
-        return d
 
+        def cbRendered(ignored: object) -> None:
+            self.assertEqual(b"".join(request.written), b"ok")
+
+        return d.addCallback(cbRendered)
 
 
 class PythonScriptTests(TestCase):
     """
     Tests for L{PythonScript}.
     """
-    def test_notFoundRender(self):
+
+    def test_notFoundRender(self) -> defer.Deferred[None]:
         """
         If the source file a L{PythonScript} is initialized with doesn't exist,
         L{PythonScript.render} sets the HTTP response code to I{NOT FOUND}.
         """
         resource = PythonScript(self.mktemp(), None)
-        request = DummyRequest([b''])
+        request = DummyRequest([b""])
         d = _render(resource, request)
-        def cbRendered(ignored):
+
+        def cbRendered(ignored: object) -> None:
             self.assertEqual(request.responseCode, NOT_FOUND)
-        d.addCallback(cbRendered)
-        return d
 
+        return d.addCallback(cbRendered)
 
-    def test_renderException(self):
+    def test_renderException(self) -> defer.Deferred[None]:
         """
         L{ResourceScriptDirectory.getChild} returns a resource which renders a
         response with the HTTP 200 status code and the content of the rpy's
@@ -107,9 +112,10 @@ class PythonScriptTests(TestCase):
         child = tmp.child("test.epy")
         child.setContent(b'raise Exception("nooo")')
         resource = PythonScript(child._asBytesPath(), None)
-        request = DummyRequest([b''])
+        request = DummyRequest([b""])
         d = _render(resource, request)
-        def cbRendered(ignored):
+
+        def cbRendered(ignored: object) -> None:
             self.assertIn(b"nooo", b"".join(request.written))
-        d.addCallback(cbRendered)
-        return d
+
+        return d.addCallback(cbRendered)

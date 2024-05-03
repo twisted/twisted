@@ -6,8 +6,6 @@
 Utilities and helpers for simulating a network
 """
 
-from __future__ import absolute_import, division, print_function
-
 import itertools
 
 try:
@@ -15,16 +13,14 @@ try:
 except ImportError:
     pass
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import directlyProvides, implementer
+
+from twisted.internet import error, interfaces
 from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
-from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.error import ConnectionRefusedError
-
-from twisted.python.failure import Failure
-from twisted.internet import error
-from twisted.internet import interfaces
+from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.testing import MemoryReactorClock
-
+from twisted.python.failure import Failure
 
 
 class TLSNegotiation:
@@ -34,10 +30,8 @@ class TLSNegotiation:
         self.sent = False
         self.readyToSend = connectState
 
-
-    def __repr__(self):
-        return 'TLSNegotiation(%r)' % (self.obj,)
-
+    def __repr__(self) -> str:
+        return f"TLSNegotiation({self.obj!r})"
 
     def pretendToVerify(self, other, tpt):
         # Set the transport problems list here?  disconnections?
@@ -48,18 +42,15 @@ class TLSNegotiation:
             tpt.loseConnection()
 
 
-
 @implementer(interfaces.IAddress)
-class FakeAddress(object):
+class FakeAddress:
     """
     The default address type for the host and peer of L{FakeTransport}
     connections.
     """
 
 
-
-@implementer(interfaces.ITransport,
-             interfaces.ITLSTransport)
+@implementer(interfaces.ITransport, interfaces.ITLSTransport)
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -68,7 +59,7 @@ class FakeTransport:
     and is thus useful mainly as a utility for debugging protocols.
     """
 
-    _nextserial = staticmethod(lambda counter=itertools.count(): next(counter))
+    _nextserial = staticmethod(lambda counter=itertools.count(): int(next(counter)))
     closed = 0
     disconnecting = 0
     disconnected = 0
@@ -105,12 +96,12 @@ class FakeTransport:
             peerAddress = FakeAddress()
         self.peerAddress = peerAddress
 
-
-    def __repr__(self):
-        return 'FakeTransport<%s,%s,%s>' % (
-            self.isServer and 'S' or 'C', self.serial,
-            self.protocol.__class__.__name__)
-
+    def __repr__(self) -> str:
+        return "FakeTransport<{},{},{}>".format(
+            self.isServer and "S" or "C",
+            self.serial,
+            self.protocol.__class__.__name__,
+        )
 
     def write(self, data):
         # If transport is closed, we should accept writes but drop the data.
@@ -122,13 +113,11 @@ class FakeTransport:
         else:
             self.stream.append(data)
 
-
     def _checkProducer(self):
         # Cheating; this is called at "idle" times to allow producers to be
         # found and dealt with
         if self.producer and not self.streamingProducer:
             self.producer.resumeProducing()
-
 
     def registerProducer(self, producer, streaming):
         """
@@ -139,23 +128,18 @@ class FakeTransport:
         if not streaming:
             producer.resumeProducing()
 
-
     def unregisterProducer(self):
         self.producer = None
-
 
     def stopConsuming(self):
         self.unregisterProducer()
         self.loseConnection()
 
-
     def writeSequence(self, iovec):
         self.write(b"".join(iovec))
 
-
     def loseConnection(self):
         self.disconnecting = True
-
 
     def abortConnection(self):
         """
@@ -163,7 +147,6 @@ class FakeTransport:
         data will be lost.
         """
         self.disconnecting = True
-
 
     def reportDisconnect(self):
         if self.tls is not None:
@@ -174,35 +157,28 @@ class FakeTransport:
             err = self.disconnectReason
         self.protocol.connectionLost(Failure(err))
 
-
     def logPrefix(self):
         """
         Identify this transport/event source to the logging system.
         """
         return "iosim"
 
-
     def getPeer(self):
         return self.peerAddress
 
-
     def getHost(self):
         return self.hostAddress
-
 
     def resumeProducing(self):
         # Never sends data anyways
         pass
 
-
     def pauseProducing(self):
         # Never sends data anyways
         pass
 
-
     def stopProducing(self):
         self.loseConnection()
-
 
     def startTLS(self, contextFactory, beNormal=True):
         # Nothing's using this feature yet, but startTLS has an undocumented
@@ -211,7 +187,6 @@ class FakeTransport:
         connectState = self.isServer ^ beNormal
         self.tls = TLSNegotiation(contextFactory, connectState)
         self.tlsbuf = []
-
 
     def getOutBuffer(self):
         """
@@ -224,7 +199,7 @@ class FakeTransport:
         S = self.stream
         if S:
             self.stream = []
-            return b''.join(S)
+            return b"".join(S)
         elif self.tls is not None:
             if self.tls.readyToSend:
                 # Only _send_ the TLS negotiation "packet" if I'm ready to.
@@ -235,16 +210,15 @@ class FakeTransport:
         else:
             return None
 
-
     def bufferReceived(self, buf):
         if isinstance(buf, TLSNegotiation):
-            assert self.tls is not None # By the time you're receiving a
-                                        # negotiation, you have to have called
-                                        # startTLS already.
+            assert self.tls is not None  # By the time you're receiving a
+            # negotiation, you have to have called
+            # startTLS already.
             if self.tls.sent:
                 self.tls.pretendToVerify(buf, self)
-                self.tls = None # We're done with the handshake if we've gotten
-                                # this far... although maybe it failed...?
+                self.tls = None  # We're done with the handshake if we've gotten
+                # this far... although maybe it failed...?
                 # TLS started!  Unbuffer...
                 b, self.tlsbuf = self.tlsbuf, None
                 self.writeSequence(b)
@@ -255,6 +229,25 @@ class FakeTransport:
         else:
             self.protocol.dataReceived(buf)
 
+    def getTcpKeepAlive(self):
+        # ITCPTransport.getTcpKeepAlive
+        pass
+
+    def getTcpNoDelay(self):
+        # ITCPTransport.getTcpNoDelay
+        pass
+
+    def loseWriteConnection(self):
+        # ITCPTransport.loseWriteConnection
+        pass
+
+    def setTcpKeepAlive(self, enabled):
+        # ITCPTransport.setTcpKeepAlive
+        pass
+
+    def setTcpNoDelay(self, enabled):
+        # ITCPTransport.setTcpNoDelay
+        pass
 
 
 def makeFakeClient(clientProtocol):
@@ -270,7 +263,6 @@ def makeFakeClient(clientProtocol):
     return FakeTransport(clientProtocol, isServer=False)
 
 
-
 def makeFakeServer(serverProtocol):
     """
     Create and return a new in-memory transport hooked up to the given protocol.
@@ -284,30 +276,32 @@ def makeFakeServer(serverProtocol):
     return FakeTransport(serverProtocol, isServer=True)
 
 
-
 class IOPump:
     """
     Utility to pump data between clients and servers for protocol testing.
 
     Perhaps this is a utility worthy of being in protocol.py?
     """
-    def __init__(self, client, server, clientIO, serverIO, debug):
+
+    def __init__(self, client, server, clientIO, serverIO, debug, clock=None):
         self.client = client
         self.server = server
         self.clientIO = clientIO
         self.serverIO = serverIO
         self.debug = debug
+        if clock is None:
+            clock = MemoryReactorClock()
+        self.clock = clock
 
-
-    def flush(self, debug=False):
+    def flush(self, debug=False, advanceClock=True):
         """
         Pump until there is no more input or output.
 
         Returns whether any data was moved.
         """
         result = False
-        for x in range(1000):
-            if self.pump(debug):
+        for _ in range(1000):
+            if self.pump(debug, advanceClock):
                 result = True
             else:
                 break
@@ -315,43 +309,44 @@ class IOPump:
             assert 0, "Too long"
         return result
 
-
-    def pump(self, debug=False):
+    def pump(self, debug=False, advanceClock=True):
         """
-        Move data back and forth.
+        Move data back and forth, while also triggering any currently pending
+        scheduled calls (i.e. C{callLater(0, f)}).
 
         Returns whether any data was moved.
         """
+        if advanceClock:
+            self.clock.advance(0)
         if self.debug or debug:
-            print('-- GLUG --')
+            print("-- GLUG --")
         sData = self.serverIO.getOutBuffer()
         cData = self.clientIO.getOutBuffer()
         self.clientIO._checkProducer()
         self.serverIO._checkProducer()
         if self.debug or debug:
-            print('.')
+            print(".")
             # XXX slightly buggy in the face of incremental output
             if cData:
-                print('C: ' + repr(cData))
+                print("C: " + repr(cData))
             if sData:
-                print('S: ' + repr(sData))
+                print("S: " + repr(sData))
         if cData:
             self.serverIO.bufferReceived(cData)
         if sData:
             self.clientIO.bufferReceived(sData)
         if cData or sData:
             return True
-        if (self.serverIO.disconnecting and
-            not self.serverIO.disconnected):
+        if self.serverIO.disconnecting and not self.serverIO.disconnected:
             if self.debug or debug:
-                print('* C')
+                print("* C")
             self.serverIO.disconnected = True
             self.clientIO.disconnecting = True
             self.clientIO.reportDisconnect()
             return True
         if self.clientIO.disconnecting and not self.clientIO.disconnected:
             if self.debug or debug:
-                print('* S')
+                print("* S")
             self.clientIO.disconnected = True
             self.serverIO.disconnecting = True
             self.serverIO.reportDisconnect()
@@ -359,9 +354,15 @@ class IOPump:
         return False
 
 
-
-def connect(serverProtocol, serverTransport, clientProtocol, clientTransport,
-            debug=False, greet=True):
+def connect(
+    serverProtocol,
+    serverTransport,
+    clientProtocol,
+    clientTransport,
+    debug=False,
+    greet=True,
+    clock=None,
+):
     """
     Create a new L{IOPump} connecting two protocols.
 
@@ -388,6 +389,9 @@ def connect(serverProtocol, serverTransport, clientProtocol, clientTransport,
         post-server-greeting state?
     @type greet: L{bool}
 
+    @param clock: An optional L{Clock}. Pumping the resulting L{IOPump} will
+        also increase clock time by a small increment.
+
     @return: An L{IOPump} which connects C{serverProtocol} and
         C{clientProtocol} and delivers bytes between them when it is pumped.
     @rtype: L{IOPump}
@@ -395,7 +399,12 @@ def connect(serverProtocol, serverTransport, clientProtocol, clientTransport,
     serverProtocol.makeConnection(serverTransport)
     clientProtocol.makeConnection(clientTransport)
     pump = IOPump(
-        clientProtocol, serverProtocol, clientTransport, serverTransport, debug
+        clientProtocol,
+        serverProtocol,
+        clientTransport,
+        serverTransport,
+        debug,
+        clock=clock,
     )
     if greet:
         # Kick off server greeting, etc
@@ -403,11 +412,15 @@ def connect(serverProtocol, serverTransport, clientProtocol, clientTransport,
     return pump
 
 
-
-def connectedServerAndClient(ServerClass, ClientClass,
-                             clientTransportFactory=makeFakeClient,
-                             serverTransportFactory=makeFakeServer,
-                             debug=False, greet=True):
+def connectedServerAndClient(
+    ServerClass,
+    ClientClass,
+    clientTransportFactory=makeFakeClient,
+    serverTransportFactory=makeFakeServer,
+    debug=False,
+    greet=True,
+    clock=None,
+):
     """
     Connect a given server and client class to each other.
 
@@ -437,6 +450,9 @@ def connectedServerAndClient(ServerClass, ClientClass,
         post-server-greeting state?
     @type greet: L{bool}
 
+    @param clock: An optional L{Clock}. Pumping the resulting L{IOPump} will
+        also increase clock time by a small increment.
+
     @return: the client protocol, the server protocol, and an L{IOPump} which,
         when its C{pump} and C{flush} methods are called, will move data
         between the created client and server protocol instances.
@@ -446,8 +462,7 @@ def connectedServerAndClient(ServerClass, ClientClass,
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    return c, s, connect(s, sio, c, cio, debug, greet)
-
+    return c, s, connect(s, sio, c, cio, debug, greet, clock=clock)
 
 
 def _factoriesShouldConnect(clientInfo, serverInfo):
@@ -467,23 +482,27 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
     @rtype: L{None} or 2-L{tuple} of (L{ClientFactory},
         L{IProtocolFactory})
     """
-    (clientHost, clientPort, clientFactory, clientTimeout,
-     clientBindAddress) = clientInfo
-    (serverPort, serverFactory, serverBacklog,
-     serverInterface) = serverInfo
+    (
+        clientHost,
+        clientPort,
+        clientFactory,
+        clientTimeout,
+        clientBindAddress,
+    ) = clientInfo
+    (serverPort, serverFactory, serverBacklog, serverInterface) = serverInfo
     if serverPort == clientPort:
         return clientFactory, serverFactory
     else:
         return None
 
 
-
-class ConnectionCompleter(object):
+class ConnectionCompleter:
     """
     A L{ConnectionCompleter} can cause synthetic TCP connections established by
     L{MemoryReactor.connectTCP} and L{MemoryReactor.listenTCP} to succeed or
     fail.
     """
+
     def __init__(self, memoryReactor):
         """
         Create a L{ConnectionCompleter} from a L{MemoryReactor}.
@@ -492,7 +511,6 @@ class ConnectionCompleter(object):
         @type memoryReactor: L{MemoryReactor}
         """
         self._reactor = memoryReactor
-
 
     def succeedOnce(self, debug=False):
         """
@@ -519,10 +537,13 @@ class ConnectionCompleter(object):
                     serverProtocol = serverFactory.buildProtocol(None)
                     serverTransport = makeFakeServer(serverProtocol)
                     clientTransport = makeFakeClient(clientProtocol)
-                    return connect(serverProtocol, serverTransport,
-                                   clientProtocol, clientTransport,
-                                   debug)
-
+                    return connect(
+                        serverProtocol,
+                        serverTransport,
+                        clientProtocol,
+                        clientTransport,
+                        debug,
+                    )
 
     def failOnce(self, reason=Failure(ConnectionRefusedError())):
         """
@@ -535,7 +556,6 @@ class ConnectionCompleter(object):
         self._reactor.tcpClients.pop(0)[2].clientConnectionFailed(
             self._reactor.connectors.pop(0), reason
         )
-
 
 
 def connectableEndpoint(debug=False):

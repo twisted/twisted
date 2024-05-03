@@ -11,13 +11,14 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-from __future__ import division, absolute_import
-
-import re
 import os
+import re
 
+from incremental import Version
 
-# http://msdn.microsoft.com/library/default.asp?url=/library/en-us/debug/base/system_error_codes.asp
+from twisted.python.deprecate import deprecatedModuleAttribute
+
+# https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
 ERROR_PATH_NOT_FOUND = 3
 ERROR_INVALID_NAME = 123
@@ -25,20 +26,39 @@ ERROR_DIRECTORY = 267
 
 O_BINARY = getattr(os, "O_BINARY", 0)
 
+
 class FakeWindowsError(OSError):
     """
     Stand-in for sometimes-builtin exception on platforms for which it
     is missing.
     """
 
+
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "FakeWindowsError",
+)
+
+
 try:
-    WindowsError = WindowsError
+    WindowsError: OSError = WindowsError
 except NameError:
     WindowsError = FakeWindowsError
 
+deprecatedModuleAttribute(
+    Version("Twisted", 21, 2, 0),
+    "Catch OSError and check presence of 'winerror' attribute.",
+    "twisted.python.win32",
+    "WindowsError",
+)
+
 
 _cmdLineQuoteRe = re.compile(r'(\\*)"')
-_cmdLineQuoteRe2 = re.compile(r'(\\+)\Z')
+_cmdLineQuoteRe2 = re.compile(r"(\\+)\Z")
+
+
 def cmdLineQuote(s):
     """
     Internal method for quoting a single command-line argument.
@@ -51,8 +71,13 @@ def cmdLineQuote(s):
     @return: a quoted string.
     @rtype: C{str}
     """
-    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == '') and '"' or ''
-    return quote + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s)) + quote
+    quote = ((" " in s) or ("\t" in s) or ('"' in s) or s == "") and '"' or ""
+    return (
+        quote
+        + _cmdLineQuoteRe2.sub(r"\1\1", _cmdLineQuoteRe.sub(r'\1\1\\"', s))
+        + quote
+    )
+
 
 def quoteArguments(arguments):
     """
@@ -60,33 +85,36 @@ def quoteArguments(arguments):
     a similar API.  This allows the list passed to C{reactor.spawnProcess} to
     match the child process's C{sys.argv} properly.
 
-    @param arglist: an iterable of C{str}, each unquoted.
+    @param arguments: an iterable of C{str}, each unquoted.
 
     @return: a single string, with the given sequence quoted as necessary.
     """
-    return ' '.join([cmdLineQuote(a) for a in arguments])
+    return " ".join([cmdLineQuote(a) for a in arguments])
 
 
-class _ErrorFormatter(object):
+class _ErrorFormatter:
     """
     Formatter for Windows error messages.
 
     @ivar winError: A callable which takes one integer error number argument
-        and returns an L{exceptions.WindowsError} instance for that error (like
+        and returns a L{WindowsError} instance for that error (like
         L{ctypes.WinError}).
 
     @ivar formatMessage: A callable which takes one integer error number
         argument and returns a C{str} giving the message for that error (like
-        L{win32api.FormatMessage}).
+        U{win32api.FormatMessage<http://
+        timgolden.me.uk/pywin32-docs/win32api__FormatMessage_meth.html>}).
 
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
         which correspond to those erorrs (like I{socket.errorTab}).
     """
+
     def __init__(self, WinError, FormatMessage, errorTab):
         self.winError = WinError
         self.formatMessage = FormatMessage
         self.errorTab = errorTab
 
+    @classmethod
     def fromEnvironment(cls):
         """
         Get as many of the platform-specific error translation objects as
@@ -105,8 +133,6 @@ class _ErrorFormatter(object):
         except ImportError:
             errorTab = None
         return cls(WinError, FormatMessage, errorTab)
-    fromEnvironment = classmethod(fromEnvironment)
-
 
     def formatError(self, errorcode):
         """
@@ -132,5 +158,6 @@ class _ErrorFormatter(object):
             if result is not None:
                 return result
         return os.strerror(errorcode)
+
 
 formatError = _ErrorFormatter.fromEnvironment().formatError

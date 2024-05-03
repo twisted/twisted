@@ -6,7 +6,8 @@
 Interfaces related to threads.
 """
 
-from __future__ import absolute_import, division, print_function
+
+from typing import Callable
 
 from zope.interface import Interface
 
@@ -17,7 +18,6 @@ class AlreadyQuit(Exception):
     """
 
 
-
 class IWorker(Interface):
     """
     A worker that can perform some work concurrently.
@@ -25,7 +25,7 @@ class IWorker(Interface):
     All methods on this interface must be thread-safe.
     """
 
-    def do(task):
+    def do(task: Callable[[], None]) -> None:
         """
         Perform the given task.
 
@@ -50,7 +50,7 @@ class IWorker(Interface):
         Free any resources associated with this L{IWorker} and cause it to
         reject all future work.
 
-        @raise: L{AlreadyQuit} if this method has already been called.
+        @raise AlreadyQuit: if this method has already been called.
         """
 
 

@@ -18,12 +18,12 @@ log.startLogging(sys.stdout)
 d = {}
 for arg in sys.argv[1:]:
     try:
-        k,v = arg.split('=', 1)
+        k, v = arg.split("=", 1)
     except ValueError:
         k = arg
-        v = ''
+        v = ""
     d[k] = v
-    
+
 f = postfix.PostfixTCPMapDictServerFactory(d)
-port = reactor.listenTCP(4242, f, interface='127.0.0.1')
+port = reactor.listenTCP(4242, f, interface="127.0.0.1")
 reactor.run()

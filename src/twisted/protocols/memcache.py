@@ -25,21 +25,16 @@ See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
 more information about the protocol.
 """
 
-from __future__ import absolute_import, division
 
 from collections import deque
 
+from twisted.internet.defer import Deferred, TimeoutError, fail
 from twisted.protocols.basic import LineReceiver
 from twisted.protocols.policies import TimeoutMixin
-from twisted.internet.defer import Deferred, fail, TimeoutError
 from twisted.python import log
-from twisted.python.compat import (
-    intToBytes, iteritems, nativeString, networkString)
-
-
+from twisted.python.compat import nativeString, networkString
 
 DEFAULT_PORT = 11211
-
 
 
 class NoSuchCommand(Exception):
@@ -48,12 +43,10 @@ class NoSuchCommand(Exception):
     """
 
 
-
 class ClientError(Exception):
     """
     Error caused by an invalid client call.
     """
-
 
 
 class ServerError(Exception):
@@ -62,8 +55,7 @@ class ServerError(Exception):
     """
 
 
-
-class Command(object):
+class Command:
     """
     Wrap a client action into an object, that holds the values used in the
     protocol.
@@ -91,20 +83,17 @@ class Command(object):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-
     def success(self, value):
         """
         Shortcut method to fire the underlying deferred.
         """
         self._deferred.callback(value)
 
-
     def fail(self, error):
         """
         Make the underlying deferred fails.
         """
         self._deferred.errback(error)
-
 
 
 class MemCacheProtocol(LineReceiver, TimeoutMixin):
@@ -132,6 +121,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
     @ivar _disconnected: indicate if the connectionLost has been called or not.
     @type _disconnected: L{bool}
     """
+
     MAX_KEY_LENGTH = 250
     _disconnected = False
 
@@ -149,7 +139,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._bufferLength = None
         self.persistentTimeOut = self.timeOut = timeOut
 
-
     def _cancelCommands(self, reason):
         """
         Cancel all the outstanding commands, making them fail with C{reason}.
@@ -158,14 +147,12 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             cmd = self._current.popleft()
             cmd.fail(reason)
 
-
     def timeoutConnection(self):
         """
         Close the connection in case of timeout.
         """
         self._cancelCommands(TimeoutError("Connection timeout"))
         self.transport.loseConnection()
-
 
     def connectionLost(self, reason):
         """
@@ -175,7 +162,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._cancelCommands(reason)
         LineReceiver.connectionLost(self, reason)
 
-
     def sendLine(self, line):
         """
         Override sendLine to add a timeout to response.
@@ -183,7 +169,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if not self._current:
             self.setTimeout(self.persistentTimeOut)
         LineReceiver.sendLine(self, line)
-
 
     def rawDataReceived(self, data):
         """
@@ -194,8 +179,8 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._bufferLength += len(data)
         if self._bufferLength >= self._lenExpected + 2:
             data = b"".join(self._getBuffer)
-            buf = data[:self._lenExpected]
-            rem = data[self._lenExpected + 2:]
+            buf = data[: self._lenExpected]
+            rem = data[self._lenExpected + 2 :]
             val = buf
             self._lenExpected = None
             self._getBuffer = None
@@ -208,13 +193,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
                 cmd.value = val
             self.setLineMode(rem)
 
-
     def cmd_STORED(self):
         """
         Manage a success response to a set operation.
         """
         self._current.popleft().success(True)
-
 
     def cmd_NOT_STORED(self):
         """
@@ -223,7 +206,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         self._current.popleft().success(False)
 
-
     def cmd_END(self):
         """
         This the end token to a get or a stat operation.
@@ -231,7 +213,7 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd = self._current.popleft()
         if cmd.command == b"get":
             if cmd.multiple:
-                values = {key: val[::2] for key, val in iteritems(cmd.values)}
+                values = {key: val[::2] for key, val in cmd.values.items()}
                 cmd.success(values)
             else:
                 cmd.success((cmd.flags, cmd.value))
@@ -244,16 +226,16 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             cmd.success(cmd.values)
         else:
             raise RuntimeError(
-                "Unexpected END response to %s command" %
-                (nativeString(cmd.command),))
-
+                "Unexpected END response to {} command".format(
+                    nativeString(cmd.command)
+                )
+            )
 
     def cmd_NOT_FOUND(self):
         """
         Manage error response for incr/decr/delete.
         """
         self._current.popleft().success(False)
-
 
     def cmd_VALUE(self, line):
         """
@@ -280,7 +262,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             cmd.cas = cas
         self.setRawMode()
 
-
     def cmd_STAT(self, line):
         """
         Reception of one stat line.
@@ -289,13 +270,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         key, val = line.split(b" ", 1)
         cmd.values[key] = val
 
-
     def cmd_VERSION(self, versionData):
         """
         Read version token.
         """
         self._current.popleft().success(versionData)
-
 
     def cmd_ERROR(self):
         """
@@ -304,7 +283,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         log.err("Non-existent command sent.")
         cmd = self._current.popleft()
         cmd.fail(NoSuchCommand())
-
 
     def cmd_CLIENT_ERROR(self, errText):
         """
@@ -315,7 +293,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd = self._current.popleft()
         cmd.fail(ClientError(errText))
 
-
     def cmd_SERVER_ERROR(self, errText):
         """
         An error has happened server-side.
@@ -325,13 +302,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         cmd = self._current.popleft()
         cmd.fail(ServerError(errText))
 
-
     def cmd_DELETED(self):
         """
         A delete command has completed successfully.
         """
         self._current.popleft().success(True)
-
 
     def cmd_OK(self):
         """
@@ -339,13 +314,11 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         self._current.popleft().success(True)
 
-
     def cmd_EXISTS(self):
         """
         A C{checkAndSet} update has failed.
         """
         self._current.popleft().success(False)
-
 
     def lineReceived(self, line):
         """
@@ -376,7 +349,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             # No pending request, remove timeout
             self.setTimeout(None)
 
-
     def increment(self, key, val=1):
         """
         Increment the value of C{key} by given value (default to 1).
@@ -393,7 +365,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         @rtype: L{Deferred}
         """
         return self._incrdecr(b"incr", key, val)
-
 
     def decrement(self, key, val=1):
         """
@@ -413,7 +384,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._incrdecr(b"decr", key, val)
 
-
     def _incrdecr(self, cmd, key, val):
         """
         Internal wrapper for incr/decr.
@@ -421,16 +391,16 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
-            return fail(ClientError(
-                "Invalid type for key: %s, expecting bytes" % (type(key),)))
+            return fail(
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
+            )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
-        fullcmd = b" ".join([cmd, key, intToBytes(int(val))])
+        fullcmd = b" ".join([cmd, key, b"%d" % (int(val),)])
         self.sendLine(fullcmd)
         cmdObj = Command(cmd, key=key)
         self._current.append(cmdObj)
         return cmdObj._deferred
-
 
     def replace(self, key, val, flags=0, expireTime=0):
         """
@@ -455,7 +425,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._set(b"replace", key, val, flags, expireTime, b"")
 
-
     def add(self, key, val, flags=0, expireTime=0):
         """
         Add the given C{key}. It must not exist in the server.
@@ -479,7 +448,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._set(b"add", key, val, flags, expireTime, b"")
 
-
     def set(self, key, val, flags=0, expireTime=0):
         """
         Set the given C{key}.
@@ -502,7 +470,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         @rtype: L{Deferred}
         """
         return self._set(b"set", key, val, flags, expireTime, b"")
-
 
     def checkAndSet(self, key, val, cas, flags=0, expireTime=0):
         """
@@ -532,7 +499,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._set(b"cas", key, val, flags, expireTime, cas)
 
-
     def _set(self, cmd, key, val, flags, expireTime, cas):
         """
         Internal wrapper for setting values.
@@ -540,26 +506,29 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
-            return fail(ClientError(
-                "Invalid type for key: %s, expecting bytes" % (type(key),)))
+            return fail(
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
+            )
         if len(key) > self.MAX_KEY_LENGTH:
             return fail(ClientError("Key too long"))
         if not isinstance(val, bytes):
-            return fail(ClientError(
-                "Invalid type for value: %s, expecting bytes" %
-                (type(val),)))
+            return fail(
+                ClientError(f"Invalid type for value: {type(val)}, expecting bytes")
+            )
         if cas:
             cas = b" " + cas
         length = len(val)
-        fullcmd = b" ".join([
-            cmd, key,
-            networkString("%d %d %d" % (flags, expireTime, length))]) + cas
+        fullcmd = (
+            b" ".join(
+                [cmd, key, networkString("%d %d %d" % (flags, expireTime, length))]
+            )
+            + cas
+        )
         self.sendLine(fullcmd)
         self.sendLine(val)
         cmdObj = Command(cmd, key=key, flags=flags, length=length)
         self._current.append(cmdObj)
         return cmdObj._deferred
-
 
     def append(self, key, val):
         """
@@ -579,7 +548,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         # Even if flags and expTime values are ignored, we have to pass them
         return self._set(b"append", key, val, 0, 0, b"")
 
-
     def prepend(self, key, val):
         """
         Prepend given data to the value of an existing key.
@@ -597,7 +565,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         # Even if flags and expTime values are ignored, we have to pass them
         return self._set(b"prepend", key, val, 0, 0, b"")
-
 
     def get(self, key, withIdentifier=False):
         """
@@ -622,7 +589,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         @rtype: L{Deferred}
         """
         return self._get([key], withIdentifier, False)
-
 
     def getMultiple(self, keys, withIdentifier=False):
         """
@@ -650,7 +616,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         """
         return self._get(keys, withIdentifier, True)
 
-
     def _get(self, keys, withIdentifier, multiple):
         """
         Helper method for C{get} and C{getMultiple}.
@@ -660,9 +625,9 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
             return fail(RuntimeError("not connected"))
         for key in keys:
             if not isinstance(key, bytes):
-                return fail(ClientError(
-                    "Invalid type for key: %s, expecting bytes" %
-                    (type(key),)))
+                return fail(
+                    ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
+                )
             if len(key) > self.MAX_KEY_LENGTH:
                 return fail(ClientError("Key too long"))
         if withIdentifier:
@@ -672,14 +637,14 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         fullcmd = b" ".join([cmd] + keys)
         self.sendLine(fullcmd)
         if multiple:
-            values = dict([(key, (0, b"", None)) for key in keys])
+            values = {key: (0, b"", None) for key in keys}
             cmdObj = Command(cmd, keys=keys, values=values, multiple=True)
         else:
-            cmdObj = Command(cmd, key=keys[0], value=None, flags=0, cas=b"",
-                             multiple=False)
+            cmdObj = Command(
+                cmd, key=keys[0], value=None, flags=0, cas=b"", multiple=False
+            )
         self._current.append(cmdObj)
         return cmdObj._deferred
-
 
     def stats(self, arg=None):
         """
@@ -706,7 +671,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._current.append(cmdObj)
         return cmdObj._deferred
 
-
     def version(self):
         """
         Get the version of the server.
@@ -722,7 +686,6 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         self._current.append(cmdObj)
         return cmdObj._deferred
 
-
     def delete(self, key):
         """
         Delete an existing C{key}.
@@ -737,13 +700,13 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         if self._disconnected:
             return fail(RuntimeError("not connected"))
         if not isinstance(key, bytes):
-            return fail(ClientError(
-                "Invalid type for key: %s, expecting bytes" % (type(key),)))
+            return fail(
+                ClientError(f"Invalid type for key: {type(key)}, expecting bytes")
+            )
         self.sendLine(b"delete " + key)
         cmdObj = Command(b"delete", key=key)
         self._current.append(cmdObj)
         return cmdObj._deferred
-
 
     def flushAll(self):
         """
@@ -761,6 +724,10 @@ class MemCacheProtocol(LineReceiver, TimeoutMixin):
         return cmdObj._deferred
 
 
-
-__all__ = ["MemCacheProtocol", "DEFAULT_PORT", "NoSuchCommand", "ClientError",
-           "ServerError"]
+__all__ = [
+    "MemCacheProtocol",
+    "DEFAULT_PORT",
+    "NoSuchCommand",
+    "ClientError",
+    "ServerError",
+]

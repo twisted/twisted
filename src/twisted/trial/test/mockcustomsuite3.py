@@ -9,10 +9,11 @@ See {twisted.trial.test.test_loader.LoaderTest.test_loadModuleWithBothCustom}.
 """
 
 
-from twisted.trial import unittest, runner
+from twisted.trial import runner, unittest
+
 
 class Foo(unittest.SynchronousTestCase):
-    def test_foo(self):
+    def test_foo(self) -> None:
         pass
 
 

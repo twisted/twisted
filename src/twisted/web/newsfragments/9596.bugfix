@@ -1,1 +1,0 @@
-Fixed return type of twisted.web.http.Request.getUser and twisted.web.http.Request.getPassword to binary if no authorization header was found or an exception was thrown

@@ -45,8 +45,9 @@ result is 1. In that, this example departs from doc/examples/longex.py,
 which errors out when trying to do this.
 """
 
-from twisted.protocols import basic
 from twisted.internet import defer, protocol
+from twisted.protocols import basic
+
 
 def runIterator(reactor, iterator):
     try:
@@ -56,15 +57,19 @@ def runIterator(reactor, iterator):
     else:
         reactor.callLater(0, runIterator, reactor, iterator)
 
+
 def multiply(numbers):
     d = defer.Deferred()
+
     def _():
         acc = 1
         while numbers:
             acc *= numbers.pop()
             yield None
         d.callback(acc)
+
     return d, _()
+
 
 class Numbers(basic.LineReceiver):
     """Protocol for reading lists of numbers and manipulating them.
@@ -73,11 +78,12 @@ class Numbers(basic.LineReceiver):
     writes back the answer.  The exact algorithm to use depends on the
     factory. It should return an str-able Deferred.
     """
+
     def lineReceived(self, line):
         try:
             numbers = [int(num) for num in line.split()]
         except ValueError:
-            self.sendLine(b'Error.')
+            self.sendLine(b"Error.")
             return
         deferred = self.factory.calc(numbers)
 
@@ -86,6 +92,7 @@ class Numbers(basic.LineReceiver):
 
         deferred.addCallback(encodeNumber)
         deferred.addCallback(self.sendLine)
+
 
 class Multiplication(protocol.ServerFactory):
     """Factory for multiplying numbers.
@@ -96,14 +103,19 @@ class Multiplication(protocol.ServerFactory):
     for transmitting the number lists, as long as they set
     correct protoocl values.
     """
+
     protocol = Numbers
+
     def calc(self, numbers):
         deferred, iterator = multiply(numbers)
         from twisted.internet import reactor
+
         runIterator(reactor, iterator)
         return deferred
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from twisted.internet import reactor
+
     reactor.listenTCP(1234, Multiplication())
     reactor.run()

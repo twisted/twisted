@@ -5,19 +5,20 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
+from typing import Dict, List, Optional
+
 import attr
 import incremental
 
-from twisted.python import deprecate
-from twisted.internet import error, protocol, reactor as _reactor
 from twisted.application import service
-from twisted.protocols import basic
+from twisted.internet import error, protocol, reactor as _reactor
 from twisted.logger import Logger
+from twisted.protocols import basic
+from twisted.python import deprecate
 
 
-
-@attr.s(frozen=True)
-class _Process(object):
+@attr.s(frozen=True, auto_attribs=True)
+class _Process:
     """
     The parameters of a process to be restarted.
 
@@ -38,13 +39,13 @@ class _Process(object):
     @type cwd: C{str}
     """
 
-    args = attr.ib()
-    uid = attr.ib(default=None)
-    gid = attr.ib(default=None)
-    env = attr.ib(default=attr.Factory(dict))
-    cwd = attr.ib(default=None)
+    args: List[str]
+    uid: Optional[int] = None
+    gid: Optional[int] = None
+    env: Dict[str, str] = attr.ib(default=attr.Factory(dict))
+    cwd: Optional[str] = None
 
-    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
+    @deprecate.deprecated(incremental.Version("Twisted", 18, 7, 0))
     def toTuple(self):
         """
         Convert process to tuple.
@@ -66,72 +67,63 @@ class _Process(object):
         return (self.args, self.uid, self.gid, self.env)
 
 
-
 class DummyTransport:
-
     disconnecting = 0
-
 
 
 transport = DummyTransport()
 
 
-
 class LineLogger(basic.LineReceiver):
-
     tag = None
     stream = None
-    delimiter = b'\n'
+    delimiter = b"\n"
     service = None
 
     def lineReceived(self, line):
         try:
-            line = line.decode('utf-8')
+            line = line.decode("utf-8")
         except UnicodeDecodeError:
             line = repr(line)
 
-        self.service.log.info(u'[{tag}] {line}',
-                              tag=self.tag,
-                              line=line,
-                              stream=self.stream)
-
+        self.service.log.info(
+            "[{tag}] {line}", tag=self.tag, line=line, stream=self.stream
+        )
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
-
     service = None
     name = None
 
     def connectionMade(self):
         self._output = LineLogger()
         self._output.tag = self.name
-        self._output.stream = 'stdout'
+        self._output.stream = "stdout"
         self._output.service = self.service
         self._outputEmpty = True
 
         self._error = LineLogger()
         self._error.tag = self.name
-        self._error.stream = 'stderr'
+        self._error.stream = "stderr"
         self._error.service = self.service
         self._errorEmpty = True
 
         self._output.makeConnection(transport)
         self._error.makeConnection(transport)
 
-
     def outReceived(self, data):
         self._output.dataReceived(data)
-        self._outputEmpty = data[-1] == b'\n'
+        self._outputEmpty = data[-1] == b"\n"
 
     def errReceived(self, data):
         self._error.dataReceived(data)
-        self._errorEmpty = data[-1] == b'\n'
+        self._errorEmpty = data[-1] == b"\n"
 
     def processEnded(self, reason):
         if not self._outputEmpty:
-            self._output.dataReceived(b'\n')
+            self._output.dataReceived(b"\n")
         if not self._errorEmpty:
-            self._error.dataReceived(b'\n')
+            self._error.dataReceived(b"\n")
         self.service.connectionLost(self.name)
 
     @property
@@ -141,7 +133,6 @@ class LoggingProtocol(protocol.ProcessProtocol):
     @property
     def empty(self):
         return self._outputEmpty
-
 
 
 class ProcessMonitor(service.Service):
@@ -188,12 +179,12 @@ class ProcessMonitor(service.Service):
         processes.
 
     """
+
     threshold = 1
     killTime = 5
     minRestartDelay = 1
     maxRestartDelay = 3600
     log = Logger()
-
 
     def __init__(self, reactor=_reactor):
         self._reactor = reactor
@@ -205,31 +196,27 @@ class ProcessMonitor(service.Service):
         self.murder = {}
         self.restart = {}
 
-
-    @deprecate.deprecatedProperty(incremental.Version('Twisted', 18, 7, 0))
+    @deprecate.deprecatedProperty(incremental.Version("Twisted", 18, 7, 0))
     def processes(self):
         """
         Processes as dict of tuples
 
         @return: Dict of process name to monitored processes as tuples
         """
-        return {name: process.toTuple()
-                for name, process in self._processes.items()}
+        return {name: process.toTuple() for name, process in self._processes.items()}
 
-
-    @deprecate.deprecated(incremental.Version('Twisted', 18, 7, 0))
+    @deprecate.deprecated(incremental.Version("Twisted", 18, 7, 0))
     def __getstate__(self):
         dct = service.Service.__getstate__(self)
-        del dct['_reactor']
-        dct['protocols'] = {}
-        dct['delay'] = {}
-        dct['timeStarted'] = {}
-        dct['murder'] = {}
-        dct['restart'] = {}
-        del dct['_processes']
-        dct['processes'] = self.processes
+        del dct["_reactor"]
+        dct["protocols"] = {}
+        dct["delay"] = {}
+        dct["timeStarted"] = {}
+        dct["murder"] = {}
+        dct["restart"] = {}
+        del dct["_processes"]
+        dct["processes"] = self.processes
         return dct
-
 
     def addProcess(self, name, args, uid=None, gid=None, env={}, cwd=None):
         """
@@ -257,16 +244,14 @@ class ProcessMonitor(service.Service):
             The default of C{None} means inheriting the laucnhing process's
             working directory.
         @type env: C{dict}
-        @raises: C{KeyError} if a process with the given name already
-            exists
+        @raise KeyError: If a process with the given name already exists.
         """
         if name in self._processes:
-            raise KeyError("remove %s first" % (name,))
+            raise KeyError(f"remove {name} first")
         self._processes[name] = _Process(args, uid, gid, env, cwd)
         self.delay[name] = self.minRestartDelay
         if self.running:
             self.startProcess(name)
-
 
     def removeProcess(self, name):
         """
@@ -279,7 +264,6 @@ class ProcessMonitor(service.Service):
         self.stopProcess(name)
         del self._processes[name]
 
-
     def startService(self):
         """
         Start all monitored processes.
@@ -287,7 +271,6 @@ class ProcessMonitor(service.Service):
         service.Service.startService(self)
         for name in list(self._processes):
             self.startProcess(name)
-
 
     def stopService(self):
         """
@@ -302,7 +285,6 @@ class ProcessMonitor(service.Service):
 
         for name in list(self._processes):
             self.stopProcess(name)
-
 
     def connectionLost(self, name):
         """
@@ -342,10 +324,9 @@ class ProcessMonitor(service.Service):
 
         # Schedule a process restart if the service is running
         if self.running and name in self._processes:
-            self.restart[name] = self._reactor.callLater(nextDelay,
-                                                         self.startProcess,
-                                                         name)
-
+            self.restart[name] = self._reactor.callLater(
+                nextDelay, self.startProcess, name
+            )
 
     def startProcess(self, name):
         """
@@ -363,40 +344,43 @@ class ProcessMonitor(service.Service):
         proto.name = name
         self.protocols[name] = proto
         self.timeStarted[name] = self._reactor.seconds()
-        self._reactor.spawnProcess(proto, process.args[0], process.args,
-                                          uid=process.uid, gid=process.gid,
-                                          env=process.env, path=process.cwd)
-
+        self._reactor.spawnProcess(
+            proto,
+            process.args[0],
+            process.args,
+            uid=process.uid,
+            gid=process.gid,
+            env=process.env,
+            path=process.cwd,
+        )
 
     def _forceStopProcess(self, proc):
         """
         @param proc: An L{IProcessTransport} provider
         """
         try:
-            proc.signalProcess('KILL')
+            proc.signalProcess("KILL")
         except error.ProcessExitedAlready:
             pass
-
 
     def stopProcess(self, name):
         """
         @param name: The name of the process to be stopped
         """
         if name not in self._processes:
-            raise KeyError('Unrecognized process name: %s' % (name,))
+            raise KeyError(f"Unrecognized process name: {name}")
 
         proto = self.protocols.get(name, None)
         if proto is not None:
             proc = proto.transport
             try:
-                proc.signalProcess('TERM')
+                proc.signalProcess("TERM")
             except error.ProcessExitedAlready:
                 pass
             else:
                 self.murder[name] = self._reactor.callLater(
-                                            self.killTime,
-                                            self._forceStopProcess, proc)
-
+                    self.killTime, self._forceStopProcess, proc
+                )
 
     def restartAll(self):
         """
@@ -408,19 +392,16 @@ class ProcessMonitor(service.Service):
         for name in self._processes:
             self.stopProcess(name)
 
-
-    def __repr__(self):
-        l = []
+    def __repr__(self) -> str:
+        lst = []
         for name, proc in self._processes.items():
-            uidgid = ''
+            uidgid = ""
             if proc.uid is not None:
                 uidgid = str(proc.uid)
             if proc.gid is not None:
-                uidgid += ':'+str(proc.gid)
+                uidgid += ":" + str(proc.gid)
 
             if uidgid:
-                uidgid = '(' + uidgid + ')'
-            l.append('%r%s: %r' % (name, uidgid, proc.args))
-        return ('<' + self.__class__.__name__ + ' '
-                + ' '.join(l)
-                + '>')
+                uidgid = "(" + uidgid + ")"
+            lst.append(f"{name!r}{uidgid}: {proc.args!r}")
+        return "<" + self.__class__.__name__ + " " + " ".join(lst) + ">"

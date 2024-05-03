@@ -23,6 +23,7 @@ class BasicProducerConsumerProxy:
     @ivar paused: As a Producer, am I paused?
     @type paused: bool
     """
+
     consumer = None
     producer = None
     producerIsStreaming = None
@@ -48,7 +49,7 @@ class BasicProducerConsumerProxy:
         self.paused = False
         if self._buffer:
             # TODO: Check to see if consumer supports writeSeq.
-            self.consumer.write(''.join(self._buffer))
+            self.consumer.write("".join(self._buffer))
             self._buffer[:] = []
         else:
             if not self.iAmStreaming:
@@ -90,8 +91,8 @@ class BasicProducerConsumerProxy:
         if self.consumer:
             self.consumer.unregisterProducer()
 
-    def __repr__(self):
-        return '<%s@%x around %s>' % (self.__class__, id(self), self.consumer)
+    def __repr__(self) -> str:
+        return f"<{self.__class__}@{id(self):x} around {self.consumer}>"
 
 
 class ProducerConsumerProxy(BasicProducerConsumerProxy):
@@ -100,6 +101,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
     When my buffer fills up, I have my parent Producer pause until my buffer
     has room in it again.
     """
+
     # Copies much from abstract.FileDescriptor
     bufferSize = 2**2**2**2
 
@@ -114,27 +116,32 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
     def resumeProducing(self):
         self.paused = False
         if self._buffer:
-            data = ''.join(self._buffer)
+            data = "".join(self._buffer)
             bytesSent = self._writeSomeData(data)
             if bytesSent < len(data):
                 unsent = data[bytesSent:]
-                assert not self.iAmStreaming, (
-                    "Streaming producer did not write all its data.")
+                assert (
+                    not self.iAmStreaming
+                ), "Streaming producer did not write all its data."
                 self._buffer[:] = [unsent]
             else:
                 self._buffer[:] = []
         else:
             bytesSent = 0
 
-        if (self.unregistered and bytesSent and not self._buffer and
-            self.consumer is not None):
+        if (
+            self.unregistered
+            and bytesSent
+            and not self._buffer
+            and self.consumer is not None
+        ):
             self.consumer.unregisterProducer()
 
         if not self.iAmStreaming:
             self.outstandingPull = not bytesSent
 
         if self.producer is not None:
-            bytesBuffered = sum([len(s) for s in self._buffer])
+            bytesBuffered = sum(len(s) for s in self._buffer)
             # TODO: You can see here the potential for high and low
             # watermarks, where bufferSize would be the high mark when we
             # ask the upstream producer to pause, and we wouldn't have
@@ -157,8 +164,9 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             self._buffer.append(data)
 
         elif self.consumer is not None:
-            assert not self._buffer, (
-                "Writing fresh data to consumer before my buffer is empty!")
+            assert (
+                not self._buffer
+            ), "Writing fresh data to consumer before my buffer is empty!"
             # I'm going to use _writeSomeData here so that there is only one
             # path to self.consumer.write.  But it doesn't actually make sense,
             # if I am streaming, for some data to not be all data.  But maybe I
@@ -167,14 +175,14 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
             bytesSent = self._writeSomeData(data)
             self.outstandingPull = False
             if not bytesSent == len(data):
-                assert not self.iAmStreaming, (
-                    "Streaming producer did not write all its data.")
+                assert (
+                    not self.iAmStreaming
+                ), "Streaming producer did not write all its data."
                 self._buffer.append(data[bytesSent:])
 
         if (self.producer is not None) and self.producerIsStreaming:
-            bytesBuffered = sum([len(s) for s in self._buffer])
+            bytesBuffered = sum(len(s) for s in self._buffer)
             if bytesBuffered >= self.bufferSize:
-
                 self.producer.pauseProducing()
                 self.producerPaused = True
 

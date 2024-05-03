@@ -4,15 +4,14 @@
 """
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
+from __future__ import annotations
 
-from __future__ import division, absolute_import
-
-from twisted.trial import unittest
-from twisted.internet.address import IPv4Address
-from twisted.internet.test.test_address import AddressTestCaseMixin
+from typing import Callable
 
 from twisted.conch.ssh.address import SSHTransportAddress
-
+from twisted.internet.address import IPv4Address
+from twisted.internet.test.test_address import AddressTestCaseMixin
+from twisted.trial import unittest
 
 
 class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
@@ -22,8 +21,7 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
     basic functionality of that class (string representation, comparison, &c).
     """
 
-
-    def _stringRepresentation(self, stringFunction):
+    def _stringRepresentation(self, stringFunction: Callable[[object], str]) -> None:
         """
         The string representation of C{SSHTransportAddress} should be
         "SSHTransportAddress(<stringFunction on address>)".
@@ -31,19 +29,16 @@ class SSHTransportAddressTests(unittest.TestCase, AddressTestCaseMixin):
         addr = self.buildAddress()
         stringValue = stringFunction(addr)
         addressValue = stringFunction(addr.address)
-        self.assertEqual(stringValue,
-                         "SSHTransportAddress(%s)" % addressValue)
+        self.assertEqual(stringValue, "SSHTransportAddress(%s)" % addressValue)
 
-
-    def buildAddress(self):
+    def buildAddress(self) -> SSHTransportAddress:
         """
         Create an arbitrary new C{SSHTransportAddress}.  A new instance is
         created for each call, but always for the same address.
         """
         return SSHTransportAddress(IPv4Address("TCP", "127.0.0.1", 22))
 
-
-    def buildDifferentAddress(self):
+    def buildDifferentAddress(self) -> SSHTransportAddress:
         """
         Like C{buildAddress}, but with a different fixed address.
         """

@@ -5,32 +5,46 @@
 Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
+from __future__ import annotations
 
-from __future__ import division, absolute_import
-
-import sys
-import itertools
 import compileall
+import itertools
+import sys
 import zipfile
+from importlib.abc import PathEntryFinder
+from types import ModuleType
+from typing import Any, Generator
+
+from typing_extensions import Protocol
 
 import twisted
-
 from twisted.python import modules
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import namedAny
-
-from twisted.trial.unittest import TestCase
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.python.test.test_zippath import zipit
+from twisted.trial.unittest import TestCase
 
+
+class _SupportsWalkModules(Protocol):
+    def walkModules(
+        self, importPackages: bool
+    ) -> Generator[modules.PythonModule, None, None]:
+        ...
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
     """
     Base class for L{modules} test cases.
     """
-    def findByIteration(self, modname, where=modules, importPackages=False):
+
+    def findByIteration(
+        self,
+        modname: str,
+        where: _SupportsWalkModules = modules,
+        importPackages: bool = False,
+    ) -> modules.PythonModule:
         """
         You don't ever actually want to do this, so it's not in the public
         API, but sometimes we want to compare the result of an iterative call
@@ -39,13 +53,11 @@ class TwistedModulesTestCase(TwistedModulesMixin, TestCase):
         for modinfo in where.walkModules(importPackages=importPackages):
             if modinfo.name == modname:
                 return modinfo
-        self.fail("Unable to find module %r through iteration." % (modname,))
-
+        self.fail(f"Unable to find module {modname!r} through iteration.")
 
 
 class BasicTests(TwistedModulesTestCase):
-
-    def test_namespacedPackages(self):
+    def test_namespacedPackages(self) -> None:
         """
         Duplicate packages are not yielded when iterating over namespace
         packages.
@@ -53,11 +65,11 @@ class BasicTests(TwistedModulesTestCase):
         # Force pkgutil to be loaded already, since the probe package being
         # created depends on it, and the replaceSysPath call below will make
         # pretty much everything unimportable.
-        __import__('pkgutil')
+        __import__("pkgutil")
 
         namespaceBoilerplate = (
-            b'import pkgutil; '
-            b'__path__ = pkgutil.extend_path(__path__, __name__)')
+            b"import pkgutil; " b"__path__ = pkgutil.extend_path(__path__, __name__)"
+        )
 
         # Create two temporary directories with packages:
         #
@@ -81,66 +93,65 @@ class BasicTests(TwistedModulesTestCase):
         # "module2"
 
         entry = self.pathEntryWithOnePackage()
-        testPackagePath = entry.child('test_package')
-        testPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+        testPackagePath = entry.child("test_package")
+        testPackagePath.child("__init__.py").setContent(namespaceBoilerplate)
 
-        nestedEntry = testPackagePath.child('nested_package')
+        nestedEntry = testPackagePath.child("nested_package")
         nestedEntry.makedirs()
-        nestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        nestedEntry.child('module.py').setContent(b'')
+        nestedEntry.child("__init__.py").setContent(namespaceBoilerplate)
+        nestedEntry.child("module.py").setContent(b"")
 
         anotherEntry = self.pathEntryWithOnePackage()
-        anotherPackagePath = anotherEntry.child('test_package')
-        anotherPackagePath.child('__init__.py').setContent(namespaceBoilerplate)
+        anotherPackagePath = anotherEntry.child("test_package")
+        anotherPackagePath.child("__init__.py").setContent(namespaceBoilerplate)
 
-        anotherNestedEntry = anotherPackagePath.child('nested_package')
+        anotherNestedEntry = anotherPackagePath.child("nested_package")
         anotherNestedEntry.makedirs()
-        anotherNestedEntry.child('__init__.py').setContent(namespaceBoilerplate)
-        anotherNestedEntry.child('module2.py').setContent(b'')
+        anotherNestedEntry.child("__init__.py").setContent(namespaceBoilerplate)
+        anotherNestedEntry.child("module2.py").setContent(b"")
 
         self.replaceSysPath([entry.path, anotherEntry.path])
 
-        module = modules.getModule('test_package')
+        module = modules.getModule("test_package")
 
         # We have to use importPackages=True in order to resolve the namespace
         # packages, so we remove the imported packages from sys.modules after
         # walking
         try:
-            walkedNames = [
-                mod.name for mod in module.walkModules(importPackages=True)]
+            walkedNames = [mod.name for mod in module.walkModules(importPackages=True)]
         finally:
             for module in list(sys.modules.keys()):
-                if module.startswith('test_package'):
+                if module.startswith("test_package"):
                     del sys.modules[module]
 
         expected = [
-            'test_package',
-            'test_package.nested_package',
-            'test_package.nested_package.module',
-            'test_package.nested_package.module2',
-            ]
+            "test_package",
+            "test_package.nested_package",
+            "test_package.nested_package.module",
+            "test_package.nested_package.module2",
+        ]
 
         self.assertEqual(walkedNames, expected)
 
-
-    def test_unimportablePackageGetItem(self):
+    def test_unimportablePackageGetItem(self) -> None:
         """
         If a package has been explicitly forbidden from importing by setting a
         L{None} key in sys.modules under its name,
         L{modules.PythonPath.__getitem__} should still be able to retrieve an
         unloaded L{modules.PythonModule} for that package.
         """
-        shouldNotLoad = []
-        path = modules.PythonPath(sysPath=[self.pathEntryWithOnePackage().path],
-                                  moduleLoader=shouldNotLoad.append,
-                                  importerCache={},
-                                  sysPathHooks={},
-                                  moduleDict={'test_package': None})
+        shouldNotLoad: list[str] = []
+        path = modules.PythonPath(
+            sysPath=[self.pathEntryWithOnePackage().path],
+            moduleLoader=shouldNotLoad.append,
+            importerCache={},
+            sysPathHooks={},
+            moduleDict={"test_package": None},
+        )
         self.assertEqual(shouldNotLoad, [])
-        self.assertFalse(path['test_package'].isLoaded())
+        self.assertFalse(path["test_package"].isLoaded())
 
-
-    def test_unimportablePackageWalkModules(self):
+    def test_unimportablePackageWalkModules(self) -> None:
         """
         If a package has been explicitly forbidden from importing by setting a
         L{None} key in sys.modules under its name, L{modules.walkModules} should
@@ -149,15 +160,13 @@ class BasicTests(TwistedModulesTestCase):
         """
         existentPath = self.pathEntryWithOnePackage()
         self.replaceSysPath([existentPath.path])
-        self.replaceSysModules({"test_package": None})
+        self.replaceSysModules({"test_package": None})  # type: ignore[dict-item]
 
         walked = list(modules.walkModules())
-        self.assertEqual([m.name for m in walked],
-                          ["test_package"])
+        self.assertEqual([m.name for m in walked], ["test_package"])
         self.assertFalse(walked[0].isLoaded())
 
-
-    def test_nonexistentPaths(self):
+    def test_nonexistentPaths(self) -> None:
         """
         Verify that L{modules.walkModules} ignores entries in sys.path which
         do not exist in the filesystem.
@@ -178,8 +187,7 @@ class BasicTests(TwistedModulesTestCase):
         self.assertEqual(beforeModules, expected)
         self.assertEqual(afterModules, expected)
 
-
-    def test_nonDirectoryPaths(self):
+    def test_nonDirectoryPaths(self) -> None:
         """
         Verify that L{modules.walkModules} ignores entries in sys.path which
         refer to regular files in the filesystem.
@@ -198,73 +206,55 @@ class BasicTests(TwistedModulesTestCase):
 
         self.assertEqual(beforeModules, afterModules)
 
-
-    def test_twistedShowsUp(self):
+    def test_twistedShowsUp(self) -> None:
         """
         Scrounge around in the top-level module namespace and make sure that
         Twisted shows up, and that the module thusly obtained is the same as
         the module that we find when we look for it explicitly by name.
         """
-        self.assertEqual(modules.getModule('twisted'),
-                          self.findByIteration("twisted"))
+        self.assertEqual(modules.getModule("twisted"), self.findByIteration("twisted"))
 
-
-    def test_dottedNames(self):
+    def test_dottedNames(self) -> None:
         """
         Verify that the walkModules APIs will give us back subpackages, not just
         subpackages.
         """
         self.assertEqual(
-            modules.getModule('twisted.python'),
-            self.findByIteration("twisted.python",
-                                 where=modules.getModule('twisted')))
+            modules.getModule("twisted.python"),
+            self.findByIteration("twisted.python", where=modules.getModule("twisted")),
+        )
 
-
-    def test_onlyTopModules(self):
+    def test_onlyTopModules(self) -> None:
         """
         Verify that the iterModules API will only return top-level modules and
         packages, not submodules or subpackages.
         """
         for module in modules.iterModules():
             self.assertFalse(
-                '.' in module.name,
+                "." in module.name,
                 "no nested modules should be returned from iterModules: %r"
-                % (module.filePath))
+                % (module.filePath),
+            )
 
-
-    def test_loadPackagesAndModules(self):
+    def test_loadPackagesAndModules(self) -> None:
         """
         Verify that we can locate and load packages, modules, submodules, and
         subpackages.
         """
-        for n in ['os',
-                  'twisted',
-                  'twisted.python',
-                  'twisted.python.reflect']:
+        for n in ["os", "twisted", "twisted.python", "twisted.python.reflect"]:
             m = namedAny(n)
-            self.failUnlessIdentical(
-                modules.getModule(n).load(),
-                m)
-            self.failUnlessIdentical(
-                self.findByIteration(n).load(),
-                m)
+            self.failUnlessIdentical(modules.getModule(n).load(), m)
+            self.failUnlessIdentical(self.findByIteration(n).load(), m)
 
-
-    def test_pathEntriesOnPath(self):
+    def test_pathEntriesOnPath(self) -> None:
         """
         Verify that path entries discovered via module loading are, in fact, on
         sys.path somewhere.
         """
-        for n in ['os',
-                  'twisted',
-                  'twisted.python',
-                  'twisted.python.reflect']:
-            self.failUnlessIn(
-                modules.getModule(n).pathEntry.filePath.path,
-                sys.path)
+        for n in ["os", "twisted", "twisted.python", "twisted.python.reflect"]:
+            self.failUnlessIn(modules.getModule(n).pathEntry.filePath.path, sys.path)
 
-
-    def test_alwaysPreferPy(self):
+    def test_alwaysPreferPy(self) -> None:
         """
         Verify that .py files will always be preferred to .pyc files, regardless of
         directory listing order.
@@ -273,28 +263,30 @@ class BasicTests(TwistedModulesTestCase):
         mypath.createDirectory()
         pp = modules.PythonPath(sysPath=[mypath.path])
         originalSmartPath = pp._smartPath
-        def _evilSmartPath(pathName):
+
+        def _evilSmartPath(pathName: str) -> Any:
             o = originalSmartPath(pathName)
             originalChildren = o.children
-            def evilChildren():
+
+            def evilChildren() -> Any:
                 # normally this order is random; let's make sure it always
                 # comes up .pyc-first.
                 x = list(originalChildren())
                 x.sort()
                 x.reverse()
                 return x
+
             o.children = evilChildren
             return o
-        mypath.child("abcd.py").setContent(b'\n')
+
+        mypath.child("abcd.py").setContent(b"\n")
         compileall.compile_dir(mypath.path, quiet=True)
         # sanity check
         self.assertEqual(len(list(mypath.children())), 2)
-        pp._smartPath = _evilSmartPath
-        self.assertEqual(pp['abcd'].filePath,
-                          mypath.child('abcd.py'))
+        pp._smartPath = _evilSmartPath  # type: ignore[method-assign]
+        self.assertEqual(pp["abcd"].filePath, mypath.child("abcd.py"))
 
-
-    def test_packageMissingPath(self):
+    def test_packageMissingPath(self) -> None:
         """
         A package can delete its __path__ for some reasons,
         C{modules.PythonPath} should be able to deal with it.
@@ -304,17 +296,16 @@ class BasicTests(TwistedModulesTestCase):
         pp = modules.PythonPath(sysPath=[mypath.path])
         subpath = mypath.child("abcd")
         subpath.createDirectory()
-        subpath.child("__init__.py").setContent(b'del __path__\n')
+        subpath.child("__init__.py").setContent(b"del __path__\n")
         sys.path.append(mypath.path)
         __import__("abcd")
         try:
             l = list(pp.walkModules())
             self.assertEqual(len(l), 1)
-            self.assertEqual(l[0].name, 'abcd')
+            self.assertEqual(l[0].name, "abcd")
         finally:
-            del sys.modules['abcd']
+            del sys.modules["abcd"]
             sys.path.remove(mypath.path)
-
 
 
 class PathModificationTests(TwistedModulesTestCase):
@@ -323,10 +314,10 @@ class PathModificationTests(TwistedModulesTestCase):
     stuffing some code in it.
     """
 
-    _serialnum = itertools.count() # used to generate serial numbers for
-                                   # package names.
+    _serialnum = itertools.count()  # used to generate serial numbers for
+    # package names.
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.pathExtensionName = self.mktemp()
         self.pathExtension = FilePath(self.pathExtensionName)
         self.pathExtension.createDirectory()
@@ -339,46 +330,43 @@ class PathModificationTests(TwistedModulesTestCase):
         self.packagePath.child("c__init__.py").setContent(b"")
         self.pathSetUp = False
 
-
-    def _setupSysPath(self):
+    def _setupSysPath(self) -> None:
         assert not self.pathSetUp
         self.pathSetUp = True
         sys.path.append(self.pathExtensionName)
 
-
-    def _underUnderPathTest(self, doImport=True):
+    def _underUnderPathTest(self, doImport: bool = True) -> None:
         moddir2 = self.mktemp()
         fpmd = FilePath(moddir2)
         fpmd.createDirectory()
         fpmd.child("foozle.py").setContent(b"x = 123\n")
         self.packagePath.child("__init__.py").setContent(
-            networkString("__path__.append({0})\n".format(repr(moddir2))))
+            networkString(f"__path__.append({repr(moddir2)})\n")
+        )
         # Cut here
         self._setupSysPath()
         modinfo = modules.getModule(self.packageName)
         self.assertEqual(
-            self.findByIteration(self.packageName+".foozle", modinfo,
-                                 importPackages=doImport),
-            modinfo['foozle'])
-        self.assertEqual(modinfo['foozle'].load().x, 123)
+            self.findByIteration(
+                self.packageName + ".foozle", modinfo, importPackages=doImport
+            ),
+            modinfo["foozle"],
+        )
+        self.assertEqual(modinfo["foozle"].load().x, 123)
 
-
-    def test_underUnderPathAlreadyImported(self):
+    def test_underUnderPathAlreadyImported(self) -> None:
         """
         Verify that iterModules will honor the __path__ of already-loaded packages.
         """
         self._underUnderPathTest()
 
-
-    def _listModules(self):
+    def _listModules(self) -> None:
         pkginfo = modules.getModule(self.packageName)
-        nfni = [modinfo.name.split(".")[-1] for modinfo in
-                pkginfo.iterModules()]
+        nfni = [modinfo.name.split(".")[-1] for modinfo in pkginfo.iterModules()]
         nfni.sort()
-        self.assertEqual(nfni, ['a', 'b', 'c__init__'])
+        self.assertEqual(nfni, ["a", "b", "c__init__"])
 
-
-    def test_listingModules(self):
+    def test_listingModules(self) -> None:
         """
         Make sure the module list comes back as we expect from iterModules on a
         package, whether zipped or not.
@@ -386,8 +374,7 @@ class PathModificationTests(TwistedModulesTestCase):
         self._setupSysPath()
         self._listModules()
 
-
-    def test_listingModulesAlreadyImported(self):
+    def test_listingModulesAlreadyImported(self) -> None:
         """
         Make sure the module list comes back as we expect from iterModules on a
         package, whether zipped or not, even if the package has already been
@@ -397,15 +384,13 @@ class PathModificationTests(TwistedModulesTestCase):
         namedAny(self.packageName)
         self._listModules()
 
-
-    def tearDown(self):
+    def tearDown(self) -> None:
         # Intentionally using 'assert' here, this is not a test assertion, this
         # is just an "oh fuck what is going ON" assertion. -glyph
         if self.pathSetUp:
             HORK = "path cleanup failed: don't be surprised if other tests break"
-            assert sys.path.pop() is self.pathExtensionName, HORK+", 1"
-            assert self.pathExtensionName not in sys.path, HORK+", 2"
-
+            assert sys.path.pop() is self.pathExtensionName, HORK + ", 1"
+            assert self.pathExtensionName not in sys.path, HORK + ", 2"
 
 
 class RebindingTests(PathModificationTests):
@@ -413,15 +398,15 @@ class RebindingTests(PathModificationTests):
     These tests verify that the default path interrogation API works properly
     even when sys.path has been rebound to a different object.
     """
-    def _setupSysPath(self):
+
+    def _setupSysPath(self) -> None:
         assert not self.pathSetUp
         self.pathSetUp = True
         self.savedSysPath = sys.path
         sys.path = sys.path[:]
         sys.path.append(self.pathExtensionName)
 
-
-    def tearDown(self):
+    def tearDown(self) -> None:
         """
         Clean up sys.path by re-binding our original object.
         """
@@ -429,12 +414,11 @@ class RebindingTests(PathModificationTests):
             sys.path = self.savedSysPath
 
 
-
 class ZipPathModificationTests(PathModificationTests):
-    def _setupSysPath(self):
+    def _setupSysPath(self) -> None:
         assert not self.pathSetUp
-        zipit(self.pathExtensionName, self.pathExtensionName+'.zip')
-        self.pathExtensionName += '.zip'
+        zipit(self.pathExtensionName, self.pathExtensionName + ".zip")
+        self.pathExtensionName += ".zip"
         assert zipfile.is_zipfile(self.pathExtensionName)
         PathModificationTests._setupSysPath(self)
 
@@ -444,31 +428,33 @@ class PythonPathTests(TestCase):
     Tests for the class which provides the implementation for all of the
     public API of L{twisted.python.modules}, L{PythonPath}.
     """
-    def test_unhandledImporter(self):
+
+    def test_unhandledImporter(self) -> None:
         """
         Make sure that the behavior when encountering an unknown importer
         type is not catastrophic failure.
         """
-        class SecretImporter(object):
+
+        class SecretImporter:
             pass
 
-        def hook(name):
+        def hook(name: object) -> SecretImporter:
             return SecretImporter()
 
-        syspath = ['example/path']
-        sysmodules = {}
+        syspath = ["example/path"]
+        sysmodules: dict[str, ModuleType] = {}
         syshooks = [hook]
-        syscache = {}
-        def sysloader(name):
+        syscache: dict[str, PathEntryFinder | None] = {}
+
+        def sysloader(name: object) -> None:
             return None
-        space = modules.PythonPath(
-            syspath, sysmodules, syshooks, syscache, sysloader)
+
+        space = modules.PythonPath(syspath, sysmodules, syshooks, syscache, sysloader)
         entries = list(space.iterEntries())
         self.assertEqual(len(entries), 1)
-        self.assertRaises(KeyError, lambda: entries[0]['module'])
+        self.assertRaises(KeyError, lambda: entries[0]["module"])
 
-
-    def test_inconsistentImporterCache(self):
+    def test_inconsistentImporterCache(self) -> None:
         """
         If the path a module loaded with L{PythonPath.__getitem__} is not
         present in the path importer cache, a warning is emitted, but the
@@ -477,35 +463,41 @@ class PythonPathTests(TestCase):
         space = modules.PythonPath([], sys.modules, [], {})
         thisModule = space[__name__]
         warnings = self.flushWarnings([self.test_inconsistentImporterCache])
-        self.assertEqual(warnings[0]['category'], UserWarning)
+        self.assertEqual(warnings[0]["category"], UserWarning)
         self.assertEqual(
-            warnings[0]['message'],
-            FilePath(twisted.__file__).parent().dirname() +
-            " (for module " + __name__ + ") not in path importer cache "
-            "(PEP 302 violation - check your local configuration).")
+            warnings[0]["message"],
+            FilePath(twisted.__file__).parent().dirname()
+            + " (for module "
+            + __name__
+            + ") not in path importer cache "
+            "(PEP 302 violation - check your local configuration).",
+        )
         self.assertEqual(len(warnings), 1)
         self.assertEqual(thisModule.name, __name__)
 
-
-    def test_containsModule(self):
+    def test_containsModule(self) -> None:
         """
         L{PythonPath} implements the C{in} operator so that when it is the
         right-hand argument and the name of a module which exists on that
         L{PythonPath} is the left-hand argument, the result is C{True}.
         """
         thePath = modules.PythonPath()
-        self.assertIn('os', thePath)
+        self.assertIn("os", thePath)
 
-
-    def test_doesntContainModule(self):
+    def test_doesntContainModule(self) -> None:
         """
         L{PythonPath} implements the C{in} operator so that when it is the
         right-hand argument and the name of a module which does not exist on
         that L{PythonPath} is the left-hand argument, the result is C{False}.
         """
         thePath = modules.PythonPath()
-        self.assertNotIn('bogusModule', thePath)
+        self.assertNotIn("bogusModule", thePath)
 
 
-__all__ = ["BasicTests", "PathModificationTests", "RebindingTests",
-           "ZipPathModificationTests", "PythonPathTests"]
+__all__ = [
+    "BasicTests",
+    "PathModificationTests",
+    "RebindingTests",
+    "ZipPathModificationTests",
+    "PythonPathTests",
+]

@@ -9,31 +9,32 @@ import os
 import shutil
 import tempfile
 
-from twisted.trial import unittest
 from twisted.internet.protocol import Protocol
+from twisted.internet.test.test_serialport import DoNothing
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
-from twisted.internet.test.test_serialport import DoNothing
+from twisted.trial import unittest
 
-
-testingForced = 'TWISTED_FORCE_SERIAL_TESTS' in os.environ
+testingForced = "TWISTED_FORCE_SERIAL_TESTS" in os.environ
 
 
 try:
-    from twisted.internet import serialport
     import serial
+
+    from twisted.internet import serialport
 except ImportError:
     if testingForced:
         raise
 
-    serialport = None
+    serialport = None  # type: ignore[assignment]
     serial = None
 
 
 if serialport is not None:
+
     class RegularFileSerial(serial.Serial):
         def __init__(self, *args, **kwargs):
-            super(RegularFileSerial, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self.captured_args = args
             self.captured_kwargs = kwargs
 
@@ -43,20 +44,19 @@ if serialport is not None:
         def _reconfigure_port(self):
             pass
 
-
     class RegularFileSerialPort(serialport.SerialPort):
         _serialFactory = RegularFileSerial
 
         def __init__(self, *args, **kwargs):
-            cbInQue = kwargs.get('cbInQue')
+            cbInQue = kwargs.get("cbInQue")
 
-            if 'cbInQue' in kwargs:
-                del kwargs['cbInQue']
+            if "cbInQue" in kwargs:
+                del kwargs["cbInQue"]
 
             self.comstat = serial.win32.COMSTAT
             self.comstat.cbInQue = cbInQue
 
-            super(RegularFileSerialPort, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         def _clearCommError(self):
             return True, self.comstat
@@ -88,10 +88,10 @@ class Win32SerialPortTests(unittest.TestCase):
         self.reactor = DoNothing()
 
         self.directory = tempfile.mkdtemp()
-        self.path = os.path.join(self.directory, 'fake_serial')
+        self.path = os.path.join(self.directory, "fake_serial")
 
-        data = b'1234'
-        with open(self.path, 'wb') as f:
+        data = b"1234"
+        with open(self.path, "wb") as f:
             f.write(data)
 
     def tearDown(self):
@@ -107,13 +107,13 @@ class Win32SerialPortTests(unittest.TestCase):
         self.assertEqual((self.path,), port._serial.captured_args)
         # Validate kwargs
         kwargs = port._serial.captured_kwargs
-        self.assertEqual(9600,                kwargs["baudrate"])
-        self.assertEqual(serial.EIGHTBITS,    kwargs["bytesize"])
-        self.assertEqual(serial.PARITY_NONE,  kwargs["parity"])
+        self.assertEqual(9600, kwargs["baudrate"])
+        self.assertEqual(serial.EIGHTBITS, kwargs["bytesize"])
+        self.assertEqual(serial.PARITY_NONE, kwargs["parity"])
         self.assertEqual(serial.STOPBITS_ONE, kwargs["stopbits"])
-        self.assertEqual(0,                   kwargs["xonxoff"])
-        self.assertEqual(0,                   kwargs["rtscts"])
-        self.assertEqual(None,                kwargs["timeout"])
+        self.assertEqual(0, kwargs["xonxoff"])
+        self.assertEqual(0, kwargs["rtscts"])
+        self.assertEqual(None, kwargs["timeout"])
         port.connectionLost(Failure(Exception("Cleanup")))
 
     def test_serialPortInitiallyConnected(self):
@@ -121,7 +121,7 @@ class Win32SerialPortTests(unittest.TestCase):
         Test the port is connected at initialization time, and
         C{Protocol.makeConnection} has been called on the desired protocol.
         """
-        self.assertEqual(0,    self.protocol.connected)
+        self.assertEqual(0, self.protocol.connected)
 
         port = RegularFileSerialPort(self.protocol, self.path, self.reactor)
         self.assertEqual(1, port.connected)
@@ -137,9 +137,9 @@ class Win32SerialPortTests(unittest.TestCase):
             cbInQue=cbInQue,
         )
         port.serialReadEvent()
-        port.write(b'')
-        port.write(b'abcd')
-        port.write(b'ABCD')
+        port.write(b"")
+        port.write(b"abcd")
+        port.write(b"ABCD")
         port.serialWriteEvent()
         port.serialWriteEvent()
         port.connectionLost(Failure(Exception("Cleanup")))
@@ -163,9 +163,7 @@ class Win32SerialPortTests(unittest.TestCase):
             cbInQue=cbInQue,
         )
         port.serialReadEvent()
-        self.assertTrue(all(
-            isinstance(d, bytes) for d in protocol.received_data
-        ))
+        self.assertTrue(all(isinstance(d, bytes) for d in protocol.received_data))
         port.connectionLost(Failure(Exception("Cleanup")))
 
     def test_serialPortReturnsBytes_1(self):

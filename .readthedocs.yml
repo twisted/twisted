@@ -1,0 +1,31 @@
+version: 2
+
+sphinx:
+  # This should not fail on errors so that we can view the rendered Read The Docs
+  # pages even on errors.
+  # We have a separate build process which fails on errors and shows all
+  # the errors in one go.
+  # This can be re-enable once RTD is updated with https://github.com/readthedocs/readthedocs.org/issues/7116
+  fail_on_warning: False
+
+# We don't proofread all the output formats, and we don't know if anyone really
+# uses some of them.  Is anyone actually printing the docs out as a PDF?  If a
+# particular format is useful to someone let's let them download it.  If
+# dubiously-used formats start causing build errors that are difficult to debug
+# (i.e. PDF, EPub) feel free to disable them if necessary, but HTMLZip is an
+# offline archive of the actual docs website that everyone uses most frequently
+# and should be kept working; if it's breaking then probably something is wrong
+# with the website as well.
+formats: all
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.11"
+
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - dev-release

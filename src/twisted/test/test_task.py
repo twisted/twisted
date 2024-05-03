@@ -5,13 +5,11 @@
 Tests for L{twisted.internet.task}.
 """
 
-from __future__ import division, absolute_import
 
-from twisted.trial import unittest
-
-from twisted.internet import interfaces, task, reactor, defer, error
+from twisted.internet import defer, error, interfaces, reactor, task
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor
+from twisted.trial import unittest
 
 # Be compatible with any jerks who used our private stuff
 Clock = task.Clock
@@ -21,27 +19,25 @@ from twisted.python import failure
 
 class TestableLoopingCall(task.LoopingCall):
     def __init__(self, clock, *a, **kw):
-        super(TestableLoopingCall, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.clock = clock
-
 
 
 class TestException(Exception):
     pass
 
 
-
 class ClockTests(unittest.TestCase):
     """
     Test the non-wallclock based clock implementation.
     """
+
     def testSeconds(self):
         """
         Test that the C{seconds} method of the fake clock returns fake time.
         """
         c = task.Clock()
         self.assertEqual(c.seconds(), 0)
-
 
     def testCallLater(self):
         """
@@ -54,7 +50,6 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(call.getTime(), 1)
         self.assertTrue(call.active())
 
-
     def testCallLaterCancelled(self):
         """
         Test that calls can be cancelled.
@@ -63,7 +58,6 @@ class ClockTests(unittest.TestCase):
         call = c.callLater(1, lambda a, b: None, 1, b=2)
         call.cancel()
         self.assertFalse(call.active())
-
 
     def test_callLaterOrdering(self):
         """
@@ -74,7 +68,6 @@ class ClockTests(unittest.TestCase):
         call1 = c.callLater(10, lambda a, b: None, 1, b=2)
         call2 = c.callLater(1, lambda a, b: None, 3, b=4)
         self.assertFalse(call1 is call2)
-
 
     def testAdvance(self):
         """
@@ -89,7 +82,6 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(events, [None])
         self.assertFalse(call.active())
 
-
     def testAdvanceCancel(self):
         """
         Test attempting to cancel the call in a callback.
@@ -99,11 +91,12 @@ class ClockTests(unittest.TestCase):
         set before the callback is called.
         """
         c = task.Clock()
+
         def cb():
             self.assertRaises(error.AlreadyCalled, call.cancel)
+
         call = c.callLater(1, cb)
         c.advance(1)
-
 
     def testCallLaterDelayed(self):
         """
@@ -118,7 +111,6 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(events, [])
         c.advance(1.0)
         self.assertEqual(events, [(1, 2)])
-
 
     def testCallLaterResetLater(self):
         """
@@ -135,7 +127,6 @@ class ClockTests(unittest.TestCase):
         c.advance(1)
         self.assertEqual(events, [(1, 2)])
 
-
     def testCallLaterResetSooner(self):
         """
         Test that calls can have their time reset to an earlier time.
@@ -148,7 +139,6 @@ class ClockTests(unittest.TestCase):
         c.advance(3)
         self.assertEqual(events, [(1, 2)])
 
-
     def test_getDelayedCalls(self):
         """
         Test that we can get a list of all delayed calls
@@ -159,8 +149,7 @@ class ClockTests(unittest.TestCase):
 
         calls = c.getDelayedCalls()
 
-        self.assertEqual(set([call, call2]), set(calls))
-
+        self.assertEqual({call, call2}, set(calls))
 
     def test_getDelayedCallsEmpty(self):
         """
@@ -170,12 +159,11 @@ class ClockTests(unittest.TestCase):
         c = task.Clock()
         self.assertEqual(c.getDelayedCalls(), [])
 
-
     def test_providesIReactorTime(self):
         c = task.Clock()
-        self.assertTrue(interfaces.IReactorTime.providedBy(c),
-                        "Clock does not provide IReactorTime")
-
+        self.assertTrue(
+            interfaces.IReactorTime.providedBy(c), "Clock does not provide IReactorTime"
+        )
 
     def test_callLaterKeepsCallsOrdered(self):
         """
@@ -190,7 +178,7 @@ class ClockTests(unittest.TestCase):
         "A".
         """
         result = []
-        expected = [('b', 2.0), ('a', 3.0)]
+        expected = [("b", 2.0), ("a", 3.0)]
         clock = task.Clock()
         logtime = lambda n: result.append((n, clock.seconds()))
 
@@ -198,9 +186,8 @@ class ClockTests(unittest.TestCase):
         call_a.reset(3.0)
         clock.callLater(2.0, logtime, "b")
 
-        clock.pump([1]*3)
+        clock.pump([1] * 3)
         self.assertEqual(result, expected)
-
 
     def test_callLaterResetKeepsCallsOrdered(self):
         """
@@ -215,7 +202,7 @@ class ClockTests(unittest.TestCase):
         greater than t1, "B" will be invoked before "A".
         """
         result = []
-        expected = [('b', 2.0), ('a', 3.0)]
+        expected = [("b", 2.0), ("a", 3.0)]
         clock = task.Clock()
         logtime = lambda n: result.append((n, clock.seconds()))
 
@@ -223,9 +210,8 @@ class ClockTests(unittest.TestCase):
         clock.callLater(2.0, logtime, "b")
         call_a.reset(3.0)
 
-        clock.pump([1]*3)
+        clock.pump([1] * 3)
         self.assertEqual(result, expected)
-
 
     def test_callLaterResetInsideCallKeepsCallsOrdered(self):
         """
@@ -235,11 +221,12 @@ class ClockTests(unittest.TestCase):
         occurs within the callable scheduled by C{callLater} itself.
         """
         result = []
-        expected = [('c', 3.0), ('b', 4.0)]
+        expected = [("c", 3.0), ("b", 4.0)]
         clock = task.Clock()
         logtime = lambda n: result.append((n, clock.seconds()))
 
         call_b = clock.callLater(2.0, logtime, "b")
+
         def a():
             call_b.reset(3.0)
 
@@ -250,19 +237,18 @@ class ClockTests(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-
 class LoopTests(unittest.TestCase):
     """
     Tests for L{task.LoopingCall} based on a fake L{IReactorTime}
     implementation.
     """
+
     def test_defaultClock(self):
         """
         L{LoopingCall}'s default clock should be the reactor.
         """
         call = task.LoopingCall(lambda: None)
         self.assertEqual(call.clock, reactor)
-
 
     def test_callbackTimeSkips(self):
         """
@@ -273,9 +259,11 @@ class LoopTests(unittest.TestCase):
         times = []
         callDuration = None
         clock = task.Clock()
+
         def aCallback():
             times.append(clock.seconds())
             clock.advance(callDuration)
+
         call = task.LoopingCall(aCallback)
         call.clock = clock
 
@@ -314,7 +302,6 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(times, [0, 2.5, 4])
         self.assertEqual(clock.seconds(), 4)
 
-
     def test_reactorTimeSkips(self):
         """
         When more time than the defined interval passes between when
@@ -324,6 +311,7 @@ class LoopTests(unittest.TestCase):
         """
         times = []
         clock = task.Clock()
+
         def aCallback():
             times.append(clock.seconds())
 
@@ -348,7 +336,6 @@ class LoopTests(unittest.TestCase):
         clock.advance(0)
         self.assertEqual(times, [0, 2, 3])
 
-
     def test_reactorTimeCountSkips(self):
         """
         When L{LoopingCall} schedules itself to run again, if more than the
@@ -360,6 +347,7 @@ class LoopTests(unittest.TestCase):
         """
         times = []
         clock = task.Clock()
+
         def aCallback(numCalls):
             times.append((clock.seconds(), numCalls))
 
@@ -386,16 +374,25 @@ class LoopTests(unittest.TestCase):
         # than the number of intervals which have completely elapsed. Along
         # with the call we did actually make, the final number of calls is 3.
         clock.advance((3 * INTERVAL) + REALISTIC_DELAY)
-        self.assertEqual(times,
-                         [(0, 1), (INTERVAL + REALISTIC_DELAY, 1),
-                          ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3)])
+        self.assertEqual(
+            times,
+            [
+                (0, 1),
+                (INTERVAL + REALISTIC_DELAY, 1),
+                ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3),
+            ],
+        )
 
         # Advancing the clock by 0 seconds should not cause any changes!
         clock.advance(0)
-        self.assertEqual(times,
-                         [(0, 1), (INTERVAL + REALISTIC_DELAY, 1),
-                          ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3)])
-
+        self.assertEqual(
+            times,
+            [
+                (0, 1),
+                (INTERVAL + REALISTIC_DELAY, 1),
+                ((4 * INTERVAL) + (2 * REALISTIC_DELAY), 3),
+            ],
+        )
 
     def test_countLengthyIntervalCounts(self):
         """
@@ -413,6 +410,7 @@ class LoopTests(unittest.TestCase):
         """
         times = []
         clock = task.Clock()
+
         def aCallback(count):
             times.append((clock.seconds(), count))
 
@@ -436,7 +434,6 @@ class LoopTests(unittest.TestCase):
         # Back on track!  We got invoked when we expected this time.
         clock.advance(INTERVAL * 0.25)
         self.assertEqual(times.pop(), ((3.0 * INTERVAL) + REALISTIC_DELAY, 1))
-
 
     def test_withCountFloatingPointBoundary(self):
         """
@@ -470,10 +467,22 @@ class LoopTests(unittest.TestCase):
         for x in range(count):
             clock.advance(interval)
 
+        def sum_compat(items):
+            """
+            Make sure the result is more precise.
+            On Python 3.11 or older this can be a float with ~ 0.00001
+            in precision difference.
+            See: https://github.com/python/cpython/issues/100425
+            """
+            total = 0.0
+            for item in items:
+                total += item
+            return total
+
         # There is still an epsilon of inaccuracy here; 0.1 is not quite
         # exactly 1/10 in binary, so we need to push our clock over the
         # threshold.
-        epsilon = timespan - sum([interval] * count)
+        epsilon = timespan - sum_compat([interval] * count)
         clock.advance(epsilon)
         secondsValue = clock.seconds()
         # The following two assertions are here to ensure that if the values of
@@ -481,23 +490,21 @@ class LoopTests(unittest.TestCase):
         # valid.  First, the "epsilon" value here measures the floating-point
         # inaccuracy in question, and so if it doesn't exist then we are not
         # triggering an interesting condition.
-        self.assertTrue(abs(epsilon) > 0.0,
-                        "{0} should be greater than zero"
-                        .format(epsilon))
+        self.assertTrue(abs(epsilon) > 0.0, f"{epsilon} should be greater than zero")
         # Secondly, task.Clock should behave in such a way that once we have
         # advanced to this point, it has reached or exceeded the timespan.
-        self.assertTrue(secondsValue >= timespan,
-                        "{0} should be greater than or equal to {1}"
-                        .format(secondsValue, timespan))
+        self.assertTrue(
+            secondsValue >= timespan,
+            f"{secondsValue} should be greater than or equal to {timespan}",
+        )
 
-        self.assertEqual(sum(accumulator), count)
+        self.assertEqual(sum_compat(accumulator), count)
         self.assertNotIn(0, accumulator)
-
 
     def test_withCountIntervalZero(self):
         """
-        L{task.LoopingCall.withCount} with interval set to 0
-        will call the countCallable 1.
+        L{task.LoopingCall.withCount} with interval set to 0 calls the
+        countCallable with a count of 1.
         """
         clock = task.Clock()
         accumulator = []
@@ -511,11 +518,14 @@ class LoopTests(unittest.TestCase):
         loop.clock = clock
         deferred = loop.start(0, now=False)
 
-        clock.advance(0)
+        # Even though we have a no-delay loop,
+        # a single iteration of the reactor will not trigger the looping call
+        # multiple times.
+        # This is why we explicitly iterate multiple times.
+        clock.pump([0] * 5)
         self.successResultOf(deferred)
 
-        self.assertEqual([1, 1, 1, 1, 1], accumulator)
-
+        self.assertEqual([1] * 5, accumulator)
 
     def test_withCountIntervalZeroDelay(self):
         """
@@ -540,20 +550,20 @@ class LoopTests(unittest.TestCase):
         loop.clock = clock
         loop.start(0, now=False)
 
-        clock.advance(0)
+        clock.pump([0] * 2)
         # Loop will block at the third call.
-        self.assertEqual([1, 1], accumulator)
+        self.assertEqual([1] * 2, accumulator)
 
         # Even if more time pass, the loops is not
         # advanced.
-        clock.advance(2)
-        self.assertEqual([1, 1], accumulator)
+        clock.pump([1] * 2)
+        self.assertEqual([1] * 2, accumulator)
 
         # Once the waiting call got a result the loop continues without
         # observing any delay in countCallable.
         deferred.callback(None)
-        clock.advance(0)
-        self.assertEqual([1, 1, 1, 1, 1], accumulator)
+        clock.pump([0] * 4)
+        self.assertEqual([1] * 5, accumulator)
 
     def test_withCountIntervalZeroDelayThenNonZeroInterval(self):
         """
@@ -564,34 +574,69 @@ class LoopTests(unittest.TestCase):
         deferred = defer.Deferred()
         accumulator = []
 
+        # The amount of time to let pass (the number of 1 second steps to
+        # take) before the looping function returns an unfired Deferred.
+        stepsBeforeDelay = 2
+
+        # The amount of time to let pass (the number of 1 second steps to
+        # take) after the looping function returns an unfired Deferred before
+        # fiddling with the loop interval.
+        extraTimeAfterDelay = 5
+
+        # The new value to set for the loop interval when fiddling with it.
+        mutatedLoopInterval = 2
+
+        # The amount of time to let pass (in one jump) after fiddling with the
+        # loop interval.
+        durationOfDelay = 9
+
+        # This is the amount of time that passed between the
+        # Deferred-returning call of the looping function and the next time it
+        # gets a chance to run.
+        skippedTime = extraTimeAfterDelay + durationOfDelay
+
+        # This is the number of calls that would have been made to the
+        # function in that amount of time if the unfired Deferred hadn't been
+        # preventing calls and if the clock hadn't made a large jump after the
+        # Deferred fired.
+        expectedSkipCount = skippedTime // mutatedLoopInterval
+
+        # Because of #5962 LoopingCall sees an unrealistic time for the second
+        # call (it seems 1.0 but on a real reactor it will see 2.0) which
+        # causes it to calculate the skip count incorrectly.  Fudge our
+        # expectation here until #5962 is fixed.
+        expectedSkipCount += 1
+
         def foo(cnt):
             accumulator.append(cnt)
-            if len(accumulator) == 2:
+            if len(accumulator) == stepsBeforeDelay:
                 return deferred
 
         loop = task.LoopingCall.withCount(foo)
         loop.clock = clock
         loop.start(0, now=False)
 
-        # Even if a lot of time pass, loop will block at the third call.
-        clock.advance(10)
-        self.assertEqual([1, 1], accumulator)
+        # Even if a lot of time passes the loop will stop iterating once the
+        # Deferred is returned.  1 * stepsBeforeDelay is enough time to get to
+        # the Deferred result.  The extraTimeAfterDelay shows us it isn't
+        # still iterating afterwards.
+        clock.pump([1] * (stepsBeforeDelay + extraTimeAfterDelay))
+        self.assertEqual([1] * stepsBeforeDelay, accumulator)
 
         # When a new interval is set, once the waiting call got a result the
         # loop continues with the new interval.
-        loop.interval = 2
+        loop.interval = mutatedLoopInterval
         deferred.callback(None)
 
+        clock.advance(durationOfDelay)
         # It will count skipped steps since the last loop call.
-        clock.advance(7)
-        self.assertEqual([1, 1, 3], accumulator)
+        self.assertEqual([1, 1, expectedSkipCount], accumulator)
 
-        clock.advance(2)
-        self.assertEqual([1, 1, 3, 1], accumulator)
+        clock.advance(1 * mutatedLoopInterval)
+        self.assertEqual([1, 1, expectedSkipCount, 1], accumulator)
 
-        clock.advance(4)
-        self.assertEqual([1, 1, 3, 1, 2], accumulator)
-
+        clock.advance(2 * mutatedLoopInterval)
+        self.assertEqual([1, 1, expectedSkipCount, 1, 2], accumulator)
 
     def testBasicFunction(self):
         # Arrange to have time advanced enough so that our function is
@@ -603,6 +648,7 @@ class LoopTests(unittest.TestCase):
         clock = task.Clock()
 
         L = []
+
         def foo(a, b, c=None, d=None):
             L.append((a, b, c, d))
 
@@ -610,16 +656,17 @@ class LoopTests(unittest.TestCase):
         D = lc.start(0.1)
 
         theResult = []
+
         def saveResult(result):
             theResult.append(result)
+
         D.addCallback(saveResult)
 
         clock.pump(timings)
 
-        self.assertEqual(len(L), 3,
-                          "got %d iterations, not 3" % (len(L),))
+        self.assertEqual(len(L), 3, "got %d iterations, not 3" % (len(L),))
 
-        for (a, b, c, d) in L:
+        for a, b, c, d in L:
             self.assertEqual(a, "a")
             self.assertEqual(b, "b")
             self.assertIsNone(c)
@@ -631,7 +678,6 @@ class LoopTests(unittest.TestCase):
         # Make sure it isn't planning to do anything further.
         self.assertFalse(clock.calls)
 
-
     def testDelayedStart(self):
         timings = [0.05, 0.1, 0.1]
 
@@ -642,28 +688,28 @@ class LoopTests(unittest.TestCase):
         d = lc.start(0.1, now=False)
 
         theResult = []
+
         def saveResult(result):
             theResult.append(result)
+
         d.addCallback(saveResult)
 
         clock.pump(timings)
 
-        self.assertEqual(len(L), 2,
-                          "got %d iterations, not 2" % (len(L),))
+        self.assertEqual(len(L), 2, "got %d iterations, not 2" % (len(L),))
         lc.stop()
         self.assertIs(theResult[0], lc)
 
         self.assertFalse(clock.calls)
 
-
     def testBadDelay(self):
         lc = task.LoopingCall(lambda: None)
         self.assertRaises(ValueError, lc.start, -1)
 
-
     # Make sure that LoopingCall.stop() prevents any subsequent calls.
     def _stoppingTest(self, delay):
         ran = []
+
         def foo():
             ran.append(None)
 
@@ -674,20 +720,18 @@ class LoopTests(unittest.TestCase):
         self.assertFalse(ran)
         self.assertFalse(clock.calls)
 
-
     def testStopAtOnce(self):
         return self._stoppingTest(0)
 
-
     def testStoppingBeforeDelayedStart(self):
         return self._stoppingTest(10)
-
 
     def test_reset(self):
         """
         Test that L{LoopingCall} can be reset.
         """
         ran = []
+
         def foo():
             ran.append(None)
 
@@ -701,14 +745,14 @@ class LoopTests(unittest.TestCase):
         c.advance(1)
         self.assertEqual(ran, [None])
 
-
     def test_reprFunction(self):
         """
         L{LoopingCall.__repr__} includes the wrapped function's name.
         """
-        self.assertEqual(repr(task.LoopingCall(installReactor, 1, key=2)),
-                         "LoopingCall<None>(installReactor, *(1,), **{'key': 2})")
-
+        self.assertEqual(
+            repr(task.LoopingCall(installReactor, 1, key=2)),
+            "LoopingCall<None>(installReactor, *(1,), **{'key': 2})",
+        )
 
     def test_reprMethod(self):
         """
@@ -716,8 +760,8 @@ class LoopTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(task.LoopingCall(TestableLoopingCall.__init__)),
-            "LoopingCall<None>(TestableLoopingCall.__init__, *(), **{})")
-
+            "LoopingCall<None>(TestableLoopingCall.__init__, *(), **{})",
+        )
 
     def test_deferredDeprecation(self):
         """
@@ -728,15 +772,14 @@ class LoopTests(unittest.TestCase):
         loop.deferred
 
         message = (
-                'twisted.internet.task.LoopingCall.deferred was deprecated in '
-                'Twisted 16.0.0; '
-                'please use the deferred returned by start() instead'
-                )
+            "twisted.internet.task.LoopingCall.deferred was deprecated in "
+            "Twisted 16.0.0; "
+            "please use the deferred returned by start() instead"
+        )
         warnings = self.flushWarnings([self.test_deferredDeprecation])
         self.assertEqual(1, len(warnings))
-        self.assertEqual(DeprecationWarning, warnings[0]['category'])
-        self.assertEqual(message, warnings[0]['message'])
-
+        self.assertEqual(DeprecationWarning, warnings[0]["category"])
+        self.assertEqual(message, warnings[0]["message"])
 
 
 class ReactorLoopTests(unittest.TestCase):
@@ -749,7 +792,6 @@ class ReactorLoopTests(unittest.TestCase):
         lc = task.LoopingCall(foo, "bar")
         return self.assertFailure(lc.start(0.1), TestException)
 
-
     def testFailAndStop(self):
         def foo(x):
             lc.stop()
@@ -757,7 +799,6 @@ class ReactorLoopTests(unittest.TestCase):
 
         lc = task.LoopingCall(foo, "bar")
         return self.assertFailure(lc.start(0.1), TestException)
-
 
     def testEveryIteration(self):
         ran = []
@@ -769,23 +810,26 @@ class ReactorLoopTests(unittest.TestCase):
 
         lc = task.LoopingCall(foo)
         d = lc.start(0)
+
         def stopped(ign):
             self.assertEqual(len(ran), 6)
-        return d.addCallback(stopped)
 
+        return d.addCallback(stopped)
 
     def testStopAtOnceLater(self):
         # Ensure that even when LoopingCall.stop() is called from a
         # reactor callback, it still prevents any subsequent calls.
         d = defer.Deferred()
+
         def foo():
-            d.errback(failure.DefaultException(
-                "This task also should never get called."))
+            d.errback(
+                failure.DefaultException("This task also should never get called.")
+            )
+
         self._lc = task.LoopingCall(foo)
         self._lc.start(1, now=False)
         reactor.callLater(0, self._callback_for_testStopAtOnceLater, d)
         return d
-
 
     def _callback_for_testStopAtOnceLater(self, d):
         self._lc.stop()
@@ -830,7 +874,6 @@ class ReactorLoopTests(unittest.TestCase):
         clock.pump(timings)
         self.assertFalse(clock.calls)
         return d
-
 
     def test_deferredWithCount(self):
         """
@@ -877,11 +920,11 @@ class ReactorLoopTests(unittest.TestCase):
         self.assertEqual(deferredCounts, [1, 3])
 
 
-
 class DeferLaterTests(unittest.TestCase):
     """
     Tests for L{task.deferLater}.
     """
+
     def test_callback(self):
         """
         The L{Deferred} returned by L{task.deferLater} is called back after
@@ -889,25 +932,26 @@ class DeferLaterTests(unittest.TestCase):
         """
         results = []
         flag = object()
+
         def callable(foo, bar):
             results.append((foo, bar))
             return flag
 
         clock = task.Clock()
-        d = task.deferLater(clock, 3, callable, 'foo', bar='bar')
+        d = task.deferLater(clock, 3, callable, "foo", bar="bar")
         d.addCallback(self.assertIs, flag)
         clock.advance(2)
         self.assertEqual(results, [])
         clock.advance(1)
-        self.assertEqual(results, [('foo', 'bar')])
+        self.assertEqual(results, [("foo", "bar")])
         return d
-
 
     def test_errback(self):
         """
         The L{Deferred} returned by L{task.deferLater} is errbacked if the
         supplied function raises an exception.
         """
+
         def callable():
             raise TestException()
 
@@ -915,7 +959,6 @@ class DeferLaterTests(unittest.TestCase):
         d = task.deferLater(clock, 1, callable)
         clock.advance(1)
         return self.assertFailure(d, TestException)
-
 
     def test_cancel(self):
         """
@@ -926,15 +969,16 @@ class DeferLaterTests(unittest.TestCase):
         clock = task.Clock()
         d = task.deferLater(clock, 1, called.append, None)
         d.cancel()
+
         def cbCancelled(ignored):
             # Make sure there are no calls outstanding.
             self.assertEqual([], clock.getDelayedCalls())
             # And make sure the call didn't somehow happen already.
             self.assertFalse(called)
+
         self.assertFailure(d, defer.CancelledError)
         d.addCallback(cbCancelled)
         return d
-
 
     def test_noCallback(self):
         """
@@ -949,9 +993,7 @@ class DeferLaterTests(unittest.TestCase):
         self.assertIs(None, self.successResultOf(d))
 
 
-
-class _FakeReactor(object):
-
+class _FakeReactor:
     def __init__(self):
         self._running = False
         self._clock = task.Clock()
@@ -959,8 +1001,7 @@ class _FakeReactor(object):
         self.seconds = self._clock.seconds
         self.getDelayedCalls = self._clock.getDelayedCalls
         self._whenRunning = []
-        self._shutdownTriggers = {'before': [], 'during': []}
-
+        self._shutdownTriggers = {"before": [], "during": []}
 
     def callWhenRunning(self, callable, *args, **kwargs):
         if self._whenRunning is None:
@@ -968,12 +1009,10 @@ class _FakeReactor(object):
         else:
             self._whenRunning.append((callable, args, kwargs))
 
-
     def addSystemEventTrigger(self, phase, event, callable, *args):
-        assert phase in ('before', 'during')
-        assert event == 'shutdown'
+        assert phase in ("before", "during")
+        assert event == "shutdown"
         self._shutdownTriggers[phase].append((callable, args))
-
 
     def run(self):
         """
@@ -994,9 +1033,8 @@ class _FakeReactor(object):
             self._clock.advance(calls[0].getTime() - self.seconds())
         shutdownTriggers = self._shutdownTriggers
         self._shutdownTriggers = None
-        for (trigger, args) in shutdownTriggers['before'] + shutdownTriggers['during']:
+        for trigger, args in shutdownTriggers["before"] + shutdownTriggers["during"]:
             trigger(*args)
-
 
     def stop(self):
         """
@@ -1005,7 +1043,6 @@ class _FakeReactor(object):
         if not self._running:
             raise error.ReactorNotRunning()
         self._running = False
-
 
 
 class ReactTests(unittest.SynchronousTestCase):
@@ -1019,18 +1056,18 @@ class ReactTests(unittest.SynchronousTestCase):
         function it is passed is called back, then stops it.
         """
         timePassed = []
+
         def main(reactor):
             finished = defer.Deferred()
             reactor.callLater(1, timePassed.append, True)
             reactor.callLater(2, finished.callback, None)
             return finished
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
         self.assertEqual(0, exitError.code)
         self.assertEqual(timePassed, [True])
         self.assertEqual(r.seconds(), 2)
-
 
     def test_runsUntilSyncCallback(self):
         """
@@ -1038,14 +1075,14 @@ class ReactTests(unittest.SynchronousTestCase):
         function it is passed has already been called back at the time it is
         returned.
         """
+
         def main(reactor):
             return defer.succeed(None)
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
         self.assertEqual(0, exitError.code)
         self.assertEqual(r.seconds(), 0)
-
 
     def test_runsUntilAsyncErrback(self):
         """
@@ -1053,6 +1090,7 @@ class ReactTests(unittest.SynchronousTestCase):
         the function it is passed is errbacked, then it stops the reactor and
         reports the error.
         """
+
         class ExpectedException(Exception):
             pass
 
@@ -1060,15 +1098,14 @@ class ReactTests(unittest.SynchronousTestCase):
             finished = defer.Deferred()
             reactor.callLater(1, finished.errback, ExpectedException())
             return finished
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
 
         self.assertEqual(1, exitError.code)
 
         errors = self.flushLoggedErrors(ExpectedException)
         self.assertEqual(len(errors), 1)
-
 
     def test_runsUntilSyncErrback(self):
         """
@@ -1076,19 +1113,19 @@ class ReactTests(unittest.SynchronousTestCase):
         function it is passed has already been errbacked at the time it is
         returned.
         """
+
         class ExpectedException(Exception):
             pass
 
         def main(reactor):
             return defer.fail(ExpectedException())
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
         self.assertEqual(1, exitError.code)
         self.assertEqual(r.seconds(), 0)
         errors = self.flushLoggedErrors(ExpectedException)
         self.assertEqual(len(errors), 1)
-
 
     def test_singleStopCallback(self):
         """
@@ -1096,19 +1133,18 @@ class ReactTests(unittest.SynchronousTestCase):
         the function it is passed is called back after the reactor has already
         been stopped.
         """
+
         def main(reactor):
             reactor.callLater(1, reactor.stop)
             finished = defer.Deferred()
-            reactor.addSystemEventTrigger(
-                'during', 'shutdown', finished.callback, None)
+            reactor.addSystemEventTrigger("during", "shutdown", finished.callback, None)
             return finished
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
         self.assertEqual(r.seconds(), 1)
 
         self.assertEqual(0, exitError.code)
-
 
     def test_singleStopErrback(self):
         """
@@ -1116,6 +1152,7 @@ class ReactTests(unittest.SynchronousTestCase):
         the function it is passed is errbacked after the reactor has already
         been stopped.
         """
+
         class ExpectedException(Exception):
             pass
 
@@ -1123,11 +1160,12 @@ class ReactTests(unittest.SynchronousTestCase):
             reactor.callLater(1, reactor.stop)
             finished = defer.Deferred()
             reactor.addSystemEventTrigger(
-                'during', 'shutdown', finished.errback, ExpectedException())
+                "during", "shutdown", finished.errback, ExpectedException()
+            )
             return finished
+
         r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, _reactor=r)
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
 
         self.assertEqual(1, exitError.code)
 
@@ -1135,28 +1173,30 @@ class ReactTests(unittest.SynchronousTestCase):
         errors = self.flushLoggedErrors(ExpectedException)
         self.assertEqual(len(errors), 1)
 
-
     def test_arguments(self):
         """
         L{task.react} passes the elements of the list it is passed as
         positional arguments to the function it is passed.
         """
         args = []
+
         def main(reactor, x, y, z):
             args.extend((x, y, z))
             return defer.succeed(None)
+
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [1, 2, 3], _reactor=r)
+            SystemExit, task.react, main, [1, 2, 3], _reactor=r
+        )
         self.assertEqual(0, exitError.code)
         self.assertEqual(args, [1, 2, 3])
-
 
     def test_defaultReactor(self):
         """
         L{twisted.internet.reactor} is used if no reactor argument is passed to
         L{task.react}.
         """
+
         def main(reactor):
             self.passedReactor = reactor
             return defer.succeed(None)
@@ -1168,47 +1208,260 @@ class ReactTests(unittest.SynchronousTestCase):
             self.assertEqual(0, exitError.code)
         self.assertIs(reactor, self.passedReactor)
 
-
     def test_exitWithDefinedCode(self):
         """
         L{task.react} forwards the exit code specified by the C{SystemExit}
         error returned by the passed function, if any.
         """
+
         def main(reactor):
             return defer.fail(SystemExit(23))
-        r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
-        self.assertEqual(23, exitError.code)
 
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
+        self.assertEqual(23, exitError.code)
 
     def test_synchronousStop(self):
         """
         L{task.react} handles when the reactor is stopped just before the
         returned L{Deferred} fires.
         """
+
         def main(reactor):
             d = defer.Deferred()
+
             def stop():
                 reactor.stop()
                 d.callback(None)
+
             reactor.callWhenRunning(stop)
             return d
-        r = _FakeReactor()
-        exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
-        self.assertEqual(0, exitError.code)
 
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
+        self.assertEqual(0, exitError.code)
 
     def test_asynchronousStop(self):
         """
         L{task.react} handles when the reactor is stopped and the
         returned L{Deferred} doesn't fire.
         """
+
         def main(reactor):
             reactor.callLater(1, reactor.stop)
             return defer.Deferred()
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
+        self.assertEqual(0, exitError.code)
+
+
+class ReactCoroutineFunctionTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{twisted.internet.task.react} with an C{async def} argument
+    """
+
+    def test_runsUntilAsyncCallback(self):
+        """
+        L{task.react} runs the reactor until the L{Deferred} returned by the
+        function it is passed is called back, then stops it.
+        """
+        timePassed = []
+
+        async def main(reactor):
+            finished = defer.Deferred()
+            reactor.callLater(1, timePassed.append, True)
+            reactor.callLater(2, finished.callback, None)
+            return await finished
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+        self.assertEqual(0, exitError.code)
+        self.assertEqual(timePassed, [True])
+        self.assertEqual(r.seconds(), 2)
+
+    def test_runsUntilSyncCallback(self):
+        """
+        L{task.react} returns quickly if the L{Deferred} returned by the
+        function it is passed has already been called back at the time it is
+        returned.
+        """
+
+        async def main(reactor):
+            return await defer.succeed(None)
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+        self.assertEqual(0, exitError.code)
+        self.assertEqual(r.seconds(), 0)
+
+    def test_runsUntilAsyncErrback(self):
+        """
+        L{task.react} runs the reactor until the L{defer.Deferred} returned by
+        the function it is passed is errbacked, then it stops the reactor and
+        reports the error.
+        """
+
+        class ExpectedException(Exception):
+            pass
+
+        async def main(reactor):
+            finished = defer.Deferred()
+            reactor.callLater(1, finished.errback, ExpectedException())
+            return await finished
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+
+        self.assertEqual(1, exitError.code)
+
+        errors = self.flushLoggedErrors(ExpectedException)
+        self.assertEqual(len(errors), 1)
+
+    def test_runsUntilSyncErrback(self):
+        """
+        L{task.react} returns quickly if the L{defer.Deferred} returned by the
+        function it is passed has already been errbacked at the time it is
+        returned.
+        """
+
+        class ExpectedException(Exception):
+            pass
+
+        async def main(reactor):
+            return await defer.fail(ExpectedException())
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+        self.assertEqual(1, exitError.code)
+        self.assertEqual(r.seconds(), 0)
+        errors = self.flushLoggedErrors(ExpectedException)
+        self.assertEqual(len(errors), 1)
+
+    def test_singleStopCallback(self):
+        """
+        L{task.react} doesn't try to stop the reactor if the L{defer.Deferred}
+        the function it is passed is called back after the reactor has already
+        been stopped.
+        """
+
+        async def main(reactor):
+            reactor.callLater(1, reactor.stop)
+            finished = defer.Deferred()
+            reactor.addSystemEventTrigger("during", "shutdown", finished.callback, None)
+            return await finished
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+        self.assertEqual(r.seconds(), 1)
+
+        self.assertEqual(0, exitError.code)
+
+    def test_singleStopErrback(self):
+        """
+        L{task.react} doesn't try to stop the reactor if the L{defer.Deferred}
+        the function it is passed is errbacked after the reactor has already
+        been stopped.
+        """
+
+        class ExpectedException(Exception):
+            pass
+
+        async def main(reactor):
+            reactor.callLater(1, reactor.stop)
+            finished = defer.Deferred()
+            reactor.addSystemEventTrigger(
+                "during", "shutdown", finished.errback, ExpectedException()
+            )
+            return await finished
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, _reactor=r)
+
+        self.assertEqual(1, exitError.code)
+
+        self.assertEqual(r.seconds(), 1)
+        errors = self.flushLoggedErrors(ExpectedException)
+        self.assertEqual(len(errors), 1)
+
+    def test_arguments(self):
+        """
+        L{task.react} passes the elements of the list it is passed as
+        positional arguments to the function it is passed.
+        """
+        args = []
+
+        async def main(reactor, x, y, z):
+            args.extend((x, y, z))
+            return await defer.succeed(None)
+
         r = _FakeReactor()
         exitError = self.assertRaises(
-            SystemExit, task.react, main, [], _reactor=r)
+            SystemExit, task.react, main, [1, 2, 3], _reactor=r
+        )
+        self.assertEqual(0, exitError.code)
+        self.assertEqual(args, [1, 2, 3])
+
+    def test_defaultReactor(self):
+        """
+        L{twisted.internet.reactor} is used if no reactor argument is passed to
+        L{task.react}.
+        """
+
+        async def main(reactor):
+            self.passedReactor = reactor
+            return await defer.succeed(None)
+
+        reactor = _FakeReactor()
+        with NoReactor():
+            installReactor(reactor)
+            exitError = self.assertRaises(SystemExit, task.react, main, [])
+            self.assertEqual(0, exitError.code)
+        self.assertIs(reactor, self.passedReactor)
+
+    def test_exitWithDefinedCode(self):
+        """
+        L{task.react} forwards the exit code specified by the C{SystemExit}
+        error returned by the passed function, if any.
+        """
+
+        async def main(reactor):
+            return await defer.fail(SystemExit(23))
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
+        self.assertEqual(23, exitError.code)
+
+    def test_synchronousStop(self):
+        """
+        L{task.react} handles when the reactor is stopped just before the
+        returned L{Deferred} fires.
+        """
+
+        async def main(reactor):
+            d = defer.Deferred()
+
+            def stop():
+                reactor.stop()
+                d.callback(None)
+
+            reactor.callWhenRunning(stop)
+            return await d
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
+        self.assertEqual(0, exitError.code)
+
+    def test_asynchronousStop(self):
+        """
+        L{task.react} handles when the reactor is stopped and the
+        returned L{Deferred} doesn't fire.
+        """
+
+        async def main(reactor):
+            reactor.callLater(1, reactor.stop)
+            return await defer.Deferred()
+
+        r = _FakeReactor()
+        exitError = self.assertRaises(SystemExit, task.react, main, [], _reactor=r)
         self.assertEqual(0, exitError.code)

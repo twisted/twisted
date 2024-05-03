@@ -5,18 +5,15 @@
 Test case for L{twisted.protocols.loopback}.
 """
 
-from __future__ import division, absolute_import
 
 from zope.interface import implementer
 
-from twisted.python.compat import intToBytes
-from twisted.trial import unittest
-from twisted.protocols import basic, loopback
-from twisted.internet import defer
-from twisted.internet.protocol import Protocol
+from twisted.internet import defer, interfaces, reactor
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IAddress, IPushProducer, IPullProducer
-from twisted.internet import reactor, interfaces
+from twisted.internet.interfaces import IAddress, IPullProducer, IPushProducer
+from twisted.internet.protocol import Protocol
+from twisted.protocols import basic, loopback
+from twisted.trial import unittest
 
 
 class SimpleProtocol(basic.LineReceiver):
@@ -25,32 +22,28 @@ class SimpleProtocol(basic.LineReceiver):
         self.lines = []
         self.connLost = []
 
-
     def connectionMade(self):
         self.conn.callback(None)
 
-
     def lineReceived(self, line):
         self.lines.append(line)
-
 
     def connectionLost(self, reason):
         self.connLost.append(reason)
 
 
-
 class DoomProtocol(SimpleProtocol):
     i = 0
+
     def lineReceived(self, line):
         self.i += 1
         if self.i < 4:
             # by this point we should have connection closed,
             # but just in case we didn't we won't ever send 'Hello 4'
-            self.sendLine(b"Hello " + intToBytes(self.i))
+            self.sendLine(b"Hello %d" % (self.i,))
         SimpleProtocol.lineReceived(self, line)
         if self.lines[-1] == b"Hello 3":
             self.transport.loseConnection()
-
 
 
 class LoopbackTestCaseMixin:
@@ -61,16 +54,17 @@ class LoopbackTestCaseMixin:
         def sendALine(result):
             s.sendLine(b"THIS IS LINE ONE!")
             s.transport.loseConnection()
+
         s.conn.addCallback(sendALine)
 
         def check(ignored):
             self.assertEqual(c.lines, [b"THIS IS LINE ONE!"])
             self.assertEqual(len(s.connLost), 1)
             self.assertEqual(len(c.connLost), 1)
+
         d = defer.maybeDeferred(self.loopbackFunc, s, c)
         d.addCallback(check)
         return d
-
 
     def testSneakyHiddenDoom(self):
         s = DoomProtocol()
@@ -78,31 +72,34 @@ class LoopbackTestCaseMixin:
 
         def sendALine(result):
             s.sendLine(b"DOOM LINE")
+
         s.conn.addCallback(sendALine)
 
         def check(ignored):
-            self.assertEqual(s.lines, [b'Hello 1', b'Hello 2', b'Hello 3'])
+            self.assertEqual(s.lines, [b"Hello 1", b"Hello 2", b"Hello 3"])
             self.assertEqual(
-                c.lines, [b'DOOM LINE', b'Hello 1', b'Hello 2', b'Hello 3'])
+                c.lines, [b"DOOM LINE", b"Hello 1", b"Hello 2", b"Hello 3"]
+            )
             self.assertEqual(len(s.connLost), 1)
             self.assertEqual(len(c.connLost), 1)
+
         d = defer.maybeDeferred(self.loopbackFunc, s, c)
         d.addCallback(check)
         return d
 
 
-
 class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackAsync)
-
 
     def test_makeConnection(self):
         """
         Test that the client and server protocol both have makeConnection
         invoked on them by loopbackAsync.
         """
+
         class TestProtocol(Protocol):
             transport = None
+
             def makeConnection(self, transport):
                 self.transport = transport
 
@@ -112,11 +109,11 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         self.assertIsNotNone(client.transport)
         self.assertIsNotNone(server.transport)
 
-
     def _hostpeertest(self, get, testServer):
         """
         Test one of the permutations of client/server host/peer.
         """
+
         class TestProtocol(Protocol):
             def makeConnection(self, transport):
                 Protocol.makeConnection(self, transport)
@@ -139,7 +136,6 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
         return d.addCallback(connected)
 
-
     def test_serverHost(self):
         """
         Test that the server gets a transport with a properly functioning
@@ -147,13 +143,11 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         """
         return self._hostpeertest("getHost", True)
 
-
     def test_serverPeer(self):
         """
         Like C{test_serverHost} but for L{ITransport.getPeer}
         """
         return self._hostpeertest("getPeer", True)
-
 
     def test_clientHost(self, get="getHost"):
         """
@@ -162,13 +156,11 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         """
         return self._hostpeertest("getHost", False)
 
-
     def test_clientPeer(self):
         """
         Like C{test_clientHost} but for L{ITransport.getPeer}.
         """
         return self._hostpeertest("getPeer", False)
-
 
     def _greetingtest(self, write, testServer):
         """
@@ -177,8 +169,10 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         @param write: The name of the method to test, C{"write"} or
             C{"writeSequence"}.
         """
+
         class GreeteeProtocol(Protocol):
             bytes = b""
+
             def dataReceived(self, bytes):
                 self.bytes += bytes
                 if self.bytes == b"bytes":
@@ -203,14 +197,12 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         loopback.loopbackAsync(server, client)
         return d
 
-
     def test_clientGreeting(self):
         """
         Test that on a connection where the client speaks first, the server
         receives the bytes sent by the client.
         """
         return self._greetingtest("write", False)
-
 
     def test_clientGreetingSequence(self):
         """
@@ -219,14 +211,12 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         """
         return self._greetingtest("writeSequence", False)
 
-
     def test_serverGreeting(self, write="write"):
         """
         Test that on a connection where the server speaks first, the client
         receives the bytes sent by the server.
         """
         return self._greetingtest("write", True)
-
 
     def test_serverGreetingSequence(self):
         """
@@ -235,9 +225,8 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         """
         return self._greetingtest("writeSequence", True)
 
-
     def _producertest(self, producerClass):
-        toProduce = list(map(intToBytes, range(0, 10)))
+        toProduce = [b"%d" % (i,) for i in range(0, 10)]
 
         class ProducingProtocol(Protocol):
             def connectionMade(self):
@@ -246,9 +235,10 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
 
         class ReceivingProtocol(Protocol):
             bytes = b""
+
             def dataReceived(self, data):
                 self.bytes += data
-                if self.bytes == b''.join(toProduce):
+                if self.bytes == b"".join(toProduce):
                     self.received.callback((client, server))
 
         server = ProducingProtocol()
@@ -258,13 +248,13 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         loopback.loopbackAsync(server, client)
         return client.received
 
-
     def test_pushProducer(self):
         """
         Test a push producer registered against a loopback transport.
         """
+
         @implementer(IPushProducer)
-        class PushProducer(object):
+        class PushProducer:
             resumed = False
 
             def __init__(self, toProduce):
@@ -284,23 +274,26 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
                     reactor.callLater(0, self._produceAndSchedule)
                 else:
                     self.consumer.unregisterProducer()
+
         d = self._producertest(PushProducer)
 
         def finished(results):
             (client, server) = results
             self.assertFalse(
                 server.producer.resumed,
-                "Streaming producer should not have been resumed.")
+                "Streaming producer should not have been resumed.",
+            )
+
         d.addCallback(finished)
         return d
-
 
     def test_pullProducer(self):
         """
         Test a pull producer registered against a loopback transport.
         """
+
         @implementer(IPullProducer)
-        class PullProducer(object):
+        class PullProducer:
             def __init__(self, toProduce):
                 self.toProduce = toProduce
 
@@ -312,8 +305,8 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
                 self.consumer.write(self.toProduce.pop(0))
                 if not self.toProduce:
                     self.consumer.unregisterProducer()
-        return self._producertest(PullProducer)
 
+        return self._producertest(PullProducer)
 
     def test_writeNotReentrant(self):
         """
@@ -321,6 +314,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         method while that protocol's transport's C{write} method is higher up
         on the stack.
         """
+
         class Server(Protocol):
             def dataReceived(self, bytes):
                 self.transport.write(b"bytes")
@@ -342,11 +336,12 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         server = Server()
         client = Client()
         d = loopback.loopbackAsync(client, server)
+
         def cbFinished(ignored):
             self.assertTrue(client.wasReady)
+
         d.addCallback(cbFinished)
         return d
-
 
     def test_pumpPolicy(self):
         """
@@ -355,6 +350,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         and a protocol to which they should be delivered.
         """
         pumpCalls = []
+
         def dummyPolicy(queue, target):
             bytes = []
             while queue:
@@ -378,11 +374,11 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
                 pumpCalls,
                 # The order here is somewhat arbitrary.  The implementation
                 # happens to always deliver data to the client first.
-                [(client, [b"baz", b"quux", None]),
-                 (server, [b"foo", b"bar"])])
+                [(client, [b"baz", b"quux", None]), (server, [b"foo", b"bar"])],
+            )
+
         finished.addCallback(cbComplete)
         return finished
-
 
     def test_identityPumpPolicy(self):
         """
@@ -400,7 +396,6 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         loopback.identityPumpPolicy(queue, client)
 
         self.assertEqual(bytes, [b"foo", b"bar"])
-
 
     def test_collapsingPumpPolicy(self):
         """
@@ -421,10 +416,8 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         self.assertEqual(bytes, [b"foobar"])
 
 
-
 class LoopbackTCPTests(LoopbackTestCaseMixin, unittest.TestCase):
     loopbackFunc = staticmethod(loopback.loopbackTCP)
-
 
 
 class LoopbackUNIXTests(LoopbackTestCaseMixin, unittest.TestCase):
@@ -434,41 +427,38 @@ class LoopbackUNIXTests(LoopbackTestCaseMixin, unittest.TestCase):
         skip = "Current reactor does not support UNIX sockets"
 
 
-
 class LoopbackRelayTest(unittest.TestCase):
     """
     Test for L{twisted.protocols.loopback.LoopbackRelay}
     """
+
     class Receiver(Protocol):
         """
         Simple Receiver class used for testing LoopbackRelay
         """
-        data = b''
+
+        data = b""
+
         def dataReceived(self, data):
             "Accumulate received data for verification"
             self.data += data
-
 
     def test_write(self):
         "Test to verify that the write function works as expected"
         receiver = self.Receiver()
         relay = loopback.LoopbackRelay(receiver)
-        relay.write(b'abc')
-        relay.write(b'def')
-        self.assertEqual(receiver.data, b'')
+        relay.write(b"abc")
+        relay.write(b"def")
+        self.assertEqual(receiver.data, b"")
         relay.clearBuffer()
-        self.assertEqual(receiver.data, b'abcdef')
-
+        self.assertEqual(receiver.data, b"abcdef")
 
     def test_writeSequence(self):
         "Test to verify that the writeSequence function works as expected"
         receiver = self.Receiver()
         relay = loopback.LoopbackRelay(receiver)
-        relay.writeSequence(
-            [b'The ', b'quick ', b'brown ', b'fox '])
-        relay.writeSequence(
-            [b'jumps ', b'over ', b'the lazy dog'])
-        self.assertEqual(receiver.data, b'')
+        relay.writeSequence([b"The ", b"quick ", b"brown ", b"fox "])
+        relay.writeSequence([b"jumps ", b"over ", b"the lazy dog"])
+        self.assertEqual(receiver.data, b"")
         relay.clearBuffer()
-        self.assertEqual(
-            receiver.data, b'The quick brown fox jumps over the lazy dog')
+        self.assertEqual(receiver.data, b"The quick brown fox jumps over the lazy dog")

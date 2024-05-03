@@ -6,18 +6,16 @@ Tests for L{twisted.runner.procmon}.
 """
 import pickle
 
-from twisted.trial import unittest
-from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
-from twisted.internet.error import (ProcessDone, ProcessTerminated,
-                                    ProcessExitedAlready)
+from twisted.internet.error import ProcessDone, ProcessExitedAlready, ProcessTerminated
 from twisted.internet.task import Clock
-from twisted.python.failure import Failure
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import globalLogPublisher
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.python.failure import Failure
+from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
+from twisted.trial import unittest
 
 
-
-class DummyProcess(object):
+class DummyProcess:
     """
     An incomplete and fake L{IProcessTransport} implementation for testing how
     L{ProcessMonitor} behaves when its monitored processes exit.
@@ -31,9 +29,19 @@ class DummyProcess(object):
 
     _terminationDelay = 1
 
-    def __init__(self, reactor, executable, args, environment, path,
-                 proto, uid=None, gid=None, usePTY=0, childFDs=None):
-
+    def __init__(
+        self,
+        reactor,
+        executable,
+        args,
+        environment,
+        path,
+        proto,
+        uid=None,
+        gid=None,
+        usePTY=0,
+        childFDs=None,
+    ):
         self.proto = proto
 
         self._reactor = reactor
@@ -45,7 +53,6 @@ class DummyProcess(object):
         self._gid = gid
         self._usePTY = usePTY
         self._childFDs = childFDs
-
 
     def signalProcess(self, signalID):
         """
@@ -59,10 +66,7 @@ class DummyProcess(object):
         @param signalID: The signal name or number to be issued to the process.
         @type signalID: C{str}
         """
-        params = {
-            "TERM": (self._terminationDelay, 0),
-            "KILL": (0, 1)
-        }
+        params = {"TERM": (self._terminationDelay, 0), "KILL": (0, 1)}
 
         if self.pid is None:
             raise ProcessExitedAlready()
@@ -70,8 +74,8 @@ class DummyProcess(object):
         if signalID in params:
             delay, status = params[signalID]
             self._signalHandler = self._reactor.callLater(
-                delay, self.processEnded, status)
-
+                delay, self.processEnded, status
+            )
 
     def processEnded(self, status):
         """
@@ -85,34 +89,51 @@ class DummyProcess(object):
         self.proto.processEnded(Failure(statusMap[status](status)))
 
 
-
 class DummyProcessReactor(MemoryReactor, Clock):
     """
     @ivar spawnedProcesses: a list that keeps track of the fake process
         instances built by C{spawnProcess}.
     @type spawnedProcesses: C{list}
     """
+
     def __init__(self):
         MemoryReactor.__init__(self)
         Clock.__init__(self)
 
         self.spawnedProcesses = []
 
-
-    def spawnProcess(self, processProtocol, executable, args=(), env={},
-                     path=None, uid=None, gid=None, usePTY=0,
-                     childFDs=None):
+    def spawnProcess(
+        self,
+        processProtocol,
+        executable,
+        args=(),
+        env={},
+        path=None,
+        uid=None,
+        gid=None,
+        usePTY=0,
+        childFDs=None,
+    ):
         """
         Fake L{reactor.spawnProcess}, that logs all the process
         arguments and returns a L{DummyProcess}.
         """
 
-        proc = DummyProcess(self, executable, args, env, path,
-                            processProtocol, uid, gid, usePTY, childFDs)
+        proc = DummyProcess(
+            self,
+            executable,
+            args,
+            env,
+            path,
+            processProtocol,
+            uid,
+            gid,
+            usePTY,
+            childFDs,
+        )
         processProtocol.makeConnection(proc)
         self.spawnedProcesses.append(proc)
         return proc
-
 
 
 class ProcmonTests(unittest.TestCase):
@@ -130,18 +151,15 @@ class ProcmonTests(unittest.TestCase):
         self.pm.maxRestartDelay = 10
         self.pm.threshold = 10
 
-
     def test_reprLooksGood(self):
         """
         Repr includes all details
         """
-        self.pm.addProcess("foo", ["arg1", "arg2"],
-                           uid=1, gid=2, env={})
+        self.pm.addProcess("foo", ["arg1", "arg2"], uid=1, gid=2, env={})
         representation = repr(self.pm)
-        self.assertIn('foo', representation)
-        self.assertIn('1', representation)
-        self.assertIn('2', representation)
-
+        self.assertIn("foo", representation)
+        self.assertIn("1", representation)
+        self.assertIn("2", representation)
 
     def test_simpleReprLooksGood(self):
         """
@@ -152,53 +170,46 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.addProcess("foo", ["arg1", "arg2"], env={})
         representation = repr(self.pm)
-        self.assertNotIn('(', representation)
-        self.assertNotIn(')', representation)
-
+        self.assertNotIn("(", representation)
+        self.assertNotIn(")", representation)
 
     def test_getStateIncludesProcesses(self):
         """
         The list of monitored processes must be included in the pickle state.
         """
-        self.pm.addProcess("foo", ["arg1", "arg2"],
-                           uid=1, gid=2, env={})
-        self.assertEqual(self.pm.__getstate__()['processes'],
-                          {'foo': (['arg1', 'arg2'], 1, 2, {})})
-
+        self.pm.addProcess("foo", ["arg1", "arg2"], uid=1, gid=2, env={})
+        self.assertEqual(
+            self.pm.__getstate__()["processes"], {"foo": (["arg1", "arg2"], 1, 2, {})}
+        )
 
     def test_getStateExcludesReactor(self):
         """
         The private L{ProcessMonitor._reactor} instance variable should not be
         included in the pickle state.
         """
-        self.assertNotIn('_reactor', self.pm.__getstate__())
-
+        self.assertNotIn("_reactor", self.pm.__getstate__())
 
     def test_addProcess(self):
         """
         L{ProcessMonitor.addProcess} only starts the named program if
         L{ProcessMonitor.startService} has been called.
         """
-        self.pm.addProcess("foo", ["arg1", "arg2"],
-                           uid=1, gid=2, env={})
+        self.pm.addProcess("foo", ["arg1", "arg2"], uid=1, gid=2, env={})
         self.assertEqual(self.pm.protocols, {})
-        self.assertEqual(self.pm.processes,
-                          {"foo": (["arg1", "arg2"], 1, 2, {})})
+        self.assertEqual(self.pm.processes, {"foo": (["arg1", "arg2"], 1, 2, {})})
         self.pm.startService()
         self.reactor.advance(0)
         self.assertEqual(list(self.pm.protocols.keys()), ["foo"])
-
 
     def test_addProcessDuplicateKeyError(self):
         """
         L{ProcessMonitor.addProcess} raises a C{KeyError} if a process with the
         given name already exists.
         """
-        self.pm.addProcess("foo", ["arg1", "arg2"],
-                           uid=1, gid=2, env={})
-        self.assertRaises(KeyError, self.pm.addProcess,
-                          "foo", ["arg1", "arg2"], uid=1, gid=2, env={})
-
+        self.pm.addProcess("foo", ["arg1", "arg2"], uid=1, gid=2, env={})
+        self.assertRaises(
+            KeyError, self.pm.addProcess, "foo", ["arg1", "arg2"], uid=1, gid=2, env={}
+        )
 
     def test_addProcessEnv(self):
         """
@@ -209,9 +220,7 @@ class ProcmonTests(unittest.TestCase):
         self.pm.startService()
         self.pm.addProcess("foo", ["foo"], uid=1, gid=2, env=fakeEnv)
         self.reactor.advance(0)
-        self.assertEqual(
-            self.reactor.spawnedProcesses[0]._environment, fakeEnv)
-
+        self.assertEqual(self.reactor.spawnedProcesses[0]._environment, fakeEnv)
 
     def test_addProcessCwd(self):
         """
@@ -219,11 +228,9 @@ class ProcmonTests(unittest.TestCase):
         to L{IReactorProcess.spawnProcess}.
         """
         self.pm.startService()
-        self.pm.addProcess("foo", ["foo"], cwd='/mnt/lala')
+        self.pm.addProcess("foo", ["foo"], cwd="/mnt/lala")
         self.reactor.advance(0)
-        self.assertEqual(
-            self.reactor.spawnedProcesses[0]._path, '/mnt/lala')
-
+        self.assertEqual(self.reactor.spawnedProcesses[0]._path, "/mnt/lala")
 
     def test_removeProcess(self):
         """
@@ -236,7 +243,6 @@ class ProcmonTests(unittest.TestCase):
         self.pm.removeProcess("foo")
         self.assertEqual(len(self.pm.processes), 0)
 
-
     def test_removeProcessUnknownKeyError(self):
         """
         L{ProcessMonitor.removeProcess} raises a C{KeyError} if the given
@@ -244,7 +250,6 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.startService()
         self.assertRaises(KeyError, self.pm.removeProcess, "foo")
-
 
     def test_startProcess(self):
         """
@@ -258,7 +263,6 @@ class ProcmonTests(unittest.TestCase):
         self.assertIsInstance(self.pm.protocols["foo"], LoggingProtocol)
         self.assertIn("foo", self.pm.timeStarted.keys())
 
-
     def test_startProcessAlreadyStarted(self):
         """
         L{ProcessMonitor.startProcess} silently returns if the named process is
@@ -268,14 +272,12 @@ class ProcmonTests(unittest.TestCase):
         self.pm.startProcess("foo")
         self.assertIsNone(self.pm.startProcess("foo"))
 
-
     def test_startProcessUnknownKeyError(self):
         """
         L{ProcessMonitor.startProcess} raises a C{KeyError} if the given
         process name isn't recognised.
         """
         self.assertRaises(KeyError, self.pm.startProcess, "foo")
-
 
     def test_stopProcessNaturalTermination(self):
         """
@@ -299,10 +301,13 @@ class ProcmonTests(unittest.TestCase):
         # verify that the process restarts
         self.reactor.advance(timeToDie)
 
-        # We expect it to be restarted immediately
-        self.assertEqual(self.reactor.seconds(),
-                         self.pm.timeStarted["foo"])
+        # No further time is required to pass here but the reactor must
+        # iterate due to implementation details.  See the comment in
+        # test_stopProcessForcedKill.
+        self.reactor.advance(0)
 
+        # We expect it to be restarted immediately
+        self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
     def test_stopProcessForcedKill(self):
         """
@@ -323,9 +328,15 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(0.0, self.pm.timeStarted["foo"])
 
         self.reactor.advance(1)
-        # We expect it to be immediately restarted
-        self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
+        # We expect it to be immediately restarted.  While no actual time
+        # should need to pass for this to happen, the reactor will need to
+        # iterate a couple times because the implementation uses `callLater`
+        # (twice!) to schedule the restart and no delayed call can run sooner
+        # than the reactor iteration after it is scheduled.
+        self.reactor.pump([0, 0])
+
+        self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
     def test_stopProcessUnknownKeyError(self):
         """
@@ -333,7 +344,6 @@ class ProcmonTests(unittest.TestCase):
         name isn't recognised.
         """
         self.assertRaises(KeyError, self.pm.stopProcess, "foo")
-
 
     def test_stopProcessAlreadyStopped(self):
         """
@@ -343,7 +353,6 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.addProcess("foo", ["foo"])
         self.assertIsNone(self.pm.stopProcess("foo"))
-
 
     def test_outputReceivedCompleteLine(self):
         """
@@ -361,17 +370,16 @@ class ProcmonTests(unittest.TestCase):
         # Long time passes
         self.reactor.advance(self.pm.threshold)
         # Process greets
-        self.pm.protocols["foo"].outReceived(b'hello world!\n')
+        self.pm.protocols["foo"].outReceived(b"hello world!\n")
         self.assertEquals(len(events), 1)
-        namespace = events[0]['log_namespace']
-        stream = events[0]['stream']
-        tag = events[0]['tag']
-        line = events[0]['line']
-        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
-        self.assertEquals(stream, 'stdout')
-        self.assertEquals(tag, 'foo')
-        self.assertEquals(line, u'hello world!')
-
+        namespace = events[0]["log_namespace"]
+        stream = events[0]["stream"]
+        tag = events[0]["tag"]
+        line = events[0]["line"]
+        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEquals(stream, "stdout")
+        self.assertEquals(tag, "foo")
+        self.assertEquals(line, "hello world!")
 
     def test_ouputReceivedCompleteErrLine(self):
         """
@@ -389,19 +397,16 @@ class ProcmonTests(unittest.TestCase):
         # Long time passes
         self.reactor.advance(self.pm.threshold)
         # Process greets
-        self.pm.protocols["foo"].errReceived(b'hello world!\n')
+        self.pm.protocols["foo"].errReceived(b"hello world!\n")
         self.assertEquals(len(events), 1)
-        namespace = events[0]['log_namespace']
-        stream = events[0]['stream']
-        tag = events[0]['tag']
-        line = events[0]['line']
-        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
-        self.assertEquals(stream, 'stderr')
-        self.assertEquals(tag, 'foo')
-        self.assertEquals(line, u'hello world!')
-
-
-
+        namespace = events[0]["log_namespace"]
+        stream = events[0]["stream"]
+        tag = events[0]["tag"]
+        line = events[0]["line"]
+        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEquals(stream, "stderr")
+        self.assertEquals(tag, "foo")
+        self.assertEquals(line, "hello world!")
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
         """
@@ -419,18 +424,17 @@ class ProcmonTests(unittest.TestCase):
         # Long time passes
         self.reactor.advance(self.pm.threshold)
         # Process greets
-        self.pm.protocols["foo"].outReceived(b'\xffhello world!\n')
+        self.pm.protocols["foo"].outReceived(b"\xffhello world!\n")
         self.assertEquals(len(events), 1)
         message = events[0]
-        namespace = message['log_namespace']
-        stream = message['stream']
-        tag = message['tag']
-        output = message['line']
-        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
-        self.assertEquals(stream, 'stdout')
-        self.assertEquals(tag, 'foo')
-        self.assertEquals(output, repr(b'\xffhello world!'))
-
+        namespace = message["log_namespace"]
+        stream = message["stream"]
+        tag = message["tag"]
+        output = message["line"]
+        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEquals(stream, "stdout")
+        self.assertEquals(tag, "foo")
+        self.assertEquals(output, repr(b"\xffhello world!"))
 
     def test_outputReceivedPartialLine(self):
         """
@@ -448,18 +452,18 @@ class ProcmonTests(unittest.TestCase):
         # Long time passes
         self.reactor.advance(self.pm.threshold)
         # Process greets
-        self.pm.protocols["foo"].outReceived(b'hello world!')
+        self.pm.protocols["foo"].outReceived(b"hello world!")
         self.assertEquals(len(events), 0)
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
         self.assertEquals(len(events), 1)
-        namespace = events[0]['log_namespace']
-        stream = events[0]['stream']
-        tag = events[0]['tag']
-        line = events[0]['line']
-        self.assertEquals(namespace, 'twisted.runner.procmon.ProcessMonitor')
-        self.assertEquals(stream, 'stdout')
-        self.assertEquals(tag, 'foo')
-        self.assertEquals(line, u'hello world!')
+        namespace = events[0]["log_namespace"]
+        stream = events[0]["stream"]
+        tag = events[0]["tag"]
+        line = events[0]["line"]
+        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEquals(stream, "stdout")
+        self.assertEquals(tag, "foo")
+        self.assertEquals(line, "hello world!")
 
     def test_connectionLostLongLivedProcess(self):
         """
@@ -481,7 +485,6 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(0)
         self.assertIn("foo", self.pm.protocols)
 
-
     def test_connectionLostMurderCancel(self):
         """
         L{ProcessMonitor.connectionLost} cancels a scheduled process killer and
@@ -498,12 +501,10 @@ class ProcmonTests(unittest.TestCase):
         delayedCall = self.pm.murder["foo"]
         self.assertTrue(delayedCall.active())
         # Advance to the point at which the dummy process exits
-        self.reactor.advance(
-            self.pm.protocols["foo"].transport._terminationDelay)
+        self.reactor.advance(self.pm.protocols["foo"].transport._terminationDelay)
         # Now the delayedCall has been cancelled and deleted
         self.assertFalse(delayedCall.active())
         self.assertNotIn("foo", self.pm.murder)
-
 
     def test_connectionLostProtocolDeletion(self):
         """
@@ -514,10 +515,8 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         self.assertIn("foo", self.pm.protocols)
         self.pm.protocols["foo"].transport.signalProcess("KILL")
-        self.reactor.advance(
-            self.pm.protocols["foo"].transport._terminationDelay)
+        self.reactor.advance(self.pm.protocols["foo"].transport._terminationDelay)
         self.assertNotIn("foo", self.pm.protocols)
-
 
     def test_connectionLostMinMaxRestartDelay(self):
         """
@@ -535,7 +534,6 @@ class ProcmonTests(unittest.TestCase):
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
         self.assertEqual(self.pm.delay["foo"], self.pm.maxRestartDelay)
 
-
     def test_connectionLostBackoffDelayDoubles(self):
         """
         L{ProcessMonitor.connectionLost} doubles the restart delay each time
@@ -543,13 +541,12 @@ class ProcmonTests(unittest.TestCase):
         """
         self.pm.startService()
         self.pm.addProcess("foo", ["foo"])
-        self.reactor.advance(self.pm.threshold - 1) #9s
+        self.reactor.advance(self.pm.threshold - 1)  # 9s
         self.assertIn("foo", self.pm.protocols)
         self.assertEqual(self.pm.delay["foo"], self.pm.minRestartDelay)
         # process dies within the threshold and should not restart immediately
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
         self.assertEqual(self.pm.delay["foo"], self.pm.minRestartDelay * 2)
-
 
     def test_startService(self):
         """
@@ -561,7 +558,6 @@ class ProcmonTests(unittest.TestCase):
         # advance the reactor to start the process
         self.reactor.advance(0)
         self.assertIn("foo", self.pm.protocols)
-
 
     def test_stopService(self):
         """
@@ -584,7 +580,6 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.killTime + 1)
         # The processes shouldn't be restarted
         self.assertEqual({}, self.pm.protocols)
-
 
     def test_restartAllRestartsOneProcess(self):
         """
@@ -617,11 +612,10 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(1)
         # Kill the process early
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
-        self.assertTrue(self.pm.restart['foo'].active())
+        self.assertTrue(self.pm.restart["foo"].active())
         self.pm.stopService()
         # Scheduled restart should have been cancelled
-        self.assertFalse(self.pm.restart['foo'].active())
-
+        self.assertFalse(self.pm.restart["foo"].active())
 
     def test_stopServiceCleanupScheduledRestarts(self):
         """
@@ -647,7 +641,6 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(self.pm.protocols, {})
 
 
-
 class DeprecationTests(unittest.SynchronousTestCase):
 
     """
@@ -660,7 +653,6 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         self.reactor = DummyProcessReactor()
         self.pm = ProcessMonitor(reactor=self.reactor)
-
 
     def test_toTuple(self):
         """
@@ -676,12 +668,10 @@ class DeprecationTests(unittest.SynchronousTestCase):
         warnings = self.flushWarnings()
         foundToTuple = False
         for warning in warnings:
-            self.assertIs(warning['category'], DeprecationWarning)
-            if 'toTuple' in warning['message']:
+            self.assertIs(warning["category"], DeprecationWarning)
+            if "toTuple" in warning["message"]:
                 foundToTuple = True
-        self.assertTrue(foundToTuple,
-                        "no tuple deprecation found:{}".format(repr(warnings)))
-
+        self.assertTrue(foundToTuple, f"no tuple deprecation found:{repr(warnings)}")
 
     def test_processes(self):
         """
@@ -695,9 +685,8 @@ class DeprecationTests(unittest.SynchronousTestCase):
         self.assertEquals(myProcesses, {})
         warnings = self.flushWarnings()
         first = warnings.pop(0)
-        self.assertIs(first['category'], DeprecationWarning)
+        self.assertIs(first["category"], DeprecationWarning)
         self.assertEquals(warnings, [])
-
 
     def test_getstate(self):
         """
@@ -706,4 +695,4 @@ class DeprecationTests(unittest.SynchronousTestCase):
         pickle.dumps(self.pm)
         warnings = self.flushWarnings()
         for warning in warnings:
-            self.assertIs(warning['category'], DeprecationWarning)
+            self.assertIs(warning["category"], DeprecationWarning)

@@ -6,6 +6,6 @@
 # in the first line
 # The class declaration is irrelevant
 
-class Foo(object):
-    pass
 
+class Foo:
+    pass
