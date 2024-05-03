@@ -12,7 +12,6 @@ import gc
 import io
 import os
 import socket
-import sys
 from functools import wraps
 from typing import Callable, ClassVar, List, Mapping, Optional, Sequence, Type
 from unittest import skipIf
@@ -770,18 +769,27 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         def test(message):
             self.assertConnectPortError(-1, message)
 
-        if sys.version_info[:2] == (2, 6):
-            # On Python 2.6 we get this generic error.
-            test("Connection refused")
-        elif platform.isWindows():
-            if self.reactorFactory is IOCPReactor:
-                # Windows IOCP reactor.
-                test("can't convert negative value to unsigned short")
+        if self.addressClass == IPv4Address:
+            if platform.isWindows():
+                if self.reactorFactory is IOCPReactor:
+                    # Windows IOCP reactor.
+                    test(("can't convert negative value to unsigned short",))
+                else:
+                    # Windows select reactor.
+                    test(("connect_ex(): port must be 0-65535.",))
             else:
-                # Windows select reactor.
-                test("getsockaddrarg: port must be 0-65535.")
+                test(("connect_ex(): port must be 0-65535.",))
         else:
-            test("getsockaddrarg: port must be 0-65535.")
+            # For IPv6 the getaddrinfo() API is used at low-level.
+            if platform.isWindows():
+                if self.reactorFactory is IOCPReactor:
+                    # Windows IOCP reactor.
+                    test(("can't convert negative value to unsigned short",))
+                else:
+                    # Windows select reactor.
+                    test((-8, "Servname not supported for ai_socktype"))
+            else:
+                test((-8, "Servname not supported for ai_socktype"))
 
     def test_connectPortOverflow(self):
         """
@@ -792,21 +800,15 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         def test(message):
             self.assertConnectPortError(65536, message)
 
-        if sys.version_info[:2] == (2, 6):
-            # On Python 2.6 we get generic errors.
-            if platform.isMacOSX():
-                test("Can't assign requested address")
-            else:
-                test("Connection refused")
-        elif platform.isWindows():
+        if platform.isWindows():
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
-                test("value too large to convert to unsigned short")
+                test(("value too large to convert to unsigned short",))
             else:
                 # Windows select reactor.
-                test("getsockaddrarg: port must be 0-65535.")
+                test(("connect_ex(): port must be 0-65535.",))
         else:
-            test("getsockaddrarg: port must be 0-65535.")
+            test(("connect_ex(): port must be 0-65535.",))
 
     def test_connectPortZero(self):
         """
@@ -818,27 +820,23 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
             self.assertConnectPortError(0, message)
 
         if platform.isMacOSX():
-            test("Can't assign requested address")
+            test(("Can't assign requested address",))
         elif platform.isWindows():
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
-                test("WSAEADDRNOTAVAIL")
+                test(("WSAEADDRNOTAVAIL",))
             else:
                 # Windows select reactor.
-                test("The requested address is not valid in its context.")
+                test(("The requested address is not valid in its context.",))
         else:
-            if os.getenv("LANG", None) == "fr_FR.UTF-8":
-                # Coverage builder is executed with French locale.
-                test("Connexion refus\xc3\xa9e")
-            else:
-                test("Connection refused")
+            test(("Connection refused",))
 
     def test_connectPortNotNumeric(self):
         """
         When trying to connect with an endpoint using a port which can not be
         resolved to a service an errback is raised.
         """
-        self.assertConnectPortError("invalid", "service/proto not found ('invalid')")
+        self.assertConnectPortError("invalid", ("service/proto not found ('invalid')",))
 
     # This is used to count the number of calls in a single test run.
     # It is defined as a class member but used as an instance member.
@@ -876,7 +874,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
 
         def whenRun():
             """
-            Accumulate errors and stop reactor.
+            Accumulate any errors and stop the reactor.
             """
             connectDeferred.addErrback(lambda failure: results.append(failure))
             connectDeferred.addBoth(lambda ign: reactor.stop())
@@ -885,7 +883,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
 
         self.runReactor(reactor)
 
-        errors = [failure.value.args[0] for failure in results]
+        errors = [failure.value.args for failure in results]
         self.assertEqual([message], errors)
 
 

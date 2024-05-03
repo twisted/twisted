@@ -486,6 +486,7 @@ class _BaseBaseClient:
             pass
         else:
             self._collectSocketDetails()
+
         self.connector.connectionFailed(failure.Failure(err))
         del self.connector
 
