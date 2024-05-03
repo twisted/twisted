@@ -1059,7 +1059,7 @@ class H2Stream:
             self._producerProducing = False
 
     # Methods called by the consumer (usually an IRequest).
-    def writeHeadersObject(self, version, code, reason, headers):
+    def writeHeaders(self, version, code, reason, headers):
         """
         Called by the consumer to write headers to the stream.
 

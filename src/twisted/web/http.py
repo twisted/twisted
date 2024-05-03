@@ -1230,7 +1230,7 @@ class Request:
             if self.cookies:
                 self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
-            self.channel.writeHeadersObject(version, code, reason, self.responseHeaders)
+            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -2631,8 +2631,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return False
 
     def writeHeaders(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP headers to
+        """Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
 
         @param version: The HTTP version in use.
@@ -2645,45 +2644,21 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type reason: L{bytes}
 
         @param headers: The headers to write to the transport.
-        @type headers: Any iterable of two-tuples of L{bytes}, representing header
-            names and header values.
-        """
-        sanitizedHeaders = Headers()
-        for name, value in headers:
-            sanitizedHeaders.addRawHeader(name, value)
-
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(
-            name + b": " + value + b"\r\n"
-            for name, values in sanitizedHeaders.getAllRawHeaders()
-            for value in values
-        )
-        headerSequence.append(b"\r\n")
-        self.transport.writeSequence(headerSequence)
-
-    def writeHeadersObject(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP
-        headers to a transport. Because they're given as a C{Headers} instance
-        we can make sure we're not subject to injection attacks.
-
-        This is faster than C{writeHeaders} if you already have a C{Headers}
-        instance.
-
-        @param version: The HTTP version in use.
-        @type version: L{bytes}
-
-        @param code: The HTTP status code to write.
-        @type code: L{bytes}
-
-        @param reason: The HTTP reason phrase to write.
-        @type reason: L{bytes}
-
-        @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}
+        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+            compatibility purposes only) any iterable of two-tuples of
+            L{bytes}, representing header names and header values. The latter
+            option is not actually used by Twisted.
 
         """
+        if not isinstance(headers, Headers):
+            # Turn into Headers instance for security reasons, to make sure we
+            # quite and sanitize everything. This variant should be removed
+            # eventually, it's only here for backwards compatibility.
+            sanitizedHeaders = Headers()
+            for name, value in headers:
+                sanitizedHeaders.addRawHeader(name, value)
+            headers = sanitizedHeaders
+
         headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
         for name, values in headers.getAllRawHeaders():
             for value in values:
