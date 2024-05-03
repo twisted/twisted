@@ -85,7 +85,7 @@ class _WakerPlus(_UnixWaker):
         next timed iteration.
         """
         result = super().doRead()
-        self.reactor._scheduleSimulate(True)
+        self.reactor._scheduleSimulate()
         return result
 
 
@@ -386,7 +386,7 @@ class CFReactor(PosixReactorBase):
         # it's possible to use startRunning to *attach* a reactor to an
         # already-running CFRunLoop, i.e. within a plugin for an application
         # that doesn't otherwise use Twisted, rather than calling it via run().
-        self._scheduleSimulate(force=True)
+        self._scheduleSimulate()
 
         # [1]: readers & writers are still active in the loop, but arguably
         #      they should not be.
@@ -484,19 +484,10 @@ class CFReactor(PosixReactorBase):
         CFRunLoopTimerInvalidate(self._currentSimulator)
         self._currentSimulator = None
 
-    def _scheduleSimulate(self, force: bool = False) -> None:
+    def _scheduleSimulate(self) -> None:
         """
         Schedule a call to C{self.runUntilCurrent}.  This will cancel the
         currently scheduled call if it is already scheduled.
-
-        @param force: Even if there are no timed calls, make sure that
-            C{runUntilCurrent} runs immediately (in a 0-seconds-from-now
-            C{CFRunLoopTimer}).  This is necessary for calls which need to
-            trigger behavior of C{runUntilCurrent} other than running timed
-            calls, such as draining the thread call queue or calling C{crash()}
-            when the appropriate flags are set.
-
-        @type force: C{bool}
         """
         self._stopSimulating()
         if not self._started:
@@ -505,7 +496,10 @@ class CFReactor(PosixReactorBase):
             # CFRunLoopTimers against the global CFRunLoop.
             return
 
-        timeout = 0.0 if force else self.timeout()
+        # runUntilCurrent acts on 3 things: _justStopped to process the
+        # side-effect of reactor.stop(), threadCallQueue to handle any calls
+        # from threads, and _pendingTimedCalls.
+        timeout = 0.0 if (self._justStopped or self.threadCallQueue) else self.timeout()
         if timeout is None:
             return
 
@@ -529,12 +523,12 @@ class CFReactor(PosixReactorBase):
         self._scheduleSimulate()
         return delayedCall
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Implement L{IReactorCore.stop}.
         """
         PosixReactorBase.stop(self)
-        self._scheduleSimulate(True)
+        self._scheduleSimulate()
 
     def crash(self):
         """

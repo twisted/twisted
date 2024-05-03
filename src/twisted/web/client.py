@@ -1530,7 +1530,7 @@ class ContentDecoderAgent:
         return response
 
 
-_canonicalHeaderName = Headers()._canonicalNameCaps
+_canonicalHeaderName = Headers()._encodeName
 _defaultSensitiveHeaders = frozenset(
     [
         b"Authorization",

@@ -23,7 +23,6 @@ from typing import Type
 
 from twisted.conch import recvline
 from twisted.internet import defer
-from twisted.python.compat import _get_async_param
 from twisted.python.htmlizer import TokenPrinter
 from twisted.python.monkey import MonkeyPatcher
 
@@ -161,8 +160,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         del self._pendingDeferreds[id(obj)]
         return failure
 
-    def write(self, data, isAsync=None, **kwargs):
-        isAsync = _get_async_param(isAsync, **kwargs)
+    def write(self, data, isAsync=None):
         self.handler.addOutput(data, isAsync)
 
 
@@ -239,8 +237,7 @@ class Manhole(recvline.HistoricRecvLine):
         w = self.terminal.lastWrite
         return not w.endswith(b"\n") and not w.endswith(b"\x1bE")
 
-    def addOutput(self, data, isAsync=None, **kwargs):
-        isAsync = _get_async_param(isAsync, **kwargs)
+    def addOutput(self, data, isAsync=None):
         if isAsync:
             self.terminal.eraseLine()
             self.terminal.cursorBackward(len(self.lineBuffer) + len(self.ps[self.pn]))

@@ -522,9 +522,6 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
-        assert callable(callback)
-        assert callable(errback)
-
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -873,7 +870,6 @@ class Deferred(Awaitable[_SelfResultT]):
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
         """
-        assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
     def errback(self, fail: Optional[Union[Failure, BaseException]] = None) -> None:
