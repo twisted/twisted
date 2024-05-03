@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 # all of them require pyserial at the moment, so check that first
-import serial  # type: ignore[import]
+import serial
 from serial import (
     EIGHTBITS,
     FIVEBITS,

@@ -80,7 +80,7 @@ class MakeServiceTests(TestCase):
                 "--sshKeyDir",
                 self.mktemp(),
                 "--sshKeySize",
-                "512",
+                "1024",
                 "--sshPort",
                 "tcp:223",
             ]

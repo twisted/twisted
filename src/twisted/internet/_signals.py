@@ -271,12 +271,12 @@ class _IWaker(Interface):
 
     disconnected = Attribute("")
 
-    def wakeUp():
+    def wakeUp() -> None:
         """
         Called when the event should be wake up.
         """
 
-    def doRead():
+    def doRead() -> None:
         """
         Read some data from my connection and discard it.
         """

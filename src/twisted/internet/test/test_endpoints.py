@@ -3303,7 +3303,7 @@ class ServerStringTests(unittest.TestCase):
         fakeEndpoint = endpoints.serverFromString(
             notAReactor, "fake:hello:world:yes=no:up=down"
         )
-        from twisted.plugins.fakeendpoint import fake  # type: ignore[import]
+        from twisted.plugins.fakeendpoint import fake  # type: ignore[import-not-found]
 
         self.assertIs(fakeEndpoint.parser, fake)
         self.assertEqual(fakeEndpoint.args, (notAReactor, "hello", "world"))
