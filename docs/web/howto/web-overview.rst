@@ -62,10 +62,10 @@ a path that is requested: you can think of a Resource as a
 single "page" to be rendered. The interface for making
 Resources is very simple; they must have a method named
 ``render`` which takes a single argument, which is the
-Request object (an instance of :api:`twisted.web.server.Request <twisted.web.server.Request>` ). This render
+Request object (an instance of :py:class:`twisted.web.server.Request` ). This render
 method must return a string, which will be returned to the web
 browser making the request. Alternatively, they can return a
-special constant, :api:`twisted.web.server.NOT_DONE_YET <twisted.web.server.NOT_DONE_YET>` , which tells
+special constant, :py:attr:`twisted.web.server.NOT_DONE_YET` , which tells
 the web server not to close the connection; you must then use
 ``request.write(data)`` to render the
 page, and call ``request.finish()`` 

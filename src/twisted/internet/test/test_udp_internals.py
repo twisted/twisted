@@ -4,24 +4,22 @@
 """
 Tests for the internal implementation details of L{twisted.internet.udp}.
 """
-
-from __future__ import division, absolute_import
+from __future__ import annotations
 
 import socket
 
-from twisted.trial import unittest
-from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import udp
+from twisted.internet.protocol import DatagramProtocol
 from twisted.python.runtime import platformType
+from twisted.trial import unittest
 
-if platformType == 'win32':
-    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
+if platformType == "win32":
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK  # type: ignore[attr-defined]
 else:
     from errno import EWOULDBLOCK
 
 
-
-class StringUDPSocket(object):
+class StringUDPSocket:
     """
     A fake UDP socket object, which returns a fixed sequence of strings and/or
     socket errors.  Useful for testing.
@@ -31,16 +29,14 @@ class StringUDPSocket(object):
     @ivar connectedAddr: The address the socket is connected to.
     """
 
-    def __init__(self, retvals):
+    def __init__(self, retvals: list[bytes | socket.error]) -> None:
         self.retvals = retvals
-        self.connectedAddr = None
+        self.connectedAddr: object | None = None
 
-
-    def connect(self, addr):
+    def connect(self, addr: object) -> None:
         self.connectedAddr = addr
 
-
-    def recvfrom(self, size):
+    def recvfrom(self, size: int) -> tuple[bytes, None]:
         """
         Return (or raise) the next value from C{self.retvals}.
         """
@@ -50,19 +46,16 @@ class StringUDPSocket(object):
         return ret, None
 
 
-
 class KeepReads(DatagramProtocol):
     """
     Accumulate reads in a list.
     """
 
-    def __init__(self):
-        self.reads = []
+    def __init__(self) -> None:
+        self.reads: list[bytes] = []
 
-
-    def datagramReceived(self, data, addr):
+    def datagramReceived(self, data: bytes, addr: object) -> None:
         self.reads.append(data)
-
 
 
 class ErrorsTests(unittest.SynchronousTestCase):
@@ -70,7 +63,7 @@ class ErrorsTests(unittest.SynchronousTestCase):
     Error handling tests for C{udp.Port}.
     """
 
-    def test_socketReadNormal(self):
+    def test_socketReadNormal(self) -> None:
         """
         Socket reads with some good data followed by a socket error which can
         be ignored causes reading to stop, and no log messages to be logged.
@@ -84,16 +77,15 @@ class ErrorsTests(unittest.SynchronousTestCase):
 
         # Normal result, no errors
         port.socket = StringUDPSocket(
-            [b"result", b"123", socket.error(-7000), b"456",
-             socket.error(-7000)])
+            [b"result", b"123", socket.error(-7000), b"456", socket.error(-7000)]
+        )
         port.doRead()
         # Read stops on error:
         self.assertEqual(protocol.reads, [b"result", b"123"])
         port.doRead()
         self.assertEqual(protocol.reads, [b"result", b"123", b"456"])
 
-
-    def test_readImmediateError(self):
+    def test_readImmediateError(self) -> None:
         """
         If the socket is unconnected, socket reads with an immediate
         connection refusal are ignored, and reading stops. The protocol's
@@ -106,13 +98,14 @@ class ErrorsTests(unittest.SynchronousTestCase):
 
         protocol = KeepReads()
         # Fail if connectionRefused is called:
-        protocol.connectionRefused = lambda: 1/0
+        protocol.connectionRefused = lambda: 1 / 0  # type: ignore[method-assign]
 
         port = udp.Port(None, protocol)
 
         # Try an immediate "connection refused"
-        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
-                                       socket.error(EWOULDBLOCK)])
+        port.socket = StringUDPSocket(
+            [b"a", socket.error(-6000), b"b", socket.error(EWOULDBLOCK)]
+        )
         port.doRead()
         # Read stops on error:
         self.assertEqual(protocol.reads, [b"a"])
@@ -120,8 +113,7 @@ class ErrorsTests(unittest.SynchronousTestCase):
         port.doRead()
         self.assertEqual(protocol.reads, [b"a", b"b"])
 
-
-    def test_connectedReadImmediateError(self):
+    def test_connectedReadImmediateError(self) -> None:
         """
         If the socket connected, socket reads with an immediate
         connection refusal are ignored, and reading stops. The protocol's
@@ -134,11 +126,12 @@ class ErrorsTests(unittest.SynchronousTestCase):
 
         protocol = KeepReads()
         refused = []
-        protocol.connectionRefused = lambda: refused.append(True)
+        protocol.connectionRefused = lambda: refused.append(True)  # type: ignore[method-assign]
 
         port = udp.Port(None, protocol)
-        port.socket = StringUDPSocket([b"a", socket.error(-6000), b"b",
-                                       socket.error(EWOULDBLOCK)])
+        port.socket = StringUDPSocket(
+            [b"a", socket.error(-6000), b"b", socket.error(EWOULDBLOCK)]
+        )
         port.connect("127.0.0.1", 9999)
 
         # Read stops on error:
@@ -151,8 +144,7 @@ class ErrorsTests(unittest.SynchronousTestCase):
         self.assertEqual(protocol.reads, [b"a", b"b"])
         self.assertEqual(refused, [True])
 
-
-    def test_readUnknownError(self):
+    def test_readUnknownError(self) -> None:
         """
         Socket reads with an unknown socket error are raised.
         """

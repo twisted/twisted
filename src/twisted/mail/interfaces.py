@@ -7,7 +7,6 @@ Interfaces for L{twisted.mail}.
 @since: 16.5
 """
 
-from __future__ import absolute_import, division
 
 from zope.interface import Interface
 
@@ -25,7 +24,6 @@ class IChallengeResponse(Interface):
         @rtype: L{bytes}
         """
 
-
     def setResponse(response):
         """
         Extract a username and possibly a password from a response and
@@ -37,7 +35,6 @@ class IChallengeResponse(Interface):
         @see: L{credentials.IUsernamePassword} or
             L{credentials.IUsernameHashedPassword}
         """
-
 
     def moreChallenges():
         """
@@ -51,9 +48,7 @@ class IChallengeResponse(Interface):
         """
 
 
-
 class IClientAuthentication(Interface):
-
     def getName():
         """
         Return an identifier associated with this authentication scheme.
@@ -65,7 +60,6 @@ class IClientAuthentication(Interface):
         """
         Generate a challenge response string.
         """
-
 
 
 class IServerFactoryPOP3(Interface):
@@ -84,6 +78,7 @@ class IServerFactoryPOP3(Interface):
         L{IUsernameHashedPassword <cred.credentials.IUsernameHashedPassword>}
         provider.
     """
+
     def cap_IMPLEMENTATION():
         """
         Return a string describing the POP3 server implementation.
@@ -91,7 +86,6 @@ class IServerFactoryPOP3(Interface):
         @rtype: L{bytes}
         @return: Server implementation information.
         """
-
 
     def cap_EXPIRE():
         """
@@ -102,7 +96,6 @@ class IServerFactoryPOP3(Interface):
             the server never deletes messages.
         """
 
-
     def perUserExpiration():
         """
         Indicate whether the message expiration policy differs per user.
@@ -112,7 +105,6 @@ class IServerFactoryPOP3(Interface):
             C{False} otherwise.
         """
 
-
     def cap_LOGIN_DELAY():
         """
         Return the minimum number of seconds between client logins.
@@ -120,7 +112,6 @@ class IServerFactoryPOP3(Interface):
         @rtype: L{int}
         @return: The minimum number of seconds between client logins.
         """
-
 
     def perUserLoginDelay():
         """
@@ -130,7 +121,6 @@ class IServerFactoryPOP3(Interface):
         @return: C{True} when the login delay differs per user, C{False}
             otherwise.
         """
-
 
 
 class IMailboxPOP3(Interface):
@@ -147,6 +137,7 @@ class IMailboxPOP3(Interface):
     @ivar messageExpiration: The number of days messages in this mailbox will
         remain on the server before being deleted.
     """
+
     def listMessages(index=None):
         """
         Retrieve the size of a message, or, if none is specified, the size of
@@ -166,7 +157,6 @@ class IMailboxPOP3(Interface):
             a message in the mailbox.  The use of ValueError is preferred.
         """
 
-
     def getMessage(index):
         """
         Retrieve a file containing the contents of a message.
@@ -180,7 +170,6 @@ class IMailboxPOP3(Interface):
         @raise ValueError or IndexError: When the index does not correspond to
             a message in the mailbox.  The use of ValueError is preferred.
         """
-
 
     def getUidl(index):
         """
@@ -197,7 +186,6 @@ class IMailboxPOP3(Interface):
             a message in the mailbox.  The use of ValueError is preferred.
         """
 
-
     def deleteMessage(index):
         """
         Mark a message for deletion.
@@ -213,7 +201,6 @@ class IMailboxPOP3(Interface):
             a message in the mailbox.  The use of ValueError is preferred.
         """
 
-
     def undeleteMessages():
         """
         Undelete all messages marked for deletion.
@@ -222,18 +209,17 @@ class IMailboxPOP3(Interface):
         position in the message sequence and retain its original UID.
         """
 
-
     def sync():
         """
         Discard the contents of any message marked for deletion.
         """
 
 
-
 class IDomain(Interface):
     """
     An interface for email domains.
     """
+
     def exists(user):
         """
         Check whether a user exists in this domain.
@@ -248,7 +234,6 @@ class IDomain(Interface):
         @raise SMTPBadRcpt: When the given user does not exist in this domain.
         """
 
-
     def addUser(user, password):
         """
         Add a user to this domain.
@@ -260,7 +245,6 @@ class IDomain(Interface):
         @param password: A password.
         """
 
-
     def getCredentialsCheckers():
         """
         Return credentials checkers for this domain.
@@ -271,11 +255,11 @@ class IDomain(Interface):
         """
 
 
-
 class IAlias(Interface):
     """
     An interface for aliases.
     """
+
     def createMessageReceiver():
         """
         Create a message receiver.
@@ -285,11 +269,11 @@ class IAlias(Interface):
         """
 
 
-
 class IAliasableDomain(IDomain):
     """
     An interface for email domains which can be aliased to other domains.
     """
+
     def setAliasGroup(aliases):
         """
         Set the group of defined aliases for this domain.
@@ -297,7 +281,6 @@ class IAliasableDomain(IDomain):
         @type aliases: L{dict} of L{bytes} -> L{IAlias} provider
         @param aliases: A mapping of domain name to alias.
         """
-
 
     def exists(user, memo=None):
         """
@@ -321,9 +304,7 @@ class IAliasableDomain(IDomain):
         """
 
 
-
 class IMessageDelivery(Interface):
-
     def receivedHeader(helo, origin, recipients):
         """
         Generate the Received header for a message.
@@ -380,7 +361,6 @@ class IMessageDelivery(Interface):
         """
 
 
-
 class IMessageDeliveryFactory(Interface):
     """
     An alternate interface to implement for handling message delivery.
@@ -392,13 +372,13 @@ class IMessageDeliveryFactory(Interface):
     be done by L{IMessageDelivery} implementors due to their lack of
     information.
     """
+
     def getMessageDelivery():
         """
         Return an L{IMessageDelivery} object.
 
         This will be called once per message.
         """
-
 
 
 class IMessageSMTP(Interface):
@@ -429,7 +409,6 @@ class IMessageSMTP(Interface):
         """
 
 
-
 class IMessageIMAPPart(Interface):
     def getHeaders(negate, *names):
         """
@@ -446,12 +425,10 @@ class IMessageIMAPPart(Interface):
         @return: A mapping of header field names to header field values
         """
 
-
     def getBodyFile():
         """
         Retrieve a file object containing only the body of this message.
         """
-
 
     def getSize():
         """
@@ -460,14 +437,12 @@ class IMessageIMAPPart(Interface):
         @rtype: L{int}
         """
 
-
     def isMultipart():
         """
         Indicate whether this message has subparts.
 
         @rtype: L{bool}
         """
-
 
     def getSubPart(part):
         """
@@ -484,14 +459,11 @@ class IMessageIMAPPart(Interface):
         """
 
 
-
 class IMessageIMAP(IMessageIMAPPart):
-
     def getUID():
         """
         Retrieve the unique identifier associated with this message.
         """
-
 
     def getFlags():
         """
@@ -501,7 +473,6 @@ class IMessageIMAP(IMessageIMAPPart):
         @return: The flags, represented as strings.
         """
 
-
     def getInternalDate():
         """
         Retrieve the date internally associated with this message.
@@ -509,7 +480,6 @@ class IMessageIMAP(IMessageIMAPPart):
         @rtype: L{bytes}
         @return: An RFC822-formatted date string.
         """
-
 
 
 class IMessageIMAPFile(Interface):
@@ -529,9 +499,7 @@ class IMessageIMAPFile(Interface):
         """
 
 
-
 class ISearchableIMAPMailbox(Interface):
-
     def search(query, uid):
         """
         Search for messages that meet the given query criteria.
@@ -559,7 +527,6 @@ class ISearchableIMAPMailbox(Interface):
         """
 
 
-
 class IMailboxIMAPListener(Interface):
     """
     Interface for objects interested in mailbox events
@@ -574,7 +541,6 @@ class IMailboxIMAPListener(Interface):
             otherwise.
         """
 
-
     def flagsChanged(newFlags):
         """
         Indicates that the flags of one or more messages have changed.
@@ -583,7 +549,6 @@ class IMailboxIMAPListener(Interface):
         @param newFlags: A mapping of message identifiers to tuples of flags
             now set on that message.
         """
-
 
     def newMessages(exists, recent):
         """
@@ -597,7 +562,6 @@ class IMailboxIMAPListener(Interface):
         @param recent: The number of messages now flagged C{\\Recent}. If the
             number of recent messages has not changed, this should be L{None}.
         """
-
 
 
 class IMessageIMAPCopier(Interface):
@@ -620,7 +584,6 @@ class IMessageIMAPCopier(Interface):
         """
 
 
-
 class IMailboxIMAPInfo(Interface):
     """
     Interface specifying only the methods required for C{listMailboxes}.
@@ -641,14 +604,12 @@ class IMailboxIMAPInfo(Interface):
             mailbox.
         """
 
-
     def getHierarchicalDelimiter():
         """
         Get the character which delimits namespaces for in this mailbox.
 
         @rtype: L{bytes}
         """
-
 
 
 class IMailboxIMAP(IMailboxIMAPInfo):
@@ -659,14 +620,12 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @rtype: L{int}
         """
 
-
     def getUIDNext():
         """
         Return the likely UID for the next message added to this mailbox.
 
         @rtype: L{int}
         """
-
 
     def getUID(message):
         """
@@ -679,14 +638,12 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @return: The UID of the message.
         """
 
-
     def getMessageCount():
         """
         Return the number of messages in this mailbox.
 
         @rtype: L{int}
         """
-
 
     def getRecentCount():
         """
@@ -695,14 +652,12 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @rtype: L{int}
         """
 
-
     def getUnseenCount():
         """
         Return the number of messages with the 'Unseen' flag.
 
         @rtype: L{int}
         """
-
 
     def isWriteable():
         """
@@ -713,7 +668,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             otherwise.
         """
 
-
     def destroy():
         """
         Called before this mailbox is deleted, permanently.
@@ -721,7 +675,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         If necessary, all resources held by this mailbox should be cleaned up
         here. This function _must_ set the \\Noselect flag on this mailbox.
         """
-
 
     def requestStatus(names):
         """
@@ -744,7 +697,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             passed this dictionary is returned instead.
         """
 
-
     def addListener(listener):
         """
         Add a mailbox change listener
@@ -753,7 +705,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @param listener: An object to add to the set of those which will be
             notified when the contents of this mailbox change.
         """
-
 
     def removeListener(listener):
         """
@@ -767,8 +718,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             this mailbox.
         """
 
-
-    def addMessage(message, flags=(), date=None):
+    def addMessage(message, flags, date):
         """
         Add the given message to this mailbox.
 
@@ -790,7 +740,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             read-write.
         """
 
-
     def expunge():
         """
         Remove all messages flagged \\Deleted.
@@ -802,7 +751,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @raise ReadOnlyMailbox: Raised if this Mailbox is not open for
             read-write.
         """
-
 
     def fetch(messages, uid):
         """
@@ -819,7 +767,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         @rtype: Any iterable of two-tuples of message sequence numbers and
             implementors of C{IMessageIMAP}.
         """
-
 
     def store(messages, flags, mode, uid):
         """
@@ -852,7 +799,6 @@ class IMailboxIMAP(IMailboxIMAPInfo):
         """
 
 
-
 class ICloseableMailboxIMAP(Interface):
     """
     A supplementary interface for mailboxes which require cleanup on close.
@@ -868,7 +814,6 @@ class ICloseableMailboxIMAP(Interface):
         @return: A L{Deferred} which fires when this mailbox has been closed,
             or None if the mailbox can be closed immediately.
         """
-
 
 
 class IAccountIMAP(Interface):
@@ -900,7 +845,6 @@ class IAccountIMAP(Interface):
             L{Deferred} is returned.
         """
 
-
     def create(pathspec):
         """
         Create a new mailbox from the given hierarchical name.
@@ -917,7 +861,6 @@ class IAccountIMAP(Interface):
         @raise MailboxException: Raised if this mailbox cannot be added. This
             may also be raised asynchronously, if a L{Deferred} is returned.
         """
-
 
     def select(name, rw=True):
         """
@@ -936,7 +879,6 @@ class IAccountIMAP(Interface):
             specified mailbox may not be selected for any reason.
         """
 
-
     def delete(name):
         """
         Delete the mailbox with the specified name.
@@ -952,7 +894,6 @@ class IAccountIMAP(Interface):
         @raise MailboxException: Raised if this mailbox cannot be deleted. This
             may also be raised asynchronously, if a L{Deferred} is returned.
         """
-
 
     def rename(oldname, newname):
         """
@@ -973,7 +914,6 @@ class IAccountIMAP(Interface):
             may also be raised asynchronously, if a L{Deferred} is returned.
         """
 
-
     def isSubscribed(name):
         """
         Check the subscription status of a mailbox
@@ -986,7 +926,6 @@ class IAccountIMAP(Interface):
             a false value otherwise. A L{Deferred} may also be returned whose
             callback will be invoked with one of these values.
         """
-
 
     def subscribe(name):
         """
@@ -1005,7 +944,6 @@ class IAccountIMAP(Interface):
             returned.
         """
 
-
     def unsubscribe(name):
         """
         Unsubscribe from a mailbox
@@ -1022,7 +960,6 @@ class IAccountIMAP(Interface):
             from. This may also be raised asynchronously, if a L{Deferred} is
             returned.
         """
-
 
     def listMailboxes(ref, wildcard):
         """
@@ -1045,9 +982,7 @@ class IAccountIMAP(Interface):
         """
 
 
-
 class INamespacePresenter(Interface):
-
     def getPersonalNamespaces():
         """
         Report the available personal namespaces.
@@ -1059,7 +994,6 @@ class INamespacePresenter(Interface):
         @return: The personal namespaces and their hierarchical delimiters. If
             no namespaces of this type exist, None should be returned.
         """
-
 
     def getSharedNamespaces():
         """
@@ -1074,7 +1008,6 @@ class INamespacePresenter(Interface):
             namespaces of this type exist, None should be returned.
         """
 
-
     def getUserNamespaces():
         """
         Report the available user namespaces.
@@ -1088,23 +1021,30 @@ class INamespacePresenter(Interface):
         """
 
 
-
 __all__ = [
     # IMAP
-    'IAccountIMAP', 'ICloseableMailboxIMAP', 'IMailboxIMAP',
-    'IMailboxIMAPInfo', 'IMailboxIMAPListener', 'IMessageIMAP',
-    'IMessageIMAPCopier', 'IMessageIMAPFile', 'IMessageIMAPPart',
-    'ISearchableIMAPMailbox', 'INamespacePresenter',
-
+    "IAccountIMAP",
+    "ICloseableMailboxIMAP",
+    "IMailboxIMAP",
+    "IMailboxIMAPInfo",
+    "IMailboxIMAPListener",
+    "IMessageIMAP",
+    "IMessageIMAPCopier",
+    "IMessageIMAPFile",
+    "IMessageIMAPPart",
+    "ISearchableIMAPMailbox",
+    "INamespacePresenter",
     # SMTP
-    'IMessageDelivery', 'IMessageDeliveryFactory', 'IMessageSMTP',
-
+    "IMessageDelivery",
+    "IMessageDeliveryFactory",
+    "IMessageSMTP",
     # Domains and aliases
-    'IDomain', 'IAlias', 'IAliasableDomain',
-
+    "IDomain",
+    "IAlias",
+    "IAliasableDomain",
     # POP3
-    'IMailboxPOP3', 'IServerFactoryPOP3',
-
+    "IMailboxPOP3",
+    "IServerFactoryPOP3",
     # Authentication
-    'IClientAuthentication',
+    "IClientAuthentication",
 ]

@@ -5,7 +5,8 @@
 """
 Helpers for working with producers.
 """
-from __future__ import division, absolute_import
+
+from typing import List
 
 from zope.interface import implementer
 
@@ -14,13 +15,12 @@ from twisted.internet.task import cooperate
 from twisted.python import log
 from twisted.python.reflect import safe_str
 
-
 # This module exports nothing public, it's for internal Twisted use only.
-__all__ = []
+__all__: List[str] = []
 
 
 @implementer(IPushProducer)
-class _PullToPush(object):
+class _PullToPush:
     """
     An adapter that converts a non-streaming to a streaming producer.
 
@@ -47,11 +47,9 @@ class _PullToPush(object):
 
     _finished = False
 
-
     def __init__(self, pullProducer, consumer):
         self._producer = pullProducer
         self._consumer = consumer
-
 
     def _pull(self):
         """
@@ -64,22 +62,27 @@ class _PullToPush(object):
         while True:
             try:
                 self._producer.resumeProducing()
-            except:
-                log.err(None, "%s failed, producing will be stopped:" %
-                        (safe_str(self._producer),))
+            except BaseException:
+                log.err(
+                    None,
+                    "%s failed, producing will be stopped:"
+                    % (safe_str(self._producer),),
+                )
                 try:
                     self._consumer.unregisterProducer()
                     # The consumer should now call stopStreaming() on us,
                     # thus stopping the streaming.
-                except:
+                except BaseException:
                     # Since the consumer blew up, we may not have had
                     # stopStreaming() called, so we just stop on our own:
-                    log.err(None, "%s failed to unregister producer:" %
-                            (safe_str(self._consumer),))
+                    log.err(
+                        None,
+                        "%s failed to unregister producer:"
+                        % (safe_str(self._consumer),),
+                    )
                     self._finished = True
                     return
             yield None
-
 
     def startStreaming(self):
         """
@@ -88,7 +91,6 @@ class _PullToPush(object):
         Start streaming data to the consumer.
         """
         self._coopTask = cooperate(self._pull())
-
 
     def stopStreaming(self):
         """
@@ -102,20 +104,17 @@ class _PullToPush(object):
         self._finished = True
         self._coopTask.stop()
 
-
     def pauseProducing(self):
         """
         @see: C{IPushProducer.pauseProducing}
         """
         self._coopTask.pause()
 
-
     def resumeProducing(self):
         """
         @see: C{IPushProducer.resumeProducing}
         """
         self._coopTask.resume()
-
 
     def stopProducing(self):
         """

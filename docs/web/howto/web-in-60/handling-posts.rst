@@ -15,7 +15,7 @@ All of the previous examples have focused on ``GET``
 requests. Unlike ``GET`` requests, ``POST`` requests can have
 a request body - extra data after the request headers; for example, data
 representing the contents of an HTML form. Twisted Web makes this data available
-to applications via the :api:`twisted.web.server.Request <Request>` object.
+to applications via the :py:class:`Request <twisted.web.server.Request>` object.
 
 
 
@@ -31,7 +31,7 @@ understand the possible negative consequences.
 
 
 As usual, we start with some imports. In addition to the Twisted imports,
-this example uses the ``cgi`` module to `escape user-enteredcontent <http://en.wikipedia.org/wiki/Cross-site_scripting>`_ for inclusion in the output.
+this example uses the ``html`` module to `escape user-enteredcontent <http://en.wikipedia.org/wiki/Cross-site_scripting>`_ for inclusion in the output.
 
 
 
@@ -44,7 +44,7 @@ this example uses the ``cgi`` module to `escape user-enteredcontent <http://en.w
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
-    import cgi
+    import html
 
 
 
@@ -82,7 +82,7 @@ method will allow it to accept ``POST`` requests:
     ...
         def render_POST(self, request):
             args = request.args[b"the-field"][0].decode("utf-8")
-            escapedArgs = cgi.escape(args)
+            escapedArgs = html.escape(args)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
                     b"<title></title></head><body>"
                     b"You submitted: " + escapedArgs.encode('utf-8'))
@@ -96,7 +96,7 @@ provides access to the contents of the form. The keys in this
 dictionary are the names of inputs in the form. Each value is a list
 containing bytes objects (since there can be multiple inputs with the same
 name), which is why we had to extract the first element to pass
-to ``cgi.escape`` . ``request.args`` will be
+to ``html.escape`` . ``request.args`` will be
 populated from form contents whenever a ``POST`` request is
 made with a content type
 of ``application/x-www-form-urlencoded``
@@ -146,7 +146,7 @@ Here's the complete source for the example:
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
-    import cgi
+    import html
 
     class FormPage(Resource):
         def render_GET(self, request):
@@ -156,7 +156,7 @@ Here's the complete source for the example:
 
         def render_POST(self, request):
             args = request.args[b"the-field"][0].decode("utf-8")
-            escapedArgs = cgi.escape(args)
+            escapedArgs = html.escape(args)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
                     b"<title></title></head><body>"
                     b"You submitted: " + escapedArgs.encode('utf-8'))

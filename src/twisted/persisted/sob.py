@@ -9,19 +9,15 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-from __future__ import division, absolute_import
 
 import os
+import pickle
 import sys
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-from twisted.python import log, runtime
-from twisted.persisted import styles
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
+from twisted.persisted import styles
+from twisted.python import log, runtime
 
 
 class IPersistable(Interface):
@@ -45,7 +41,6 @@ class IPersistable(Interface):
 
 @implementer(IPersistable)
 class Persistent:
-
     style = "pickle"
 
     def __init__(self, original, name):
@@ -64,24 +59,27 @@ class Persistent:
             finalname = filename
             filename = finalname + "-2"
         elif tag:
-            filename = "%s-%s-2.%s" % (self.name, tag, ext)
-            finalname = "%s-%s.%s" % (self.name, tag, ext)
+            filename = f"{self.name}-{tag}-2.{ext}"
+            finalname = f"{self.name}-{tag}.{ext}"
         else:
-            filename = "%s-2.%s" % (self.name, ext)
-            finalname = "%s.%s" % (self.name, ext)
+            filename = f"{self.name}-2.{ext}"
+            finalname = f"{self.name}.{ext}"
         return finalname, filename
 
     def _saveTemp(self, filename, dumpFunc):
-        with open(filename, 'wb') as f:
+        with open(filename, "wb") as f:
             dumpFunc(self.original, f)
 
     def _getStyle(self):
         if self.style == "source":
             from twisted.persisted.aot import jellyToSource as dumpFunc
+
             ext = "tas"
         else:
-            def dumpFunc(obj, file):
+
+            def dumpFunc(obj, file=None):
                 pickle.dump(obj, file, 2)
+
             ext = "tap"
         return ext, dumpFunc
 
@@ -95,20 +93,20 @@ class Persistent:
         ext, dumpFunc = self._getStyle()
         if passphrase is not None:
             raise TypeError("passphrase must be None")
-            ext = 'e' + ext
         finalname, filename = self._getFilename(filename, ext, tag)
-        log.msg("Saving "+self.name+" application to "+finalname+"...")
+        log.msg("Saving " + self.name + " application to " + finalname + "...")
         self._saveTemp(filename, dumpFunc)
         if runtime.platformType == "win32" and os.path.isfile(finalname):
             os.remove(finalname)
         os.rename(filename, finalname)
         log.msg("Saved.")
 
+
 # "Persistant" has been present since 1.0.7, so retain it for compatibility
 Persistant = Persistent
 
-class _EverythingEphemeral(styles.Ephemeral):
 
+class _EverythingEphemeral(styles.Ephemeral):
     initRun = 0
 
     def __init__(self, mainMod):
@@ -136,22 +134,22 @@ def load(filename, style):
     @param filename: string
     @param style: string (one of 'pickle' or 'source')
     """
-    mode = 'r'
-    if style=='source':
+    mode = "r"
+    if style == "source":
         from twisted.persisted.aot import unjellyFromSource as _load
     else:
-        _load, mode = pickle.load, 'rb'
+        _load, mode = pickle.load, "rb"
 
     fp = open(filename, mode)
-    ee = _EverythingEphemeral(sys.modules['__main__'])
-    sys.modules['__main__'] = ee
+    ee = _EverythingEphemeral(sys.modules["__main__"])
+    sys.modules["__main__"] = ee
     ee.initRun = 1
     with fp:
         try:
             value = _load(fp)
         finally:
             # restore __main__ if an exception is raised.
-            sys.modules['__main__'] = ee.mainMod
+            sys.modules["__main__"] = ee.mainMod
 
     styles.doUpgrade()
     ee.initRun = 0
@@ -170,25 +168,33 @@ def loadValueFromFile(filename, variable):
     @param filename: string
     @param variable: string
     """
-    with open(filename, 'r') as fileObj:
+    with open(filename) as fileObj:
         data = fileObj.read()
-    d = {'__file__': filename}
+    d = {"__file__": filename}
     codeObj = compile(data, filename, "exec")
     eval(codeObj, d, d)
     value = d[variable]
     return value
 
+
 def guessType(filename):
     ext = os.path.splitext(filename)[1]
     return {
-        '.tac':  'python',
-        '.etac':  'python',
-        '.py':  'python',
-        '.tap': 'pickle',
-        '.etap': 'pickle',
-        '.tas': 'source',
-        '.etas': 'source',
+        ".tac": "python",
+        ".etac": "python",
+        ".py": "python",
+        ".tap": "pickle",
+        ".etap": "pickle",
+        ".tas": "source",
+        ".etas": "source",
     }[ext]
 
-__all__ = ['loadValueFromFile', 'load', 'Persistent', 'Persistant',
-           'IPersistable', 'guessType']
+
+__all__ = [
+    "loadValueFromFile",
+    "load",
+    "Persistent",
+    "Persistant",
+    "IPersistable",
+    "guessType",
+]

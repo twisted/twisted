@@ -8,115 +8,197 @@ DNS protocol implementation.
 Future Plans:
     - Get rid of some toplevels, maybe.
 """
-
-from __future__ import division, absolute_import
-
-__all__ = [
-    'IEncodable', 'IRecord',
-
-    'A', 'A6', 'AAAA', 'AFSDB', 'CNAME', 'DNAME', 'HINFO',
-    'MAILA', 'MAILB', 'MB', 'MD', 'MF', 'MG', 'MINFO', 'MR', 'MX',
-    'NAPTR', 'NS', 'NULL', 'OPT', 'PTR', 'RP', 'SOA', 'SPF', 'SRV', 'TXT',
-    'SSHFP', 'TSIG', 'WKS',
-
-    'ANY', 'CH', 'CS', 'HS', 'IN',
-
-    'ALL_RECORDS', 'AXFR', 'IXFR',
-
-    'EFORMAT', 'ENAME', 'ENOTIMP', 'EREFUSED', 'ESERVER', 'EBADVERSION',
-    'EBADSIG', 'EBADKEY', 'EBADTIME',
-
-    'Record_A', 'Record_A6', 'Record_AAAA', 'Record_AFSDB', 'Record_CNAME',
-    'Record_DNAME', 'Record_HINFO', 'Record_MB', 'Record_MD', 'Record_MF',
-    'Record_MG', 'Record_MINFO', 'Record_MR', 'Record_MX', 'Record_NAPTR',
-    'Record_NS', 'Record_NULL', 'Record_PTR', 'Record_RP', 'Record_SOA',
-    'Record_SPF', 'Record_SRV', 'Record_SSHFP', 'Record_TSIG', 'Record_TXT',
-    'Record_WKS',
-    'UnknownRecord',
-
-    'QUERY_CLASSES', 'QUERY_TYPES', 'REV_CLASSES', 'REV_TYPES', 'EXT_QUERIES',
-
-    'Charstr', 'Message', 'Name', 'Query', 'RRHeader', 'SimpleRecord',
-    'DNSDatagramProtocol', 'DNSMixin', 'DNSProtocol',
-
-    'OK', 'OP_INVERSE', 'OP_NOTIFY', 'OP_QUERY', 'OP_STATUS', 'OP_UPDATE',
-    'PORT',
-
-    'AuthoritativeDomainError', 'DNSQueryTimeoutError', 'DomainError',
-    ]
-
+from __future__ import annotations
 
 # System imports
-import inspect, struct, random, socket
-from itertools import chain
-
+import inspect
+import random
+import socket
+import struct
 from io import BytesIO
+from itertools import chain
+from typing import Optional, Sequence, SupportsInt, Union, overload
+
+from zope.interface import Attribute, Interface, implementer
+
+# Twisted imports
+from twisted.internet import defer, protocol
+from twisted.internet.error import CannotListenError
+from twisted.python import failure, log, randbytes, util as tputil
+from twisted.python.compat import cmp, comparable, nativeString
+
+__all__ = [
+    "IEncodable",
+    "IRecord",
+    "IEncodableRecord",
+    "A",
+    "A6",
+    "AAAA",
+    "AFSDB",
+    "CNAME",
+    "DNAME",
+    "HINFO",
+    "MAILA",
+    "MAILB",
+    "MB",
+    "MD",
+    "MF",
+    "MG",
+    "MINFO",
+    "MR",
+    "MX",
+    "NAPTR",
+    "NS",
+    "NULL",
+    "OPT",
+    "PTR",
+    "RP",
+    "SOA",
+    "SPF",
+    "SRV",
+    "TXT",
+    "SSHFP",
+    "TSIG",
+    "WKS",
+    "ANY",
+    "CH",
+    "CS",
+    "HS",
+    "IN",
+    "ALL_RECORDS",
+    "AXFR",
+    "IXFR",
+    "EFORMAT",
+    "ENAME",
+    "ENOTIMP",
+    "EREFUSED",
+    "ESERVER",
+    "EBADVERSION",
+    "EBADSIG",
+    "EBADKEY",
+    "EBADTIME",
+    "Record_A",
+    "Record_A6",
+    "Record_AAAA",
+    "Record_AFSDB",
+    "Record_CNAME",
+    "Record_DNAME",
+    "Record_HINFO",
+    "Record_MB",
+    "Record_MD",
+    "Record_MF",
+    "Record_MG",
+    "Record_MINFO",
+    "Record_MR",
+    "Record_MX",
+    "Record_NAPTR",
+    "Record_NS",
+    "Record_NULL",
+    "Record_PTR",
+    "Record_RP",
+    "Record_SOA",
+    "Record_SPF",
+    "Record_SRV",
+    "Record_SSHFP",
+    "Record_TSIG",
+    "Record_TXT",
+    "Record_WKS",
+    "UnknownRecord",
+    "QUERY_CLASSES",
+    "QUERY_TYPES",
+    "REV_CLASSES",
+    "REV_TYPES",
+    "EXT_QUERIES",
+    "Charstr",
+    "Message",
+    "Name",
+    "Query",
+    "RRHeader",
+    "SimpleRecord",
+    "DNSDatagramProtocol",
+    "DNSMixin",
+    "DNSProtocol",
+    "OK",
+    "OP_INVERSE",
+    "OP_NOTIFY",
+    "OP_QUERY",
+    "OP_STATUS",
+    "OP_UPDATE",
+    "PORT",
+    "AuthoritativeDomainError",
+    "DNSQueryTimeoutError",
+    "DomainError",
+]
+
 
 AF_INET6 = socket.AF_INET6
 
-from zope.interface import implementer, Interface, Attribute
+
+def _ord2bytes(ordinal):
+    """
+    Construct a bytes object representing a single byte with the given
+    ordinal value.
+
+    @type ordinal: L{int}
+    @rtype: L{bytes}
+    """
+    return bytes([ordinal])
 
 
-# Twisted imports
-from twisted.internet import protocol, defer
-from twisted.internet.error import CannotListenError
-from twisted.python import log, failure
-from twisted.python import util as tputil
-from twisted.python import randbytes
-from twisted.python.compat import _PY3, unicode, comparable, cmp, nativeString
+def _nicebytes(bytes):
+    """
+    Represent a mostly textful bytes object in a way suitable for
+    presentation to an end user.
+
+    @param bytes: The bytes to represent.
+    @rtype: L{str}
+    """
+    return repr(bytes)[1:]
 
 
-if _PY3:
-    def _ord2bytes(ordinal):
-        """
-        Construct a bytes object representing a single byte with the given
-        ordinal value.
+def _nicebyteslist(list):
+    """
+    Represent a list of mostly textful bytes objects in a way suitable for
+    presentation to an end user.
 
-        @type ordinal: L{int}
-        @rtype: L{bytes}
-        """
-        return bytes([ordinal])
-
-
-    def _nicebytes(bytes):
-        """
-        Represent a mostly textful bytes object in a way suitable for presentation
-        to an end user.
-
-        @param bytes: The bytes to represent.
-        @rtype: L{str}
-        """
-        return repr(bytes)[1:]
-
-
-    def _nicebyteslist(list):
-        """
-        Represent a list of mostly textful bytes objects in a way suitable for
-        presentation to an end user.
-
-        @param list: The list of bytes to represent.
-        @rtype: L{str}
-        """
-        return '[%s]' % (
-            ', '.join([_nicebytes(b) for b in list]),)
-else:
-    _ord2bytes = chr
-    _nicebytes = _nicebyteslist = repr
-
+    @param list: The list of bytes to represent.
+    @rtype: L{str}
+    """
+    return "[{}]".format(", ".join([_nicebytes(b) for b in list]))
 
 
 def randomSource():
     """
-    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to return
-    2 random chars.
+    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to
+    return 2 random bytes.
+
+    @rtype: L{bytes}
     """
-    return struct.unpack('H', randbytes.secureRandom(2, fallback=True))[0]
+    return struct.unpack("H", randbytes.secureRandom(2, fallback=True))[0]
 
 
 PORT = 53
 
-(A, NS, MD, MF, CNAME, SOA, MB, MG, MR, NULL, WKS, PTR, HINFO, MINFO, MX, TXT,
- RP, AFSDB) = range(1, 19)
+(
+    A,
+    NS,
+    MD,
+    MF,
+    CNAME,
+    SOA,
+    MB,
+    MG,
+    MR,
+    NULL,
+    WKS,
+    PTR,
+    HINFO,
+    MINFO,
+    MX,
+    TXT,
+    RP,
+    AFSDB,
+) = range(1, 19)
 AAAA = 28
 SRV = 33
 NAPTR = 35
@@ -132,74 +214,61 @@ TKEY = 249
 TSIG = 250
 
 QUERY_TYPES = {
-    A: 'A',
-    NS: 'NS',
-    MD: 'MD',
-    MF: 'MF',
-    CNAME: 'CNAME',
-    SOA: 'SOA',
-    MB: 'MB',
-    MG: 'MG',
-    MR: 'MR',
-    NULL: 'NULL',
-    WKS: 'WKS',
-    PTR: 'PTR',
-    HINFO: 'HINFO',
-    MINFO: 'MINFO',
-    MX: 'MX',
-    TXT: 'TXT',
-    RP: 'RP',
-    AFSDB: 'AFSDB',
-
+    A: "A",
+    NS: "NS",
+    MD: "MD",
+    MF: "MF",
+    CNAME: "CNAME",
+    SOA: "SOA",
+    MB: "MB",
+    MG: "MG",
+    MR: "MR",
+    NULL: "NULL",
+    WKS: "WKS",
+    PTR: "PTR",
+    HINFO: "HINFO",
+    MINFO: "MINFO",
+    MX: "MX",
+    TXT: "TXT",
+    RP: "RP",
+    AFSDB: "AFSDB",
     # 19 through 27?  Eh, I'll get to 'em.
-
-    AAAA: 'AAAA',
-    SRV: 'SRV',
-    NAPTR: 'NAPTR',
-    A6: 'A6',
-    DNAME: 'DNAME',
-    OPT: 'OPT',
-    SSHFP: 'SSHFP',
-    SPF: 'SPF',
-
-    TKEY: 'TKEY',
-    TSIG: 'TSIG',
+    AAAA: "AAAA",
+    SRV: "SRV",
+    NAPTR: "NAPTR",
+    A6: "A6",
+    DNAME: "DNAME",
+    OPT: "OPT",
+    SSHFP: "SSHFP",
+    SPF: "SPF",
+    TKEY: "TKEY",
+    TSIG: "TSIG",
 }
 
 IXFR, AXFR, MAILB, MAILA, ALL_RECORDS = range(251, 256)
 
 # "Extended" queries (Hey, half of these are deprecated, good job)
 EXT_QUERIES = {
-    IXFR: 'IXFR',
-    AXFR: 'AXFR',
-    MAILB: 'MAILB',
-    MAILA: 'MAILA',
-    ALL_RECORDS: 'ALL_RECORDS'
+    IXFR: "IXFR",
+    AXFR: "AXFR",
+    MAILB: "MAILB",
+    MAILA: "MAILA",
+    ALL_RECORDS: "ALL_RECORDS",
 }
 
-REV_TYPES = dict([
-    (v, k) for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())
-])
+REV_TYPES = {v: k for (k, v) in chain(QUERY_TYPES.items(), EXT_QUERIES.items())}
 
 IN, CS, CH, HS = range(1, 5)
 ANY = 255
 
-QUERY_CLASSES = {
-    IN: 'IN',
-    CS: 'CS',
-    CH: 'CH',
-    HS: 'HS',
-    ANY: 'ANY'
-}
-REV_CLASSES = dict([
-    (v, k) for (k, v) in QUERY_CLASSES.items()
-])
+QUERY_CLASSES = {IN: "IN", CS: "CS", CH: "CH", HS: "HS", ANY: "ANY"}
+REV_CLASSES = {v: k for (k, v) in QUERY_CLASSES.items()}
 
 
 # Opcodes
 OP_QUERY, OP_INVERSE, OP_STATUS = range(3)
-OP_NOTIFY = 4 # RFC 1996
-OP_UPDATE = 5 # RFC 2136
+OP_NOTIFY = 4  # RFC 1996
+OP_UPDATE = 5  # RFC 2136
 
 
 # Response Codes
@@ -208,7 +277,6 @@ OK, EFORMAT, ESERVER, ENAME, ENOTIMP, EREFUSED = range(6)
 EBADVERSION = 16
 # RFC 2845
 EBADSIG, EBADKEY, EBADTIME = range(16, 19)
-
 
 
 class IRecord(Interface):
@@ -221,9 +289,11 @@ class IRecord(Interface):
 
 # Backwards compatibility aliases - these should be deprecated or something I
 # suppose. -exarkun
-from twisted.names.error import DomainError, AuthoritativeDomainError
-from twisted.names.error import DNSQueryTimeoutError
-
+from twisted.names.error import (
+    AuthoritativeDomainError,
+    DNSQueryTimeoutError,
+    DomainError,
+)
 
 
 def _nameToLabels(name):
@@ -236,14 +306,47 @@ def _nameToLabels(name):
 
     @return: A L{list} of labels ending with an empty label
         representing the DNS root zone.
+    @rtype: L{list} of L{bytes}
     """
-    if name in (b'', b'.'):
-        return [b'']
-    labels = name.split(b'.')
-    if labels[-1] != b'':
-        labels.append(b'')
+    if name in (b"", b"."):
+        return [b""]
+    labels = name.split(b".")
+    if labels[-1] != b"":
+        labels.append(b"")
     return labels
 
+
+def domainString(domain: str | bytes) -> bytes:
+    """
+    Coerce a domain name string to bytes.
+
+    L{twisted.names} represents domain names as L{bytes}, but many interfaces
+    accept L{bytes} or a text string (L{unicode} on Python 2, L{str} on Python
+    3). This function coerces text strings using IDNA encoding --- see
+    L{encodings.idna}.
+
+    Note that DNS is I{case insensitive} but I{case preserving}. This function
+    doesn't normalize case, so you'll still need to do that whenever comparing
+    the strings it returns.
+
+    @param domain: A domain name.  If passed as a text string it will be
+        C{idna} encoded.
+    @type domain: L{bytes} or L{str}
+
+    @returns: L{bytes} suitable for network transmission.
+    @rtype: L{bytes}
+
+    @since: Twisted 20.3.0
+    """
+    if isinstance(domain, str):
+        domain = domain.encode("idna")
+    if not isinstance(domain, bytes):
+        raise TypeError(
+            "Expected {} or {} but found {!r} of type {}".format(
+                bytes.__name__, str.__name__, domain, type(domain)
+            )
+        )
+    return domain
 
 
 def _isSubdomainOf(descendantName, ancestorName):
@@ -273,11 +376,42 @@ def _isSubdomainOf(descendantName, ancestorName):
     """
     descendantLabels = _nameToLabels(descendantName.lower())
     ancestorLabels = _nameToLabels(ancestorName.lower())
-    return descendantLabels[-len(ancestorLabels):] == ancestorLabels
+    return descendantLabels[-len(ancestorLabels) :] == ancestorLabels
 
 
+def _str2time(s: str) -> int:
+    """
+    mypy doesn't like type-punning str | bytes | int | None into a str so we have this helper function.
+    """
+    suffixes = (
+        ("S", 1),
+        ("M", 60),
+        ("H", 60 * 60),
+        ("D", 60 * 60 * 24),
+        ("W", 60 * 60 * 24 * 7),
+        ("Y", 60 * 60 * 24 * 365),
+    )
+    s = s.upper().strip()
+    for suff, mult in suffixes:
+        if s.endswith(suff):
+            return int(float(s[:-1]) * mult)
+    try:
+        return int(s)
+    except ValueError:
+        raise ValueError("Invalid time interval specifier: " + s)
 
-def str2time(s):
+
+@overload
+def str2time(s: Union[str, bytes, int]) -> int:
+    ...
+
+
+@overload
+def str2time(s: None) -> None:
+    ...
+
+
+def str2time(s: Union[str, bytes, int, None]) -> Union[int, None]:
     """
     Parse a string description of an interval into an integer number of seconds.
 
@@ -288,28 +422,18 @@ def str2time(s):
         (years).  For example: C{"3S"} indicates an interval of three seconds;
         C{"5D"} indicates an interval of five days.  Alternatively, C{s} may be
         any non-string and it will be returned unmodified.
-    @type s: text string (L{bytes} or L{unicode}) for parsing; anything else
+    @type s: text string (L{bytes} or L{str}) for parsing; anything else
         for passthrough.
 
     @return: an L{int} giving the interval represented by the string C{s}, or
         whatever C{s} is if it is not a string.
     """
-    suffixes = (
-        ('S', 1), ('M', 60), ('H', 60 * 60), ('D', 60 * 60 * 24),
-        ('W', 60 * 60 * 24 * 7), ('Y', 60 * 60 * 24 * 365)
-    )
-    if _PY3 and isinstance(s, bytes):
-        s = s.decode('ascii')
+    if isinstance(s, bytes):
+        return _str2time(s.decode("ascii"))
 
     if isinstance(s, str):
-        s = s.upper().strip()
-        for (suff, mult) in suffixes:
-            if s.endswith(suff):
-                return int(float(s[:-1]) * mult)
-        try:
-            s = int(s)
-        except ValueError:
-            raise ValueError("Invalid time interval specifier: " + s)
+        return _str2time(s)
+
     return s
 
 
@@ -323,30 +447,33 @@ def readPrecisely(file, l):
 class IEncodable(Interface):
     """
     Interface for something which can be encoded to and decoded
-    from a file object.
+    to the DNS wire format.
+
+    A binary-mode file object (such as L{io.BytesIO}) is used as a buffer when
+    encoding or decoding.
     """
 
-    def encode(strio, compDict = None):
+    def encode(strio, compDict=None):
         """
         Write a representation of this object to the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream to which to write bytes
+        @param strio: The buffer to write to. It must have a C{tell()} method.
 
-        @type compDict: C{dict} or L{None}
-        @param compDict: A dictionary of backreference addresses that have
-        already been written to this stream and that may be used for
-        compression.
+        @type compDict: L{dict} of L{bytes} to L{int} r L{None}
+        @param compDict: A mapping of names to byte offsets that have already
+        been written to the buffer, which may be used for compression (see RFC
+        1035 section 4.1.4). When L{None}, encode without compression.
         """
 
-    def decode(strio, length = None):
+    def decode(strio, length=None):
         """
         Reconstruct an object from data read from the given
         file object.
 
         @type strio: File-like object
-        @param strio: The stream from which bytes may be read
+        @param strio: A seekable buffer from which bytes may be read.
 
         @type length: L{int} or L{None}
         @param length: The number of bytes in this RDATA field.  Most
@@ -356,15 +483,20 @@ class IEncodable(Interface):
         """
 
 
+class IEncodableRecord(IEncodable, IRecord):
+    """
+    Interface for DNS records that can be encoded and decoded.
+
+    @since: Twisted 21.2.0
+    """
+
 
 @implementer(IEncodable)
-class Charstr(object):
-
-    def __init__(self, string=b''):
+class Charstr:
+    def __init__(self, string: bytes = b""):
         if not isinstance(string, bytes):
-            raise ValueError("%r is not a byte string" % (string,))
+            raise ValueError(f"{string!r} is not a byte string")
         self.string = string
-
 
     def encode(self, strio, compDict=None):
         """
@@ -379,7 +511,6 @@ class Charstr(object):
         strio.write(_ord2bytes(ind))
         strio.write(string)
 
-
     def decode(self, strio, length=None):
         """
         Decode a byte string into this Charstr.
@@ -391,33 +522,23 @@ class Charstr(object):
         @raise EOFError: Raised when there are not enough bytes available from
             C{strio}.
         """
-        self.string = b''
+        self.string = b""
         l = ord(readPrecisely(strio, 1))
         self.string = readPrecisely(strio, l)
 
-
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Charstr):
             return self.string == other.string
         return NotImplemented
 
-
-    def __ne__(self, other):
-        if isinstance(other, Charstr):
-            return self.string != other.string
-        return NotImplemented
-
-
     def __hash__(self):
         return hash(self.string)
 
-
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Represent this L{Charstr} instance by its string value.
         """
         return nativeString(self.string)
-
 
 
 @implementer(IEncodable)
@@ -429,17 +550,13 @@ class Name:
     @ivar name: A byte string giving the name.
     @type name: L{bytes}
     """
-    def __init__(self, name=b''):
+
+    def __init__(self, name: bytes | str = b""):
         """
         @param name: A name.
-        @type name: L{unicode} or L{bytes}
+        @type name: L{bytes} or L{str}
         """
-        if isinstance(name, unicode):
-            name = name.encode('idna')
-        if not isinstance(name, bytes):
-            raise TypeError("%r is not a byte string" % (name,))
-        self.name = name
-
+        self.name = domainString(name)
 
     def encode(self, strio, compDict=None):
         """
@@ -458,14 +575,13 @@ class Name:
         while name:
             if compDict is not None:
                 if name in compDict:
-                    strio.write(
-                        struct.pack("!H", 0xc000 | compDict[name]))
+                    strio.write(struct.pack("!H", 0xC000 | compDict[name]))
                     return
                 else:
                     compDict[name] = strio.tell() + Message.headerSize
-            ind = name.find(b'.')
+            ind = name.find(b".")
             if ind > 0:
-                label, name = name[:ind], name[ind + 1:]
+                label, name = name[:ind], name[ind + 1 :]
             else:
                 # This is the last label, end the loop after handling it.
                 label = name
@@ -473,8 +589,7 @@ class Name:
                 ind = len(label)
             strio.write(_ord2bytes(ind))
             strio.write(label)
-        strio.write(b'\x00')
-
+        strio.write(b"\x00")
 
     def decode(self, strio, length=None):
         """
@@ -491,7 +606,7 @@ class Name:
             because it contains a loop).
         """
         visited = set()
-        self.name = b''
+        self.name = b""
         off = 0
         while 1:
             l = ord(readPrecisely(strio, 1))
@@ -500,8 +615,7 @@ class Name:
                     strio.seek(off)
                 return
             if (l >> 6) == 3:
-                new_off = ((l&63) << 8
-                            | ord(readPrecisely(strio, 1)))
+                new_off = (l & 63) << 8 | ord(readPrecisely(strio, 1))
                 if new_off in visited:
                     raise ValueError("Compression loop in encoded name")
                 visited.add(new_off)
@@ -510,33 +624,24 @@ class Name:
                 strio.seek(new_off)
                 continue
             label = readPrecisely(strio, l)
-            if self.name == b'':
+            if self.name == b"":
                 self.name = label
             else:
-                self.name = self.name + b'.' + label
+                self.name = self.name + b"." + label
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Name):
             return self.name.lower() == other.name.lower()
         return NotImplemented
 
-
-    def __ne__(self, other):
-        if isinstance(other, Name):
-            return self.name.lower() != other.name.lower()
-        return NotImplemented
-
-
     def __hash__(self):
         return hash(self.name)
 
-
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Represent this L{Name} instance by its string name.
         """
         return nativeString(self.name)
-
 
 
 @comparable
@@ -554,13 +659,10 @@ class Query:
     @ivar cls: The query class.
     @type cls: L{int}
     """
-    name = None
-    type = None
-    cls = None
 
-    def __init__(self, name=b'', type=A, cls=IN):
+    def __init__(self, name: Union[bytes, str] = b"", type: int = A, cls: int = IN):
         """
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: See L{Query.name}
 
         @type type: L{int}
@@ -573,43 +675,39 @@ class Query:
         self.type = type
         self.cls = cls
 
-
     def encode(self, strio, compDict=None):
         self.name.encode(strio, compDict)
         strio.write(struct.pack("!HH", self.type, self.cls))
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.name.decode(strio)
         buff = readPrecisely(strio, 4)
         self.type, self.cls = struct.unpack("!HH", buff)
 
-
     def __hash__(self):
-        return hash((str(self.name).lower(), self.type, self.cls))
-
+        return hash((self.name.name.lower(), self.type, self.cls))
 
     def __cmp__(self, other):
         if isinstance(other, Query):
             return cmp(
-                (str(self.name).lower(), self.type, self.cls),
-                (str(other.name).lower(), other.type, other.cls))
+                (self.name.name.lower(), self.type, self.cls),
+                (other.name.name.lower(), other.type, other.cls),
+            )
         return NotImplemented
 
+    def __str__(self) -> str:
+        t = QUERY_TYPES.get(
+            self.type, EXT_QUERIES.get(self.type, "UNKNOWN (%d)" % self.type)
+        )
+        c = QUERY_CLASSES.get(self.cls, "UNKNOWN (%d)" % self.cls)
+        return f"<Query {self.name} {t} {c}>"
 
-    def __str__(self):
-        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
-        c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<Query %s %s %s>' % (self.name, t, c)
-
-
-    def __repr__(self):
-        return 'Query(%r, %r, %r)' % (str(self.name), self.type, self.cls)
-
+    def __repr__(self) -> str:
+        return f"Query({self.name.name!r}, {self.type!r}, {self.cls!r})"
 
 
 @implementer(IEncodable)
-class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An OPT record header.
 
@@ -629,19 +727,38 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @since: 13.2
     """
+
     showAttributes = (
-        ('name', lambda n: nativeString(n.name)), 'type', 'udpPayloadSize',
-        'extendedRCODE', 'version', 'dnssecOK', 'options')
+        ("name", lambda n: nativeString(n.name)),
+        "type",
+        "udpPayloadSize",
+        "extendedRCODE",
+        "version",
+        "dnssecOK",
+        "options",
+    )
 
     compareAttributes = (
-        'name', 'type', 'udpPayloadSize', 'extendedRCODE', 'version',
-        'dnssecOK', 'options')
+        "name",
+        "type",
+        "udpPayloadSize",
+        "extendedRCODE",
+        "version",
+        "dnssecOK",
+        "options",
+    )
 
-    def __init__(self, udpPayloadSize=4096, extendedRCODE=0, version=0,
-                 dnssecOK=False, options=None):
+    def __init__(
+        self,
+        udpPayloadSize=4096,
+        extendedRCODE=0,
+        version=0,
+        dnssecOK=False,
+        options=None,
+    ):
         """
         @type udpPayloadSize: L{int}
-        @param payload: The number of octets of the largest UDP
+        @param udpPayloadSize: The number of octets of the largest UDP
             payload that can be reassembled and delivered in the
             requestor's network stack.
 
@@ -672,7 +789,6 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             options = []
         self.options = options
 
-
     @property
     def name(self):
         """
@@ -683,8 +799,7 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             is a pseudo record, the name is always an L{Name} instance
             with value b'', which represents the DNS root zone.
         """
-        return Name(b'')
-
+        return Name(b"")
 
     @property
     def type(self):
@@ -697,12 +812,11 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         """
         return OPT
 
-
     def encode(self, strio, compDict=None):
         """
         Encode this L{_OPTHeader} instance to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this L{_OPTHeader}
             will be written to this file.
 
@@ -720,19 +834,15 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             name=self.name.name,
             type=self.type,
             cls=self.udpPayloadSize,
-            ttl=(
-                self.extendedRCODE << 24
-                | self.version << 16
-                | self.dnssecOK << 15),
-            payload=UnknownRecord(optionBytes)
+            ttl=(self.extendedRCODE << 24 | self.version << 16 | self.dnssecOK << 15),
+            payload=UnknownRecord(optionBytes),
         ).encode(strio, compDict)
-
 
     def decode(self, strio, length=None):
         """
         Decode bytes into an L{_OPTHeader} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTHeader} is decoded.
 
@@ -747,9 +857,8 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         newOptHeader = self.fromRRHeader(h)
 
         for attrName in self.compareAttributes:
-            if attrName not in ('name', 'type'):
+            if attrName not in ("name", "type"):
                 setattr(self, attrName, getattr(newOptHeader, attrName))
-
 
     @classmethod
     def fromRRHeader(cls, rrHeader):
@@ -778,15 +887,14 @@ class _OPTHeader(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         return cls(
             udpPayloadSize=rrHeader.cls,
             extendedRCODE=rrHeader.ttl >> 24,
-            version=rrHeader.ttl >> 16 & 0xff,
-            dnssecOK=(rrHeader.ttl & 0xffff) >> 15,
-            options=options
-            )
-
+            version=rrHeader.ttl >> 16 & 0xFF,
+            dnssecOK=(rrHeader.ttl & 0xFFFF) >> 15,
+            options=options,
+        )
 
 
 @implementer(IEncodable)
-class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
+class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A class to represent OPT record variable options.
 
@@ -797,12 +905,13 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
 
     @since: 13.2
     """
-    showAttributes = ('code', ('data', nativeString))
-    compareAttributes = ('code', 'data')
 
-    _fmt = '!HH'
+    showAttributes = ("code", ("data", nativeString))
+    compareAttributes = ("code", "data")
 
-    def __init__(self, code=0, data=b''):
+    _fmt = "!HH"
+
+    def __init__(self, code=0, data=b""):
         """
         @type code: L{int}
         @param code: The option code
@@ -813,12 +922,11 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         self.code = code
         self.data = data
 
-
     def encode(self, strio, compDict=None):
         """
         Encode this L{_OPTVariableOption} to bytes.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: the byte representation of this
             L{_OPTVariableOption} will be written to this file.
 
@@ -827,15 +935,13 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
             have already been written to this stream and that may
             be used for DNS name compression.
         """
-        strio.write(
-            struct.pack(self._fmt, self.code, len(self.data)) + self.data)
-
+        strio.write(struct.pack(self._fmt, self.code, len(self.data)) + self.data)
 
     def decode(self, strio, length=None):
         """
         Decode bytes into an L{_OPTVariableOption} instance.
 
-        @type strio: L{file}
+        @type strio: file
         @param strio: Bytes will be read from this file until the full
             L{_OPTVariableOption} is decoded.
 
@@ -846,7 +952,6 @@ class _OPTVariableOption(tputil.FancyStrMixin, tputil.FancyEqMixin, object):
         buff = readPrecisely(strio, l)
         self.code, length = struct.unpack(self._fmt, buff)
         self.data = readPrecisely(strio, length)
-
 
 
 @implementer(IEncodable)
@@ -867,28 +972,32 @@ class RRHeader(tputil.FancyEqMixin):
     @ivar ttl: The time-to-live for this record.
     @type ttl: L{int}
 
-    @ivar payload: An object that implements the L{IEncodable} interface
+    @ivar payload: The record described by this header.
+    @type payload: L{IEncodableRecord} or L{None}
 
     @ivar auth: A L{bool} indicating whether this C{RRHeader} was parsed from
         an authoritative message.
     """
-    compareAttributes = ('name', 'type', 'cls', 'ttl', 'payload', 'auth')
+
+    compareAttributes = ("name", "type", "cls", "ttl", "payload", "auth")
 
     fmt = "!HHIH"
 
-    name = None
-    type = None
-    cls = None
-    ttl = None
-    payload = None
     rdlength = None
 
     cachedResponse = None
 
-    def __init__(self, name=b'', type=A, cls=IN, ttl=0, payload=None,
-                 auth=False):
+    def __init__(
+        self,
+        name: Union[bytes, str] = b"",
+        type: int = A,
+        cls: int = IN,
+        ttl: SupportsInt = 0,
+        payload: Optional[IEncodableRecord] = None,
+        auth: bool = False,
+    ):
         """
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         @param name: See L{RRHeader.name}
 
         @type type: L{int}
@@ -901,13 +1010,23 @@ class RRHeader(tputil.FancyEqMixin):
         @param ttl: Time to live for this record.  This will be
             converted to an L{int}.
 
-        @type payload: An object implementing C{IEncodable}
-        @param payload: A Query Type specific data object.
+        @type payload: L{IEncodableRecord} or L{None}
+        @param payload: An optional Query Type specific data object.
 
         @raises TypeError: if the ttl cannot be converted to an L{int}.
         @raises ValueError: if the ttl is negative.
+        @raises ValueError: if the payload type is not equal to the C{type}
+                            argument.
         """
-        assert (payload is None) or isinstance(payload, UnknownRecord) or (payload.TYPE == type)
+        payloadType = None if payload is None else payload.TYPE
+        if payloadType is not None and payloadType != type:
+            raise ValueError(
+                "Payload type (%s) does not match given type (%s)"
+                % (
+                    QUERY_TYPES.get(payloadType, payloadType),
+                    QUERY_TYPES.get(type, type),
+                )
+            )
 
         integralTTL = int(ttl)
 
@@ -921,7 +1040,6 @@ class RRHeader(tputil.FancyEqMixin):
         self.payload = payload
         self.auth = auth
 
-
     def encode(self, strio, compDict=None):
         self.name.encode(strio, compDict)
         strio.write(struct.pack(self.fmt, self.type, self.cls, self.ttl, 0))
@@ -930,33 +1048,36 @@ class RRHeader(tputil.FancyEqMixin):
             self.payload.encode(strio, compDict)
             aft = strio.tell()
             strio.seek(prefix - 2, 0)
-            strio.write(struct.pack('!H', aft - prefix))
+            strio.write(struct.pack("!H", aft - prefix))
             strio.seek(aft, 0)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.name.decode(strio)
         l = struct.calcsize(self.fmt)
         buff = readPrecisely(strio, l)
         r = struct.unpack(self.fmt, buff)
         self.type, self.cls, self.ttl, self.rdlength = r
 
-
     def isAuthoritative(self):
         return self.auth
 
-
-    def __str__(self):
-        t = QUERY_TYPES.get(self.type, EXT_QUERIES.get(self.type, 'UNKNOWN (%d)' % self.type))
-        c = QUERY_CLASSES.get(self.cls, 'UNKNOWN (%d)' % self.cls)
-        return '<RR name=%s type=%s class=%s ttl=%ds auth=%s>' % (self.name, t, c, self.ttl, self.auth and 'True' or 'False')
-
+    def __str__(self) -> str:
+        t = QUERY_TYPES.get(
+            self.type, EXT_QUERIES.get(self.type, "UNKNOWN (%d)" % self.type)
+        )
+        c = QUERY_CLASSES.get(self.cls, "UNKNOWN (%d)" % self.cls)
+        return "<RR name=%s type=%s class=%s ttl=%ds auth=%s>" % (
+            self.name,
+            t,
+            c,
+            self.ttl,
+            self.auth and "True" or "False",
+        )
 
     __repr__ = __str__
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A Resource Record which consists of a single RFC 1035 domain-name.
@@ -968,29 +1089,27 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    showAttributes = (('name', 'name', '%s'), 'ttl')
-    compareAttributes = ('name', 'ttl')
 
-    TYPE = None
+    showAttributes = (("name", "name", "%s"), "ttl")
+    compareAttributes = ("name", "ttl")
+
+    TYPE: Optional[int] = None
     name = None
 
-    def __init__(self, name=b'', ttl=None):
+    def __init__(self, name=b"", ttl=None):
         """
         @param name: See L{SimpleRecord.name}
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         """
         self.name = Name(name)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         self.name.encode(strio, compDict)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.name = Name()
         self.name.decode(strio)
-
 
     def __hash__(self):
         return hash(self.name)
@@ -1001,9 +1120,9 @@ class Record_NS(SimpleRecord):
     """
     An authoritative nameserver.
     """
-    TYPE = NS
-    fancybasename = 'NS'
 
+    TYPE = NS
+    fancybasename = "NS"
 
 
 class Record_MD(SimpleRecord):
@@ -1014,9 +1133,9 @@ class Record_MD(SimpleRecord):
 
     @see: L{Record_MX}
     """
-    TYPE = MD
-    fancybasename = 'MD'
 
+    TYPE = MD
+    fancybasename = "MD"
 
 
 class Record_MF(SimpleRecord):
@@ -1027,18 +1146,18 @@ class Record_MF(SimpleRecord):
 
     @see: L{Record_MX}
     """
-    TYPE = MF
-    fancybasename = 'MF'
 
+    TYPE = MF
+    fancybasename = "MF"
 
 
 class Record_CNAME(SimpleRecord):
     """
     The canonical name for an alias.
     """
-    TYPE = CNAME
-    fancybasename = 'CNAME'
 
+    TYPE = CNAME
+    fancybasename = "CNAME"
 
 
 class Record_MB(SimpleRecord):
@@ -1047,9 +1166,9 @@ class Record_MB(SimpleRecord):
 
     This is an experimental record type.
     """
-    TYPE = MB
-    fancybasename = 'MB'
 
+    TYPE = MB
+    fancybasename = "MB"
 
 
 class Record_MG(SimpleRecord):
@@ -1058,9 +1177,9 @@ class Record_MG(SimpleRecord):
 
     This is an experimental record type.
     """
-    TYPE = MG
-    fancybasename = 'MG'
 
+    TYPE = MG
+    fancybasename = "MG"
 
 
 class Record_MR(SimpleRecord):
@@ -1069,18 +1188,18 @@ class Record_MR(SimpleRecord):
 
     This is an experimental record type.
     """
-    TYPE = MR
-    fancybasename = 'MR'
 
+    TYPE = MR
+    fancybasename = "MR"
 
 
 class Record_PTR(SimpleRecord):
     """
     A domain name pointer.
     """
-    TYPE = PTR
-    fancybasename = 'PTR'
 
+    TYPE = PTR
+    fancybasename = "PTR"
 
 
 class Record_DNAME(SimpleRecord):
@@ -1094,12 +1213,12 @@ class Record_DNAME(SimpleRecord):
     @see: U{http://www.faqs.org/rfcs/rfc2672.html}
     @see: U{http://www.faqs.org/rfcs/rfc3363.html}
     """
+
     TYPE = DNAME
-    fancybasename = 'DNAME'
+    fancybasename = "DNAME"
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_A(tputil.FancyEqMixin):
     """
     An IPv4 host address.
@@ -1112,48 +1231,44 @@ class Record_A(tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    compareAttributes = ('address', 'ttl')
+
+    compareAttributes = ("address", "ttl")
 
     TYPE = A
     address = None
 
-    def __init__(self, address='0.0.0.0', ttl=None):
+    def __init__(self, address="0.0.0.0", ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv4 address associated with this record, in
             quad-dotted notation.
         """
-        if _PY3 and isinstance(address, bytes):
-            address = address.decode('idna')
+        if isinstance(address, bytes):
+            address = address.decode("ascii")
 
         address = socket.inet_aton(address)
         self.address = address
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         strio.write(self.address)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.address = readPrecisely(strio, 4)
-
 
     def __hash__(self):
         return hash(self.address)
 
+    def __str__(self) -> str:
+        return f"<A address={self.dottedQuad()} ttl={self.ttl}>"
 
-    def __str__(self):
-        return '<A address=%s ttl=%s>' % (self.dottedQuad(), self.ttl)
     __repr__ = __str__
-
 
     def dottedQuad(self):
         return socket.inet_ntoa(self.address)
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Marks the start of a zone of authority.
@@ -1193,20 +1308,48 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type ttl: L{int}
     @ivar ttl: The default TTL to use for records served from this zone.
     """
-    fancybasename = 'SOA'
-    compareAttributes = ('serial', 'mname', 'rname', 'refresh', 'expire', 'retry', 'minimum', 'ttl')
-    showAttributes = (('mname', 'mname', '%s'), ('rname', 'rname', '%s'), 'serial', 'refresh', 'retry', 'expire', 'minimum', 'ttl')
+
+    fancybasename = "SOA"
+    compareAttributes = (
+        "serial",
+        "mname",
+        "rname",
+        "refresh",
+        "expire",
+        "retry",
+        "minimum",
+        "ttl",
+    )
+    showAttributes = (
+        ("mname", "mname", "%s"),
+        ("rname", "rname", "%s"),
+        "serial",
+        "refresh",
+        "retry",
+        "expire",
+        "minimum",
+        "ttl",
+    )
 
     TYPE = SOA
 
-    def __init__(self, mname=b'', rname=b'', serial=0, refresh=0, retry=0,
-                 expire=0, minimum=0, ttl=None):
+    def __init__(
+        self,
+        mname=b"",
+        rname=b"",
+        serial=0,
+        refresh=0,
+        retry=0,
+        expire=0,
+        minimum=0,
+        ttl=None,
+    ):
         """
         @param mname: See L{Record_SOA.mname}
-        @type mname: L{bytes} or L{unicode}
+        @type mname: L{bytes} or L{str}
 
         @param rname: See L{Record_SOA.rname}
-        @type rname: L{bytes} or L{unicode}
+        @type rname: L{bytes} or L{str}
         """
         self.mname, self.rname = Name(mname), Name(rname)
         self.serial, self.refresh = str2time(serial), str2time(refresh)
@@ -1214,36 +1357,34 @@ class Record_SOA(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.retry = str2time(retry)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         self.mname.encode(strio, compDict)
         self.rname.encode(strio, compDict)
         strio.write(
             struct.pack(
-                '!LlllL',
-                self.serial, self.refresh, self.retry, self.expire,
-                self.minimum
+                "!LlllL",
+                self.serial,
+                self.refresh,
+                self.retry,
+                self.expire,
+                self.minimum,
             )
         )
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.mname, self.rname = Name(), Name()
         self.mname.decode(strio)
         self.rname.decode(strio)
-        r = struct.unpack('!LlllL', readPrecisely(strio, 20))
+        r = struct.unpack("!LlllL", readPrecisely(strio, 20))
         self.serial, self.refresh, self.retry, self.expire, self.minimum = r
 
-
     def __hash__(self):
-        return hash((
-            self.serial, self.mname, self.rname,
-            self.refresh, self.expire, self.retry
-        ))
+        return hash(
+            (self.serial, self.mname, self.rname, self.refresh, self.expire, self.retry)
+        )
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     A null record.
@@ -1254,9 +1395,10 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
-    fancybasename = 'NULL'
-    showAttributes = (('payload', _nicebytes), 'ttl')
-    compareAttributes = ('payload', 'ttl')
+
+    fancybasename = "NULL"
+    showAttributes = (("payload", _nicebytes), "ttl")
+    compareAttributes = ("payload", "ttl")
 
     TYPE = NULL
 
@@ -1264,21 +1406,17 @@ class Record_NULL(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.payload = payload
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         strio.write(self.payload)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.payload = readPrecisely(strio, length)
-
 
     def __hash__(self):
         return hash(self.payload)
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A well known service description.
@@ -1301,46 +1439,45 @@ class Record_WKS(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
+
     fancybasename = "WKS"
-    compareAttributes = ('address', 'protocol', 'map', 'ttl')
-    showAttributes = [('_address', 'address', '%s'), 'protocol', 'ttl']
+    compareAttributes = ("address", "protocol", "map", "ttl")
+    showAttributes = [("_address", "address", "%s"), "protocol", "ttl"]
 
     TYPE = WKS
 
-    _address = property(lambda self: socket.inet_ntoa(self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntoa(self.address)
 
-    def __init__(self, address='0.0.0.0', protocol=0, map=b'', ttl=None):
+    def __init__(self, address="0.0.0.0", protocol=0, map=b"", ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv4 address associated with this record, in
             quad-dotted notation.
         """
-        if _PY3 and isinstance(address, bytes):
-            address = address.decode('idna')
+        if isinstance(address, bytes):
+            address = address.decode("idna")
 
         self.address = socket.inet_aton(address)
         self.protocol, self.map = protocol, map
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         strio.write(self.address)
-        strio.write(struct.pack('!B', self.protocol))
+        strio.write(struct.pack("!B", self.protocol))
         strio.write(self.map)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.address = readPrecisely(strio, 4)
-        self.protocol = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        self.protocol = struct.unpack("!B", readPrecisely(strio, 1))[0]
         self.map = readPrecisely(strio, length - 5)
-
 
     def __hash__(self):
         return hash((self.address, self.protocol, self.map))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     An IPv6 host address.
@@ -1355,40 +1492,39 @@ class Record_AAAA(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1886.html}
     """
+
     TYPE = AAAA
 
-    fancybasename = 'AAAA'
-    showAttributes = (('_address', 'address', '%s'), 'ttl')
-    compareAttributes = ('address', 'ttl')
+    fancybasename = "AAAA"
+    showAttributes = (("_address", "address", "%s"), "ttl")
+    compareAttributes = ("address", "ttl")
 
-    _address = property(lambda self: socket.inet_ntop(AF_INET6, self.address))
+    @property
+    def _address(self):
+        return socket.inet_ntop(AF_INET6, self.address)
 
-    def __init__(self, address='::', ttl=None):
+    def __init__(self, address="::", ttl=None):
         """
-        @type address: L{bytes} or L{unicode}
+        @type address: L{bytes} or L{str}
         @param address: The IPv6 address for this host, in RFC 2373 format.
         """
-        if _PY3 and isinstance(address, bytes):
-            address = address.decode('idna')
+        if isinstance(address, bytes):
+            address = address.decode("idna")
 
         self.address = socket.inet_pton(AF_INET6, address)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         strio.write(self.address)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.address = readPrecisely(strio, 16)
-
 
     def __hash__(self):
         return hash(self.address)
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     An IPv6 address.
@@ -1416,24 +1552,33 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @see: U{http://www.faqs.org/rfcs/rfc3363.html}
     @see: U{http://www.faqs.org/rfcs/rfc3364.html}
     """
+
     TYPE = A6
 
-    fancybasename = 'A6'
-    showAttributes = (('_suffix', 'suffix', '%s'), ('prefix', 'prefix', '%s'), 'ttl')
-    compareAttributes = ('prefixLen', 'prefix', 'suffix', 'ttl')
+    fancybasename = "A6"
+    showAttributes = (("_suffix", "suffix", "%s"), ("prefix", "prefix", "%s"), "ttl")
+    compareAttributes = ("prefixLen", "prefix", "suffix", "ttl")
 
-    _suffix = property(lambda self: socket.inet_ntop(AF_INET6, self.suffix))
+    @property
+    def _suffix(self):
+        return socket.inet_ntop(AF_INET6, self.suffix)
 
-    def __init__(self, prefixLen=0, suffix='::', prefix=b'', ttl=None):
+    def __init__(
+        self,
+        prefixLen: int = 0,
+        suffix: bytes | str = "::",
+        prefix: bytes | str = b"",
+        ttl: Union[str, bytes, int, None] = None,
+    ):
         """
         @param suffix: An IPv6 address suffix in in RFC 2373 format.
-        @type suffix: L{bytes} or L{unicode}
+        @type suffix: L{bytes} or L{str}
 
         @param prefix: An IPv6 address prefix for other A6 records.
-        @type prefix: L{bytes} or L{unicode}
+        @type prefix: L{bytes} or L{str}
         """
-        if _PY3 and isinstance(suffix, bytes):
-            suffix = suffix.decode('idna')
+        if isinstance(suffix, bytes):
+            suffix = suffix.decode("idna")
 
         self.prefixLen = prefixLen
         self.suffix = socket.inet_pton(AF_INET6, suffix)
@@ -1441,48 +1586,45 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self.bytes = int((128 - self.prefixLen) / 8.0)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!B', self.prefixLen))
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack("!B", self.prefixLen))
         if self.bytes:
-            strio.write(self.suffix[-self.bytes:])
+            strio.write(self.suffix[-self.bytes :])
         if self.prefixLen:
             # This may not be compressed
             self.prefix.encode(strio, None)
 
-
-    def decode(self, strio, length = None):
-        self.prefixLen = struct.unpack('!B', readPrecisely(strio, 1))[0]
+    def decode(self, strio, length=None):
+        self.prefixLen = struct.unpack("!B", readPrecisely(strio, 1))[0]
         self.bytes = int((128 - self.prefixLen) / 8.0)
         if self.bytes:
-            self.suffix = b'\x00' * (16 - self.bytes) + readPrecisely(strio, self.bytes)
+            self.suffix = b"\x00" * (16 - self.bytes) + readPrecisely(strio, self.bytes)
         if self.prefixLen:
             self.prefix.decode(strio)
 
-
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Record_A6):
-            return (self.prefixLen == other.prefixLen and
-                    self.suffix[-self.bytes:] == other.suffix[-self.bytes:] and
-                    self.prefix == other.prefix and
-                    self.ttl == other.ttl)
+            return (
+                self.prefixLen == other.prefixLen
+                and self.suffix[-self.bytes :] == other.suffix[-self.bytes :]
+                and self.prefix == other.prefix
+                and self.ttl == other.ttl
+            )
         return NotImplemented
 
-
     def __hash__(self):
-        return hash((self.prefixLen, self.suffix[-self.bytes:], self.prefix))
+        return hash((self.prefixLen, self.suffix[-self.bytes :], self.prefix))
 
-
-    def __str__(self):
-        return '<A6 %s %s (%d) ttl=%s>' % (
+    def __str__(self) -> str:
+        return "<A6 %s %s (%d) ttl=%s>" % (
             self.prefix,
             socket.inet_ntop(AF_INET6, self.suffix),
-            self.prefixLen, self.ttl
+            self.prefixLen,
+            self.ttl,
         )
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1517,16 +1659,17 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc2782.html}
     """
+
     TYPE = SRV
 
-    fancybasename = 'SRV'
-    compareAttributes = ('priority', 'weight', 'target', 'port', 'ttl')
-    showAttributes = ('priority', 'weight', ('target', 'target', '%s'), 'port', 'ttl')
+    fancybasename = "SRV"
+    compareAttributes = ("priority", "weight", "target", "port", "ttl")
+    showAttributes = ("priority", "weight", ("target", "target", "%s"), "port", "ttl")
 
-    def __init__(self, priority=0, weight=0, port=0, target=b'', ttl=None):
+    def __init__(self, priority=0, weight=0, port=0, target=b"", ttl=None):
         """
         @param target: See L{Record_SRV.target}
-        @type target: L{bytes} or L{unicode}
+        @type target: L{bytes} or L{str}
         """
         self.priority = int(priority)
         self.weight = int(weight)
@@ -1534,26 +1677,22 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.target = Name(target)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!HHH', self.priority, self.weight, self.port))
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack("!HHH", self.priority, self.weight, self.port))
         # This can't be compressed
         self.target.encode(strio, None)
 
-
-    def decode(self, strio, length = None):
-        r = struct.unpack('!HHH', readPrecisely(strio, struct.calcsize('!HHH')))
+    def decode(self, strio, length=None):
+        r = struct.unpack("!HHH", readPrecisely(strio, struct.calcsize("!HHH")))
         self.priority, self.weight, self.port = r
         self.target = Name()
         self.target.decode(strio)
-
 
     def __hash__(self):
         return hash((self.priority, self.weight, self.port, self.target))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The location of the server(s) for a specific protocol and domain.
@@ -1598,21 +1737,42 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc2915.html}
     """
+
     TYPE = NAPTR
 
-    compareAttributes = ('order', 'preference', 'flags', 'service', 'regexp',
-                         'replacement')
-    fancybasename = 'NAPTR'
+    compareAttributes = (
+        "order",
+        "preference",
+        "flags",
+        "service",
+        "regexp",
+        "replacement",
+    )
+    fancybasename = "NAPTR"
 
-    showAttributes = ('order', 'preference', ('flags', 'flags', '%s'),
-                      ('service', 'service', '%s'), ('regexp', 'regexp', '%s'),
-                      ('replacement', 'replacement', '%s'), 'ttl')
+    showAttributes = (
+        "order",
+        "preference",
+        ("flags", "flags", "%s"),
+        ("service", "service", "%s"),
+        ("regexp", "regexp", "%s"),
+        ("replacement", "replacement", "%s"),
+        "ttl",
+    )
 
-    def __init__(self, order=0, preference=0, flags=b'', service=b'',
-                 regexp=b'', replacement=b'', ttl=None):
+    def __init__(
+        self,
+        order=0,
+        preference=0,
+        flags=b"",
+        service=b"",
+        regexp=b"",
+        replacement=b"",
+        ttl=None,
+    ):
         """
         @param replacement: See L{Record_NAPTR.replacement}
-        @type replacement: L{bytes} or L{unicode}
+        @type replacement: L{bytes} or L{str}
         """
         self.order = int(order)
         self.preference = int(preference)
@@ -1622,18 +1782,16 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.replacement = Name(replacement)
         self.ttl = str2time(ttl)
 
-
     def encode(self, strio, compDict=None):
-        strio.write(struct.pack('!HH', self.order, self.preference))
+        strio.write(struct.pack("!HH", self.order, self.preference))
         # This can't be compressed
         self.flags.encode(strio, None)
         self.service.encode(strio, None)
         self.regexp.encode(strio, None)
         self.replacement.encode(strio, None)
 
-
     def decode(self, strio, length=None):
-        r = struct.unpack('!HH', readPrecisely(strio, struct.calcsize('!HH')))
+        r = struct.unpack("!HH", readPrecisely(strio, struct.calcsize("!HH")))
         self.order, self.preference = r
         self.flags = Charstr()
         self.service = Charstr()
@@ -1644,15 +1802,20 @@ class Record_NAPTR(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.regexp.decode(strio)
         self.replacement.decode(strio)
 
-
     def __hash__(self):
-        return hash((
-            self.order, self.preference, self.flags,
-            self.service, self.regexp, self.replacement))
+        return hash(
+            (
+                self.order,
+                self.preference,
+                self.flags,
+                self.service,
+                self.regexp,
+                self.replacement,
+            )
+        )
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Map from a domain name to the name of an AFS cell database server.
@@ -1673,39 +1836,36 @@ class Record_AFSDB(tputil.FancyStrMixin, tputil.FancyEqMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1183.html}
     """
+
     TYPE = AFSDB
 
-    fancybasename = 'AFSDB'
-    compareAttributes = ('subtype', 'hostname', 'ttl')
-    showAttributes = ('subtype', ('hostname', 'hostname', '%s'), 'ttl')
+    fancybasename = "AFSDB"
+    compareAttributes = ("subtype", "hostname", "ttl")
+    showAttributes = ("subtype", ("hostname", "hostname", "%s"), "ttl")
 
-    def __init__(self, subtype=0, hostname=b'', ttl=None):
+    def __init__(self, subtype=0, hostname=b"", ttl=None):
         """
         @param hostname: See L{Record_AFSDB.hostname}
-        @type hostname: L{bytes} or L{unicode}
+        @type hostname: L{bytes} or L{str}
         """
         self.subtype = int(subtype)
         self.hostname = Name(hostname)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!H', self.subtype))
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack("!H", self.subtype))
         self.hostname.encode(strio, compDict)
 
-
-    def decode(self, strio, length = None):
-        r = struct.unpack('!H', readPrecisely(strio, struct.calcsize('!H')))
-        self.subtype, = r
+    def decode(self, strio, length=None):
+        r = struct.unpack("!H", readPrecisely(strio, struct.calcsize("!H")))
+        (self.subtype,) = r
         self.hostname.decode(strio)
-
 
     def __hash__(self):
         return hash((self.subtype, self.hostname))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     The responsible person for a domain.
@@ -1724,43 +1884,40 @@ class Record_RP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     @see: U{http://www.faqs.org/rfcs/rfc1183.html}
     """
+
     TYPE = RP
 
-    fancybasename = 'RP'
-    compareAttributes = ('mbox', 'txt', 'ttl')
-    showAttributes = (('mbox', 'mbox', '%s'), ('txt', 'txt', '%s'), 'ttl')
+    fancybasename = "RP"
+    compareAttributes = ("mbox", "txt", "ttl")
+    showAttributes = (("mbox", "mbox", "%s"), ("txt", "txt", "%s"), "ttl")
 
-    def __init__(self, mbox=b'', txt=b'', ttl=None):
+    def __init__(self, mbox=b"", txt=b"", ttl=None):
         """
         @param mbox: See L{Record_RP.mbox}.
-        @type mbox: L{bytes} or L{unicode}
+        @type mbox: L{bytes} or L{str}
 
         @param txt: See L{Record_RP.txt}
-        @type txt: L{bytes} or L{unicode}
+        @type txt: L{bytes} or L{str}
         """
         self.mbox = Name(mbox)
         self.txt = Name(txt)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         self.mbox.encode(strio, compDict)
         self.txt.encode(strio, compDict)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.mbox = Name()
         self.txt = Name()
         self.mbox.decode(strio)
         self.txt.decode(strio)
 
-
     def __hash__(self):
         return hash((self.mbox, self.txt))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Host information.
@@ -1775,43 +1932,46 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
+
     TYPE = HINFO
 
-    fancybasename = 'HINFO'
-    showAttributes = (('cpu', _nicebytes), ('os', _nicebytes), 'ttl')
-    compareAttributes = ('cpu', 'os', 'ttl')
+    fancybasename = "HINFO"
+    showAttributes = (("cpu", _nicebytes), ("os", _nicebytes), "ttl")
+    compareAttributes = ("cpu", "os", "ttl")
 
-    def __init__(self, cpu=b'', os=b'', ttl=None):
+    def __init__(
+        self,
+        cpu: bytes = b"",
+        os: bytes = b"",
+        ttl: Union[str, bytes, int, None] = None,
+    ):
         self.cpu, self.os = cpu, os
         self.ttl = str2time(ttl)
 
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack("!B", len(self.cpu)) + self.cpu)
+        strio.write(struct.pack("!B", len(self.os)) + self.os)
 
-    def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!B', len(self.cpu)) + self.cpu)
-        strio.write(struct.pack('!B', len(self.os)) + self.os)
-
-
-    def decode(self, strio, length = None):
-        cpu = struct.unpack('!B', readPrecisely(strio, 1))[0]
+    def decode(self, strio, length=None):
+        cpu = struct.unpack("!B", readPrecisely(strio, 1))[0]
         self.cpu = readPrecisely(strio, cpu)
-        os = struct.unpack('!B', readPrecisely(strio, 1))[0]
+        os = struct.unpack("!B", readPrecisely(strio, 1))[0]
         self.os = readPrecisely(strio, os)
 
-
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Record_HINFO):
-            return (self.os.lower() == other.os.lower() and
-                    self.cpu.lower() == other.cpu.lower() and
-                    self.ttl == other.ttl)
+            return (
+                self.os.lower() == other.os.lower()
+                and self.cpu.lower() == other.cpu.lower()
+                and self.ttl == other.ttl
+            )
         return NotImplemented
-
 
     def __hash__(self):
         return hash((self.os.lower(), self.cpu.lower()))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Mailbox or mail list information.
@@ -1833,46 +1993,45 @@ class Record_MINFO(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
+
     TYPE = MINFO
 
     rmailbx = None
     emailbx = None
 
-    fancybasename = 'MINFO'
-    compareAttributes = ('rmailbx', 'emailbx', 'ttl')
-    showAttributes = (('rmailbx', 'responsibility', '%s'),
-                      ('emailbx', 'errors', '%s'),
-                      'ttl')
+    fancybasename = "MINFO"
+    compareAttributes = ("rmailbx", "emailbx", "ttl")
+    showAttributes = (
+        ("rmailbx", "responsibility", "%s"),
+        ("emailbx", "errors", "%s"),
+        "ttl",
+    )
 
-    def __init__(self, rmailbx=b'', emailbx=b'', ttl=None):
+    def __init__(self, rmailbx=b"", emailbx=b"", ttl=None):
         """
         @param rmailbx: See L{Record_MINFO.rmailbx}.
-        @type rmailbx: L{bytes} or L{unicode}
+        @type rmailbx: L{bytes} or L{str}
 
         @param emailbx: See L{Record_MINFO.rmailbx}.
-        @type emailbx: L{bytes} or L{unicode}
+        @type emailbx: L{bytes} or L{str}
         """
         self.rmailbx, self.emailbx = Name(rmailbx), Name(emailbx)
         self.ttl = str2time(ttl)
 
-
-    def encode(self, strio, compDict = None):
+    def encode(self, strio, compDict=None):
         self.rmailbx.encode(strio, compDict)
         self.emailbx.encode(strio, compDict)
 
-
-    def decode(self, strio, length = None):
+    def decode(self, strio, length=None):
         self.rmailbx, self.emailbx = Name(), Name()
         self.rmailbx.decode(strio)
         self.emailbx.decode(strio)
-
 
     def __hash__(self):
         return hash((self.rmailbx, self.emailbx))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     """
     Mail exchange.
@@ -1889,28 +2048,28 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
     @ivar ttl: The maximum number of seconds which this record should be
         cached.
     """
+
     TYPE = MX
 
-    fancybasename = 'MX'
-    compareAttributes = ('preference', 'name', 'ttl')
-    showAttributes = ('preference', ('name', 'name', '%s'), 'ttl')
+    fancybasename = "MX"
+    compareAttributes = ("preference", "name", "ttl")
+    showAttributes = ("preference", ("name", "name", "%s"), "ttl")
 
-    def __init__(self, preference=0, name=b'', ttl=None, **kwargs):
+    def __init__(self, preference=0, name=b"", ttl=None, **kwargs):
         """
         @param name: See L{Record_MX.name}.
-        @type name: L{bytes} or L{unicode}
+        @type name: L{bytes} or L{str}
         """
         self.preference = int(preference)
-        self.name = Name(kwargs.get('exchange', name))
+        self.name = Name(kwargs.get("exchange", name))
         self.ttl = str2time(ttl)
 
-    def encode(self, strio, compDict = None):
-        strio.write(struct.pack('!H', self.preference))
+    def encode(self, strio, compDict=None):
+        strio.write(struct.pack("!H", self.preference))
         self.name.encode(strio, compDict)
 
-
-    def decode(self, strio, length = None):
-        self.preference = struct.unpack('!H', readPrecisely(strio, 2))[0]
+    def decode(self, strio, length=None):
+        self.preference = struct.unpack("!H", readPrecisely(strio, 2))[0]
         self.name = Name()
         self.name.decode(strio)
 
@@ -1918,8 +2077,7 @@ class Record_MX(tputil.FancyStrMixin, tputil.FancyEqMixin):
         return hash((self.preference, self.name))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A record containing the fingerprint of an SSH key.
@@ -1949,9 +2107,10 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
           and
           U{RFC 6594 <https://tools.ietf.org/html/rfc6594>}
     """
+
     fancybasename = "SSHFP"
-    compareAttributes = ('algorithm', 'fingerprintType', 'fingerprint', 'ttl')
-    showAttributes = ('algorithm', 'fingerprintType', 'fingerprint')
+    compareAttributes = ("algorithm", "fingerprintType", "fingerprint", "ttl")
+    showAttributes = ("algorithm", "fingerprintType", "fingerprint")
 
     TYPE = SSHFP
 
@@ -1963,31 +2122,26 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
     FINGERPRINT_TYPE_SHA1 = 1
     FINGERPRINT_TYPE_SHA256 = 2
 
-    def __init__(self, algorithm=0, fingerprintType=0, fingerprint=b'', ttl=0):
+    def __init__(self, algorithm=0, fingerprintType=0, fingerprint=b"", ttl=0):
         self.algorithm = algorithm
         self.fingerprintType = fingerprintType
         self.fingerprint = fingerprint
         self.ttl = ttl
 
-
     def encode(self, strio, compDict=None):
-        strio.write(struct.pack('!BB',
-                                self.algorithm, self.fingerprintType))
+        strio.write(struct.pack("!BB", self.algorithm, self.fingerprintType))
         strio.write(self.fingerprint)
 
-
     def decode(self, strio, length=None):
-        r = struct.unpack('!BB', readPrecisely(strio, 2))
+        r = struct.unpack("!BB", readPrecisely(strio, 2))
         (self.algorithm, self.fingerprintType) = r
         self.fingerprint = readPrecisely(strio, length - 2)
-
 
     def __hash__(self):
         return hash((self.algorithm, self.fingerprintType, self.fingerprint))
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Freeform text.
@@ -1998,45 +2152,41 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type ttl: L{int}
     @ivar ttl: The maximum number of seconds which this record should be cached.
     """
+
     TYPE = TXT
 
-    fancybasename = 'TXT'
-    showAttributes = (('data', _nicebyteslist), 'ttl')
-    compareAttributes = ('data', 'ttl')
+    fancybasename = "TXT"
+    showAttributes = (("data", _nicebyteslist), "ttl")
+    compareAttributes = ("data", "ttl")
 
     def __init__(self, *data, **kw):
         self.data = list(data)
         # arg man python sucks so bad
-        self.ttl = str2time(kw.get('ttl', None))
-
+        self.ttl = str2time(kw.get("ttl", None))
 
     def encode(self, strio, compDict=None):
         for d in self.data:
-            strio.write(struct.pack('!B', len(d)) + d)
-
+            strio.write(struct.pack("!B", len(d)) + d)
 
     def decode(self, strio, length=None):
         soFar = 0
         self.data = []
         while soFar < length:
-            L = struct.unpack('!B', readPrecisely(strio, 1))[0]
+            L = struct.unpack("!B", readPrecisely(strio, 1))[0]
             self.data.append(readPrecisely(strio, L))
             soFar += L + 1
         if soFar != length:
             log.msg(
-                "Decoded %d bytes in %s record, but rdlength is %d" % (
-                    soFar, self.fancybasename, length
-                )
+                "Decoded %d bytes in %s record, but rdlength is %d"
+                % (soFar, self.fancybasename, length)
             )
-
 
     def __hash__(self):
         return hash(tuple(self.data))
 
 
-
-@implementer(IEncodable, IRecord)
-class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
+@implementer(IEncodableRecord)
+class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     Encapsulate the wire data for unknown record types so that they can
     pass through the system unchanged.
@@ -2049,14 +2199,16 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
 
     @since: 11.1
     """
-    fancybasename = 'UNKNOWN'
-    compareAttributes = ('data', 'ttl')
-    showAttributes = (('data', _nicebytes), 'ttl')
 
-    def __init__(self, data=b'', ttl=None):
+    TYPE = None
+
+    fancybasename = "UNKNOWN"
+    compareAttributes = ("data", "ttl")
+    showAttributes = (("data", _nicebytes), "ttl")
+
+    def __init__(self, data=b"", ttl=None):
         self.data = data
         self.ttl = str2time(ttl)
-
 
     def encode(self, strio, compDict=None):
         """
@@ -2065,20 +2217,17 @@ class UnknownRecord(tputil.FancyEqMixin, tputil.FancyStrMixin, object):
         """
         strio.write(self.data)
 
-
     def decode(self, strio, length=None):
         """
         Load the bytes which are part of this record from the stream and store
         them unparsed and unmodified.
         """
         if length is None:
-            raise Exception('must know length for unknown record types')
+            raise Exception("must know length for unknown record types")
         self.data = readPrecisely(strio, length)
-
 
     def __hash__(self):
         return hash((self.data, self.ttl))
-
 
 
 class Record_SPF(Record_TXT):
@@ -2093,12 +2242,12 @@ class Record_SPF(Record_TXT):
     @ivar ttl: The maximum number of seconds
                which this record should be cached.
     """
+
     TYPE = SPF
-    fancybasename = 'SPF'
+    fancybasename = "SPF"
 
 
-
-@implementer(IEncodable, IRecord)
+@implementer(IEncodableRecord)
 class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     """
     A transaction signature, encapsulated in a RR, as described
@@ -2127,17 +2276,33 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @ivar otherData: Other data carried in exceptional cases.
 
     """
+
     fancybasename = "TSIG"
-    compareAttributes = ('algorithm', 'timeSigned', 'fudge',
-                         'MAC', 'originalID', 'error', 'otherData',
-                         'ttl')
-    showAttributes = ['algorithm', 'timeSigned', 'MAC', 'error', 'otherData']
+    compareAttributes = (
+        "algorithm",
+        "timeSigned",
+        "fudge",
+        "MAC",
+        "originalID",
+        "error",
+        "otherData",
+        "ttl",
+    )
+    showAttributes = ["algorithm", "timeSigned", "MAC", "error", "otherData"]
 
     TYPE = TSIG
 
-    def __init__(self, algorithm=None, timeSigned=None,
-                 fudge=5, MAC=None, originalID=0,
-                 error=OK, otherData=b'', ttl=0):
+    def __init__(
+        self,
+        algorithm=None,
+        timeSigned=None,
+        fudge=5,
+        MAC=None,
+        originalID=0,
+        error=OK,
+        otherData=b"",
+        ttl=0,
+    ):
         # All of our init arguments have to have defaults, because of
         # the way IEncodable and Message.parseRecords() work, but for
         # some of our arguments there is no reasonable default; we use
@@ -2152,34 +2317,29 @@ class Record_TSIG(tputil.FancyEqMixin, tputil.FancyStrMixin):
         self.otherData = otherData
         self.ttl = ttl
 
-
     def encode(self, strio, compDict=None):
         self.algorithm.encode(strio, compDict)
-        strio.write(struct.pack('!Q', self.timeSigned)[2:])  # 48-bit number
-        strio.write(struct.pack('!HH', self.fudge, len(self.MAC)))
+        strio.write(struct.pack("!Q", self.timeSigned)[2:])  # 48-bit number
+        strio.write(struct.pack("!HH", self.fudge, len(self.MAC)))
         strio.write(self.MAC)
-        strio.write(struct.pack('!HHH',
-                                self.originalID, self.error,
-                                len(self.otherData)))
+        strio.write(
+            struct.pack("!HHH", self.originalID, self.error, len(self.otherData))
+        )
         strio.write(self.otherData)
-
 
     def decode(self, strio, length=None):
         algorithm = Name()
         algorithm.decode(strio)
         self.algorithm = algorithm
-        fields = struct.unpack('!QHH', b'\x00\x00' + readPrecisely(strio, 10))
+        fields = struct.unpack("!QHH", b"\x00\x00" + readPrecisely(strio, 10))
         self.timeSigned, self.fudge, macLength = fields
         self.MAC = readPrecisely(strio, macLength)
-        fields = struct.unpack('!HHH', readPrecisely(strio, 6))
+        fields = struct.unpack("!HHH", readPrecisely(strio, 6))
         self.originalID, self.error, otherLength = fields
         self.otherData = readPrecisely(strio, otherLength)
 
-
     def __hash__(self):
-        return hash((self.algorithm, self.timeSigned,
-                     self.MAC, self.originalID))
-
+        return hash((self.algorithm, self.timeSigned, self.MAC, self.originalID))
 
 
 def _responseFromMessage(responseConstructor, message, **kwargs):
@@ -2209,7 +2369,6 @@ def _responseFromMessage(responseConstructor, message, **kwargs):
     return response
 
 
-
 def _getDisplayableArguments(obj, alwaysShow, fieldNames):
     """
     Inspect the function signature of C{obj}'s constructor,
@@ -2223,32 +2382,24 @@ def _getDisplayableArguments(obj, alwaysShow, fieldNames):
     @return: A L{list} of displayable arguments.
     """
     displayableArgs = []
-    if _PY3:
-        # Get the argument names and values from the constructor.
-        signature = inspect.signature(obj.__class__.__init__)
-        for name in fieldNames:
-            defaultValue = signature.parameters[name].default
-            fieldValue = getattr(obj, name, defaultValue)
-            if (name in alwaysShow) or (fieldValue != defaultValue):
-                displayableArgs.append(' %s=%r' % (name, fieldValue))
-    else:
-        # Get the argument names and values from the constructor.
-        argspec = inspect.getargspec(obj.__class__.__init__)
-        # Reverse the args and defaults to avoid mapping positional arguments
-        # which don't have a default.
-        defaults = dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
-        for name in fieldNames:
-            defaultValue = defaults.get(name)
-            fieldValue = getattr(obj, name, defaultValue)
-            if (name in alwaysShow) or (fieldValue != defaultValue):
-                displayableArgs.append(' %s=%r' % (name, fieldValue))
+    # Get the argument names and values from the constructor.
+    signature = inspect.signature(obj.__class__.__init__)
+    for name in fieldNames:
+        defaultValue = signature.parameters[name].default
+        fieldValue = getattr(obj, name, defaultValue)
+        if (name in alwaysShow) or (fieldValue != defaultValue):
+            displayableArgs.append(f" {name}={fieldValue!r}")
 
     return displayableArgs
 
 
-
-def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
-                 sectionNames=None):
+def _compactRepr(
+    obj: object,
+    alwaysShow: Sequence[str] | None = None,
+    flagNames: Sequence[str] | None = None,
+    fieldNames: Sequence[str] | None = None,
+    sectionNames: Sequence[str] | None = None,
+) -> str:
     """
     Return a L{str} representation of C{obj} which only shows fields with
     non-default values, flags which are True and sections which have been
@@ -2283,20 +2434,19 @@ def _compactRepr(obj, alwaysShow=None, flagNames=None, fieldNames=None,
             setFlags.append(name)
 
     displayableArgs = _getDisplayableArguments(obj, alwaysShow, fieldNames)
-    out = ['<', obj.__class__.__name__] + displayableArgs
+    out = ["<", obj.__class__.__name__] + displayableArgs
 
     if setFlags:
-        out.append(' flags=%s' % (','.join(setFlags),))
+        out.append(" flags={}".format(",".join(setFlags)))
 
     for name in sectionNames:
         section = getattr(obj, name, [])
         if section:
-            out.append(' %s=%r' % (name, section))
+            out.append(f" {name}={section!r}")
 
-    out.append('>')
+    out.append(">")
 
-    return ''.join(out)
-
+    return "".join(out)
 
 
 class Message(tputil.FancyEqMixin):
@@ -2339,11 +2489,23 @@ class Message(tputil.FancyEqMixin):
     @ivar _sectionNames: The names of attributes representing the record
         sections of this message.
     """
+
     compareAttributes = (
-        'id', 'answer', 'opCode', 'recDes', 'recAv',
-        'auth', 'rCode', 'trunc', 'maxSize',
-        'authenticData', 'checkingDisabled',
-        'queries', 'answers', 'authority', 'additional'
+        "id",
+        "answer",
+        "opCode",
+        "recDes",
+        "recAv",
+        "auth",
+        "rCode",
+        "trunc",
+        "maxSize",
+        "authenticData",
+        "checkingDisabled",
+        "queries",
+        "answers",
+        "authority",
+        "additional",
     )
 
     headerFmt = "!H2B4H"
@@ -2352,9 +2514,20 @@ class Message(tputil.FancyEqMixin):
     # Question, answer, additional, and nameserver lists
     queries = answers = add = ns = None
 
-    def __init__(self, id=0, answer=0, opCode=0, recDes=0, recAv=0,
-                       auth=0, rCode=OK, trunc=0, maxSize=512,
-                       authenticData=0, checkingDisabled=0):
+    def __init__(
+        self,
+        id=0,
+        answer=0,
+        opCode=0,
+        recDes=0,
+        recAv=0,
+        auth=0,
+        rCode=OK,
+        trunc=0,
+        maxSize=512,
+        authenticData=0,
+        checkingDisabled=0,
+    ):
         """
         @param id: A 16 bit identifier assigned by the program that
             generates any kind of query.  This identifier is copied to
@@ -2432,8 +2605,7 @@ class Message(tputil.FancyEqMixin):
         self.authority = []
         self.additional = []
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Generate a repr of this L{Message}.
 
@@ -2444,13 +2616,19 @@ class Message(tputil.FancyEqMixin):
         """
         return _compactRepr(
             self,
-            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
-                       'authenticData', 'checkingDisabled'),
-            fieldNames=('id', 'opCode', 'rCode', 'maxSize'),
-            sectionNames=('queries', 'answers', 'authority', 'additional'),
-            alwaysShow=('id',)
+            flagNames=(
+                "answer",
+                "auth",
+                "trunc",
+                "recDes",
+                "recAv",
+                "authenticData",
+                "checkingDisabled",
+            ),
+            fieldNames=("id", "opCode", "rCode", "maxSize"),
+            sectionNames=("queries", "answers", "authority", "additional"),
+            alwaysShow=("id",),
         )
-
 
     def addQuery(self, name, type=ALL_RECORDS, cls=IN):
         """
@@ -2467,7 +2645,6 @@ class Message(tputil.FancyEqMixin):
         """
         self.queries.append(Query(name, type, cls))
 
-
     def encode(self, strio):
         compDict = {}
         body_tmp = BytesIO()
@@ -2483,37 +2660,49 @@ class Message(tputil.FancyEqMixin):
         size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
             self.trunc = 1
-            body = body[:self.maxSize - self.headerSize]
-        byte3 = (( ( self.answer & 1 ) << 7 )
-                 | ((self.opCode & 0xf ) << 3 )
-                 | ((self.auth & 1 ) << 2 )
-                 | ((self.trunc & 1 ) << 1 )
-                 | ( self.recDes & 1 ) )
-        byte4 = ( ( (self.recAv & 1 ) << 7 )
-                  | ((self.authenticData & 1) << 5)
-                  | ((self.checkingDisabled & 1) << 4)
-                  | (self.rCode & 0xf ) )
+            body = body[: self.maxSize - self.headerSize]
+        byte3 = (
+            ((self.answer & 1) << 7)
+            | ((self.opCode & 0xF) << 3)
+            | ((self.auth & 1) << 2)
+            | ((self.trunc & 1) << 1)
+            | (self.recDes & 1)
+        )
+        byte4 = (
+            ((self.recAv & 1) << 7)
+            | ((self.authenticData & 1) << 5)
+            | ((self.checkingDisabled & 1) << 4)
+            | (self.rCode & 0xF)
+        )
 
-        strio.write(struct.pack(self.headerFmt, self.id, byte3, byte4,
-                                len(self.queries), len(self.answers),
-                                len(self.authority), len(self.additional)))
+        strio.write(
+            struct.pack(
+                self.headerFmt,
+                self.id,
+                byte3,
+                byte4,
+                len(self.queries),
+                len(self.answers),
+                len(self.authority),
+                len(self.additional),
+            )
+        )
         strio.write(body)
-
 
     def decode(self, strio, length=None):
         self.maxSize = 0
         header = readPrecisely(strio, self.headerSize)
         r = struct.unpack(self.headerFmt, header)
         self.id, byte3, byte4, nqueries, nans, nns, nadd = r
-        self.answer = ( byte3 >> 7 ) & 1
-        self.opCode = ( byte3 >> 3 ) & 0xf
-        self.auth = ( byte3 >> 2 ) & 1
-        self.trunc = ( byte3 >> 1 ) & 1
+        self.answer = (byte3 >> 7) & 1
+        self.opCode = (byte3 >> 3) & 0xF
+        self.auth = (byte3 >> 2) & 1
+        self.trunc = (byte3 >> 1) & 1
         self.recDes = byte3 & 1
-        self.recAv = ( byte4 >> 7 ) & 1
-        self.authenticData = ( byte4 >> 5 ) & 1
-        self.checkingDisabled = ( byte4 >> 4 ) & 1
-        self.rCode = byte4 & 0xf
+        self.recAv = (byte4 >> 7) & 1
+        self.authenticData = (byte4 >> 5) & 1
+        self.checkingDisabled = (byte4 >> 4) & 1
+        self.rCode = byte4 & 0xF
 
         self.queries = []
         for i in range(nqueries):
@@ -2524,14 +2713,10 @@ class Message(tputil.FancyEqMixin):
                 return
             self.queries.append(q)
 
-        items = (
-            (self.answers, nans),
-            (self.authority, nns),
-            (self.additional, nadd))
+        items = ((self.answers, nans), (self.authority, nns), (self.additional, nadd))
 
-        for (l, n) in items:
+        for l, n in items:
             self.parseRecords(l, n, strio)
-
 
     def parseRecords(self, list, num, strio):
         for i in range(num):
@@ -2550,20 +2735,18 @@ class Message(tputil.FancyEqMixin):
                 return
             list.append(header)
 
-
     # Create a mapping from record types to their corresponding Record_*
     # classes.  This relies on the global state which has been created so
     # far in initializing this module (so don't define Record classes after
     # this).
     _recordTypes = {}
     for name in globals():
-        if name.startswith('Record_'):
+        if name.startswith("Record_"):
             _recordTypes[globals()[name].TYPE] = globals()[name]
 
     # Clear the iteration variable out of the class namespace so it
     # doesn't become an attribute.
     del name
-
 
     def lookupRecordType(self, type):
         """
@@ -2574,10 +2757,9 @@ class Message(tputil.FancyEqMixin):
 
         @return: An object which implements L{IRecord} or L{None} if none
             can be found for the given type.
-        @rtype: L{types.ClassType}
+        @rtype: C{Type[IRecord]}
         """
         return self._recordTypes.get(type, UnknownRecord)
-
 
     def toStr(self):
         """
@@ -2590,7 +2772,6 @@ class Message(tputil.FancyEqMixin):
         self.encode(strio)
         return strio.getvalue()
 
-
     def fromStr(self, str):
         """
         Decode a byte string in the format described by RFC 1035 into this
@@ -2602,8 +2783,7 @@ class Message(tputil.FancyEqMixin):
         self.decode(strio)
 
 
-
-class _EDNSMessage(tputil.FancyEqMixin, object):
+class _EDNSMessage(tputil.FancyEqMixin):
     """
     An I{EDNS} message.
 
@@ -2644,18 +2824,47 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
     """
 
     compareAttributes = (
-        'id', 'answer', 'opCode', 'auth', 'trunc',
-        'recDes', 'recAv', 'rCode', 'ednsVersion', 'dnssecOK',
-        'authenticData', 'checkingDisabled', 'maxSize',
-        'queries', 'answers', 'authority', 'additional')
+        "id",
+        "answer",
+        "opCode",
+        "auth",
+        "trunc",
+        "recDes",
+        "recAv",
+        "rCode",
+        "ednsVersion",
+        "dnssecOK",
+        "authenticData",
+        "checkingDisabled",
+        "maxSize",
+        "queries",
+        "answers",
+        "authority",
+        "additional",
+    )
 
     _messageFactory = Message
 
-    def __init__(self, id=0, answer=False, opCode=OP_QUERY, auth=False,
-                 trunc=False, recDes=False, recAv=False, rCode=0,
-                 ednsVersion=0, dnssecOK=False, authenticData=False,
-                 checkingDisabled=False, maxSize=512,
-                 queries=None, answers=None, authority=None, additional=None):
+    def __init__(
+        self,
+        id=0,
+        answer=False,
+        opCode=OP_QUERY,
+        auth=False,
+        trunc=False,
+        recDes=False,
+        recAv=False,
+        rCode=0,
+        ednsVersion=0,
+        dnssecOK=False,
+        authenticData=False,
+        checkingDisabled=False,
+        maxSize=512,
+        queries=None,
+        answers=None,
+        authority=None,
+        additional=None,
+    ):
         """
         Construct a new L{_EDNSMessage}
 
@@ -2775,17 +2984,23 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             additional = []
         self.additional = additional
 
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         return _compactRepr(
             self,
-            flagNames=('answer', 'auth', 'trunc', 'recDes', 'recAv',
-                       'authenticData', 'checkingDisabled', 'dnssecOK'),
-            fieldNames=('id', 'opCode', 'rCode', 'maxSize', 'ednsVersion'),
-            sectionNames=('queries', 'answers', 'authority', 'additional'),
-            alwaysShow=('id',)
+            flagNames=(
+                "answer",
+                "auth",
+                "trunc",
+                "recDes",
+                "recAv",
+                "authenticData",
+                "checkingDisabled",
+                "dnssecOK",
+            ),
+            fieldNames=("id", "opCode", "rCode", "maxSize", "ednsVersion"),
+            sectionNames=("queries", "answers", "authority", "additional"),
+            alwaysShow=("id",),
         )
-
 
     def _toMessage(self):
         """
@@ -2807,9 +3022,10 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             recDes=self.recDes,
             recAv=self.recAv,
             # Assign the lower 4 bits to the message
-            rCode=self.rCode & 0xf,
+            rCode=self.rCode & 0xF,
             authenticData=self.authenticData,
-            checkingDisabled=self.checkingDisabled)
+            checkingDisabled=self.checkingDisabled,
+        )
 
         m.queries = self.queries[:]
         m.answers = self.answers[:]
@@ -2817,15 +3033,16 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         m.additional = self.additional[:]
 
         if self.ednsVersion is not None:
-            o = _OPTHeader(version=self.ednsVersion,
-                           dnssecOK=self.dnssecOK,
-                           udpPayloadSize=self.maxSize,
-                           # Assign the upper 8 bits to the OPT record
-                           extendedRCODE=self.rCode >> 4)
+            o = _OPTHeader(
+                version=self.ednsVersion,
+                dnssecOK=self.dnssecOK,
+                udpPayloadSize=self.maxSize,
+                # Assign the upper 8 bits to the OPT record
+                extendedRCODE=self.rCode >> 4,
+            )
             m.additional.append(o)
 
         return m
-
 
     def toStr(self):
         """
@@ -2834,7 +3051,6 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
         @return: A L{bytes} string.
         """
         return self._toMessage().toStr()
-
 
     @classmethod
     def _fromMessage(cls, message):
@@ -2884,7 +3100,7 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             answers=message.answers[:],
             authority=message.authority[:],
             additional=additional,
-            )
+        )
 
         if len(optRecords) == 1:
             # XXX: If multiple OPT records are received, an EDNS server should
@@ -2896,7 +3112,6 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             newMessage.rCode = opt.extendedRCODE << 4 | message.rCode
 
         return newMessage
-
 
     def fromStr(self, bytes):
         """
@@ -2914,24 +3129,23 @@ class _EDNSMessage(tputil.FancyEqMixin, object):
             setattr(self, attrName, getattr(ednsMessage, attrName))
 
 
-
-class DNSMixin(object):
+class DNSMixin:
     """
     DNS protocol mixin shared by UDP and TCP implementations.
 
     @ivar _reactor: A L{IReactorTime} and L{IReactorUDP} provider which will
         be used to issue DNS queries and manage request timeouts.
     """
+
     id = None
     liveMessages = None
 
     def __init__(self, controller, reactor=None):
         self.controller = controller
-        self.id = random.randrange(2 ** 10, 2 ** 15)
+        self.id = random.randrange(2**10, 2**15)
         if reactor is None:
             from twisted.internet import reactor
         self._reactor = reactor
-
 
     def pickID(self):
         """
@@ -2942,13 +3156,11 @@ class DNSMixin(object):
             if id not in self.liveMessages:
                 return id
 
-
     def callLater(self, period, func, *args):
         """
         Wrapper around reactor.callLater, mainly for test purpose.
         """
         return self._reactor.callLater(period, func, *args)
-
 
     def _query(self, queries, timeout, id, writeMessage):
         """
@@ -2976,7 +3188,7 @@ class DNSMixin(object):
 
         try:
             writeMessage(m)
-        except:
+        except BaseException:
             return defer.fail()
 
         resultDeferred = defer.Deferred()
@@ -3000,6 +3212,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     """
     DNS protocol over UDP.
     """
+
     resends = None
 
     def stopProtocol(self):
@@ -3039,7 +3252,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except EOFError:
             log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
             return
-        except:
+        except ValueError as ex:
+            log.msg(f"Invalid packet ({ex}) from {addr}")
+            return
+        except BaseException:
             # Nothing should trigger this, but since we're potentially
             # invoking a lot of different decoding methods, we might as well
             # be extra cautious.  Anything that triggers this is itself
@@ -3054,12 +3270,11 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             # XXX we shouldn't need this hack of catching exception on callback()
             try:
                 d.callback(m)
-            except:
+            except BaseException:
                 log.err()
         else:
             if m.id not in self.resends:
                 self.controller.messageReceived(m, self, addr)
-
 
     def removeResend(self, id):
         """
@@ -3104,8 +3319,9 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
     """
     DNS protocol over TCP.
     """
+
     length = None
-    buffer = b''
+    buffer = b""
 
     def writeMessage(self, message):
         """
@@ -3114,7 +3330,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         @type message: L{Message}
         """
         s = message.toStr()
-        self.transport.write(struct.pack('!H', len(s)) + s)
+        self.transport.write(struct.pack("!H", len(s)) + s)
 
     def connectionMade(self):
         """
@@ -3123,7 +3339,6 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         self.liveMessages = {}
         self.controller.connectionMade(self)
 
-
     def connectionLost(self, reason):
         """
         Notify the controller that this protocol is no longer
@@ -3131,17 +3346,16 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         self.controller.connectionLost(self)
 
-
     def dataReceived(self, data):
         self.buffer += data
 
         while self.buffer:
             if self.length is None and len(self.buffer) >= 2:
-                self.length = struct.unpack('!H', self.buffer[:2])[0]
+                self.length = struct.unpack("!H", self.buffer[:2])[0]
                 self.buffer = self.buffer[2:]
 
             if len(self.buffer) >= self.length:
-                myChunk = self.buffer[:self.length]
+                myChunk = self.buffer[: self.length]
                 m = Message()
                 m.fromStr(myChunk)
 
@@ -3155,14 +3369,13 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
                     # XXX we shouldn't need this hack
                     try:
                         d.callback(m)
-                    except:
+                    except BaseException:
                         log.err()
 
-                self.buffer = self.buffer[self.length:]
+                self.buffer = self.buffer[self.length :]
                 self.length = None
             else:
                 break
-
 
     def query(self, queries, timeout=60):
         """

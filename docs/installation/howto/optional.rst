@@ -33,23 +33,23 @@ The following optional dependencies are supported:
 
 * **conch** - packages for working with conch/SSH.
 
-  * `pyasn1`_
   * `cryptography`_
 
 * **soap** - the `SOAPpy`_ package to work with SOAP.
 
 * **serial** - the `pyserial`_ package to work with serial data.
 
-* **all_non_platform** - installs **tls**, **conch**, **soap**, and **serial** options.
+* **all-non-platform** - installs **tls**, **conch**, **soap**, and **serial** options.
 
-* **macos_platform** - **all_non_platform** options and `pyobjc`_ to work with Objective-C apis.
+* **macos-platform** - **all-non-platform** options and `pyobjc`_ to work with Objective-C apis.
 
-* **windows_platform** - **all_non_platform** options and `pywin32`_ to work with Windows's apis.
+* **windows-platform** - **all-non-platform** options and `pywin32`_ to work with Windows's apis.
 
 * **http2** - packages needed for http2 support.
 
   * `h2`_
   * `priority`_
+
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _TwistedChecker: https://pypi.python.org/pypi/TwistedChecker
@@ -60,7 +60,6 @@ The following optional dependencies are supported:
 .. _pydoctor: https://pypi.python.org/pypi/pydoctor
 .. _pyOpenSSL: https://pypi.python.org/pypi/pyOpenSSL
 .. _service_identity: https://pypi.python.org/pypi/service_identity
-.. _pyasn1: https://pypi.python.org/pypi/pyasn1
 .. _cryptography: https://pypi.python.org/pypi/cryptography
 .. _SOAPpy: https://pypi.python.org/pypi/SOAPpy
 .. _pyserial: https://pypi.python.org/pypi/pyserial

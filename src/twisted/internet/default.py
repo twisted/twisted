@@ -9,7 +9,6 @@ Depending on a specific application's needs, some other reactor may in
 fact be better.
 """
 
-from __future__ import division, absolute_import
 
 __all__ = ["install"]
 
@@ -44,7 +43,7 @@ def _getInstallFunction(platform):
                 from twisted.internet.epollreactor import install
             except ImportError:
                 from twisted.internet.pollreactor import install
-        elif platform.getType() == 'posix' and not platform.isMacOSX():
+        elif platform.getType() == "posix" and not platform.isMacOSX():
             from twisted.internet.pollreactor import install
         else:
             from twisted.internet.selectreactor import install

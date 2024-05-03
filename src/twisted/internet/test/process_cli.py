@@ -1,14 +1,15 @@
-from __future__ import absolute_import, division
-
-import sys
 import os
+import sys
 
 try:
     # On Windows, stdout is not opened in binary mode by default,
     # so newline characters are munged on writing, interfering with
     # the tests.
     import msvcrt
-    msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+
+    msvcrt.setmode(  # type:ignore[attr-defined]
+        sys.stdout.fileno(), os.O_BINARY
+    )
 except ImportError:
     pass
 
@@ -17,11 +18,5 @@ except ImportError:
 for arg in sys.argv[1:]:
     res = arg + chr(0)
 
-    if sys.version_info < (3, 0):
-        stdout = sys.stdout
-    else:
-        stdout = sys.stdout.buffer
-        res = res.encode(sys.getfilesystemencoding(), "surrogateescape")
-
-    stdout.write(res)
-    stdout.flush()
+    sys.stdout.buffer.write(res.encode(sys.getfilesystemencoding(), "surrogateescape"))
+    sys.stdout.flush()

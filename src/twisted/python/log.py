@@ -6,37 +6,34 @@
 Logging and metrics infrastructure.
 """
 
-from __future__ import division, absolute_import
 
 import sys
 import time
 import warnings
-
-from datetime import datetime
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
+from typing import Any, BinaryIO, Dict, Optional, cast
 
 from zope.interface import Interface
 
-from twisted.python.compat import unicode, _PY3
-from twisted.python import context
-from twisted.python import reflect
-from twisted.python import util
-from twisted.python import failure
-from twisted.python._oldstyle import _oldStyle
-from twisted.python.threadable import synchronize
 from twisted.logger import (
-    Logger as NewLogger, LogLevel as NewLogLevel,
+    LegacyLogObserverWrapper,
+    Logger as NewLogger,
+    LoggingFile,
+    LogLevel as NewLogLevel,
+    LogPublisher as NewPublisher,
     STDLibLogObserver as NewSTDLibLogObserver,
-    LegacyLogObserverWrapper, LoggingFile, LogPublisher as NewPublisher,
-    globalLogPublisher as newGlobalLogPublisher,
     globalLogBeginner as newGlobalLogBeginner,
+    globalLogPublisher as newGlobalLogPublisher,
 )
-
 from twisted.logger._global import LogBeginner
 from twisted.logger._legacy import publishToNewObserver as _publishNew
+from twisted.python import context, failure, reflect, util
+from twisted.python.threadable import synchronize
+
+EventDict = Dict[str, Any]
 
 
-
-@_oldStyle
 class ILogContext:
     """
     Actually, this interface is just a synonym for the dictionary interface,
@@ -46,7 +43,6 @@ class ILogContext:
     """
 
 
-
 class ILogObserver(Interface):
     """
     An observer which can do something with log events.
@@ -54,11 +50,11 @@ class ILogObserver(Interface):
     Given that most log observers are actually bound methods, it's okay to not
     explicitly declare provision of this interface.
     """
-    def __call__(eventDict):
+
+    def __call__(eventDict: EventDict) -> None:
         """
         Log an event.
 
-        @type eventDict: C{dict} with C{str} keys.
         @param eventDict: A dictionary with arbitrary keys.  However, these
             keys are often available:
               - C{message}: A C{tuple} of C{str} containing messages to be
@@ -75,16 +71,13 @@ class ILogObserver(Interface):
         """
 
 
-
-context.setDefault(ILogContext,
-                   {"system": "-"})
+context.setDefault(ILogContext, {"system": "-"})
 
 
 def callWithContext(ctx, func, *args, **kw):
     newCtx = context.get(ILogContext).copy()
     newCtx.update(ctx)
     return context.call({ILogContext: newCtx}, func, *args, **kw)
-
 
 
 def callWithLogger(logger, func, *args, **kw):
@@ -96,16 +89,15 @@ def callWithLogger(logger, func, *args, **kw):
         lp = logger.logPrefix()
     except KeyboardInterrupt:
         raise
-    except:
-        lp = '(buggy logPrefix method)'
+    except BaseException:
+        lp = "(buggy logPrefix method)"
         err(system=lp)
     try:
         return callWithContext({"system": lp}, func, *args, **kw)
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         err(system=lp)
-
 
 
 def err(_stuff=None, _why=None, **kw):
@@ -137,35 +129,38 @@ def err(_stuff=None, _why=None, **kw):
     else:
         msg(repr(_stuff), why=_why, isError=1, **kw)
 
+
 deferr = err
 
 
-@_oldStyle
 class Logger:
     """
     This represents a class which may 'own' a log. Used by subclassing.
     """
+
     def logPrefix(self):
         """
         Override this method to insert custom logging behavior.  Its
         return value will be inserted in front of every line.  It may
         be called more times than the number of output lines.
         """
-        return '-'
+        return "-"
 
 
-
-@_oldStyle
 class LogPublisher:
     """
     Class for singleton log message publishing.
     """
 
-    synchronized = ['msg']
+    synchronized = ["msg"]
 
-
-    def __init__(self, observerPublisher=None, publishPublisher=None,
-                 logBeginner=None, warningsModule=warnings):
+    def __init__(
+        self,
+        observerPublisher=None,
+        publishPublisher=None,
+        logBeginner=None,
+        warningsModule=warnings,
+    ):
         if publishPublisher is None:
             publishPublisher = NewPublisher()
             if observerPublisher is None:
@@ -179,13 +174,13 @@ class LogPublisher:
             # This default behavior is really only used for testing.
             beginnerPublisher = NewPublisher()
             beginnerPublisher.addObserver(observerPublisher)
-            logBeginner = LogBeginner(beginnerPublisher, NullFile(), sys,
-                                      warnings)
+            logBeginner = LogBeginner(
+                beginnerPublisher, cast(BinaryIO, NullFile()), sys, warnings
+            )
         self._logBeginner = logBeginner
         self._warningsModule = warningsModule
         self._oldshowwarning = warningsModule.showwarning
         self.showwarning = self._logBeginner.showwarning
-
 
     @property
     def observers(self):
@@ -196,7 +191,6 @@ class LogPublisher:
         @rtype: L{list} of L{callable}
         """
         return [x.legacyObserver for x in self._legacyObservers]
-
 
     def _startLogging(self, other, setStdout):
         """
@@ -213,7 +207,6 @@ class LogPublisher:
         self._legacyObservers.append(wrapped)
         self._logBeginner.beginLoggingTo([wrapped], True, setStdout)
 
-
     def _stopLogging(self):
         """
         Clean-up hook for fixing potentially global state.  Only for testing of
@@ -222,7 +215,6 @@ class LogPublisher:
         """
         if self._warningsModule.showwarning == self.showwarning:
             self._warningsModule.showwarning = self._oldshowwarning
-
 
     def addObserver(self, other):
         """
@@ -236,7 +228,6 @@ class LogPublisher:
         self._legacyObservers.append(wrapped)
         self._observerPublisher.addObserver(wrapped)
 
-
     def removeObserver(self, other):
         """
         Remove an observer.
@@ -246,7 +237,6 @@ class LogPublisher:
                 self._legacyObservers.remove(observer)
                 self._observerPublisher.removeObserver(observer)
                 break
-
 
     def msg(self, *message, **kw):
         """
@@ -276,10 +266,10 @@ class LogPublisher:
         >>> log.msg('Started', system='Foo')
 
         """
-        actualEventDict = (context.get(ILogContext) or {}).copy()
+        actualEventDict = cast(EventDict, (context.get(ILogContext) or {}).copy())
         actualEventDict.update(kw)
-        actualEventDict['message'] = message
-        actualEventDict['time'] = time.time()
+        actualEventDict["message"] = message
+        actualEventDict["time"] = time.time()
         if "isError" not in actualEventDict:
             actualEventDict["isError"] = 0
 
@@ -289,8 +279,8 @@ class LogPublisher:
 synchronize(LogPublisher)
 
 
+if "theLogPublisher" not in globals():
 
-if 'theLogPublisher' not in globals():
     def _actually(something):
         """
         A decorator that returns its argument rather than the thing it is
@@ -306,8 +296,10 @@ if 'theLogPublisher' not in globals():
         @return: a 1-argument callable that returns C{something}
         @rtype: L{object}
         """
+
         def decorate(thingWithADocstring):
             return something
+
         return decorate
 
     theLogPublisher = LogPublisher(
@@ -315,7 +307,6 @@ if 'theLogPublisher' not in globals():
         publishPublisher=newGlobalLogPublisher,
         logBeginner=newGlobalLogBeginner,
     )
-
 
     @_actually(theLogPublisher.addObserver)
     def addObserver(observer):
@@ -328,7 +319,6 @@ if 'theLogPublisher' not in globals():
         @type observer: L{callable}
         """
 
-
     @_actually(theLogPublisher.removeObserver)
     def removeObserver(observer):
         """
@@ -339,7 +329,6 @@ if 'theLogPublisher' not in globals():
         @param observer: a log observer previously added with L{addObserver}
         @type observer: L{callable}
         """
-
 
     @_actually(theLogPublisher.msg)
     def msg(*message, **event):
@@ -355,7 +344,6 @@ if 'theLogPublisher' not in globals():
         @type event: L{dict} mapping L{str} (native string) to L{object}
         """
 
-
     @_actually(theLogPublisher.showwarning)
     def showwarning():
         """
@@ -365,21 +353,18 @@ if 'theLogPublisher' not in globals():
         """
 
 
-
-def _safeFormat(fmtString, fmtDict):
+def _safeFormat(fmtString: str, fmtDict: Dict[str, Any]) -> str:
     """
     Try to format a string, swallowing all errors to always return a string.
 
     @note: For backward-compatibility reasons, this function ensures that it
-        returns a native string, meaning C{bytes} in Python 2 and C{unicode} in
+        returns a native string, meaning L{bytes} in Python 2 and L{str} in
         Python 3.
 
     @param fmtString: a C{%}-format string
-
     @param fmtDict: string formatting arguments for C{fmtString}
 
     @return: A native string, formatted from C{fmtString} and C{fmtDict}.
-    @rtype: L{str}
     """
     # There's a way we could make this if not safer at least more
     # informative: perhaps some sort of str/repr wrapper objects
@@ -391,31 +376,28 @@ def _safeFormat(fmtString, fmtDict):
         text = fmtString % fmtDict
     except KeyboardInterrupt:
         raise
-    except:
+    except BaseException:
         try:
-            text = ('Invalid format string or unformattable object in '
-                    'log message: %r, %s' % (fmtString, fmtDict))
-        except:
+            text = (
+                "Invalid format string or unformattable object in "
+                "log message: %r, %s" % (fmtString, fmtDict)
+            )
+        except BaseException:
             try:
-                text = ('UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, '
-                        'MESSAGE LOST' % (fmtString,))
-            except:
-                text = ('PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND '
-                        'MESSAGE DETAILS, MESSAGE LOST')
-
-    # Return a native string
-    if _PY3:
-        if isinstance(text, bytes):
-            text = text.decode("utf-8")
-    else:
-        if isinstance(text, unicode):
-            text = text.encode("utf-8")
+                text = (
+                    "UNFORMATTABLE OBJECT WRITTEN TO LOG with fmt %r, "
+                    "MESSAGE LOST" % (fmtString,)
+                )
+            except BaseException:
+                text = (
+                    "PATHOLOGICAL ERROR IN BOTH FORMAT STRING AND "
+                    "MESSAGE DETAILS, MESSAGE LOST"
+                )
 
     return text
 
 
-
-def textFromEventDict(eventDict):
+def textFromEventDict(eventDict: EventDict) -> Optional[str]:
     """
     Extract text from an event dict passed to a log observer. If it cannot
     handle the dict, it returns None.
@@ -433,52 +415,56 @@ def textFromEventDict(eventDict):
        the text.
     Other keys will be used when applying the C{format}, or ignored.
     """
-    edm = eventDict['message']
+    edm = eventDict["message"]
     if not edm:
-        if eventDict['isError'] and 'failure' in eventDict:
-            why = eventDict.get('why')
+        if eventDict["isError"] and "failure" in eventDict:
+            why = cast(str, eventDict.get("why"))
             if why:
                 why = reflect.safe_str(why)
             else:
-                why = 'Unhandled Error'
+                why = "Unhandled Error"
             try:
-                traceback = eventDict['failure'].getTraceback()
+                traceback = cast(failure.Failure, eventDict["failure"]).getTraceback()
             except Exception as e:
-                traceback = '(unable to obtain traceback): ' + str(e)
-            text = (why + '\n' + traceback)
-        elif 'format' in eventDict:
-            text = _safeFormat(eventDict['format'], eventDict)
+                traceback = "(unable to obtain traceback): " + str(e)
+            text = why + "\n" + traceback
+        elif "format" in eventDict:
+            text = _safeFormat(eventDict["format"], eventDict)
         else:
             # We don't know how to log this
             return None
     else:
-        text = ' '.join(map(reflect.safe_str, edm))
+        text = " ".join(map(reflect.safe_str, edm))
     return text
 
 
-
-@_oldStyle
-class _GlobalStartStopMixIn:
+class _GlobalStartStopObserver(ABC):
     """
     Mix-in for global log observers that can start and stop.
     """
 
-    def start(self):
+    @abstractmethod
+    def emit(self, eventDict: EventDict) -> None:
+        """
+        Emit the given log event.
+
+        @param eventDict: a log event
+        """
+
+    def start(self) -> None:
         """
         Start observing log events.
         """
         addObserver(self.emit)
 
-
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop observing log events.
         """
         removeObserver(self.emit)
 
 
-
-class FileLogObserver(_GlobalStartStopMixIn):
+class FileLogObserver(_GlobalStartStopObserver):
     """
     Log observer that writes to a file-like object.
 
@@ -486,13 +472,12 @@ class FileLogObserver(_GlobalStartStopMixIn):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat = None
+    timeFormat: Optional[str] = None
 
     def __init__(self, f):
         # Compatibility
         self.write = f.write
         self.flush = f.flush
-
 
     def getTimezoneOffset(self, when):
         """
@@ -505,9 +490,10 @@ class FileLogObserver(_GlobalStartStopMixIn):
         @return: The number of seconds offset from UTC.  West is positive,
         east is negative.
         """
-        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
+        offset = datetime.fromtimestamp(when, timezone.utc).replace(
+            tzinfo=None
+        ) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
-
 
     def formatTime(self, when):
         """
@@ -528,43 +514,46 @@ class FileLogObserver(_GlobalStartStopMixIn):
             return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
-        when = datetime.utcfromtimestamp(when + tzOffset)
+        when = datetime.fromtimestamp(when + tzOffset, timezone.utc).replace(
+            tzinfo=None
+        )
         tzHour = abs(int(tzOffset / 60 / 60))
         tzMin = abs(int(tzOffset / 60 % 60))
         if tzOffset < 0:
-            tzSign = '-'
+            tzSign = "-"
         else:
-            tzSign = '+'
-        return '%d-%02d-%02d %02d:%02d:%02d%s%02d%02d' % (
-            when.year, when.month, when.day,
-            when.hour, when.minute, when.second,
-            tzSign, tzHour, tzMin)
+            tzSign = "+"
+        return "%d-%02d-%02d %02d:%02d:%02d%s%02d%02d" % (
+            when.year,
+            when.month,
+            when.day,
+            when.hour,
+            when.minute,
+            when.second,
+            tzSign,
+            tzHour,
+            tzMin,
+        )
 
-
-    def emit(self, eventDict):
+    def emit(self, eventDict: EventDict) -> None:
         """
         Format the given log event as text and write it to the output file.
 
         @param eventDict: a log event
-        @type eventDict: L{dict} mapping L{str} (native string) to L{object}
         """
         text = textFromEventDict(eventDict)
         if text is None:
             return
 
         timeStr = self.formatTime(eventDict["time"])
-        fmtDict = {
-            "system": eventDict["system"],
-            "text": text.replace("\n", "\n\t")
-        }
+        fmtDict = {"system": eventDict["system"], "text": text.replace("\n", "\n\t")}
         msgStr = _safeFormat("[%(system)s] %(text)s\n", fmtDict)
 
         util.untilConcludes(self.write, timeStr + " " + msgStr)
         util.untilConcludes(self.flush)  # Hoorj!
 
 
-
-class PythonLoggingObserver(_GlobalStartStopMixIn, object):
+class PythonLoggingObserver(_GlobalStartStopObserver):
     """
     Output twisted messages to Python standard library L{logging} module.
 
@@ -581,8 +570,7 @@ class PythonLoggingObserver(_GlobalStartStopMixIn, object):
         """
         self._newObserver = NewSTDLibLogObserver(loggerName)
 
-
-    def emit(self, eventDict):
+    def emit(self, eventDict: EventDict) -> None:
         """
         Receive a twisted log entry, format it and bridge it to python.
 
@@ -591,12 +579,10 @@ class PythonLoggingObserver(_GlobalStartStopMixIn, object):
 
             >>> log.msg('debugging', logLevel=logging.DEBUG)
         """
-        if 'log_format' in eventDict:
+        if "log_format" in eventDict:
             _publishNew(self._newObserver, eventDict, textFromEventDict)
 
 
-
-@_oldStyle
 class StdioOnnaStick:
     """
     Class that pretends to be stdout/err, and turns writes into log messages.
@@ -610,54 +596,43 @@ class StdioOnnaStick:
 
     closed = 0
     softspace = 0
-    mode = 'wb'
-    name = '<stdio (log)>'
+    mode = "wb"
+    name = "<stdio (log)>"
 
     def __init__(self, isError=0, encoding=None):
         self.isError = isError
         if encoding is None:
             encoding = sys.getdefaultencoding()
         self.encoding = encoding
-        self.buf = ''
-
+        self.buf = ""
 
     def close(self):
         pass
 
-
     def fileno(self):
         return -1
-
 
     def flush(self):
         pass
 
-
     def read(self):
-        raise IOError("can't read from the log!")
+        raise OSError("can't read from the log!")
 
     readline = read
     readlines = read
     seek = read
     tell = read
 
-
     def write(self, data):
-        if not _PY3 and isinstance(data, unicode):
-            data = data.encode(self.encoding)
-        d = (self.buf + data).split('\n')
+        d = (self.buf + data).split("\n")
         self.buf = d[-1]
         messages = d[0:-1]
         for message in messages:
             msg(message, printed=1, isError=self.isError)
 
-
     def writelines(self, lines):
         for line in lines:
-            if not _PY3 and isinstance(line, unicode):
-                line = line.encode(self.encoding)
             msg(line, printed=1, isError=self.isError)
-
 
 
 def startLogging(file, *a, **kw):
@@ -673,7 +648,6 @@ def startLogging(file, *a, **kw):
     return flo
 
 
-
 def startLoggingWithObserver(observer, setStdout=1):
     """
     Initialize logging to a specified observer. If setStdout is true
@@ -684,19 +658,17 @@ def startLoggingWithObserver(observer, setStdout=1):
     msg("Log opened.")
 
 
-
-@_oldStyle
 class NullFile:
     """
     A file-like object that discards everything.
     """
+
     softspace = 0
 
     def read(self):
         """
         Do nothing.
         """
-
 
     def write(self, bytes):
         """
@@ -706,18 +678,15 @@ class NullFile:
         @type bytes: L{bytes}
         """
 
-
     def flush(self):
         """
         Do nothing.
         """
 
-
     def close(self):
         """
         Do nothing.
         """
-
 
 
 def discardLogs():
@@ -728,40 +697,42 @@ def discardLogs():
     logfile = NullFile()
 
 
-
 # Prevent logfile from being erased on reload.  This only works in cpython.
-if 'logfile' not in globals():
-    logfile = LoggingFile(logger=NewLogger(),
-                          level=NewLogLevel.info,
-                          encoding=getattr(sys.stdout, "encoding", None))
-    logerr = LoggingFile(logger=NewLogger(),
-                         level=NewLogLevel.error,
-                         encoding=getattr(sys.stderr, "encoding", None))
+if "logfile" not in globals():
+    logfile = LoggingFile(
+        logger=NewLogger(),
+        level=NewLogLevel.info,
+        encoding=getattr(sys.stdout, "encoding", None),
+    )
+    logerr = LoggingFile(
+        logger=NewLogger(),
+        level=NewLogLevel.error,
+        encoding=getattr(sys.stderr, "encoding", None),
+    )
 
 
-
-class DefaultObserver(_GlobalStartStopMixIn):
+class DefaultObserver(_GlobalStartStopObserver):
     """
     Default observer.
 
     Will ignore all non-error messages and send error messages to sys.stderr.
     Will be removed when startLogging() is called for the first time.
     """
+
     stderr = sys.stderr
 
-    def emit(self, eventDict):
+    def emit(self, eventDict: EventDict) -> None:
         """
         Emit an event dict.
 
         @param eventDict: an event dict
-        @type eventDict: dict
         """
         if eventDict["isError"]:
             text = textFromEventDict(eventDict)
-            self.stderr.write(text)
+            if text is not None:
+                self.stderr.write(text)
             self.stderr.flush()
 
 
-
-if 'defaultObserver' not in globals():
+if "defaultObserver" not in globals():
     defaultObserver = DefaultObserver()

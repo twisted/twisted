@@ -5,30 +5,37 @@
 Tests for L{twisted.words.protocols.jabber.client}
 """
 
-from __future__ import absolute_import, division
 
 from hashlib import sha1
+from unittest import skipIf
 
 from twisted.internet import defer
-from twisted.python.compat import unicode
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import client, error, jid, xmlstream
 from twisted.words.protocols.jabber.sasl import SASLInitiatingInitializer
 from twisted.words.xish import utility
 
+try:
+    from twisted.internet import ssl
+except ImportError:
+    ssl = None  # type: ignore[assignment]
+    skipWhenNoSSL = (True, "SSL not available")
+else:
+    skipWhenNoSSL = (False, "")
+
 IQ_AUTH_GET = '/iq[@type="get"]/query[@xmlns="jabber:iq:auth"]'
 IQ_AUTH_SET = '/iq[@type="set"]/query[@xmlns="jabber:iq:auth"]'
-NS_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'
+NS_BIND = "urn:ietf:params:xml:ns:xmpp-bind"
 IQ_BIND_SET = '/iq[@type="set"]/bind[@xmlns="%s"]' % NS_BIND
-NS_SESSION = 'urn:ietf:params:xml:ns:xmpp-session'
+NS_SESSION = "urn:ietf:params:xml:ns:xmpp-session"
 IQ_SESSION_SET = '/iq[@type="set"]/session[@xmlns="%s"]' % NS_SESSION
+
 
 class CheckVersionInitializerTests(unittest.TestCase):
     def setUp(self):
         a = xmlstream.Authenticator()
         xs = xmlstream.XmlStream(a)
         self.init = client.CheckVersionInitializer(xs)
-
 
     def testSupported(self):
         """
@@ -37,18 +44,16 @@ class CheckVersionInitializerTests(unittest.TestCase):
         self.init.xmlstream.version = (1, 0)
         self.init.initialize()
 
-
     def testNotSupported(self):
         """
         Test unsupported version number 0.0, and check exception.
         """
         self.init.xmlstream.version = (0, 0)
         exc = self.assertRaises(error.StreamError, self.init.initialize)
-        self.assertEqual('unsupported-version', exc.condition)
+        self.assertEqual("unsupported-version", exc.condition)
 
 
-
-class InitiatingInitializerHarness(object):
+class InitiatingInitializerHarness:
     """
     Testing harness for interacting with XML stream initializers.
 
@@ -65,9 +70,8 @@ class InitiatingInitializerHarness(object):
         self.output = []
         self.pipe = utility.XmlPipe()
         self.xmlstream = self.pipe.sink
-        self.authenticator = xmlstream.ConnectAuthenticator('example.org')
+        self.authenticator = xmlstream.ConnectAuthenticator("example.org")
         self.xmlstream.authenticator = self.authenticator
-
 
     def waitFor(self, event, handler):
         """
@@ -88,18 +92,16 @@ class InitiatingInitializerHarness(object):
         return d
 
 
-
 class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.IQAuthInitializer}.
     """
 
     def setUp(self):
-        super(IQAuthInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.IQAuthInitializer(self.xmlstream)
-        self.authenticator.jid = jid.JID('user@example.com/resource')
-        self.authenticator.password = u'secret'
-
+        self.authenticator.jid = jid.JID("user@example.com/resource")
+        self.authenticator.password = "secret"
 
     def testPlainText(self):
         """
@@ -119,11 +121,11 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             """
 
             # Create server response
-            response = xmlstream.toResponse(iq, 'result')
-            response.addElement(('jabber:iq:auth', 'query'))
-            response.query.addElement('username')
-            response.query.addElement('password')
-            response.query.addElement('resource')
+            response = xmlstream.toResponse(iq, "result")
+            response.addElement(("jabber:iq:auth", "query"))
+            response.query.addElement("username")
+            response.query.addElement("password")
+            response.query.addElement("resource")
 
             # Set up an observer for the next request we expect.
             d = self.waitFor(IQ_AUTH_SET, onAuthSet)
@@ -140,12 +142,12 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual('secret', unicode(iq.query.password))
-            self.assertEqual('resource', unicode(iq.query.resource))
+            self.assertEqual("user", str(iq.query.username))
+            self.assertEqual("secret", str(iq.query.password))
+            self.assertEqual("resource", str(iq.query.resource))
 
             # Send server response
-            response = xmlstream.toResponse(iq, 'result')
+            response = xmlstream.toResponse(iq, "result")
             self.pipe.source.send(response)
 
         # Set up an observer for the request for authentication fields
@@ -154,7 +156,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         # Start the initializer
         d2 = self.init.initialize()
         return defer.gatherResults([d1, d2])
-
 
     def testDigest(self):
         """
@@ -175,11 +176,11 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             """
 
             # Create server response
-            response = xmlstream.toResponse(iq, 'result')
-            response.addElement(('jabber:iq:auth', 'query'))
-            response.query.addElement('username')
-            response.query.addElement('digest')
-            response.query.addElement('resource')
+            response = xmlstream.toResponse(iq, "result")
+            response.addElement(("jabber:iq:auth", "query"))
+            response.query.addElement("username")
+            response.query.addElement("digest")
+            response.query.addElement("resource")
 
             # Set up an observer for the next request we expect.
             d = self.waitFor(IQ_AUTH_SET, onAuthSet)
@@ -196,17 +197,16 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with an empty result
             signalling success.
             """
-            self.assertEqual('user', unicode(iq.query.username))
-            self.assertEqual(sha1(b'12345secret').hexdigest(),
-                              unicode(iq.query.digest))
-            self.assertEqual('resource', unicode(iq.query.resource))
+            self.assertEqual("user", str(iq.query.username))
+            self.assertEqual(sha1(b"12345secret").hexdigest(), str(iq.query.digest))
+            self.assertEqual("resource", str(iq.query.resource))
 
             # Send server response
-            response = xmlstream.toResponse(iq, 'result')
+            response = xmlstream.toResponse(iq, "result")
             self.pipe.source.send(response)
 
         # Digest authentication relies on the stream session identifier. Set it.
-        self.xmlstream.sid = u'12345'
+        self.xmlstream.sid = "12345"
 
         # Set up an observer for the request for authentication fields
         d1 = self.waitFor(IQ_AUTH_GET, onAuthGet)
@@ -216,18 +216,18 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
 
         return defer.gatherResults([d1, d2])
 
-
     def testFailRequestFields(self):
         """
         Test initializer failure of request for fields for authentication.
         """
+
         def onAuthGet(iq):
             """
             Called when the initializer sent a query for authentication methods.
 
             The server responds that the client is not authorized to authenticate.
             """
-            response = error.StanzaError('not-authorized').toResponse(iq)
+            response = error.StanzaError("not-authorized").toResponse(iq)
             self.pipe.source.send(response)
 
         # Set up an observer for the request for authentication fields
@@ -240,7 +240,6 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         self.assertFailure(d2, error.StanzaError)
 
         return defer.gatherResults([d1, d2])
-
 
     def testFailAuth(self):
         """
@@ -256,11 +255,11 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             """
 
             # Send server response
-            response = xmlstream.toResponse(iq, 'result')
-            response.addElement(('jabber:iq:auth', 'query'))
-            response.query.addElement('username')
-            response.query.addElement('password')
-            response.query.addElement('resource')
+            response = xmlstream.toResponse(iq, "result")
+            response.addElement(("jabber:iq:auth", "query"))
+            response.query.addElement("username")
+            response.query.addElement("password")
+            response.query.addElement("resource")
 
             # Set up an observer for the next request we expect.
             d = self.waitFor(IQ_AUTH_SET, onAuthSet)
@@ -277,7 +276,7 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
             The server checks the credentials and responds with a not-authorized
             stanza error.
             """
-            response = error.StanzaError('not-authorized').toResponse(iq)
+            response = error.StanzaError("not-authorized").toResponse(iq)
             self.pipe.source.send(response)
 
         # Set up an observer for the request for authentication fields
@@ -292,52 +291,50 @@ class IQAuthInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         return defer.gatherResults([d1, d2])
 
 
-
 class BindInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
     Tests for L{client.BindInitializer}.
     """
 
     def setUp(self):
-        super(BindInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.BindInitializer(self.xmlstream)
-        self.authenticator.jid = jid.JID('user@example.com/resource')
-
+        self.authenticator.jid = jid.JID("user@example.com/resource")
 
     def testBasic(self):
         """
         Set up a stream, and act as if resource binding succeeds.
         """
+
         def onBind(iq):
-            response = xmlstream.toResponse(iq, 'result')
-            response.addElement((NS_BIND, 'bind'))
-            response.bind.addElement('jid',
-                                     content=u'user@example.com/other resource')
+            response = xmlstream.toResponse(iq, "result")
+            response.addElement((NS_BIND, "bind"))
+            response.bind.addElement("jid", content="user@example.com/other resource")
             self.pipe.source.send(response)
 
         def cb(result):
-            self.assertEqual(jid.JID('user@example.com/other resource'),
-                              self.authenticator.jid)
+            self.assertEqual(
+                jid.JID("user@example.com/other resource"), self.authenticator.jid
+            )
 
         d1 = self.waitFor(IQ_BIND_SET, onBind)
         d2 = self.init.start()
         d2.addCallback(cb)
         return defer.gatherResults([d1, d2])
 
-
     def testFailure(self):
         """
         Set up a stream, and act as if resource binding fails.
         """
+
         def onBind(iq):
-            response = error.StanzaError('conflict').toResponse(iq)
+            response = error.StanzaError("conflict").toResponse(iq)
             self.pipe.source.send(response)
 
         d1 = self.waitFor(IQ_BIND_SET, onBind)
         d2 = self.init.start()
         self.assertFailure(d2, error.StanzaError)
         return defer.gatherResults([d1, d2])
-
 
 
 class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
@@ -346,9 +343,8 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
     """
 
     def setUp(self):
-        super(SessionInitializerTests, self).setUp()
+        super().setUp()
         self.init = client.SessionInitializer(self.xmlstream)
-
 
     def testSuccess(self):
         """
@@ -356,20 +352,20 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         """
 
         def onSession(iq):
-            response = xmlstream.toResponse(iq, 'result')
+            response = xmlstream.toResponse(iq, "result")
             self.pipe.source.send(response)
 
         d1 = self.waitFor(IQ_SESSION_SET, onSession)
         d2 = self.init.start()
         return defer.gatherResults([d1, d2])
 
-
     def testFailure(self):
         """
         Set up a stream, and act as if session establishment fails.
         """
+
         def onSession(iq):
-            response = error.StanzaError('forbidden').toResponse(iq)
+            response = error.StanzaError("forbidden").toResponse(iq)
             self.pipe.source.send(response)
 
         d1 = self.waitFor(IQ_SESSION_SET, onSession)
@@ -378,12 +374,49 @@ class SessionInitializerTests(InitiatingInitializerHarness, unittest.TestCase):
         return defer.gatherResults([d1, d2])
 
 
+class BasicAuthenticatorTests(unittest.TestCase):
+    """
+    Test for both BasicAuthenticator and basicClientFactory.
+    """
+
+    def test_basic(self):
+        """
+        Authenticator and stream are properly constructed by the factory.
+
+        The L{xmlstream.XmlStream} protocol created by the factory has the new
+        L{client.BasicAuthenticator} instance in its C{authenticator}
+        attribute.  It is set up with C{jid} and C{password} as passed to the
+        factory, C{otherHost} taken from the client JID. The stream futher has
+        two initializers, for TLS and authentication, of which the first has
+        its C{required} attribute set to C{True}.
+        """
+        self.client_jid = jid.JID("user@example.com/resource")
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        xs = client.basicClientFactory(self.client_jid, "secret").buildProtocol(None)
+
+        # test authenticator's instance variables
+        self.assertEqual("example.com", xs.authenticator.otherHost)
+        self.assertEqual(self.client_jid, xs.authenticator.jid)
+        self.assertEqual("secret", xs.authenticator.password)
+
+        # test list of initializers
+        tls, auth = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIsInstance(auth, client.IQAuthInitializer)
+
+        self.assertFalse(tls.required)
+
 
 class XMPPAuthenticatorTests(unittest.TestCase):
     """
     Test for both XMPPAuthenticator and XMPPClientFactory.
     """
-    def testBasic(self):
+
+    def test_basic(self):
         """
         Test basic operations.
 
@@ -391,18 +424,17 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         it produce a protocol instance. Then inspect the instance variables of
         the authenticator and XML stream objects.
         """
-        self.client_jid = jid.JID('user@example.com/resource')
+        self.client_jid = jid.JID("user@example.com/resource")
 
         # Get an XmlStream instance. Note that it gets initialized with the
         # XMPPAuthenticator (that has its associateWithXmlStream called) that
         # is in turn initialized with the arguments to the factory.
-        xs = client.XMPPClientFactory(self.client_jid,
-                                      'secret').buildProtocol(None)
+        xs = client.XMPPClientFactory(self.client_jid, "secret").buildProtocol(None)
 
         # test authenticator's instance variables
-        self.assertEqual('example.com', xs.authenticator.otherHost)
+        self.assertEqual("example.com", xs.authenticator.otherHost)
         self.assertEqual(self.client_jid, xs.authenticator.jid)
-        self.assertEqual('secret', xs.authenticator.password)
+        self.assertEqual("secret", xs.authenticator.password)
 
         # test list of initializers
         version, tls, sasl, bind, session = xs.initializers
@@ -412,7 +444,35 @@ class XMPPAuthenticatorTests(unittest.TestCase):
         self.assertIsInstance(bind, client.BindInitializer)
         self.assertIsInstance(session, client.SessionInitializer)
 
-        self.assertFalse(tls.required)
+        self.assertTrue(tls.required)
         self.assertTrue(sasl.required)
-        self.assertFalse(bind.required)
+        self.assertTrue(bind.required)
         self.assertFalse(session.required)
+
+    @skipIf(*skipWhenNoSSL)
+    def test_tlsConfiguration(self):
+        """
+        A TLS configuration is passed to the TLS initializer.
+        """
+        configs = []
+
+        def init(self, xs, required=True, configurationForTLS=None):
+            configs.append(configurationForTLS)
+
+        self.client_jid = jid.JID("user@example.com/resource")
+
+        # Get an XmlStream instance. Note that it gets initialized with the
+        # XMPPAuthenticator (that has its associateWithXmlStream called) that
+        # is in turn initialized with the arguments to the factory.
+        configurationForTLS = ssl.CertificateOptions()
+        factory = client.XMPPClientFactory(
+            self.client_jid, "secret", configurationForTLS=configurationForTLS
+        )
+        self.patch(xmlstream.TLSInitiatingInitializer, "__init__", init)
+        xs = factory.buildProtocol(None)
+
+        # test list of initializers
+        version, tls, sasl, bind, session = xs.initializers
+
+        self.assertIsInstance(tls, xmlstream.TLSInitiatingInitializer)
+        self.assertIs(configurationForTLS, configs[0])

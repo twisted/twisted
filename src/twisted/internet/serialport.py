@@ -6,29 +6,42 @@
 Serial Port Protocol
 """
 
-from __future__ import division, absolute_import
 
 # http://twistedmatrix.com/trac/ticket/3725#comment:24
 # Apparently applications use these names even though they should
 # be imported from pyserial
-__all__ = ["serial", "PARITY_ODD", "PARITY_EVEN", "PARITY_NONE",
-           "STOPBITS_TWO", "STOPBITS_ONE", "FIVEBITS",
-           "EIGHTBITS", "SEVENBITS", "SIXBITS",
-# Name this module is actually trying to export
-           "SerialPort"]
+__all__ = [
+    "serial",
+    "PARITY_ODD",
+    "PARITY_EVEN",
+    "PARITY_NONE",
+    "STOPBITS_TWO",
+    "STOPBITS_ONE",
+    "FIVEBITS",
+    "EIGHTBITS",
+    "SEVENBITS",
+    "SIXBITS",
+    # Name this module is actually trying to export
+    "SerialPort",
+]
 
 # all of them require pyserial at the moment, so check that first
 import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import (
+    EIGHTBITS,
+    FIVEBITS,
+    PARITY_EVEN,
+    PARITY_NONE,
+    PARITY_ODD,
+    SEVENBITS,
+    SIXBITS,
+    STOPBITS_ONE,
+    STOPBITS_TWO,
+)
 
-from twisted.python._oldstyle import _oldStyle
 from twisted.python.runtime import platform
 
 
-
-@_oldStyle
 class BaseSerialPort:
     """
     Base class for Windows and POSIX serial ports.
@@ -42,7 +55,6 @@ class BaseSerialPort:
     """
 
     _serialFactory = serial.Serial
-
 
     def setBaudRate(self, baudrate):
         if hasattr(self._serial, "setBaudrate"):
@@ -74,16 +86,15 @@ class BaseSerialPort:
     def getCTS(self):
         return self._serial.getCTS()
 
-    def setDTR(self, on = 1):
+    def setDTR(self, on=1):
         self._serial.setDTR(on)
 
-    def setRTS(self, on = 1):
+    def setRTS(self, on=1):
         self._serial.setRTS(on)
-
 
 
 # Expert appropriate implementation of SerialPort.
 if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
 else:
-    from twisted.internet._posixserialport import SerialPort
+    from twisted.internet._posixserialport import SerialPort  # type: ignore[assignment]

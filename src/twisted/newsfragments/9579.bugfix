@@ -1,1 +1,0 @@
-twisted.python.runtime.Platform.supportsINotify no longer considers the result of isDocker for its own result.

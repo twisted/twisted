@@ -20,7 +20,7 @@ Overview
 
 
 
-In all the :api:`twisted.spread.pb.IPerspective <IPerspective>` uses
+In all the :py:class:`IPerspective <twisted.spread.pb.IPerspective>` uses
 we have shown so far, we ignored the ``mind`` argument and created
 a new ``Avatar`` for every connection. This is usually an easy
 design choice, and it works well for simple cases.

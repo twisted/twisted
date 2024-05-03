@@ -11,25 +11,20 @@ you are sitting at an interactive terminal.  For example, to programmatically
 interact with a known_hosts database, use L{twisted.conch.client.knownhosts}.
 """
 
-from __future__ import print_function
+import contextlib
+import getpass
+import io
+import os
+import sys
+from base64 import decodebytes
 
-from twisted.python import log
-from twisted.python.compat import (
-    nativeString, raw_input, _PY3, _b64decodebytes as decodebytes)
-from twisted.python.filepath import FilePath
-
+from twisted.conch.client import agent
+from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import common, keys, userauth
 from twisted.internet import defer, protocol, reactor
-
-from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-
-from twisted.conch.client import agent
-
-import os, sys, getpass, contextlib
-
-if _PY3:
-    import io
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 # The default location of the known hosts file (probably should be parsed out
 # of an ssh config file someday).
@@ -38,6 +33,8 @@ _KNOWN_HOSTS = "~/.ssh/known_hosts"
 
 # This name is bound so that the unit tests can use 'patch' to override it.
 _open = open
+_input = input
+
 
 def verifyHostKey(transport, host, pubKey, fingerprint):
     """
@@ -79,15 +76,15 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
     types may include L{HostKeyChanged}, L{UserRejectedKey}, L{IOError} or
     L{KeyboardInterrupt}.
     """
-    actualHost = transport.factory.options['host']
+    actualHost = transport.factory.options["host"]
     actualKey = keys.Key.fromString(pubKey)
-    kh = KnownHostsFile.fromPath(FilePath(
-            transport.factory.options['known-hosts']
-            or os.path.expanduser(_KNOWN_HOSTS)
-            ))
-    ui = ConsoleUI(lambda : _open("/dev/tty", "r+b", buffering=0))
+    kh = KnownHostsFile.fromPath(
+        FilePath(
+            transport.factory.options["known-hosts"] or os.path.expanduser(_KNOWN_HOSTS)
+        )
+    )
+    ui = ConsoleUI(lambda: _open("/dev/tty", "r+b", buffering=0))
     return kh.verifyHostKey(ui, actualHost, host, actualKey)
-
 
 
 def isInKnownHosts(host, pubKey, options):
@@ -100,13 +97,13 @@ def isInKnownHosts(host, pubKey, options):
     keyType = common.getNS(pubKey)[0]
     retVal = 0
 
-    if not options['known-hosts'] and not os.path.exists(os.path.expanduser('~/.ssh/')):
-        print('Creating ~/.ssh directory...')
-        os.mkdir(os.path.expanduser('~/.ssh'))
-    kh_file = options['known-hosts'] or _KNOWN_HOSTS
+    if not options["known-hosts"] and not os.path.exists(os.path.expanduser("~/.ssh/")):
+        print("Creating ~/.ssh directory...")
+        os.mkdir(os.path.expanduser("~/.ssh"))
+    kh_file = options["known-hosts"] or _KNOWN_HOSTS
     try:
-        known_hosts = open(os.path.expanduser(kh_file), 'rb')
-    except IOError:
+        known_hosts = open(os.path.expanduser(kh_file), "rb")
+    except OSError:
         return 0
     with known_hosts:
         for line in known_hosts.readlines():
@@ -114,20 +111,19 @@ def isInKnownHosts(host, pubKey, options):
             if len(split) < 3:
                 continue
             hosts, hostKeyType, encodedKey = split[:3]
-            if host not in hosts.split(b','): # incorrect host
+            if host not in hosts.split(b","):  # incorrect host
                 continue
-            if hostKeyType != keyType: # incorrect type of key
+            if hostKeyType != keyType:  # incorrect type of key
                 continue
             try:
                 decodedKey = decodebytes(encodedKey)
-            except:
+            except BaseException:
                 continue
             if decodedKey == pubKey:
                 return 1
             else:
                 retVal = 2
     return retVal
-
 
 
 def getHostKeyAlgorithms(host, options):
@@ -142,10 +138,9 @@ def getHostKeyAlgorithms(host, options):
     @param options: options passed to client
     @return: L{list} of L{str} representing key types or L{None}.
     """
-    knownHosts = KnownHostsFile.fromPath(FilePath(
-        options['known-hosts']
-        or os.path.expanduser(_KNOWN_HOSTS)
-        ))
+    knownHosts = KnownHostsFile.fromPath(
+        FilePath(options["known-hosts"] or os.path.expanduser(_KNOWN_HOSTS))
+    )
     keyTypes = []
     for entry in knownHosts.iterentries():
         if entry.matchesHost(host):
@@ -154,34 +149,31 @@ def getHostKeyAlgorithms(host, options):
     return keyTypes or None
 
 
-
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-
     def __init__(self, user, options, *args):
         userauth.SSHUserAuthClient.__init__(self, user, *args)
         self.keyAgent = None
         self.options = options
         self.usedFiles = []
         if not options.identitys:
-            options.identitys = ['~/.ssh/id_rsa', '~/.ssh/id_dsa']
-
+            options.identitys = ["~/.ssh/id_rsa", "~/.ssh/id_dsa"]
 
     def serviceStarted(self):
-        if 'SSH_AUTH_SOCK' in os.environ and not self.options['noagent']:
-            log.msg('using agent')
+        if "SSH_AUTH_SOCK" in os.environ and not self.options["noagent"]:
+            self._log.debug(
+                "using SSH agent {authSock!r}", authSock=os.environ["SSH_AUTH_SOCK"]
+            )
             cc = protocol.ClientCreator(reactor, agent.SSHAgentClient)
-            d = cc.connectUNIX(os.environ['SSH_AUTH_SOCK'])
+            d = cc.connectUNIX(os.environ["SSH_AUTH_SOCK"])
             d.addCallback(self._setAgent)
             d.addErrback(self._ebSetAgent)
         else:
             userauth.SSHUserAuthClient.serviceStarted(self)
 
-
     def serviceStopped(self):
         if self.keyAgent:
             self.keyAgent.transport.loseConnection()
             self.keyAgent = None
-
 
     def _setAgent(self, a):
         self.keyAgent = a
@@ -189,10 +181,8 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         d.addBoth(self._ebSetAgent)
         return d
 
-
     def _ebSetAgent(self, f):
         userauth.SSHUserAuthClient.serviceStarted(self)
-
 
     def _getPassword(self, prompt):
         """
@@ -207,17 +197,18 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             try:
                 p = getpass.getpass(prompt)
                 return p
-            except (KeyboardInterrupt, IOError):
+            except (KeyboardInterrupt, OSError):
                 print()
-                raise ConchError('PEBKAC')
+                raise ConchError("PEBKAC")
 
-
-    def getPassword(self, prompt = None):
+    def getPassword(self, prompt=None):
         if prompt:
             prompt = nativeString(prompt)
         else:
-            prompt = ("%s@%s's password: " %
-                (nativeString(self.user), self.transport.transport.getPeer().host))
+            prompt = "{}@{}'s password: ".format(
+                nativeString(self.user),
+                self.transport.transport.getPeer().host,
+            )
         try:
             # We don't know the encoding the other side is using,
             # signaling that is not part of the SSH protocol. But
@@ -227,7 +218,6 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             return defer.succeed(p)
         except ConchError:
             return defer.fail()
-
 
     def getPublicKey(self):
         """
@@ -239,22 +229,23 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             if key is not None:
                 return key
         files = [x for x in self.options.identitys if x not in self.usedFiles]
-        log.msg(str(self.options.identitys))
-        log.msg(str(files))
+        self._log.debug(
+            "public key identities: {identities}\n{files}",
+            identities=self.options.identitys,
+            files=files,
+        )
         if not files:
             return None
         file = files[0]
-        log.msg(file)
         self.usedFiles.append(file)
         file = os.path.expanduser(file)
-        file += '.pub'
+        file += ".pub"
         if not os.path.exists(file):
-            return self.getPublicKey() # try again
+            return self.getPublicKey()  # try again
         try:
             return keys.Key.fromFile(file)
         except keys.BadKeyError:
-            return self.getPublicKey() # try again
-
+            return self.getPublicKey()  # try again
 
     def signData(self, publicKey, signData):
         """
@@ -264,11 +255,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         @type publicKey: L{Key}
         @type signData: L{bytes}
         """
-        if not self.usedFiles: # agent key
+        if not self.usedFiles:  # agent key
             return self.keyAgent.signData(publicKey.blob(), signData)
         else:
             return userauth.SSHUserAuthClient.signData(self, publicKey, signData)
-
 
     def getPrivateKey(self):
         """
@@ -285,17 +275,15 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             for i in range(3):
                 prompt = "Enter passphrase for key '%s': " % self.usedFiles[-1]
                 try:
-                    p = self._getPassword(prompt).encode(
-                        sys.getfilesystemencoding())
+                    p = self._getPassword(prompt).encode(sys.getfilesystemencoding())
                     return defer.succeed(keys.Key.fromFile(file, passphrase=p))
                 except (keys.BadKeyError, ConchError):
                     pass
-                return defer.fail(ConchError('bad password'))
+                return defer.fail(ConchError("bad password"))
             raise
         except KeyboardInterrupt:
             print()
             reactor.stop()
-
 
     def getGenericAnswers(self, name, instruction, prompts):
         responses = []
@@ -307,11 +295,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             for prompt, echo in prompts:
                 prompt = prompt.decode("utf-8")
                 if echo:
-                    responses.append(raw_input(prompt))
+                    responses.append(_input(prompt))
                 else:
                     responses.append(getpass.getpass(prompt))
         return defer.succeed(responses)
-
 
     @classmethod
     def _openTty(cls):
@@ -322,15 +309,10 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         @return: File objects for reading and writing to /dev/tty,
                  corresponding to standard input and standard output.
         @rtype: A L{tuple} of L{io.TextIOWrapper} on Python 3.
-                A L{tuple} of binary files on Python 2.
         """
-        stdin = open("/dev/tty", "rb")
-        stdout = open("/dev/tty", "wb")
-        if _PY3:
-            stdin = io.TextIOWrapper(stdin)
-            stdout = io.TextIOWrapper(stdout)
+        stdin = io.TextIOWrapper(open("/dev/tty", "rb"))
+        stdout = io.TextIOWrapper(open("/dev/tty", "wb"))
         return stdin, stdout
-
 
     @classmethod
     @contextlib.contextmanager

@@ -18,9 +18,10 @@ Pluggable method lookup policies.
 # SOAPpy
 import SOAPpy
 
-# twisted imports
-from twisted.web import server, resource, client
 from twisted.internet import defer
+
+# twisted imports
+from twisted.web import client, resource, server
 
 
 class SOAPPublisher(resource.Resource):
@@ -79,16 +80,20 @@ class SOAPPublisher(resource.Resource):
         return server.NOT_DONE_YET
 
     def _methodNotFound(self, request, methodName):
-        response = SOAPpy.buildSOAP(SOAPpy.faultType("%s:Client" %
-            SOAPpy.NS.ENV_T, "Method %s not found" % methodName),
-            encoding=self.encoding)
+        response = SOAPpy.buildSOAP(
+            SOAPpy.faultType(
+                "%s:Client" % SOAPpy.NS.ENV_T, "Method %s not found" % methodName
+            ),
+            encoding=self.encoding,
+        )
         self._sendResponse(request, response, status=500)
 
     def _gotResult(self, result, request, methodName):
         if not isinstance(result, SOAPpy.voidType):
             result = {"Result": result}
-        response = SOAPpy.buildSOAP(kw={'%sResponse' % methodName: result},
-                                  encoding=self.encoding)
+        response = SOAPpy.buildSOAP(
+            kw={"%sResponse" % methodName: result}, encoding=self.encoding
+        )
         self._sendResponse(request, response)
 
     def _gotError(self, failure, request, methodName):
@@ -96,8 +101,9 @@ class SOAPPublisher(resource.Resource):
         if isinstance(e, SOAPpy.faultType):
             fault = e
         else:
-            fault = SOAPpy.faultType("%s:Server" % SOAPpy.NS.ENV_T,
-                "Method %s failed." % methodName)
+            fault = SOAPpy.faultType(
+                "%s:Server" % SOAPpy.NS.ENV_T, "Method %s failed." % methodName
+            )
         response = SOAPpy.buildSOAP(fault, encoding=self.encoding)
         self._sendResponse(request, response, status=500)
 
@@ -132,7 +138,7 @@ class Proxy:
 
     def _cbGotResult(self, result):
         result = SOAPpy.parseSOAPRPC(result)
-        if hasattr(result, 'Result'):
+        if hasattr(result, "Result"):
             return result.Result
         elif len(result) == 1:
             ## SOAPpy 0.11.6 wraps the return results in a containing structure.
@@ -145,10 +151,16 @@ class Proxy:
             return result
 
     def callRemote(self, method, *args, **kwargs):
-        payload = SOAPpy.buildSOAP(args=args, kw=kwargs, method=method,
-                                   header=self.header, namespace=self.namespace)
-        return client.getPage(self.url, postdata=payload, method="POST",
-                              headers={'content-type': 'text/xml',
-                                       'SOAPAction': method}
-                              ).addCallback(self._cbGotResult)
-
+        payload = SOAPpy.buildSOAP(
+            args=args,
+            kw=kwargs,
+            method=method,
+            header=self.header,
+            namespace=self.namespace,
+        )
+        return client.getPage(
+            self.url,
+            postdata=payload,
+            method="POST",
+            headers={"content-type": "text/xml", "SOAPAction": method},
+        ).addCallback(self._cbGotResult)

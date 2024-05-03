@@ -4,16 +4,26 @@
 
 """
 A library for performing interesting tasks with DOM objects.
-"""
 
+This module is now deprecated.
+"""
+import warnings
 from io import StringIO
 
+from incremental import Version, getVersionString
+
 from twisted.web import microdom
-from twisted.web.microdom import getElementsByTagName, escape, unescape
+from twisted.web.microdom import escape, getElementsByTagName, unescape
+
+warningString = "twisted.web.domhelpers was deprecated at {}".format(
+    getVersionString(Version("Twisted", 23, 10, 0))
+)
+warnings.warn(warningString, DeprecationWarning, stacklevel=3)
+
+
 # These modules are imported here as a shortcut.
 escape
 getElementsByTagName
-
 
 
 class NodeLookupError(Exception):
@@ -26,28 +36,31 @@ def substitute(request, node, subs):
     attempt to do string substitution with the given parameter.
     """
     for child in node.childNodes:
-        if hasattr(child, 'nodeValue') and child.nodeValue:
+        if hasattr(child, "nodeValue") and child.nodeValue:
             child.replaceData(0, len(child.nodeValue), child.nodeValue % subs)
         substitute(request, child, subs)
 
-def _get(node, nodeId, nodeAttrs=('id','class','model','pattern')):
+
+def _get(node, nodeId, nodeAttrs=("id", "class", "model", "pattern")):
     """
     (internal) Get a node with the specified C{nodeId} as any of the C{class},
     C{id} or C{pattern} attributes.
     """
 
-    if hasattr(node, 'hasAttributes') and node.hasAttributes():
+    if hasattr(node, "hasAttributes") and node.hasAttributes():
         for nodeAttr in nodeAttrs:
-            if (str (node.getAttribute(nodeAttr)) == nodeId):
+            if str(node.getAttribute(nodeAttr)) == nodeId:
                 return node
     if node.hasChildNodes():
-        if hasattr(node.childNodes, 'length'):
+        if hasattr(node.childNodes, "length"):
             length = node.childNodes.length
         else:
             length = len(node.childNodes)
         for childNum in range(length):
             result = _get(node.childNodes[childNum], nodeId)
-            if result: return result
+            if result:
+                return result
+
 
 def get(node, nodeId):
     """
@@ -56,8 +69,10 @@ def get(node, nodeId):
     L{NodeLookupError}.
     """
     result = _get(node, nodeId)
-    if result: return result
+    if result:
+        return result
     raise NodeLookupError(nodeId)
+
 
 def getIfExists(node, nodeId):
     """
@@ -66,6 +81,7 @@ def getIfExists(node, nodeId):
     L{None}.
     """
     return _get(node, nodeId)
+
 
 def getAndClear(node, nodeId):
     """Get a node with the specified C{nodeId} as any of the C{class},
@@ -77,11 +93,13 @@ def getAndClear(node, nodeId):
         clearNode(result)
     return result
 
+
 def clearNode(node):
     """
     Remove all children from the given node.
     """
     node.childNodes[:] = []
+
 
 def locateNodes(nodeList, key, value, noNesting=1):
     """
@@ -92,7 +110,7 @@ def locateNodes(nodeList, key, value, noNesting=1):
     if not isinstance(nodeList, type([])):
         return locateNodes(nodeList.childNodes, key, value, noNesting)
     for childNode in nodeList:
-        if not hasattr(childNode, 'getAttribute'):
+        if not hasattr(childNode, "getAttribute"):
             continue
         if str(childNode.getAttribute(key)) == value:
             returnList.append(childNode)
@@ -101,58 +119,65 @@ def locateNodes(nodeList, key, value, noNesting=1):
         returnList.extend(locateNodes(childNode, key, value, noNesting))
     return returnList
 
+
 def superSetAttribute(node, key, value):
-    if not hasattr(node, 'setAttribute'): return
+    if not hasattr(node, "setAttribute"):
+        return
     node.setAttribute(key, value)
     if node.hasChildNodes():
         for child in node.childNodes:
             superSetAttribute(child, key, value)
 
+
 def superPrependAttribute(node, key, value):
-    if not hasattr(node, 'setAttribute'): return
+    if not hasattr(node, "setAttribute"):
+        return
     old = node.getAttribute(key)
     if old:
-        node.setAttribute(key, value+'/'+old)
+        node.setAttribute(key, value + "/" + old)
     else:
         node.setAttribute(key, value)
     if node.hasChildNodes():
         for child in node.childNodes:
             superPrependAttribute(child, key, value)
 
+
 def superAppendAttribute(node, key, value):
-    if not hasattr(node, 'setAttribute'): return
+    if not hasattr(node, "setAttribute"):
+        return
     old = node.getAttribute(key)
     if old:
-        node.setAttribute(key, old + '/' + value)
+        node.setAttribute(key, old + "/" + value)
     else:
         node.setAttribute(key, value)
     if node.hasChildNodes():
         for child in node.childNodes:
             superAppendAttribute(child, key, value)
 
+
 def gatherTextNodes(iNode, dounescape=0, joinWith=""):
     """Visit each child node and collect its text data, if any, into a string.
-For example::
-    >>> doc=microdom.parseString('<a>1<b>2<c>3</c>4</b></a>')
-    >>> gatherTextNodes(doc.documentElement)
-    '1234'
-With dounescape=1, also convert entities back into normal characters.
-@return: the gathered nodes as a single string
-@rtype: str
-"""
-    gathered=[]
-    gathered_append=gathered.append
-    slice=[iNode]
-    while len(slice)>0:
-        c=slice.pop(0)
-        if hasattr(c, 'nodeValue') and c.nodeValue is not None:
+    For example::
+        >>> doc=microdom.parseString('<a>1<b>2<c>3</c>4</b></a>')
+        >>> gatherTextNodes(doc.documentElement)
+        '1234'
+    With dounescape=1, also convert entities back into normal characters.
+    @return: the gathered nodes as a single string
+    @rtype: str"""
+    gathered = []
+    gathered_append = gathered.append
+    slice = [iNode]
+    while len(slice) > 0:
+        c = slice.pop(0)
+        if hasattr(c, "nodeValue") and c.nodeValue is not None:
             if dounescape:
-                val=unescape(c.nodeValue)
+                val = unescape(c.nodeValue)
             else:
-                val=c.nodeValue
+                val = c.nodeValue
             gathered_append(val)
-        slice[:0]=c.childNodes
+        slice[:0] = c.childNodes
     return joinWith.join(gathered)
+
 
 class RawText(microdom.Text):
     """This is an evil and horrible speed hack. Basically, if you have a big
@@ -166,8 +191,18 @@ class RawText(microdom.Text):
     node, it would be parsed then.
     """
 
-    def writexml(self, writer, indent="", addindent="", newl="", strip=0, nsprefixes=None, namespace=None):
-        writer.write("%s%s%s" % (indent, self.data, newl))
+    def writexml(
+        self,
+        writer,
+        indent="",
+        addindent="",
+        newl="",
+        strip=0,
+        nsprefixes=None,
+        namespace=None,
+    ):
+        writer.write(f"{indent}{self.data}{newl}")
+
 
 def findNodes(parent, matcher, accum=None):
     if accum is None:
@@ -195,6 +230,7 @@ def findNodesShallowOnMatch(parent, matcher, recurseMatcher, accum=None):
             findNodesShallowOnMatch(child, matcher, recurseMatcher, accum)
     return accum
 
+
 def findNodesShallow(parent, matcher, accum=None):
     if accum is None:
         accum = []
@@ -213,9 +249,10 @@ def findElementsWithAttributeShallow(parent, attribute):
     Return an iterable of the elements which are direct children of C{parent}
     and which have the C{attribute} attribute.
     """
-    return findNodesShallow(parent,
-        lambda n: getattr(n, 'tagName', None) is not None and
-            n.hasAttribute(attribute))
+    return findNodesShallow(
+        parent,
+        lambda n: getattr(n, "tagName", None) is not None and n.hasAttribute(attribute),
+    )
 
 
 def findElements(parent, matcher):
@@ -225,19 +262,22 @@ def findElements(parent, matcher):
     """
     return findNodes(
         parent,
-        lambda n, matcher=matcher: getattr(n, 'tagName', None) is not None and
-                                   matcher(n))
+        lambda n, matcher=matcher: getattr(n, "tagName", None) is not None
+        and matcher(n),
+    )
+
 
 def findElementsWithAttribute(parent, attribute, value=None):
     if value:
         return findElements(
             parent,
-            lambda n, attribute=attribute, value=value:
-              n.hasAttribute(attribute) and n.getAttribute(attribute) == value)
+            lambda n, attribute=attribute, value=value: n.hasAttribute(attribute)
+            and n.getAttribute(attribute) == value,
+        )
     else:
         return findElements(
-            parent,
-            lambda n, attribute=attribute: n.hasAttribute(attribute))
+            parent, lambda n, attribute=attribute: n.hasAttribute(attribute)
+        )
 
 
 def findNodesNamed(parent, name):
@@ -246,8 +286,8 @@ def findNodesNamed(parent, name):
 
 def writeNodeData(node, oldio):
     for subnode in node.childNodes:
-        if hasattr(subnode, 'data'):
-            oldio.write(u"" + subnode.data)
+        if hasattr(subnode, "data"):
+            oldio.write("" + subnode.data)
         else:
             writeNodeData(subnode, oldio)
 
@@ -265,8 +305,9 @@ def getParents(node):
         node = node.parentNode
     return l
 
+
 def namedChildren(parent, nodeName):
     """namedChildren(parent, nodeName) -> children (not descendants) of parent
     that have tagName == nodeName
     """
-    return [n for n in parent.childNodes if getattr(n, 'tagName', '')==nodeName]
+    return [n for n in parent.childNodes if getattr(n, "tagName", "") == nodeName]

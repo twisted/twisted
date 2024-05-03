@@ -8,35 +8,32 @@ authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
 
-from __future__ import division, absolute_import
-
-from zope.interface import implementer, Interface
 
 import base64
 import hmac
 import random
 import re
 import time
-
 from binascii import hexlify
 from hashlib import md5
 
-from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString
-from twisted.python.compat import intToBytes, unicode
-from twisted.cred._digest import calcResponse, calcHA1, calcHA2
-from twisted.cred import error
+from zope.interface import Interface, implementer
 
+from twisted.cred import error
+from twisted.cred._digest import calcHA1, calcHA2, calcResponse
+from twisted.python.compat import nativeString, networkString
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.randbytes import secureRandom
+from twisted.python.versions import Version
 
 
 class ICredentials(Interface):
     """
     I check credentials.
 
-    Implementors _must_ specify which sub-interfaces of ICredentials
-    to which it conforms, using L{zope.interface.declarations.implementer}.
+    Implementors I{must} specify the sub-interfaces of ICredentials
+    to which it conforms, using L{zope.interface.implementer}.
     """
-
 
 
 class IUsernameDigestHash(ICredentials):
@@ -44,6 +41,7 @@ class IUsernameDigestHash(ICredentials):
     This credential is used when a CredentialChecker has access to the hash
     of the username:realm:password as in an Apache .htdigest file.
     """
+
     def checkHash(digestHash):
         """
         @param digestHash: The hashed username:realm:password to check against.
@@ -52,7 +50,6 @@ class IUsernameDigestHash(ICredentials):
             the given hash, C{False} if they do not, or a L{Deferred} which
             will be called back with one of these values.
         """
-
 
 
 class IUsernameHashedPassword(ICredentials):
@@ -84,7 +81,6 @@ class IUsernameHashedPassword(ICredentials):
         """
 
 
-
 class IUsernamePassword(ICredentials):
     """
     I encapsulate a username and a plaintext password.
@@ -102,7 +98,10 @@ class IUsernamePassword(ICredentials):
     @ivar password: The password associated with these credentials.
     """
 
-    def checkPassword(password):
+    username: bytes
+    password: bytes
+
+    def checkPassword(password: bytes) -> bool:
         """
         Validate these credentials against the correct password.
 
@@ -117,16 +116,16 @@ class IUsernamePassword(ICredentials):
         """
 
 
-
 class IAnonymous(ICredentials):
     """
     I am an explicitly anonymous request for access.
+
+    @see: L{twisted.cred.checkers.AllowAnonymousAccess}
     """
 
 
-
 @implementer(IUsernameHashedPassword, IUsernameDigestHash)
-class DigestedCredentials(object):
+class DigestedCredentials:
     """
     Yet Another Simple HTTP Digest authentication scheme.
     """
@@ -137,7 +136,6 @@ class DigestedCredentials(object):
         self.realm = realm
         self.fields = fields
 
-
     def checkPassword(self, password):
         """
         Verify that the credentials represented by this object agree with the
@@ -145,21 +143,25 @@ class DigestedCredentials(object):
         response hash represented by this object was generated and comparing
         the results.
         """
-        response = self.fields.get('response')
-        uri = self.fields.get('uri')
-        nonce = self.fields.get('nonce')
-        cnonce = self.fields.get('cnonce')
-        nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm', b'md5').lower()
-        qop = self.fields.get('qop', b'auth')
+        response = self.fields.get("response")
+        uri = self.fields.get("uri")
+        nonce = self.fields.get("nonce")
+        cnonce = self.fields.get("cnonce")
+        nc = self.fields.get("nc")
+        algo = self.fields.get("algorithm", b"md5").lower()
+        qop = self.fields.get("qop", b"auth")
 
         expected = calcResponse(
             calcHA1(algo, self.username, self.realm, password, nonce, cnonce),
             calcHA2(algo, self.method, uri, qop, None),
-            algo, nonce, nc, cnonce, qop)
+            algo,
+            nonce,
+            nc,
+            cnonce,
+            qop,
+        )
 
         return expected == response
-
 
     def checkHash(self, digestHash):
         """
@@ -169,24 +171,28 @@ class DigestedCredentials(object):
         @param digestHash: A precomputed H(A1) value based on the username,
             realm, and password associate with this credentials object.
         """
-        response = self.fields.get('response')
-        uri = self.fields.get('uri')
-        nonce = self.fields.get('nonce')
-        cnonce = self.fields.get('cnonce')
-        nc = self.fields.get('nc')
-        algo = self.fields.get('algorithm', b'md5').lower()
-        qop = self.fields.get('qop', b'auth')
+        response = self.fields.get("response")
+        uri = self.fields.get("uri")
+        nonce = self.fields.get("nonce")
+        cnonce = self.fields.get("cnonce")
+        nc = self.fields.get("nc")
+        algo = self.fields.get("algorithm", b"md5").lower()
+        qop = self.fields.get("qop", b"auth")
 
         expected = calcResponse(
             calcHA1(algo, None, None, None, nonce, cnonce, preHA1=digestHash),
             calcHA2(algo, self.method, uri, qop, None),
-            algo, nonce, nc, cnonce, qop)
+            algo,
+            nonce,
+            nc,
+            cnonce,
+            qop,
+        )
 
         return expected == response
 
 
-
-class DigestCredentialFactory(object):
+class DigestCredentialFactory:
     """
     Support for RFC2617 HTTP Digest Authentication
 
@@ -207,16 +213,17 @@ class DigestCredentialFactory(object):
     """
 
     _parseparts = re.compile(
-        b'([^= ]+)'    # The key
-        b'='           # Conventional key/value separator (literal)
-        b'(?:'         # Group together a couple options
-          b'"([^"]*)"' # A quoted string of length 0 or more
-        b'|'           # The other option in the group is coming
-          b'([^,]+)'   # An unquoted string of length 1 or more, up to a comma
-        b')'           # That non-matching group ends
-        b',?')         # There might be a comma at the end (none on last pair)
+        b"([^= ]+)"  # The key
+        b"="  # Conventional key/value separator (literal)
+        b"(?:"  # Group together a couple options
+        b'"([^"]*)"'  # A quoted string of length 0 or more
+        b"|"  # The other option in the group is coming
+        b"([^,]+)"  # An unquoted string of length 1 or more, up to a comma
+        b")"  # That non-matching group ends
+        b",?"
+    )  # There might be a comma at the end (none on last pair)
 
-    CHALLENGE_LIFETIME_SECS = 15 * 60    # 15 minutes
+    CHALLENGE_LIFETIME_SECS = 15 * 60  # 15 minutes
 
     scheme = b"digest"
 
@@ -224,7 +231,6 @@ class DigestCredentialFactory(object):
         self.algorithm = algorithm
         self.authenticationRealm = authenticationRealm
         self.privateKey = secureRandom(12)
-
 
     def getChallenge(self, address):
         """
@@ -239,12 +245,13 @@ class DigestCredentialFactory(object):
         c = self._generateNonce()
         o = self._generateOpaque(c, address)
 
-        return {'nonce': c,
-                'opaque': o,
-                'qop': b'auth',
-                'algorithm': self.algorithm,
-                'realm': self.authenticationRealm}
-
+        return {
+            "nonce": c,
+            "opaque": o,
+            "qop": b"auth",
+            "algorithm": self.algorithm,
+            "realm": self.authenticationRealm,
+        }
 
     def _generateNonce(self):
         """
@@ -255,14 +262,12 @@ class DigestCredentialFactory(object):
         """
         return hexlify(secureRandom(12))
 
-
     def _getTime(self):
         """
         Parameterize the time based seed used in C{_generateOpaque}
         so we can deterministically unittest it's behavior.
         """
         return time.time()
-
 
     def _generateOpaque(self, nonce, clientip):
         """
@@ -271,18 +276,17 @@ class DigestCredentialFactory(object):
         """
         # Now, what we do is encode the nonce, client ip and a timestamp in the
         # opaque value with a suitable digest.
-        now = intToBytes(int(self._getTime()))
+        now = b"%d" % (int(self._getTime()),)
 
         if not clientip:
-            clientip = b''
-        elif isinstance(clientip, unicode):
-            clientip = clientip.encode('ascii')
+            clientip = b""
+        elif isinstance(clientip, str):
+            clientip = clientip.encode("ascii")
 
         key = b",".join((nonce, clientip, now))
         digest = hexlify(md5(key + self.privateKey).digest())
         ekey = base64.b64encode(key)
-        return b"-".join((digest, ekey.replace(b'\n', b'')))
-
+        return b"-".join((digest, ekey.replace(b"\n", b"")))
 
     def _verifyOpaque(self, opaque, nonce, clientip):
         """
@@ -302,49 +306,51 @@ class DigestCredentialFactory(object):
             contained the wrong values.
         """
         # First split the digest from the key
-        opaqueParts = opaque.split(b'-')
+        opaqueParts = opaque.split(b"-")
         if len(opaqueParts) != 2:
-            raise error.LoginFailed('Invalid response, invalid opaque value')
+            raise error.LoginFailed("Invalid response, invalid opaque value")
 
         if not clientip:
-            clientip = b''
-        elif isinstance(clientip, unicode):
-            clientip = clientip.encode('ascii')
+            clientip = b""
+        elif isinstance(clientip, str):
+            clientip = clientip.encode("ascii")
 
         # Verify the key
         key = base64.b64decode(opaqueParts[1])
-        keyParts = key.split(b',')
+        keyParts = key.split(b",")
 
         if len(keyParts) != 3:
-            raise error.LoginFailed('Invalid response, invalid opaque value')
+            raise error.LoginFailed("Invalid response, invalid opaque value")
 
         if keyParts[0] != nonce:
             raise error.LoginFailed(
-                'Invalid response, incompatible opaque/nonce values')
+                "Invalid response, incompatible opaque/nonce values"
+            )
 
         if keyParts[1] != clientip:
             raise error.LoginFailed(
-                'Invalid response, incompatible opaque/client values')
+                "Invalid response, incompatible opaque/client values"
+            )
 
         try:
             when = int(keyParts[2])
         except ValueError:
-            raise error.LoginFailed(
-                'Invalid response, invalid opaque/time values')
+            raise error.LoginFailed("Invalid response, invalid opaque/time values")
 
-        if (int(self._getTime()) - when >
-            DigestCredentialFactory.CHALLENGE_LIFETIME_SECS):
-
+        if (
+            int(self._getTime()) - when
+            > DigestCredentialFactory.CHALLENGE_LIFETIME_SECS
+        ):
             raise error.LoginFailed(
-                'Invalid response, incompatible opaque/nonce too old')
+                "Invalid response, incompatible opaque/nonce too old"
+            )
 
         # Verify the digest
         digest = hexlify(md5(key + self.privateKey).digest())
         if digest != opaqueParts[0]:
-            raise error.LoginFailed('Invalid response, invalid opaque value')
+            raise error.LoginFailed("Invalid response, invalid opaque value")
 
         return True
-
 
     def decode(self, response, method, host):
         """
@@ -366,34 +372,30 @@ class DigestCredentialFactory(object):
 
         @return: L{DigestedCredentials}
         """
-        response = b' '.join(response.splitlines())
+        response = b" ".join(response.splitlines())
         parts = self._parseparts.findall(response)
         auth = {}
-        for (key, bare, quoted) in parts:
+        for key, bare, quoted in parts:
             value = (quoted or bare).strip()
             auth[nativeString(key.strip())] = value
 
-        username = auth.get('username')
+        username = auth.get("username")
         if not username:
-            raise error.LoginFailed('Invalid response, no username given.')
+            raise error.LoginFailed("Invalid response, no username given.")
 
-        if 'opaque' not in auth:
-            raise error.LoginFailed('Invalid response, no opaque given.')
+        if "opaque" not in auth:
+            raise error.LoginFailed("Invalid response, no opaque given.")
 
-        if 'nonce' not in auth:
-            raise error.LoginFailed('Invalid response, no nonce given.')
+        if "nonce" not in auth:
+            raise error.LoginFailed("Invalid response, no nonce given.")
 
         # Now verify the nonce/opaque values for this client
-        if self._verifyOpaque(auth.get('opaque'), auth.get('nonce'), host):
-            return DigestedCredentials(username,
-                                       method,
-                                       self.authenticationRealm,
-                                       auth)
-
+        if self._verifyOpaque(auth.get("opaque"), auth.get("nonce"), host):
+            return DigestedCredentials(username, method, self.authenticationRealm, auth)
 
 
 @implementer(IUsernameHashedPassword)
-class CramMD5Credentials(object):
+class CramMD5Credentials:
     """
     An encapsulation of some CramMD5 hashed credentials.
 
@@ -406,13 +408,13 @@ class CramMD5Credentials(object):
     @ivar username: The username from the response from the client.
     @type username: L{bytes} or L{None} if not yet provided.
     """
+
     username = None
-    challenge = b''
-    response = b''
+    challenge = b""
+    response = b""
 
     def __init__(self, host=None):
         self.host = host
-
 
     def getChallenge(self):
         if self.challenge:
@@ -423,29 +425,32 @@ class CramMD5Credentials(object):
         # the unencoded form must correspond to that of an RFC 822 'msg-id'
         # [RFC822] as described in [POP3].
         #   -- RFC 2195
-        r = random.randrange(0x7fffffff)
+        r = random.randrange(0x7FFFFFFF)
         t = time.time()
-        self.challenge = networkString('<%d.%d@%s>' % (
-            r, t, nativeString(self.host) if self.host else None))
+        self.challenge = networkString(
+            "<%d.%d@%s>" % (r, t, nativeString(self.host) if self.host else None)
+        )
         return self.challenge
-
 
     def setResponse(self, response):
         self.username, self.response = response.split(None, 1)
 
-
     def moreChallenges(self):
         return False
 
-
     def checkPassword(self, password):
-        verify = hexlify(hmac.HMAC(password, self.challenge).digest())
+        verify = hexlify(hmac.HMAC(password, self.challenge, digestmod=md5).digest())
         return verify == self.response
-
 
 
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
+    deprecatedModuleAttribute(
+        Version("Twisted", 21, 2, 0),
+        "Use twisted.cred.credentials.UsernamePassword instead.",
+        "twisted.cred.credentials",
+        "UsernameHashedPassword",
+    )
 
     def __init__(self, username, hashed):
         self.username = username
@@ -455,23 +460,19 @@ class UsernameHashedPassword:
         return self.hashed == password
 
 
-
 @implementer(IUsernamePassword)
 class UsernamePassword:
-
-    def __init__(self, username, password):
+    def __init__(self, username: bytes, password: bytes) -> None:
         self.username = username
         self.password = password
 
-    def checkPassword(self, password):
+    def checkPassword(self, password: bytes) -> bool:
         return self.password == password
-
 
 
 @implementer(IAnonymous)
 class Anonymous:
     pass
-
 
 
 class ISSHPrivateKey(ICredentials):
@@ -495,7 +496,6 @@ class ISSHPrivateKey(ICredentials):
         owns the private key.
     @type signature: L{bytes} or L{None}
     """
-
 
 
 @implementer(ISSHPrivateKey)
