@@ -290,7 +290,28 @@ jobs:
         name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
 
+  benchmarks:
+    runs-on: ubuntu-22.04
+    env:
+      TOX_PARALLEL_NO_SPINNER: 1
 
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox~=3.0
+
+    - name: Run benchmarks
+      uses: CodSpeedHQ/action@v2
+      with:
+        token: ${{ secrets.CODSPEED_TOKEN }}
+        run: tox -e benchmarks-ci
 
   static-checks:
     runs-on: ubuntu-22.04
