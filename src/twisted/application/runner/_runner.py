@@ -12,7 +12,7 @@ from sys import stderr
 from typing import Any, Callable, Mapping, TextIO
 
 from attr import Factory, attrib, attrs
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (

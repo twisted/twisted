@@ -36,6 +36,9 @@ implement onion routing.  It can also be used to run TLS over unusual
 transports, such as UNIX sockets and stdio.
 """
 
+from __future__ import annotations
+
+from typing import Callable, Iterable, Optional, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -44,14 +47,18 @@ from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroRetu
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
+    IDelayedCall,
     IHandshakeListener,
     ILoggingContext,
     INegotiated,
     IOpenSSLClientConnectionCreator,
     IOpenSSLServerConnectionCreator,
+    IProtocol,
     IProtocolNegotiationFactory,
     IPushProducer,
+    IReactorTime,
     ISystemHandle,
+    ITransport,
 )
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
@@ -116,7 +123,7 @@ def _representsEOF(exceptionObject: Error) -> bool:
     return reasonString.casefold().startswith("unexpected eof")
 
 
-@implementer(ISystemHandle, INegotiated)
+@implementer(ISystemHandle, INegotiated, ITransport)
 class TLSMemoryBIOProtocol(ProtocolWrapper):
     """
     L{TLSMemoryBIOProtocol} is a protocol wrapper which uses OpenSSL via a
@@ -129,6 +136,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     may also want to pause a producer.  Pause/resume events are therefore
     merged using the L{_ProducerMembrane} wrapper.  Non-streaming (pull)
     producers are supported by wrapping them with L{_PullToPush}.
+
+    Because TLS may need to wait for reads before writing, some writes may be
+    buffered until a read occurs.
 
     @ivar _tlsConnection: The L{OpenSSL.SSL.Connection} instance which is
         encrypted and decrypting this connection.
@@ -449,8 +459,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         If C{loseConnection} was called, subsequent calls to C{write} will
         drop the bytes on the floor.
         """
-        if isinstance(bytes, str):
-            raise TypeError("Must write bytes to a TLS transport, not str.")
         # Writes after loseConnection are not supported, unless a producer has
         # been registered, in which case writes can happen until the producer
         # is unregistered:
@@ -682,6 +690,117 @@ class _ContextFactoryToConnectionFactory:
         return self._connectionForTLS(protocol)
 
 
+class _AggregateSmallWrites:
+    """
+    Aggregate small writes so they get written in large batches.
+
+    If this is used as part of a transport, the transport needs to call
+    ``flush()`` immediately when ``loseConnection()`` is called, otherwise any
+    buffered writes will never get written.
+
+    @cvar MAX_BUFFER_SIZE: The maximum amount of bytes to buffer before writing
+        them out.
+    """
+
+    MAX_BUFFER_SIZE = 64_000
+
+    def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
+        self._write = write
+        self._clock = clock
+        self._buffer: list[bytes] = []
+        self._bufferLeft = self.MAX_BUFFER_SIZE
+        self._scheduled: Optional[IDelayedCall] = None
+
+    def write(self, data: bytes) -> None:
+        """
+        Buffer the data, or write it immediately if we've accumulated enough to
+        make it worth it.
+
+        Accumulating too much data can result in higher memory usage.
+        """
+        self._buffer.append(data)
+        self._bufferLeft -= len(data)
+
+        if self._bufferLeft < 0:
+            # We've accumulated enough we should just write it out. No need to
+            # schedule a flush, since we just flushed everything.
+            self.flush()
+            return
+
+        if self._scheduled:
+            # We already have a scheduled send, so with the data in the buffer,
+            # there is nothing more to do here.
+            return
+
+        # Schedule the write of the accumulated buffer for the next reactor
+        # iteration.
+        self._scheduled = self._clock.callLater(0, self._scheduledFlush)
+
+    def _scheduledFlush(self) -> None:
+        """Called in next reactor iteration."""
+        self._scheduled = None
+        self.flush()
+
+    def flush(self) -> None:
+        """Flush any buffered writes."""
+        if self._buffer:
+            self._bufferLeft = self.MAX_BUFFER_SIZE
+            self._write(b"".join(self._buffer))
+            del self._buffer[:]
+
+
+def _get_default_clock() -> IReactorTime:
+    """
+    Return the default reactor.
+
+    This is a function so it can be monkey-patched in tests, specifically
+    L{twisted.web.test.test_agent}.
+    """
+    from twisted.internet import reactor
+
+    return cast(IReactorTime, reactor)
+
+
+class BufferingTLSTransport(TLSMemoryBIOProtocol):
+    """
+    A TLS transport implemented by wrapping buffering around a
+    L{TLSMemoryBIOProtocol}.
+
+    Doing many small writes directly to a L{OpenSSL.SSL.Connection}, as
+    implemented in L{TLSMemoryBIOProtocol}, can add significant CPU and
+    bandwidth overhead.  Thus, even when writing is possible, small writes will
+    get aggregated and written as a single write at the next reactor iteration.
+    """
+
+    # Implementation Note: An implementation based on composition would be
+    # nicer, but there's close integration between L{ProtocolWrapper}
+    # subclasses like L{TLSMemoryBIOProtocol} and the corresponding factory. An
+    # attempt to implement this with broke things like
+    # L{TLSMemoryBIOFactory.protocols} having the correct instances, whereas
+    # subclassing makes that work.
+
+    def __init__(
+        self,
+        factory: TLSMemoryBIOFactory,
+        wrappedProtocol: IProtocol,
+        _connectWrapped: bool = True,
+    ):
+        super().__init__(factory, wrappedProtocol, _connectWrapped)
+        actual_write = super().write
+        self._aggregator = _AggregateSmallWrites(actual_write, factory._clock)
+        # This is kinda ugly, but speeds things up a lot in a hot path with
+        # lots of small TLS writes. May become unnecessary in Python 3.13 or
+        # later if JIT and/or inlining becomes a thing.
+        self.write = self._aggregator.write  # type: ignore[method-assign]
+
+    def writeSequence(self, sequence: Iterable[bytes]) -> None:
+        self._aggregator.write(b"".join(sequence))
+
+    def loseConnection(self) -> None:
+        self._aggregator.flush()
+        super().loseConnection()
+
+
 class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
@@ -696,11 +815,17 @@ class TLSMemoryBIOFactory(WrappingFactory):
         L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
     """
 
-    protocol = TLSMemoryBIOProtocol
+    protocol = BufferingTLSTransport
 
     noisy = False  # disable unnecessary logging.
 
-    def __init__(self, contextFactory, isClient, wrappedFactory):
+    def __init__(
+        self,
+        contextFactory,
+        isClient,
+        wrappedFactory,
+        clock=None,
+    ):
         """
         Create a L{TLSMemoryBIOFactory}.
 
@@ -752,6 +877,10 @@ class TLSMemoryBIOFactory(WrappingFactory):
         if not creatorInterface.providedBy(contextFactory):
             contextFactory = _ContextFactoryToConnectionFactory(contextFactory)
         self._connectionCreator = contextFactory
+
+        if clock is None:
+            clock = _get_default_clock()
+        self._clock = clock
 
     def logPrefix(self):
         """

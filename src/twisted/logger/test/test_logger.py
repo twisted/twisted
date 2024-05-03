@@ -9,7 +9,7 @@ from typing import List, Optional, Type, cast
 
 from zope.interface import implementer
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 
 from twisted.trial import unittest
 from .._format import formatEvent

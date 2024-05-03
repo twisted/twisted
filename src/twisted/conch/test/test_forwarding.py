@@ -26,7 +26,7 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
     if not cryptography:
         skip = "Cannot run without cryptography"
 
-    def makeTCPConnection(self, reactor):
+    def makeTCPConnection(self, reactor: MemoryReactorClock) -> None:
         """
         Fake that connection was established for first connectTCP request made
         on C{reactor}.
@@ -40,7 +40,7 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         transport = StringTransport(peerAddress=connector.getDestination())
         protocol.makeConnection(transport)
 
-    def test_channelOpenHostnameRequests(self):
+    def test_channelOpenHostnameRequests(self) -> None:
         """
         When a hostname is sent as part of forwarding requests, it
         is resolved using HostnameEndpoint's resolver.
