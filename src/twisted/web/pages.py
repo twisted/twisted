@@ -76,7 +76,7 @@ class _ErrorPage(Resource):
         return self
 
 
-def errorPage(code: int, brief: str, detail: str) -> IResource:
+def errorPage(code: int, brief: str, detail: str) -> _ErrorPage:
     """
     Build a resource that responds to all requests with a particular HTTP
     status code and an HTML body containing some descriptive text. This is

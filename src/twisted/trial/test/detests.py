@@ -4,9 +4,10 @@
 """
 Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
-
+from __future__ import annotations
 
 from twisted.internet import defer, reactor, threads
+from twisted.python.failure import Failure
 from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import unittest
 from twisted.trial.util import suppress as SUPPRESS
@@ -160,7 +161,7 @@ class DeferredTests(unittest.TestCase):
 
 
 class TimeoutTests(unittest.TestCase):
-    timedOut = None
+    timedOut: Failure | None = None
 
     def test_pass(self):
         d = defer.Deferred()
