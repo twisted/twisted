@@ -6,13 +6,16 @@
 HTTP client.
 """
 
+from __future__ import annotations
 
 import collections
 import os
 import warnings
 import zlib
+from dataclasses import dataclass
 from functools import wraps
-from typing import Iterable
+from http.cookiejar import CookieJar
+from typing import TYPE_CHECKING, Iterable, Optional
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
@@ -21,6 +24,7 @@ from incremental import Version
 
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
+from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import IOpenSSLContextFactory, IProtocol
 from twisted.logger import Logger
@@ -42,6 +46,20 @@ from twisted.web.iweb import (
     IPolicyForHTTPS,
     IResponse,
 )
+
+# For the purpose of type-checking we want our faked-out types to be identical to the types they are replacing.
+# For the purpose of the impementation, we want to start
+# with a blank slate so that we don't accidentally use
+# any of the real implementation.
+
+if TYPE_CHECKING:
+    from email.message import EmailMessage as _InfoType
+    from http.client import HTTPResponse as _ResponseBase
+    from urllib.request import Request as _RequestBase
+else:
+    _RequestBase = object
+    _ResponseBase = object
+    _InfoType = object
 
 
 def urlunparse(parts):
@@ -1200,36 +1218,38 @@ class ProxyAgent(_AgentBase):
         )
 
 
-class _FakeUrllib2Request:
+class _FakeStdlibRequest(_RequestBase):
     """
-    A fake C{urllib2.Request} object for C{cookielib} to work with.
+    A fake L{urllib.request.Request} object for L{cookiejar} to work with.
 
-    @see: U{http://docs.python.org/library/urllib2.html#request-objects}
+    @see: U{urllib.request.Request
+        <https://docs.python.org/3/library/urllib.request.html#urllib.request.Request>}
 
-    @type uri: native L{str}
     @ivar uri: Request URI.
 
-    @type headers: L{twisted.web.http_headers.Headers}
     @ivar headers: Request headers.
 
-    @type type: native L{str}
     @ivar type: The scheme of the URI.
 
-    @type host: native L{str}
     @ivar host: The host[:port] of the URI.
 
     @since: 11.1
     """
 
-    def __init__(self, uri):
+    uri: str
+    type: str
+    host: str
+    # The received headers managed using Twisted API.
+    _twistedHeaders: Headers
+
+    def __init__(self, uri: bytes) -> None:
         """
-        Create a fake Urllib2 request.
+        Create a fake  request.
 
         @param uri: Request URI.
-        @type uri: L{bytes}
         """
         self.uri = nativeString(uri)
-        self.headers = Headers()
+        self._twistedHeaders = Headers()
 
         _uri = URI.fromBytes(uri)
         self.type = nativeString(_uri.scheme)
@@ -1240,19 +1260,19 @@ class _FakeUrllib2Request:
             self.host += ":" + str(_uri.port)
 
         self.origin_req_host = nativeString(_uri.host)
-        self.unverifiable = lambda _: False
+        self.unverifiable = False
 
     def has_header(self, header):
-        return self.headers.hasHeader(networkString(header))
+        return self._twistedHeaders.hasHeader(networkString(header))
 
     def add_unredirected_header(self, name, value):
-        self.headers.addRawHeader(networkString(name), networkString(value))
+        self._twistedHeaders.addRawHeader(networkString(name), networkString(value))
 
     def get_full_url(self):
         return self.uri
 
     def get_header(self, name, default=None):
-        headers = self.headers.getRawHeaders(networkString(name), default)
+        headers = self._twistedHeaders.getRawHeaders(networkString(name), default)
         if headers is not None:
             headers = [nativeString(x) for x in headers]
             return headers[0]
@@ -1269,62 +1289,68 @@ class _FakeUrllib2Request:
         return False
 
 
-class _FakeUrllib2Response:
-    """
-    A fake C{urllib2.Response} object for C{cookielib} to work with.
+@dataclass
+class _FakeUrllibResponseInfo(_InfoType):
+    response: IResponse
 
-    @type response: C{twisted.web.iweb.IResponse}
+    def get_all(self, name: str, default: bytes) -> list[str]:  # type:ignore[override]
+        headers = self.response.headers.getRawHeaders(networkString(name), default)
+        h = [nativeString(x) for x in headers]
+        return h
+
+
+class _FakeStdlibResponse(_ResponseBase):
+    """
+    A fake L{urllib.response.Response} object for L{http.cookiejar} to work
+    with.
+
     @ivar response: Underlying Twisted Web response.
 
     @since: 11.1
     """
 
-    def __init__(self, response):
+    response: IResponse
+
+    def __init__(self, response: IResponse) -> None:
         self.response = response
 
-    def info(self):
-        class _Meta:
-            def getheaders(zelf, name):
-                # PY2
-                headers = self.response.headers.getRawHeaders(name, [])
-                return headers
-
-            def get_all(zelf, name, default):
-                # PY3
-                headers = self.response.headers.getRawHeaders(
-                    networkString(name), default
-                )
-                h = [nativeString(x) for x in headers]
-                return h
-
-        return _Meta()
+    def info(self) -> _InfoType:
+        result = _FakeUrllibResponseInfo(self.response)
+        return result
 
 
 @implementer(IAgent)
 class CookieAgent:
     """
-    L{CookieAgent} extends the basic L{Agent} to add RFC-compliant
-    handling of HTTP cookies.  Cookies are written to and extracted
-    from a C{cookielib.CookieJar} instance.
+    L{CookieAgent} extends the basic L{Agent} to add RFC-compliant handling of
+    HTTP cookies.  Cookies are written to and extracted from a L{CookieJar}
+    instance.
 
     The same cookie jar instance will be used for any requests through this
     agent, mutating it whenever a I{Set-Cookie} header appears in a response.
 
-    @type _agent: L{twisted.web.client.Agent}
     @ivar _agent: Underlying Twisted Web agent to issue requests through.
 
-    @type cookieJar: C{cookielib.CookieJar}
     @ivar cookieJar: Initialized cookie jar to read cookies from and store
         cookies to.
 
     @since: 11.1
     """
 
-    def __init__(self, agent, cookieJar):
+    _agent: IAgent
+    cookieJar: CookieJar
+
+    def __init__(self, agent: IAgent, cookieJar: CookieJar) -> None:
         self._agent = agent
         self.cookieJar = cookieJar
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Optional[Headers] = None,
+        bodyProducer: Optional[IBodyProducer] = None,
+    ) -> Deferred[IResponse]:
         """
         Issue a new request to the wrapped L{Agent}.
 
@@ -1337,33 +1363,33 @@ class CookieAgent:
 
         @see: L{Agent.request}
         """
-        if headers is None:
-            headers = Headers()
-        lastRequest = _FakeUrllib2Request(uri)
+        actualHeaders = headers if headers is not None else Headers()
+        lastRequest = _FakeStdlibRequest(uri)
         # Setting a cookie header explicitly will disable automatic request
         # cookies.
-        if not headers.hasHeader(b"cookie"):
+        if not actualHeaders.hasHeader(b"cookie"):
             self.cookieJar.add_cookie_header(lastRequest)
             cookieHeader = lastRequest.get_header("Cookie", None)
             if cookieHeader is not None:
-                headers = headers.copy()
-                headers.addRawHeader(b"cookie", networkString(cookieHeader))
+                actualHeaders = actualHeaders.copy()
+                actualHeaders.addRawHeader(b"cookie", networkString(cookieHeader))
 
-        d = self._agent.request(method, uri, headers, bodyProducer)
-        d.addCallback(self._extractCookies, lastRequest)
-        return d
+        return self._agent.request(
+            method, uri, actualHeaders, bodyProducer
+        ).addCallback(self._extractCookies, lastRequest)
 
-    def _extractCookies(self, response, request):
+    def _extractCookies(
+        self, response: IResponse, request: _FakeStdlibRequest
+    ) -> IResponse:
         """
         Extract response cookies and store them in the cookie jar.
 
-        @type response: L{twisted.web.iweb.IResponse}
-        @param response: Twisted Web response.
+        @param response: the Twisted Web response that we are processing.
 
-        @param request: A urllib2 compatible request object.
+        @param request: A L{_FakeStdlibRequest} wrapping our Twisted request,
+            for L{CookieJar} to extract cookies from.
         """
-        resp = _FakeUrllib2Response(response)
-        self.cookieJar.extract_cookies(resp, request)
+        self.cookieJar.extract_cookies(_FakeStdlibResponse(response), request)
         return response
 
 
@@ -1504,7 +1530,7 @@ class ContentDecoderAgent:
         return response
 
 
-_canonicalHeaderName = Headers()._canonicalNameCaps
+_canonicalHeaderName = Headers()._encodeName
 _defaultSensitiveHeaders = frozenset(
     [
         b"Authorization",

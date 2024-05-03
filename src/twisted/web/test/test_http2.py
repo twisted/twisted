@@ -33,12 +33,12 @@ skipH2 = None
 try:
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
-    import h2  # type: ignore[import]
-    import h2.errors  # type: ignore[import]
-    import h2.exceptions  # type: ignore[import]
+    import h2
+    import h2.errors
+    import h2.exceptions
     import hyperframe
-    import priority  # type: ignore[import]
-    from hpack.hpack import Decoder, Encoder  # type: ignore[import]
+    import priority
+    from hpack.hpack import Decoder, Encoder
 
     from twisted.web._http2 import H2Connection
 except ImportError:
