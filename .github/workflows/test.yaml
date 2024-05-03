@@ -292,8 +292,6 @@ jobs:
 
   benchmarks:
     runs-on: ubuntu-22.04
-    env:
-      TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
     - uses: actions/checkout@v3
