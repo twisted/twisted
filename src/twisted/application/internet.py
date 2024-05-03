@@ -41,7 +41,7 @@ reactor.listen/connect* methods for more information.
 from random import random as _goodEnoughRandom
 from typing import List
 
-from automat import MethodicalMachine  # type: ignore[import]
+from automat import MethodicalMachine
 
 from twisted.application import service
 from twisted.internet import task

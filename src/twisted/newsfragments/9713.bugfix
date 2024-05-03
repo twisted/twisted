@@ -1,0 +1,1 @@
+Type annotations have been added to twisted.conch.interfaces.IKnownHostEntry and its implementations, twisted.conch.client.knownhosts.PlainHost and twisted.conch.client.knownhosts.HashedHost, correcting a variety of type confusion issues throughout the conch client code.

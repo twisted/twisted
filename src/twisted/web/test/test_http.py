@@ -1224,6 +1224,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             p.dataReceived(s)
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [])
 
     def test_long(self):
         """
@@ -1381,20 +1382,6 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
         )
 
-    def test_malformedChunkEndFinal(self):
-        r"""
-        L{_ChunkedTransferDecoder.dataReceived} raises
-        L{_MalformedChunkedDataError} when the terminal zero-length chunk is
-        followed by characters other than C{\r\n}.
-        """
-        p = http._ChunkedTransferDecoder(
-            lambda b: None,
-            lambda b: None,  # pragma: nocov
-        )
-        self.assertRaises(
-            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
-        )
-
     def test_finish(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length
@@ -1468,6 +1455,79 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         parser.dataReceived(b"0\r\n\r\n")
         self.assertEqual(errors, [])
         self.assertEqual(successes, [True])
+
+    def test_trailerHeaders(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
+        and ignores trailer headers which come after the terminating zero-length
+        chunk.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        p.dataReceived(b"3\r\nabc\r\n5\r\n12345\r\n")
+        p.dataReceived(
+            b"a\r\n0123456789\r\n0\r\nServer-Timing: total;dur=123.4\r\nExpires: Wed, 21 Oct 2015 07:28:00 GMT\r\n\r\n"
+        )
+        self.assertEqual(L, [b"abc", b"12345", b"0123456789"])
+        self.assertEqual(finished, [b""])
+        self.assertEqual(
+            p._trailerHeaders,
+            [
+                b"Server-Timing: total;dur=123.4",
+                b"Expires: Wed, 21 Oct 2015 07:28:00 GMT",
+            ],
+        )
+
+    def test_shortTrailerHeader(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunks of input with
+        tailer header broken up and delivered in multiple calls.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        for s in iterbytes(
+            b"3\r\nabc\r\n5\r\n12345\r\n0\r\nServer-Timing: total;dur=123.4\r\n\r\n"
+        ):
+            p.dataReceived(s)
+        self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
+        self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [b"Server-Timing: total;dur=123.4"])
+
+    def test_tooLongTrailerHeader(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the trailing headers data is too long.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        p._maxTrailerHeadersSize = 10
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3\r\nabc\r\n0\r\nTotal-Trailer: header;greater-then=10\r\n\r\n",
+        )
+
+    def test_unfinishedTrailerHeader(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the trailing headers data is too long
+        and doesn't have final CRLF characters.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        p._maxTrailerHeadersSize = 10
+        p.dataReceived(b"3\r\nabc\r\n0\r\n0123456789")
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"A",
+        )
 
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
@@ -2804,15 +2864,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"(no clientproto yet) 202 happily accepted",
         )
 
-    def test_setResponseCodeAndMessageNotBytes(self):
-        """
-        L{http.Request.setResponseCode} accepts C{bytes} for the message
-        parameter and raises L{TypeError} if passed anything else.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        self.assertRaises(TypeError, req.setResponseCode, 202, "not happily accepted")
-
     def test_setResponseCodeAcceptsIntegers(self):
         """
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
@@ -2820,15 +2871,22 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
-        self.assertRaises(TypeError, req.setResponseCode, "1")
 
-    def test_setResponseCodeAcceptsLongIntegers(self):
+    def test_setResponseCode418(self):
         """
-        L{http.Request.setResponseCode} accepts L{int} for the code
-        parameter.
+        L{http.Request.setResponseCode} supports RFC 2324 section 2.3.2
+        418 response code and will automatically set the associated message.
         """
-        req = http.Request(DummyChannel(), False)
-        req.setResponseCode(1)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+
+        req.setResponseCode(http.IM_A_TEAPOT)
+        req.write(b"")
+
+        self.assertEqual(
+            channel.transport.written.getvalue().splitlines()[0],
+            b"(no clientproto yet) 418 I'm a teapot",
+        )
 
     def test_setLastModifiedNeverSet(self):
         """

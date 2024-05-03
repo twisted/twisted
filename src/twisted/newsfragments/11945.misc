@@ -1,1 +1,0 @@
-opt into mypy strict by default, remove redundant mypy overrides

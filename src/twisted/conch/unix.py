@@ -43,7 +43,7 @@ from twisted.python import components
 from twisted.python.compat import nativeString
 
 try:
-    import utmp  # type: ignore[import]
+    import utmp
 except ImportError:
     utmp = None
 
