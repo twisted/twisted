@@ -1200,7 +1200,6 @@ class Request:
             version = self.clientproto
             code = b"%d" % (self.code,)
             reason = self.code_message
-            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -1211,7 +1210,7 @@ class Request:
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
-                headers.append((b"Transfer-Encoding", b"chunked"))
+                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -1228,14 +1227,10 @@ class Request:
             if self.etag is not None:
                 self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
-            for name, values in self.responseHeaders.getAllRawHeaders():
-                for value in values:
-                    headers.append((name, value))
+            if self.cookies:
+                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
-            for cookie in self.cookies:
-                headers.append((b"Set-Cookie", cookie))
-
-            self.channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -2636,8 +2631,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return False
 
     def writeHeaders(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP headers to
+        """Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
 
         @param version: The HTTP version in use.
@@ -2650,19 +2644,25 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type reason: L{bytes}
 
         @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}
-        """
-        sanitizedHeaders = Headers()
-        for name, value in headers:
-            sanitizedHeaders.addRawHeader(name, value)
+        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+            compatibility purposes only) any iterable of two-tuples of
+            L{bytes}, representing header names and header values. The latter
+            option is not actually used by Twisted.
 
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(
-            name + b": " + value + b"\r\n"
-            for name, values in sanitizedHeaders.getAllRawHeaders()
-            for value in values
-        )
+        """
+        if not isinstance(headers, Headers):
+            # Turn into Headers instance for security reasons, to make sure we
+            # quite and sanitize everything. This variant should be removed
+            # eventually, it's only here for backwards compatibility.
+            sanitizedHeaders = Headers()
+            for name, value in headers:
+                sanitizedHeaders.addRawHeader(name, value)
+            headers = sanitizedHeaders
+
+        headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
+        for name, values in headers.getAllRawHeaders():
+            for value in values:
+                headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
 
