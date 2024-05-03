@@ -169,7 +169,25 @@ def runProtocolsWithReactor(
     def failed(result):
         log.err(result, "Connection setup failed.")
 
-    disconnected = gatherResults([serverProtocol._done, clientProtocol._done])
+    def instrument(message: str, d: Deferred[object]) -> Deferred[object]:
+        def show(result: object) -> object:
+            print(message, ":", result)
+            return result
+
+        return d.addBoth(show)
+
+    disconnected = gatherResults(
+        [
+            instrument("server done", serverProtocol._done),
+            instrument("client done", clientProtocol._done).addCallback(
+                # Some of the tests cause the server to stop reading, which may
+                # make it impossible to detect when the server disconnects, and
+                # both client and server must disconnect to complete the test,
+                # so we give it a nudge when the client has disconnected.
+                lambda _: serverProtocol.transport.startReading()
+            ),
+        ]
+    )
     d.addCallback(lambda _: disconnected)
     d.addErrback(failed)
     d.addCallback(lambda _: needsRunningReactor(reactor, reactor.stop))

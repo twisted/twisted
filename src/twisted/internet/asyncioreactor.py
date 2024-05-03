@@ -143,23 +143,29 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._disconnectSelectable(selectable, why, read)
 
     def addReader(self, reader):
+        print("adding reader", reader)
         if reader in self._readers.keys() or reader in self._continuousPolling._readers:
+            print("nope")
             return
 
         fd = reader.fileno()
+        print("fd", fd)
         try:
             self._asyncioEventloop.add_reader(
                 fd, callWithLogger, reader, self._readOrWrite, reader, True
             )
             self._readers[reader] = fd
+            print("added", fd)
         except OSError as e:
             self._unregisterFDInAsyncio(fd)
             if e.errno == errno.EPERM:
+                print("EPERM")
                 # epoll(7) doesn't support certain file descriptors,
                 # e.g. filesystem files, so for those we just poll
                 # continuously:
                 self._continuousPolling.addReader(reader)
             else:
+                print("oops bye")
                 raise
 
     def addWriter(self, writer):
@@ -187,10 +193,12 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def removeReader(self, reader):
         # First, see if they're trying to remove a reader that we don't have.
+        print("removing reader")
         if not (
             reader in self._readers.keys() or self._continuousPolling.isReading(reader)
         ):
             # We don't have it, so just return OK.
+            print("nope")
             return
 
         # If it was a cont. polling reader, check there first.
@@ -199,6 +207,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             return
 
         fd = reader.fileno()
+        print("remove reader fd", fd)
         if fd == -1:
             # If the FD is -1, we want to know what its original FD was, to
             # remove it.
@@ -207,6 +216,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
             self._readers.pop(reader)
 
         self._asyncioEventloop.remove_reader(fd)
+        print("removed", fd)
 
     def removeWriter(self, writer):
         # First, see if they're trying to remove a writer that we don't have.
@@ -258,7 +268,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         super().stop()
         # This will cause runUntilCurrent which in its turn
         # will call fireSystemEvent("shutdown")
-        self.callLater(0, lambda: None)
+        self._reschedule()
 
     def crash(self):
         super().crash()
@@ -270,7 +280,7 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._reschedule()
 
     def _reschedule(self):
-        timeout = self.timeout()
+        timeout = 0.0 if self._justStopped else self.timeout()
         if timeout is not None:
             abs_time = self._asyncioEventloop.time() + timeout
             self._scheduledAt = abs_time
