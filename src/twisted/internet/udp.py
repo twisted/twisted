@@ -199,7 +199,9 @@ class Port(base.BasePort):
             try:
                 skt = self.createInternetSocket()
                 if self.addressFamily == socket.AF_INET6:
-                    addr = socket.getaddrinfo(self.interface, self.port, 0, 0, 0, socket.AI_NUMERICHOST )[0][4]
+                    addr = socket.getaddrinfo(
+                        self.interface, self.port, 0, 0, 0, socket.AI_NUMERICHOST
+                    )[0][4]
                 else:
                     addr = (self.interface, self.port)
                 skt.bind(addr)
