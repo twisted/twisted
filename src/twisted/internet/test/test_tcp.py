@@ -126,7 +126,7 @@ if platform.isWindows():
 
     try:
         from twisted.internet.iocpreactor.reactor import IOCPReactor
-    except ImportError:  # pragma: cover
+    except ImportError:  # pragma: no cover
         # On our CI, we always have iocp-support package available.
         # This is here for the case in which someone runs the tests on
         # Windows, without the package installed.
