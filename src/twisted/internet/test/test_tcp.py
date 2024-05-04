@@ -126,7 +126,10 @@ if platform.isWindows():
 
     try:
         from twisted.internet.iocpreactor.reactor import IOCPReactor
-    except ImportError:
+    except ImportError:  # pragma: cover
+        # On our CI, we always have iocp-support package available.
+        # This is here for the case in which someone runs the tests on
+        # Windows, without the package installed.
         IOCPReactor = None  # type: ignore[misc,assignment]
 
     SKIP_EMFILE = True
@@ -863,6 +866,8 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
             self.assertConnectPortErrorCalls = 0
 
         if self.assertConnectPortErrorCalls != 0:  # pragma: no cover
+            # This is never called during normal tests.
+            # This is here to make sure the assertion is not misused.
             raise AssertionError("This assertion can only be called once per test.")
         else:
             self.assertConnectPortErrorCalls = 1
