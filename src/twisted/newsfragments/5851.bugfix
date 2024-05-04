@@ -1,0 +1,1 @@
+twisted.internet.ssl.Certificate.__repr__ can now handle certificates without a common name (CN) in the certificate itself or the signing CA.
