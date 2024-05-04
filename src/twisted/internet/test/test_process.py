@@ -1143,8 +1143,6 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
     if platform.isWindows():
         skip = "PTYs are not supported on Windows."
     elif platform.isMacOSX():
-        skip = "PTYs are flaky from a Darwin bug. See #8840."
-
         skippedReactors = {
             "twisted.internet.pollreactor.PollReactor": "macOS's poll() does not support PTYs"
         }

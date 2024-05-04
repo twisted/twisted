@@ -7,7 +7,7 @@ Contents:
     :maxdepth: 2
     :includehidden:
 
-    installation/index
+    installation
     core/index
     conch/index
     mail/index

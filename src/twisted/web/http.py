@@ -385,7 +385,7 @@ def stringToDatetime(dateString):
 
     @type dateString: C{bytes}
     """
-    parts = nativeString(dateString).split()
+    parts = dateString.decode("ascii").split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
@@ -1200,7 +1200,6 @@ class Request:
             version = self.clientproto
             code = b"%d" % (self.code,)
             reason = self.code_message
-            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -1211,7 +1210,7 @@ class Request:
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
-                headers.append((b"Transfer-Encoding", b"chunked"))
+                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -1228,14 +1227,10 @@ class Request:
             if self.etag is not None:
                 self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
-            for name, values in self.responseHeaders.getAllRawHeaders():
-                for value in values:
-                    headers.append((name, value))
+            if self.cookies:
+                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
-            for cookie in self.cookies:
-                headers.append((b"Set-Cookie", cookie))
-
-            self.channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -1363,19 +1358,15 @@ class Request:
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code, message=None):
+    def setResponseCode(self, code: int, message: Optional[bytes] = None) -> None:
         """
         Set the HTTP response code.
 
         @type code: L{int}
         @type message: L{bytes}
         """
-        if not isinstance(code, int):
-            raise TypeError("HTTP response code must be int or long")
         self.code = code
-        if message:
-            if not isinstance(message, bytes):
-                raise TypeError("HTTP response status message must be bytes")
+        if message is not None:
             self.code_message = message
         else:
             self.code_message = RESPONSES.get(code, b"Unknown Status")
@@ -2275,13 +2266,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         self._networkProducer.registerProducer(self, True)
 
+    def dataReceived(self, data):
+        self.resetTimeout()
+        basic.LineReceiver.dataReceived(self, data)
+
     def lineReceived(self, line):
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        self.resetTimeout()
-
         self._receivedHeaderSize += len(line)
         if self._receivedHeaderSize > self.totalHeadersSize:
             self._respondToBadRequestAndDisconnect()
@@ -2427,12 +2420,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._maybeChooseTransferDecoder(header, data):
             return False
 
-        reqHeaders = self.requests[-1].requestHeaders
-        values = reqHeaders.getRawHeaders(header)
-        if values is not None:
-            values.append(data)
-        else:
-            reqHeaders.setRawHeaders(header, [data])
+        self.requests[-1].requestHeaders.addRawHeader(header, data)
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
@@ -2504,8 +2492,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-
-        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
@@ -2645,8 +2631,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return False
 
     def writeHeaders(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP headers to
+        """Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
 
         @param version: The HTTP version in use.
@@ -2659,19 +2644,25 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type reason: L{bytes}
 
         @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}
-        """
-        sanitizedHeaders = Headers()
-        for name, value in headers:
-            sanitizedHeaders.addRawHeader(name, value)
+        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+            compatibility purposes only) any iterable of two-tuples of
+            L{bytes}, representing header names and header values. The latter
+            option is not actually used by Twisted.
 
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(
-            name + b": " + value + b"\r\n"
-            for name, values in sanitizedHeaders.getAllRawHeaders()
-            for value in values
-        )
+        """
+        if not isinstance(headers, Headers):
+            # Turn into Headers instance for security reasons, to make sure we
+            # quite and sanitize everything. This variant should be removed
+            # eventually, it's only here for backwards compatibility.
+            sanitizedHeaders = Headers()
+            for name, value in headers:
+                sanitizedHeaders.addRawHeader(name, value)
+            headers = sanitizedHeaders
+
+        headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
+        for name, values in headers.getAllRawHeaders():
+            for value in values:
+                headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
 
@@ -3145,11 +3136,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         using.
         """
         if self._negotiatedProtocol is None:
-            try:
-                negotiatedProtocol = self._channel.transport.negotiatedProtocol
-            except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b"http/1.1"
+            negotiatedProtocol = getattr(
+                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+            )
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b"http/1.1"

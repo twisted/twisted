@@ -47,7 +47,8 @@ To deprecate properties you can use::
             '''
 
 
-To mark module-level attributes as being deprecated you can use::
+While it's best to avoid this as it adds performance overhead to *any* usage of
+the module, to mark module-level attributes as being deprecated you can use::
 
     badAttribute = "someValue"
 

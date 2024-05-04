@@ -5,7 +5,14 @@
 This module contains interfaces defined for the L{twisted.conch} package.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from zope.interface import Attribute, Interface
+
+if TYPE_CHECKING:
+    from twisted.conch.ssh.keys import Key
 
 
 class IConchUser(Interface):
@@ -363,16 +370,15 @@ class IKnownHostEntry(Interface):
     @since: 8.2
     """
 
-    def matchesKey(key):
+    def matchesKey(key: Key) -> bool:
         """
         Return True if this entry matches the given Key object, False
         otherwise.
 
         @param key: The key object to match against.
-        @type key: L{twisted.conch.ssh.keys.Key}
         """
 
-    def matchesHost(hostname):
+    def matchesHost(hostname: bytes) -> bool:
         """
         Return True if this entry matches the given hostname, False otherwise.
 
@@ -381,16 +387,12 @@ class IKnownHostEntry(Interface):
         quad string.
 
         @param hostname: The hostname to match against.
-        @type hostname: L{str}
         """
 
-    def toString():
+    def toString() -> bytes:
         """
-
         @return: a serialized string representation of this entry, suitable for
-        inclusion in a known_hosts file.  (Newline not included.)
-
-        @rtype: L{str}
+            inclusion in a known_hosts file.  (Newline not included.)
         """
 
 

@@ -27,7 +27,6 @@ import os
 import platform
 import socket
 import urllib.parse as urllib_parse
-import warnings
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
@@ -497,35 +496,6 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self)
 
 
-def _get_async_param(isAsync=None, **kwargs):
-    """
-    Provide a backwards-compatible way to get async param value that does not
-    cause a syntax error under Python 3.7.
-
-    @param isAsync: isAsync param value (should default to None)
-    @type isAsync: L{bool}
-
-    @param kwargs: keyword arguments of the caller (only async is allowed)
-    @type kwargs: L{dict}
-
-    @raise TypeError: Both isAsync and async specified.
-
-    @return: Final isAsync param value
-    @rtype: L{bool}
-    """
-    if "async" in kwargs:
-        warnings.warn(
-            "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    if isAsync is None and "async" in kwargs:
-        isAsync = kwargs.pop("async")
-    if kwargs:
-        raise TypeError
-    return bool(isAsync)
-
-
 def _pypy3BlockingHack():
     """
     Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
@@ -645,6 +615,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_get_async_param",
     "Sequence",
 ]
