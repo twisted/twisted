@@ -127,9 +127,9 @@ if platform.isWindows():
     try:
         from twisted.internet.iocpreactor.reactor import IOCPReactor
     except ImportError:
-        IOCPReactor = None
+        IOCPReactor = None  # type: ignore[misc,assignment]
 
-    SKIP_EMFILE = "Reserved EMFILE file descriptor not supported on Windows."
+    SKIP_EMFILE = True
 
 else:
     try:
@@ -140,7 +140,7 @@ else:
         getLinkLocalIPv6Addresses = _posixifaces.posixGetLinkLocalIPv6Addresses
 
     # Outside of Windows we don't have an IOCP reactor.
-    IOCPReactor = None
+    IOCPReactor = None  # type: ignore[misc,assignment]
 
     SKIP_EMFILE = False
 
