@@ -85,6 +85,7 @@ from twisted.internet.test.reactormixins import (
 from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.logger import Logger
 from twisted.python import log
+from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import (
@@ -770,13 +771,15 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
             self.assertConnectPortError(-1, message)
 
         if self.addressClass == IPv4Address:
-            if platform.isWindows():
+            if _PYPY:
+                test(("port must be 0-65535.",))
+            elif platform.isWindows():
                 if self.reactorFactory is IOCPReactor:
                     # Windows IOCP reactor.
                     test(("can't convert negative value to unsigned short",))
                 else:
                     # Windows select reactor.
-                    test(("connect_ex(): port must be 0-65535.",))
+                    test((-8, "Servname not supported for ai_socktype"))
             else:
                 test(("connect_ex(): port must be 0-65535.",))
         else:
@@ -787,7 +790,9 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
                     test(("can't convert negative value to unsigned short",))
                 else:
                     # Windows select reactor.
-                    test((-8, "Servname not supported for ai_socktype"))
+                    test(("connect_ex(): port must be 0-65535.",))
+            elif platform.isMacOSX():
+                test((8, "nodename nor servname provided, or not known"))
             else:
                 test((-8, "Servname not supported for ai_socktype"))
 
@@ -800,7 +805,11 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         def test(message):
             self.assertConnectPortError(65536, message)
 
-        if platform.isWindows():
+        if _PYPY:
+            test(("port must be 0-65535.",))
+        elif platform.isMacOSX() and self.addressClass == IPv6Address:
+            test((8, "nodename nor servname provided, or not known"))
+        elif platform.isWindows():
             if self.reactorFactory is IOCPReactor:
                 # Windows IOCP reactor.
                 test(("value too large to convert to unsigned short",))
