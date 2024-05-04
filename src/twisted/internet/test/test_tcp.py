@@ -773,24 +773,19 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         if self.addressClass == IPv4Address:
             if _PYPY:
                 test(("port must be 0-65535.",))
-            elif platform.isWindows():
-                if self.reactorFactory is IOCPReactor:
-                    # Windows IOCP reactor.
-                    test(("can't convert negative value to unsigned short",))
-                else:
-                    # Windows select reactor.
-                    test((-8, "Servname not supported for ai_socktype"))
+            elif self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test(("can't convert negative value to unsigned short",))
             else:
                 test(("connect_ex(): port must be 0-65535.",))
         else:
             # For IPv6 the getaddrinfo() API is used at low-level.
-            if platform.isWindows():
-                if self.reactorFactory is IOCPReactor:
-                    # Windows IOCP reactor.
-                    test(("can't convert negative value to unsigned short",))
-                else:
-                    # Windows select reactor.
-                    test(("connect_ex(): port must be 0-65535.",))
+            if self.reactorFactory is IOCPReactor:
+                # Windows IOCP reactor.
+                test(("can't convert negative value to unsigned short",))
+            elif platform.isWindows():
+                # Windows select reactor.
+                test(("connect_ex(): port must be 0-65535.",))
             elif platform.isMacOSX():
                 test((8, "nodename nor servname provided, or not known"))
             else:
