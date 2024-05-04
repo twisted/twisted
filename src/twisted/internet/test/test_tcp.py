@@ -862,7 +862,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         def resetCallCount():
             self.assertConnectPortErrorCalls = 0
 
-        if self.assertConnectPortErrorCalls != 0:
+        if self.assertConnectPortErrorCalls != 0:  # pragma: no cover
             raise AssertionError("This assertion can only be called once per test.")
         else:
             self.assertConnectPortErrorCalls = 1
