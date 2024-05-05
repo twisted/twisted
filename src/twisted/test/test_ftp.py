@@ -1588,7 +1588,6 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
         deferred = defer.Deferred()
 
         class DataFactory(protocol.ServerFactory):
-
             protocol = _BufferingProtocol
 
             def buildProtocol(self, addr):
