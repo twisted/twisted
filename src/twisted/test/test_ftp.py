@@ -13,7 +13,6 @@ import re
 import socket
 import string
 from io import BytesIO
-from unittest import skipIf
 
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
@@ -29,10 +28,10 @@ from twisted.test import proto_helpers
 from twisted.test.testutils import HAS_IPV6, skipWithoutIPv6
 from twisted.trial.unittest import TestCase
 
-if runtime.platform.isWindows():
-    nonPOSIXSkip = "Cannot run on Windows"
+if not runtime.platform.isWindows():
+    nonPOSIXSkip = None
 else:
-    nonPOSIXSkip = ""
+    nonPOSIXSkip = "Cannot run on Windows"
 
 
 def _hasIPv4MappedAddresses():
@@ -987,6 +986,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any FTP error raised by STOR while transferring the file is returned
         to the client.
         """
+
         # Make a failing file writer.
         class FailingFileWriter(ftp._FileWriter):
             def receive(self):
@@ -1047,6 +1047,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any errors during reading a file inside a RETR should be returned to
         the client.
         """
+
         # Make a failing file reading.
         class FailingFileReader(ftp._FileReader):
             def send(self, consumer):
@@ -3328,11 +3329,12 @@ class FTPRealmTests(TestCase):
         self.assertEqual(filepath.FilePath("/home/alice@example.com"), home)
 
 
-@skipIf(nonPOSIXSkip, nonPOSIXSkip)
 class SystemFTPRealmTests(TestCase):
     """
     Tests for L{ftp.SystemFTPRealm}.
     """
+
+    skip = nonPOSIXSkip
 
     def test_getHomeDirectory(self):
         """

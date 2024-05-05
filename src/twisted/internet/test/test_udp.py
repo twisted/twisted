@@ -85,7 +85,6 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         """
 
         class DisconnectingProtocol(DatagramProtocol):
-
             started = False
             stopped = False
             inStartProtocol = False

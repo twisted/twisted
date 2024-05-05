@@ -17,7 +17,7 @@ NS_XMPP_STANZAS = "urn:ietf:params:xml:ns:xmpp-stanzas"
 
 
 class BaseErrorTests(unittest.TestCase):
-    def test_getElementPlain(self):
+    def test_getElementPlain(self) -> None:
         """
         Test getting an element for a plain error.
         """
@@ -26,7 +26,7 @@ class BaseErrorTests(unittest.TestCase):
         self.assertIdentical(element.uri, None)
         self.assertEqual(len(element.children), 1)
 
-    def test_getElementText(self):
+    def test_getElementText(self) -> None:
         """
         Test getting an element for an error with a text.
         """
@@ -36,7 +36,7 @@ class BaseErrorTests(unittest.TestCase):
         self.assertEqual(str(element.text), "text")
         self.assertEqual(element.text.getAttribute((NS_XML, "lang")), None)
 
-    def test_getElementTextLang(self):
+    def test_getElementTextLang(self) -> None:
         """
         Test getting an element for an error with a text and language.
         """
@@ -46,7 +46,7 @@ class BaseErrorTests(unittest.TestCase):
         self.assertEqual(str(element.text), "text")
         self.assertEqual(element.text[(NS_XML, "lang")], "en_US")
 
-    def test_getElementAppCondition(self):
+    def test_getElementAppCondition(self) -> None:
         """
         Test getting an element for an error with an app specific condition.
         """
@@ -58,7 +58,7 @@ class BaseErrorTests(unittest.TestCase):
 
 
 class StreamErrorTests(unittest.TestCase):
-    def test_getElementPlain(self):
+    def test_getElementPlain(self) -> None:
         """
         Test namespace of the element representation of an error.
         """
@@ -66,7 +66,7 @@ class StreamErrorTests(unittest.TestCase):
         element = e.getElement()
         self.assertEqual(element.uri, NS_STREAMS)
 
-    def test_getElementConditionNamespace(self):
+    def test_getElementConditionNamespace(self) -> None:
         """
         Test that the error condition element has the correct namespace.
         """
@@ -76,7 +76,7 @@ class StreamErrorTests(unittest.TestCase):
             NS_XMPP_STREAMS, getattr(element, "feature-not-implemented").uri
         )
 
-    def test_getElementTextNamespace(self):
+    def test_getElementTextNamespace(self) -> None:
         """
         Test that the error text element has the correct namespace.
         """
@@ -90,7 +90,7 @@ class StanzaErrorTests(unittest.TestCase):
     Tests for L{error.StreamError}.
     """
 
-    def test_typeRemoteServerTimeout(self):
+    def test_typeRemoteServerTimeout(self) -> None:
         """
         Remote Server Timeout should yield type wait, code 504.
         """
@@ -98,7 +98,7 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual("wait", e.type)
         self.assertEqual("504", e.code)
 
-    def test_getElementPlain(self):
+    def test_getElementPlain(self) -> None:
         """
         Test getting an element for a plain stanza error.
         """
@@ -108,7 +108,7 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual(element["type"], "cancel")
         self.assertEqual(element["code"], "501")
 
-    def test_getElementType(self):
+    def test_getElementType(self) -> None:
         """
         Test getting an element for a stanza error with a given type.
         """
@@ -118,7 +118,7 @@ class StanzaErrorTests(unittest.TestCase):
         self.assertEqual(element["type"], "auth")
         self.assertEqual(element["code"], "501")
 
-    def test_getElementConditionNamespace(self):
+    def test_getElementConditionNamespace(self) -> None:
         """
         Test that the error condition element has the correct namespace.
         """
@@ -128,7 +128,7 @@ class StanzaErrorTests(unittest.TestCase):
             NS_XMPP_STANZAS, getattr(element, "feature-not-implemented").uri
         )
 
-    def test_getElementTextNamespace(self):
+    def test_getElementTextNamespace(self) -> None:
         """
         Test that the error text element has the correct namespace.
         """
@@ -136,7 +136,7 @@ class StanzaErrorTests(unittest.TestCase):
         element = e.getElement()
         self.assertEqual(NS_XMPP_STANZAS, element.text.uri)
 
-    def test_toResponse(self):
+    def test_toResponse(self) -> None:
         """
         Test an error response is generated from a stanza.
 
@@ -164,10 +164,10 @@ class ParseErrorTests(unittest.TestCase):
     Tests for L{error._parseError}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.error = domish.Element((None, "error"))
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         """
         Test parsing of the empty error element.
         """
@@ -177,7 +177,7 @@ class ParseErrorTests(unittest.TestCase):
             result,
         )
 
-    def test_condition(self):
+    def test_condition(self) -> None:
         """
         Test parsing of an error element with a condition.
         """
@@ -185,7 +185,7 @@ class ParseErrorTests(unittest.TestCase):
         result = error._parseError(self.error, "errorns")
         self.assertEqual("bad-request", result["condition"])
 
-    def test_text(self):
+    def test_text(self) -> None:
         """
         Test parsing of an error element with a text.
         """
@@ -195,7 +195,7 @@ class ParseErrorTests(unittest.TestCase):
         self.assertEqual("test", result["text"])
         self.assertEqual(None, result["textLang"])
 
-    def test_textLang(self):
+    def test_textLang(self) -> None:
         """
         Test parsing of an error element with a text with a defined language.
         """
@@ -205,7 +205,7 @@ class ParseErrorTests(unittest.TestCase):
         result = error._parseError(self.error, "errorns")
         self.assertEqual("en_US", result["textLang"])
 
-    def test_appCondition(self):
+    def test_appCondition(self) -> None:
         """
         Test parsing of an error element with an app specific condition.
         """
@@ -213,7 +213,7 @@ class ParseErrorTests(unittest.TestCase):
         result = error._parseError(self.error, "errorns")
         self.assertEqual(condition, result["appCondition"])
 
-    def test_appConditionMultiple(self):
+    def test_appConditionMultiple(self) -> None:
         """
         Test parsing of an error element with multiple app specific conditions.
         """
@@ -224,7 +224,7 @@ class ParseErrorTests(unittest.TestCase):
 
 
 class ExceptionFromStanzaTests(unittest.TestCase):
-    def test_basic(self):
+    def test_basic(self) -> None:
         """
         Test basic operations of exceptionFromStanza.
 
@@ -264,7 +264,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
         self.assertEqual(uc, result.appCondition)
         self.assertEqual([p], result.children)
 
-    def test_legacy(self):
+    def test_legacy(self) -> None:
         """
         Test legacy operations of exceptionFromStanza.
 
@@ -294,7 +294,7 @@ class ExceptionFromStanzaTests(unittest.TestCase):
 
 
 class ExceptionFromStreamErrorTests(unittest.TestCase):
-    def test_basic(self):
+    def test_basic(self) -> None:
         """
         Test basic operations of exceptionFromStreamError.
 

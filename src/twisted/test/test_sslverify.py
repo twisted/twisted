@@ -6,10 +6,10 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
-
 import datetime
 import itertools
 import sys
+import textwrap
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -19,6 +19,7 @@ from incremental import Version
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
+from twisted.internet.task import Clock
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
@@ -139,7 +140,7 @@ def makeCertificate(**kw):
     certificate.gmtime_adj_notBefore(0)
     certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
     for xname in certificate.get_issuer(), certificate.get_subject():
-        for (k, v) in kw.items():
+        for k, v in kw.items():
             setattr(xname, k, nativeString(v))
 
     certificate.set_serial_number(counter())
@@ -288,17 +289,21 @@ def _loopbackTLSConnection(serverOpts, clientOpts):
     plainServerFactory = protocol.Factory()
     plainServerFactory.protocol = lambda: serverWrappedProto
 
+    clock = Clock()
     clientFactory = TLSMemoryBIOFactory(
-        clientOpts, isClient=True, wrappedFactory=plainServerFactory
+        clientOpts, isClient=True, wrappedFactory=plainServerFactory, clock=clock
     )
     serverFactory = TLSMemoryBIOFactory(
-        serverOpts, isClient=False, wrappedFactory=plainClientFactory
+        serverOpts, isClient=False, wrappedFactory=plainClientFactory, clock=clock
     )
 
     sProto, cProto, pump = connectedServerAndClient(
         lambda: serverFactory.buildProtocol(None),
         lambda: clientFactory.buildProtocol(None),
+        clock=clock,
     )
+    pump.flush()
+
     return sProto, cProto, serverWrappedProto, clientWrappedProto, pump
 
 
@@ -509,7 +514,7 @@ class FakeContext:
         """
         self._mode = mode
 
-    def set_verify(self, flags, callback):
+    def set_verify(self, flags, callback=None):
         self._verify = flags, callback
 
     def set_verify_depth(self, depth):
@@ -997,10 +1002,10 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertEqual(DeprecationWarning, warnings[0]["category"])
         self.assertEqual(message, warnings[0]["message"])
 
-    def test_tlsv1ByDefault(self):
+    def test_tlsv12ByDefault(self):
         """
         L{sslverify.OpenSSLCertificateOptions} will make the default minimum
-        TLS version v1.0, if no C{method}, or C{insecurelyLowerMinimumTo} is
+        TLS version v1.2, if no C{method}, or C{insecurelyLowerMinimumTo} is
         given.
         """
         opts = sslverify.OpenSSLCertificateOptions(
@@ -1013,6 +1018,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
 
@@ -1080,7 +1087,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
                 certificate=self.sCert,
-                method=SSL.SSLv23_METHOD,
+                method=SSL.TLS_METHOD,
                 lowerMaximumSecurityTo=sslverify.TLSVersion.TLSv1_2,
             )
 
@@ -1322,9 +1329,11 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             | SSL.OP_NO_COMPRESSION
             | SSL.OP_CIPHER_SERVER_PREFERENCE
             | SSL.OP_NO_SSLv3
+            | SSL.OP_NO_TLSv1
+            | SSL.OP_NO_TLSv1_1
         )
         self.assertEqual(options, ctx._options & options)
-        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_0)
+        self.assertEqual(opts._defaultMinimumTLSVersion, sslverify.TLSVersion.TLSv1_2)
 
     def test_tlsProtocolsAllSecureTLS(self):
         """
@@ -1468,6 +1477,60 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
                 "Digest: C4:96:11:00:30:C3:EC:EE:A3:55:AA:ED:8C:84:85:18",
                 "Public Key with Hash: " + keyHash,
             ],
+        )
+
+    def test_representationOfCertificate(self):
+        """
+        The repr of L{sslverify.Certificate} returns
+        a human-readable string containing the subject of the certificate itself, and the subject of the signing CA.
+        """
+        c = sslverify.Certificate.loadPEM(A_HOST_CERTIFICATE_PEM)
+        self.assertEqual(
+            repr(c),
+            "<Certificate Subject=b'example.twistedmatrix.com' Issuer=b'example.twistedmatrix.com'>",
+        )
+
+    def test_representationOfCertificateNoCN(self):
+        """
+        Repr of a L{sslverify.Certificate} for which both the certificate and the signing CA have no subject, contains the empty string as the subject.
+        """
+        ubuntuOneGoDaddyPem = textwrap.dedent(
+            """\
+            -----BEGIN CERTIFICATE-----
+            MIIE3jCCA8agAwIBAgICAwEwDQYJKoZIhvcNAQEFBQAwYzELMAkGA1UEBhMCVVMx
+            ITAfBgNVBAoTGFRoZSBHbyBEYWRkeSBHcm91cCwgSW5jLjExMC8GA1UECxMoR28g
+            RGFkZHkgQ2xhc3MgMiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTAeFw0wNjExMTYw
+            MTU0MzdaFw0yNjExMTYwMTU0MzdaMIHKMQswCQYDVQQGEwJVUzEQMA4GA1UECBMH
+            QXJpem9uYTETMBEGA1UEBxMKU2NvdHRzZGFsZTEaMBgGA1UEChMRR29EYWRkeS5j
+            b20sIEluYy4xMzAxBgNVBAsTKmh0dHA6Ly9jZXJ0aWZpY2F0ZXMuZ29kYWRkeS5j
+            b20vcmVwb3NpdG9yeTEwMC4GA1UEAxMnR28gRGFkZHkgU2VjdXJlIENlcnRpZmlj
+            YXRpb24gQXV0aG9yaXR5MREwDwYDVQQFEwgwNzk2OTI4NzCCASIwDQYJKoZIhvcN
+            AQEBBQADggEPADCCAQoCggEBAMQt1RWMnCZM7DI161+4WQFapmGBWTtwY6vj3D3H
+            KrjJM9N55DrtPDAjhI6zMBS2sofDPZVUBJ7fmd0LJR4h3mUpfjWoqVTr9vcyOdQm
+            VZWt7/v+WIbXnvQAjYwqDL1CBM6nPwT27oDyqu9SoWlm2r4arV3aLGbqGmu75RpR
+            SgAvSMeYddi5Kcju+GZtCpyz8/x4fKL4o/K1w/O5epHBp+YlLpyo7RJlbmr2EkRT
+            cDCVw5wrWCs9CHRK8r5RsL+H0EwnWGu1NcWdrxcx+AuP7q2BNgWJCJjPOq8lh8BJ
+            6qf9Z/dFjpfMFDniNoW1fho3/Rb2cRGadDAW/hOUoz+EDU8CAwEAAaOCATIwggEu
+            MB0GA1UdDgQWBBT9rGEyk2xF1uLuhV+auud2mWjM5zAfBgNVHSMEGDAWgBTSxLDS
+            kdRMEXGzYcs9of7dqGrU4zASBgNVHRMBAf8ECDAGAQH/AgEAMDMGCCsGAQUFBwEB
+            BCcwJTAjBggrBgEFBQcwAYYXaHR0cDovL29jc3AuZ29kYWRkeS5jb20wRgYDVR0f
+            BD8wPTA7oDmgN4Y1aHR0cDovL2NlcnRpZmljYXRlcy5nb2RhZGR5LmNvbS9yZXBv
+            c2l0b3J5L2dkcm9vdC5jcmwwSwYDVR0gBEQwQjBABgRVHSAAMDgwNgYIKwYBBQUH
+            AgEWKmh0dHA6Ly9jZXJ0aWZpY2F0ZXMuZ29kYWRkeS5jb20vcmVwb3NpdG9yeTAO
+            BgNVHQ8BAf8EBAMCAQYwDQYJKoZIhvcNAQEFBQADggEBANKGwOy9+aG2Z+5mC6IG
+            OgRQjhVyrEp0lVPLN8tESe8HkGsz2ZbwlFalEzAFPIUyIXvJxwqoJKSQ3kbTJSMU
+            A2fCENZvD117esyfxVgqwcSeIaha86ykRvOe5GPLL5CkKSkB2XIsKd83ASe8T+5o
+            0yGPwLPk9Qnt0hCqU7S+8MxZC9Y7lhyVJEnfzuz9p0iRFEUOOjZv2kWzRaJBydTX
+            RE4+uXR21aITVSzGh6O1mawGhId/dQb8vxRMDsxuxN89txJx9OjxUUAiKEngHUuH
+            qDTMBqLdElrRhjZkAzVvb3du6/KFUJheqwNTrZEjYx8WnM25sgVjOuH0aBsXBTWV
+            U+4=
+            -----END CERTIFICATE-----
+            """
+        )
+        c = sslverify.Certificate.loadPEM(ubuntuOneGoDaddyPem)
+        self.assertEqual(
+            repr(c),
+            "<Certificate Subject=b'Go Daddy Secure Certification Authority' Issuer=>",
         )
 
     def test_publicKeyMatching(self):
@@ -2061,17 +2124,21 @@ class ServiceIdentityTests(SynchronousTestCase):
         self.serverOpts = serverOpts
         self.clientOpts = clientOpts
 
+        clock = Clock()
         clientTLSFactory = TLSMemoryBIOFactory(
-            clientOpts, isClient=True, wrappedFactory=clientFactory
+            clientOpts, isClient=True, wrappedFactory=clientFactory, clock=clock
         )
         serverTLSFactory = TLSMemoryBIOFactory(
-            serverOpts, isClient=False, wrappedFactory=serverFactory
+            serverOpts, isClient=False, wrappedFactory=serverFactory, clock=clock
         )
 
         cProto, sProto, pump = connectedServerAndClient(
             lambda: serverTLSFactory.buildProtocol(None),
             lambda: clientTLSFactory.buildProtocol(None),
+            clock=clock,
         )
+        pump.flush()
+
         return cProto, sProto, clientWrappedProto, serverWrappedProto, pump
 
     def test_invalidHostname(self):
@@ -3341,31 +3408,19 @@ class SelectVerifyImplementationTests(SynchronousTestCase):
             if warning["category"] == UserWarning
         )
 
-        importErrors = [
-            # Python 3.6.3
-            "'import of service_identity halted; None in sys.modules'",
-            # Python 3
-            "'import of 'service_identity' halted; None in sys.modules'",
-            # Python 2
-            "'No module named service_identity'",
-        ]
+        expectedMessage = (
+            "You do not have a working installation of the "
+            "service_identity module: "
+            "'import of service_identity halted; None in sys.modules'.  "
+            "Please install it from "
+            "<https://pypi.python.org/pypi/service_identity> "
+            "and make sure all of its dependencies are satisfied.  "
+            "Without the service_identity module, Twisted can perform only"
+            " rudimentary TLS client hostname verification.  Many valid "
+            "certificate/hostname mappings may be rejected."
+        )
 
-        expectedMessages = []
-        for importError in importErrors:
-            expectedMessages.append(
-                "You do not have a working installation of the "
-                "service_identity module: {message}.  Please install it from "
-                "<https://pypi.python.org/pypi/service_identity> "
-                "and make sure all of its dependencies are satisfied.  "
-                "Without the service_identity module, Twisted can perform only"
-                " rudimentary TLS client hostname verification.  Many valid "
-                "certificate/hostname mappings may be rejected.".format(
-                    message=importError
-                )
-            )
-
-        self.assertIn(warning["message"], expectedMessages)
-
+        self.assertEqual(warning["message"], expectedMessage)
         # Make sure we're abusing the warning system to a sufficient
         # degree: there is no filename or line number that makes sense for
         # this warning to "blame" for the problem.  It is a system

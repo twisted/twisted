@@ -201,7 +201,7 @@ class OnDiskDatabaseTests(unittest.TestCase):
     def setUp(self):
         self.dbfile = self.mktemp()
         with open(self.dbfile, "wb") as f:
-            for (u, p) in self.users:
+            for u, p in self.users:
                 f.write(u + b":" + p + b"\n")
 
     def test_getUserNonexistentDatabase(self):
@@ -215,13 +215,13 @@ class OnDiskDatabaseTests(unittest.TestCase):
 
     def testUserLookup(self):
         self.db = checkers.FilePasswordDB(self.dbfile)
-        for (u, p) in self.users:
+        for u, p in self.users:
             self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
     def testCaseInSensitivity(self):
         self.db = checkers.FilePasswordDB(self.dbfile, caseSensitive=False)
-        for (u, p) in self.users:
+        for u, p in self.users:
             self.assertEqual(self.db.getUser(u.upper()), (u, p))
 
     def testRequestAvatarId(self):
@@ -257,7 +257,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
         dbfile = self.mktemp()
         self.db = checkers.FilePasswordDB(dbfile, hash=self.hash)
         with open(dbfile, "wb") as f:
-            for (u, p) in self.users:
+            for u, p in self.users:
                 f.write(u + b":" + self.hash(u, p, u[:2]) + b"\n")
 
         r = TestRealm()
@@ -266,11 +266,6 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
         hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
-        # workaround for pypy3 3.6.9 and above which returns bytes from crypt.crypt()
-        # This is fixed in pypy3 7.3.5.
-        # See L{https://foss.heptapod.net/pypy/pypy/-/issues/3395}
-        if isinstance(hashed_password, bytes):
-            return hashed_password
         return hashed_password.encode("ascii")
 
     def testGoodCredentials(self):
@@ -343,7 +338,7 @@ class CheckersMixin:
         the expected C{avatarID}s
         """
         for chk in self.getCheckers():
-            for (cred, avatarId) in self.getGoodCredentials():
+            for cred, avatarId in self.getGoodCredentials():
                 r = yield chk.requestAvatarId(cred)
                 self.assertEqual(r, avatarId)
 
@@ -361,7 +356,10 @@ class CheckersMixin:
 class HashlessFilePasswordDBMixin:
     credClass = credentials.UsernamePassword
     diskHash = None
-    networkHash = staticmethod(lambda x: x)
+
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return x
 
     _validCredentials = [
         (b"user1", b"password1"),
@@ -418,7 +416,9 @@ class LocallyHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
 
 
 class NetworkHashedFilePasswordDBMixin(HashlessFilePasswordDBMixin):
-    networkHash = staticmethod(lambda x: hexlify(x))
+    @staticmethod
+    def networkHash(x: bytes) -> bytes:
+        return hexlify(x)
 
     class credClass(credentials.UsernamePassword):
         def checkPassword(self, password):

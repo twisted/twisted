@@ -56,6 +56,7 @@ the modules outside the standard library's python-files directory::
 @type theSystemPath: L{PythonPath}
 """
 
+from __future__ import annotations
 
 import inspect
 import sys
@@ -64,7 +65,6 @@ import zipimport
 
 # let's try to keep path imports to a minimum...
 from os.path import dirname, split as splitpath
-from typing import cast
 
 from zope.interface import Interface, implementer
 
@@ -252,7 +252,9 @@ class PythonAttribute:
     this class.
     """
 
-    def __init__(self, name, onObject, loaded, pythonValue):
+    def __init__(
+        self, name: str, onObject: PythonAttribute, loaded: bool, pythonValue: object
+    ) -> None:
         """
         Create a PythonAttribute.  This is a private constructor.  Do not construct
         me directly, use PythonModule.iterAttributes.
@@ -262,7 +264,7 @@ class PythonAttribute:
         @param loaded: always True, for now
         @param pythonValue: the value of the attribute we're pointing to.
         """
-        self.name = name
+        self.name: str = name
         self.onObject = onObject
         self._loaded = loaded
         self.pythonValue = pythonValue
@@ -307,7 +309,9 @@ class PythonModule(_ModuleIteratorHelper):
     from.
     """
 
-    def __init__(self, name, filePath, pathEntry):
+    def __init__(
+        self, name: str, filePath: FilePath[str], pathEntry: PathEntry
+    ) -> None:
         """
         Create a PythonModule.  Do not construct this directly, instead inspect a
         PythonPath or other PythonModule instances.
@@ -318,7 +322,7 @@ class PythonModule(_ModuleIteratorHelper):
         """
         _name = nativeString(name)
         assert not _name.endswith(".__init__")
-        self.name = _name
+        self.name: str = _name
         self.filePath = filePath
         self.parentPath = filePath.parent()
         self.pathEntry = pathEntry
@@ -397,7 +401,7 @@ class PythonModule(_ModuleIteratorHelper):
         PythonModules with the same name are equal.
         """
         if isinstance(other, PythonModule):
-            return cast(bool, other.name == self.name)
+            return other.name == self.name
         return NotImplemented
 
     def walkModules(self, importPackages=False):

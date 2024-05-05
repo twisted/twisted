@@ -1,9 +1,10 @@
 Twisted
-=======
+#######
 
 |gitter|_
+|rtd|_
 |pypi|_
-|mypy|_
+|ci|_
 
 For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
@@ -33,7 +34,7 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
+Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installations.rst>`_.
 
 
 Documentation and Support
@@ -42,10 +43,11 @@ Documentation and Support
 Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
-Help is also available on the `Twisted mailing list <https://twistedmatrix.com/cgi-bin/mailman/listinfo/twisted-python>`_.
+Help is also available on the `Twisted mailing list <https://mail.python.org/mailman3/lists/twisted.python.org/>`_.
 
-There is also a pair of very lively IRC channels, ``#twisted`` (for general Twisted questions) and ``#twisted.web`` (for Twisted Web),
-on `irc.libera.chat <https://web.libera.chat/>_`.
+There is also an IRC channel, ``#twisted``,
+on the `Libera.Chat <https://libera.chat/>`_ network.
+A web client is available at `web.libera.chat <https://web.libera.chat/>`_.
 
 
 Unit Tests
@@ -86,7 +88,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2021 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2024 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.
@@ -114,5 +116,8 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. |gitter| image:: https://img.shields.io/gitter/room/twisted/twisted.svg
 .. _gitter: https://gitter.im/twisted/twisted
 
-.. |mypy| image:: https://github.com/twisted/twisted/workflows/mypy/badge.svg
-.. _mypy: https://github.com/twisted/twisted
+.. |ci| image:: https://github.com/twisted/twisted/actions/workflows/test.yaml/badge.svg
+.. _ci: https://github.com/twisted/twisted
+
+.. |rtd| image:: https://readthedocs.org/projects/twisted/badge/?version=latest&style=flat
+.. _rtd: https://docs.twistedmatrix.com

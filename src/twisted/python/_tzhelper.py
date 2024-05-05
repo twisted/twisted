@@ -6,7 +6,12 @@
 Time zone utilities.
 """
 
-from datetime import datetime as DateTime, timedelta as TimeDelta, tzinfo as TZInfo
+from datetime import (
+    datetime as DateTime,
+    timedelta as TimeDelta,
+    timezone,
+    tzinfo as TZInfo,
+)
 from typing import Optional
 
 __all__ = [
@@ -68,9 +73,9 @@ class FixedOffsetTimeZone(TZInfo):
         Create a time zone with a fixed offset corresponding to a time stamp in
         the system's locally configured time zone.
         """
-        offset = DateTime.fromtimestamp(timeStamp) - DateTime.utcfromtimestamp(
-            timeStamp
-        )
+        offset = DateTime.fromtimestamp(timeStamp) - DateTime.fromtimestamp(
+            timeStamp, timezone.utc
+        ).replace(tzinfo=None)
         return cls(offset)
 
     def utcoffset(self, dt: Optional[DateTime]) -> TimeDelta:

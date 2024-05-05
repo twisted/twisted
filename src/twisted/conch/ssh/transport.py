@@ -9,19 +9,22 @@ RFC 4253.
 
 Maintainer: Paul Swartz
 """
-
+from __future__ import annotations
 
 import binascii
 import hmac
 import struct
+import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
+from typing import Any, Callable, Dict, Tuple, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from typing_extensions import Literal
 
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
@@ -49,7 +52,12 @@ def _mpFromBytes(data):
     return MP(int.from_bytes(data, "big"))
 
 
-class _MACParams(tuple):
+# from https://github.com/python/typeshed/blob/703ed36d5a5c9505c903ea2182e6eed679d9bddb/stdlib/hmac.pyi#L9-L10
+_Hash = Any
+_DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
+
+
+class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).
@@ -67,6 +75,8 @@ class _MACParams(tuple):
 
     @ivar key: The HMAC key which will be used.
     """
+
+    key: bytes
 
 
 class SSHCiphers:
@@ -168,7 +178,9 @@ class SSHCiphers:
             backend=default_backend(),
         )
 
-    def _getMAC(self, mac, key):
+    def _getMAC(
+        self, mac: bytes, key: bytes
+    ) -> tuple[None, Literal[b""], Literal[b""], Literal[0]] | _MACParams:
         """
         Gets a 4-tuple representing the message authentication code.
         (<hash module>, <inner hash value>, <outer hash value>,
@@ -332,7 +344,8 @@ class SSHTransportBase(protocol.Protocol):
         key exchanges supported, in order from most-preferred to least.
 
     @ivar supportedPublicKeys:  A list of strings representing the
-        public key types supported, in order from most-preferred to least.
+        public key algorithms supported, in order from most-preferred to
+        least.
 
     @ivar supportedCompressions: A list of strings representing compression
         types supported, from most-preferred to least.
@@ -418,6 +431,12 @@ class SSHTransportBase(protocol.Protocol):
         passed to L{sendPacket} but could not be sent because it is not legal
         to send them while a key exchange is in progress.  When the key
         exchange completes, another attempt is made to send these messages.
+
+    @ivar _peerSupportsExtensions: a boolean indicating whether the other side
+        of the connection supports RFC 8308 extension negotiation.
+
+    @ivar peerExtensions: a dict of extensions supported by the other side of
+        the connection.
     """
 
     _log = Logger()
@@ -451,7 +470,7 @@ class SSHTransportBase(protocol.Protocol):
         if eckey.find(b"ecdh") != -1:
             supportedPublicKeys += [eckey.replace(b"ecdh", b"ecdsa")]
 
-    supportedPublicKeys += [b"ssh-rsa", b"ssh-dss"]
+    supportedPublicKeys += [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa", b"ssh-dss"]
     if default_backend().ed25519_supported():
         supportedPublicKeys.append(b"ssh-ed25519")
 
@@ -484,6 +503,17 @@ class SSHTransportBase(protocol.Protocol):
     # The current key exchange state.
     _keyExchangeState = _KEY_EXCHANGE_NONE
     _blockedByKeyExchange = None
+
+    # Added to key exchange algorithms by a client to indicate support for
+    # extension negotiation.
+    _EXT_INFO_C = b"ext-info-c"
+
+    # Added to key exchange algorithms by a server to indicate support for
+    # extension negotiation.
+    _EXT_INFO_S = b"ext-info-s"
+
+    _peerSupportsExtensions = False
+    peerExtensions: Dict[bytes, bytes] = {}
 
     def connectionLost(self, reason):
         """
@@ -525,11 +555,24 @@ class SSHTransportBase(protocol.Protocol):
                 % (self._keyExchangeState,)
             )
 
+        supportedKeyExchanges = list(self.supportedKeyExchanges)
+        # Advertise extension negotiation (RFC 8308, section 2.1).  At
+        # present, the Conch client processes the "server-sig-algs"
+        # extension (section 3.1), and the Conch server sends that but
+        # ignores any extensions sent by the client, so strictly speaking at
+        # the moment we only need to send this in the client case; however,
+        # there's nothing to forbid the server from sending it as well, and
+        # doing so makes things easier if it needs to process extensions
+        # sent by clients in future.
+        supportedKeyExchanges.append(
+            self._EXT_INFO_C if self.isClient else self._EXT_INFO_S
+        )
+
         self.ourKexInitPayload = b"".join(
             [
                 bytes((MSG_KEXINIT,)),
                 randbytes.secureRandom(16),
-                NS(b",".join(self.supportedKeyExchanges)),
+                NS(b",".join(supportedKeyExchanges)),
                 NS(b",".join(self.supportedPublicKeys)),
                 NS(b",".join(self.supportedCiphers)),
                 NS(b",".join(self.supportedCiphers)),
@@ -563,7 +606,11 @@ class SSHTransportBase(protocol.Protocol):
         # Written somewhat peculularly to reflect the way the specification
         # defines the allowed message types.
         if 1 <= messageType <= 19:
-            return messageType not in (MSG_SERVICE_REQUEST, MSG_SERVICE_ACCEPT)
+            return messageType not in (
+                MSG_SERVICE_REQUEST,
+                MSG_SERVICE_ACCEPT,
+                MSG_EXT_INFO,
+            )
         if 20 <= messageType <= 29:
             return messageType not in (MSG_KEXINIT,)
         return 30 <= messageType <= 49
@@ -693,6 +740,14 @@ class SSHTransportBase(protocol.Protocol):
         """
         self.buf = self.buf + data
         if not self.gotVersion:
+            if len(self.buf) > 4096:
+                self.sendDisconnect(
+                    DISCONNECT_CONNECTION_LOST,
+                    b"Peer version string longer than 4KB. "
+                    b"Preventing a denial of service attack.",
+                )
+                return
+
             if self.buf.find(b"\n", self.buf.find(b"SSH-")) == -1:
                 return
 
@@ -847,7 +902,7 @@ class SSHTransportBase(protocol.Protocol):
         ) = (s.split(b",") for s in strings)
         # These are the server directions
         outs = [encSC, macSC, compSC]
-        ins = [encCS, macSC, compCS]
+        ins = [encCS, macCS, compCS]
         if self.isClient:
             outs, ins = ins, outs  # Switch directions
         server = (
@@ -873,11 +928,18 @@ class SSHTransportBase(protocol.Protocol):
         )
         self.outgoingCompressionType = ffs(client[6], server[6])
         self.incomingCompressionType = ffs(client[7], server[7])
-        if None in (
-            self.kexAlg,
-            self.keyAlg,
-            self.outgoingCompressionType,
-            self.incomingCompressionType,
+        if (
+            None
+            in (
+                self.kexAlg,
+                self.keyAlg,
+                self.outgoingCompressionType,
+                self.incomingCompressionType,
+            )
+            # We MUST disconnect if an extension negotiation indication ends
+            # up being negotiated as a key exchange method (RFC 8308,
+            # section 2.2).
+            or self.kexAlg in (self._EXT_INFO_C, self._EXT_INFO_S)
         ):
             self.sendDisconnect(
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
@@ -888,6 +950,9 @@ class SSHTransportBase(protocol.Protocol):
                 DISCONNECT_KEY_EXCHANGE_FAILED, b"couldn't match all kex parts"
             )
             return
+        self._peerSupportsExtensions = (
+            self._EXT_INFO_S if self.isClient else self._EXT_INFO_C
+        ) in kexAlgs
         self._log.debug(
             "kex alg={kexAlg!r} key alg={keyAlg!r}",
             kexAlg=self.kexAlg,
@@ -968,6 +1033,25 @@ class SSHTransportBase(protocol.Protocol):
         message, lang, foo = getNS(packet[1:], 2)
         self.receiveDebug(alwaysDisplay, message, lang)
 
+    def ssh_EXT_INFO(self, packet):
+        """
+        Called when we get a MSG_EXT_INFO message.  Payload::
+            uint32 nr-extensions
+            repeat the following 2 fields "nr-extensions" times:
+              string extension-name
+              string extension-value (binary)
+
+        @type packet: L{bytes}
+        @param packet: The message data.
+        """
+        (numExtensions,) = struct.unpack(">L", packet[:4])
+        packet = packet[4:]
+        extensions = {}
+        for _ in range(numExtensions):
+            extName, extValue, packet = getNS(packet, 2)
+            extensions[extName] = extValue
+        self.peerExtensions = extensions
+
     def setService(self, service):
         """
         Set our service to service and start it running.  If we were
@@ -1035,6 +1119,21 @@ class SSHTransportBase(protocol.Protocol):
             description=desc,
         )
         self.transport.loseConnection()
+
+    def sendExtInfo(self, extensions):
+        """
+        Send an RFC 8308 extension advertisement to the remote peer.
+
+        Nothing is sent if the peer doesn't support negotiations.
+        @type extensions: L{list} of (L{bytes}, L{bytes})
+        @param extensions: a list of (extension-name, extension-value) pairs.
+        """
+        if self._peerSupportsExtensions:
+            payload = b"".join(
+                [struct.pack(">L", len(extensions))]
+                + [NS(name) + NS(value) for name, value in extensions]
+            )
+            self.sendPacket(MSG_EXT_INFO, payload)
 
     def _startEphemeralDH(self):
         """
@@ -1148,7 +1247,7 @@ class SSHTransportBase(protocol.Protocol):
         self._keyExchangeState = self._KEY_EXCHANGE_NONE
         messages = self._blockedByKeyExchange
         self._blockedByKeyExchange = None
-        for (messageType, payload) in messages:
+        for messageType, payload in messages:
             self.sendPacket(messageType, payload)
 
     def isEncrypted(self, direction="out"):
@@ -1351,6 +1450,31 @@ class SSHServerTransport(SSHTransportBase):
     isClient = False
     ignoreNextPacket = 0
 
+    def _getHostKeys(self, keyAlg):
+        """
+        Get the public and private host keys corresponding to the given
+        public key signature algorithm.
+
+        The factory stores public and private host keys by their key format,
+        which is not quite the same as the key signature algorithm: for
+        example, an ssh-rsa key can sign using any of the ssh-rsa,
+        rsa-sha2-256, or rsa-sha2-512 algorithms.
+
+        @type keyAlg: L{bytes}
+        @param keyAlg: A public key signature algorithm name.
+
+        @rtype: 2-L{tuple} of L{keys.Key}
+        @return: The public and private host keys.
+
+        @raises KeyError: if the factory does not have both a public and a
+        private host key for this signature algorithm.
+        """
+        if keyAlg in {b"rsa-sha2-256", b"rsa-sha2-512"}:
+            keyFormat = b"ssh-rsa"
+        else:
+            keyFormat = keyAlg
+        return self.factory.publicKeys[keyFormat], self.factory.privateKeys[keyFormat]
+
     def ssh_KEXINIT(self, packet):
         """
         Called when we receive a MSG_KEXINIT message.  For a description
@@ -1399,8 +1523,7 @@ class SSHServerTransport(SSHTransportBase):
         pktPub, packet = getNS(packet)
 
         # Get the host's public and private keys
-        pubHostKey = self.factory.publicKeys[self.keyAlg]
-        privHostKey = self.factory.privateKeys[self.keyAlg]
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
 
         # Generate the private key
         ecPriv = self._generateECPrivateKey()
@@ -1426,7 +1549,9 @@ class SSHServerTransport(SSHTransportBase):
 
         self.sendPacket(
             MSG_KEXDH_REPLY,
-            NS(pubHostKey.blob()) + NS(encPub) + NS(privHostKey.sign(exchangeHash)),
+            NS(pubHostKey.blob())
+            + NS(encPub)
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1449,6 +1574,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         self.g, self.p = _kex.getDHGeneratorAndPrime(self.kexAlg)
         self._startEphemeralDH()
         sharedSecret = self._finishEphemeralDH(clientDHpublicKey)
@@ -1457,16 +1583,16 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(MP(clientDHpublicKey))
         h.update(self.dhSecretKeyPublicMP)
         h.update(sharedSecret)
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEXDH_REPLY,
-            NS(self.factory.publicKeys[self.keyAlg].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
 
@@ -1545,6 +1671,7 @@ class SSHServerTransport(SSHTransportBase):
         @param packet: The message data.
         """
         clientDHpublicKey, foo = getMP(packet)
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
         # TODO: we should also look at the value they send to us and reject
         # insecure values of f (if g==2 and f has a single '1' bit while the
         # rest are '0's, then they must have used a small y also).
@@ -1558,7 +1685,7 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.ourVersionString))
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
-        h.update(NS(self.factory.publicKeys[self.keyAlg].blob()))
+        h.update(NS(pubHostKey.blob()))
         h.update(self.dhGexRequest)
         h.update(MP(self.p))
         h.update(MP(self.g))
@@ -1568,11 +1695,27 @@ class SSHServerTransport(SSHTransportBase):
         exchangeHash = h.digest()
         self.sendPacket(
             MSG_KEX_DH_GEX_REPLY,
-            NS(self.factory.publicKeys[self.keyAlg].blob())
+            NS(pubHostKey.blob())
             + self.dhSecretKeyPublicMP
-            + NS(self.factory.privateKeys[self.keyAlg].sign(exchangeHash)),
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
         self._keySetup(sharedSecret, exchangeHash)
+
+    def _keySetup(self, sharedSecret, exchangeHash):
+        """
+        See SSHTransportBase._keySetup().
+        """
+        firstKey = self.sessionID is None
+        SSHTransportBase._keySetup(self, sharedSecret, exchangeHash)
+        # RFC 8308 section 2.4 says that the server MAY send EXT_INFO at
+        # zero, one, or both of the following opportunities: the next packet
+        # following the server's first MSG_NEWKEYS, or immediately preceding
+        # the server's MSG_USERAUTH_SUCCESS.  We have no need for the
+        # latter, so make sure we only send it in the former case.
+        if firstKey:
+            self.sendExtInfo(
+                [(b"server-sig-algs", b",".join(self.supportedPublicKeys))]
+            )
 
     def ssh_NEWKEYS(self, packet):
         """
@@ -2084,6 +2227,7 @@ MSG_UNIMPLEMENTED = 3
 MSG_DEBUG = 4
 MSG_SERVICE_REQUEST = 5
 MSG_SERVICE_ACCEPT = 6
+MSG_EXT_INFO = 7
 MSG_KEXINIT = 20
 MSG_NEWKEYS = 21
 MSG_KEXDH_INIT = 30

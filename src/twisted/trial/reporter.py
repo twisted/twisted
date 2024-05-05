@@ -7,7 +7,7 @@
 """
 Defines classes that handle the results of tests.
 """
-
+from __future__ import annotations
 
 import os
 import sys
@@ -15,8 +15,12 @@ import time
 import unittest as pyunit
 import warnings
 from collections import OrderedDict
+from types import TracebackType
+from typing import TYPE_CHECKING, List, Optional, Tuple, Type, Union
 
 from zope.interface import implementer
+
+from typing_extensions import TypeAlias
 
 from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
@@ -24,13 +28,20 @@ from twisted.python.failure import Failure
 from twisted.python.util import untilConcludes
 from twisted.trial import itrial, util
 
+if TYPE_CHECKING:
+    from ._synctest import Todo
+
 try:
-    from subunit import TestProtocolClient  # type: ignore[import]
+    from subunit import TestProtocolClient
 except ImportError:
     TestProtocolClient = None
 
+ExcInfo: TypeAlias = Tuple[Type[BaseException], BaseException, TracebackType]
+XUnitFailure = Union[ExcInfo, Tuple[None, None, None]]
+TrialFailure = Union[XUnitFailure, Failure]
 
-def _makeTodo(value):
+
+def _makeTodo(value: str) -> "Todo":
     """
     Return a L{Todo} object built from C{value}.
 
@@ -76,10 +87,23 @@ class TestResult(pyunit.TestResult):
 
     @ivar successes: count the number of successes achieved by the test run.
     @type successes: C{int}
+
+    @ivar _startTime: The time when the current test was started. It defaults to
+    L{None}, which means that the test was skipped.
+    @ivar _lastTime: The duration of the current test run. It defaults to
+    L{None}, which means that the test was skipped.
     """
 
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
     _DEFAULT_TODO = "Test expected to fail"
+
+    skips: List[Tuple[itrial.ITestCase, str]]
+    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
+    successes: int
+    _testStarted: Optional[int]
+    # The duration of the test. It is None until the test completes.
+    _lastTime: Optional[int]
 
     def __init__(self):
         super().__init__()
@@ -88,6 +112,8 @@ class TestResult(pyunit.TestResult):
         self.unexpectedSuccesses = []
         self.successes = 0
         self._timings = []
+        self._testStarted = None
+        self._lastTime = None
 
     def __repr__(self) -> str:
         return "<%s run=%d errors=%d failures=%d todos=%d dones=%d skips=%d>" % (
@@ -107,9 +133,12 @@ class TestResult(pyunit.TestResult):
         """
         Convert a C{sys.exc_info()}-style tuple to a L{Failure}, if necessary.
         """
-        if isinstance(error, tuple):
+        is_exc_info_tuple = isinstance(error, tuple) and len(error) == 3
+        if is_exc_info_tuple:
             return Failure(error[1], error[0], error[2])
-        return error
+        elif isinstance(error, Failure):
+            return error
+        raise TypeError(f"Cannot convert {error} to a Failure")
 
     def startTest(self, test):
         """
@@ -127,7 +156,8 @@ class TestResult(pyunit.TestResult):
         @type test: L{pyunit.TestCase}
         """
         super().stopTest(test)
-        self._lastTime = self._getTime() - self._testStarted
+        if self._testStarted is not None:
+            self._lastTime = self._getTime() - self._testStarted
 
     def addFailure(self, test, fail):
         """
@@ -889,7 +919,7 @@ class _Win32Colorizer:
     """
 
     def __init__(self, stream):
-        from win32console import (  # type: ignore[import]
+        from win32console import (
             FOREGROUND_BLUE,
             FOREGROUND_GREEN,
             FOREGROUND_INTENSITY,
@@ -925,7 +955,7 @@ class _Win32Colorizer:
             screenBuffer = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
         except ImportError:
             return False
-        import pywintypes  # type: ignore[import]
+        import pywintypes
 
         try:
             screenBuffer.SetConsoleTextAttribute(

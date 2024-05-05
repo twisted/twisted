@@ -398,6 +398,8 @@ class RemoteCopy(Unjellyable):
         object's dictionary (or a filtered approximation of it depending
         on my peer's perspective).
         """
+        if not state:
+            state = {}
         state = {
             x.decode("utf8") if isinstance(x, bytes) else x: y for x, y in state.items()
         }
@@ -571,7 +573,7 @@ class RemoteCacheMethod:
         """(internal) action method."""
         cacheID = self.broker.cachedRemotelyAs(self.cached)
         if cacheID is None:
-            from pb import ProtocolError  # type: ignore[import]
+            from twisted.spread.pb import ProtocolError
 
             raise ProtocolError(
                 "You can't call a cached method when the object hasn't been given to the peer yet."
@@ -618,9 +620,9 @@ class RemoteCacheObserver:
         """Generate a hash unique to all L{RemoteCacheObserver}s for this broker/perspective/cached triplet"""
 
         return (
-            (hash(self.broker) % 2 ** 10)
-            + (hash(self.perspective) % 2 ** 10)
-            + (hash(self.cached) % 2 ** 10)
+            (hash(self.broker) % 2**10)
+            + (hash(self.perspective) % 2**10)
+            + (hash(self.cached) % 2**10)
         )
 
     def __cmp__(self, other):
@@ -634,7 +636,7 @@ class RemoteCacheObserver:
         if isinstance(_name, str):
             _name = _name.encode("utf-8")
         if cacheID is None:
-            from pb import ProtocolError
+            from twisted.spread.pb import ProtocolError
 
             raise ProtocolError(
                 "You can't call a cached method when the "

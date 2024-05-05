@@ -11,9 +11,11 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-from typing import List
+from typing import Callable, List
 
 from zope.interface import implementer
+
+from typing_extensions import ParamSpec
 
 # We can't import reactor at module-level because this code runs before trial
 # installs a user-specified reactor, installing the default reactor and
@@ -22,6 +24,8 @@ from twisted.internet import defer, utils
 from twisted.python import failure
 from twisted.trial import itrial, util
 from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
+
+_P = ParamSpec("_P")
 
 _wait_is_running: List[None] = []
 
@@ -199,7 +203,8 @@ class TestCase(SynchronousTestCase):
         object.
         """
         failures = []
-        for func, args, kwargs in self._cleanups[::-1]:
+        while len(self._cleanups) > 0:
+            func, args, kwargs = self._cleanups.pop()
             try:
                 yield func(*args, **kwargs)
             except Exception:
@@ -294,7 +299,11 @@ class TestCase(SynchronousTestCase):
         finally:
             self._undeprecateReactor(reactor)
 
-    def addCleanup(self, f, *args, **kwargs):
+    # f should be a positional only argument but that is a breaking change
+    # see https://github.com/twisted/twisted/issues/11967
+    def addCleanup(  # type: ignore[override]
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         """
         Extend the base cleanup feature with support for cleanup functions which
         return Deferreds.

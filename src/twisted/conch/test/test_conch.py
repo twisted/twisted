@@ -38,7 +38,6 @@ try:
 except ImportError:
     pass
 
-pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
 if cryptography:
@@ -294,9 +293,6 @@ run()"""
 class ConchServerSetupMixin:
     if not cryptography:
         skip = "can't run without cryptography"
-
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
 
     @staticmethod
     def realmFactory():

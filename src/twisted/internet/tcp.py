@@ -8,13 +8,13 @@ Various asynchronous TCP/IP classes.
 End users shouldn't use this module directly - use the reactor APIs instead.
 """
 
-import os
+from __future__ import annotations
 
-# System Imports
+import os
 import socket
 import struct
 import sys
-from typing import Callable, ClassVar, List, Optional
+from typing import Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -24,6 +24,8 @@ import typing_extensions
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
+    IProtocol,
+    IReactorTCP,
     ISystemHandle,
     ITCPTransport,
 )
@@ -781,9 +783,19 @@ class Server(_TLSServerMixin, Connection):
 
     _base = Connection
 
-    _addressType = address.IPv4Address
+    _addressType: Union[
+        type[address.IPv4Address], type[address.IPv6Address]
+    ] = address.IPv4Address
 
-    def __init__(self, sock, protocol, client, server, sessionno, reactor):
+    def __init__(
+        self,
+        sock: socket.socket,
+        protocol: IProtocol,
+        client: tuple[object, ...],
+        server: Port,
+        sessionno: int,
+        reactor: IReactorTCP,
+    ) -> None:
         """
         Server(sock, protocol, client, server, sessionno)
 
@@ -802,7 +814,7 @@ class Server(_TLSServerMixin, Connection):
         logPrefix = self._getLogPrefix(self.protocol)
         self.logstr = f"{logPrefix},{sessionno},{self.hostname}"
         if self.server is not None:
-            self.repstr = "<{} #{} on {}>".format(
+            self.repstr: str = "<{} #{} on {}>".format(
                 self.protocol.__class__.__name__,
                 self.sessionno,
                 self.server._realPortNumber,

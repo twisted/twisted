@@ -32,9 +32,9 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
+from twisted.internet.testing import StringTransport
 from twisted.logger import formatEvent, globalLogPublisher
 from twisted.python.failure import Failure
-from twisted.test.proto_helpers import StringTransport
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 

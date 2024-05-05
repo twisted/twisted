@@ -1,6 +1,6 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import gc
 import re
@@ -8,29 +8,132 @@ import sys
 import textwrap
 import types
 from io import StringIO
+from typing import List
 
+from hamcrest import assert_that, contains_string
+from hypothesis import given
+from hypothesis.strategies import sampled_from
+
+from twisted.logger import Logger
 from twisted.python import util
-from twisted.python.filepath import FilePath
+from twisted.python.filepath import FilePath, IFilePath
 from twisted.python.usage import UsageError
 from twisted.scripts import trial
 from twisted.trial import unittest
 from twisted.trial._dist.disttrial import DistTrialRunner
+from twisted.trial._dist.functional import compose
 from twisted.trial.runner import (
     DestructiveTestSuite,
     TestLoader,
     TestSuite,
     TrialRunner,
+    _Runner,
 )
 from twisted.trial.test.test_loader import testNames
+from .matchers import fileContents
 
 pyunit = __import__("unittest")
 
 
-def sibpath(filename):
+def sibpath(filename: str) -> str:
     """
     For finding files in twisted/trial/test
     """
     return util.sibpath(__file__, filename)
+
+
+def logSomething() -> None:
+    """
+    Emit something to L{twisted.logger}.
+    """
+    Logger().info("something")
+
+
+def parseArguments(argv: List[str]) -> trial.Options:
+    """
+    Parse an argument list using trial's argument parser.
+    """
+    config = trial.Options()
+    config.parseOptions(argv)
+    return config
+
+
+def runFromConfig(config: trial.Options) -> trial.Options:
+    """
+    Run L{logSomething} as a test method using the given configuration.
+    """
+    runner = trial._makeRunner(config)
+    runner.stream = StringIO()
+    suite = TestSuite([pyunit.FunctionTestCase(logSomething)])
+    runner.run(suite)
+    return config
+
+
+runFromArguments = compose(runFromConfig, parseArguments)
+
+
+class LogfileTests(unittest.SynchronousTestCase):
+    """
+    Tests for the --logfile option.
+    """
+
+    @given(
+        sampled_from(
+            [
+                "dir-a",
+                "dir-b",
+                "dir-c/dir-d",
+            ]
+        )
+    )
+    def test_default(self, workingDirectory: str) -> None:
+        """
+        If no value is given for the option then logs are written to a log
+        file constructed from a default value.
+        """
+        config = runFromArguments(["--temp-directory", workingDirectory])
+        logPath: IFilePath = FilePath(workingDirectory).preauthChild(config["logfile"])
+        assert_that(logPath, fileContents(contains_string("something")))
+
+    @given(
+        sampled_from(
+            [
+                "somelog.txt",
+                "somedir/somelog.txt",
+            ]
+        )
+    )
+    def test_relativePath(self, logfile: str) -> None:
+        """
+        If the value given for the option is a relative path then it is
+        interpreted relative to trial's own temporary working directory and
+        logs are written there.
+        """
+        config = runFromArguments(["--logfile", logfile])
+        logPath: IFilePath = FilePath(config["temp-directory"]).preauthChild(logfile)
+        assert_that(logPath, fileContents(contains_string("something")))
+
+    @given(
+        sampled_from(
+            [
+                "somelog.txt",
+                "somedir/somelog.txt",
+            ]
+        )
+    )
+    def test_absolutePath(self, logfile: str) -> None:
+        """
+        If the value given for the option is an absolute path then it is
+        interpreted absolutely and logs are written there.
+        """
+        # We don't want to scribble to arbitrary places on the host
+        # filesystem.  Construct an absolute path that's beneath our working
+        # directory - which trial will make into a per-run unique temporary
+        # directory.
+        logPath = FilePath(".").preauthChild(logfile)
+        runFromArguments(["--logfile", logPath.path])
+        iPath: IFilePath = logPath
+        assert_that(iPath, fileContents(contains_string("something")))
 
 
 class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
@@ -38,26 +141,26 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
     Tests for the --force-gc option.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.config = trial.Options()
-        self.log = []
+        self.log: list[str] = []
         self.patch(gc, "collect", self.collect)
         test = pyunit.FunctionTestCase(self.simpleTest)
         self.test = TestSuite([test, test])
 
-    def simpleTest(self):
+    def simpleTest(self) -> None:
         """
         A simple test method that records that it was run.
         """
         self.log.append("test")
 
-    def collect(self):
+    def collect(self) -> None:
         """
         A replacement for gc.collect that logs calls to itself.
         """
         self.log.append("collect")
 
-    def makeRunner(self):
+    def makeRunner(self) -> _Runner:
         """
         Return a L{TrialRunner} object that is safe to use in tests.
         """
@@ -65,7 +168,7 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
         runner.stream = StringIO()
         return runner
 
-    def test_forceGc(self):
+    def test_forceGc(self) -> None:
         """
         Passing the --force-gc option to the trial script forces the garbage
         collector to run before and after each test.
@@ -78,7 +181,7 @@ class ForceGarbageCollectionTests(unittest.SynchronousTestCase):
             self.log, ["collect", "test", "collect", "collect", "test", "collect"]
         )
 
-    def test_unforceGc(self):
+    def test_unforceGc(self) -> None:
         """
         By default, no garbage collection is forced.
         """
@@ -93,20 +196,20 @@ class SuiteUsedTests(unittest.SynchronousTestCase):
     Check the category of tests suite used by the loader.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a trial configuration object.
         """
         self.config = trial.Options()
 
-    def test_defaultSuite(self):
+    def test_defaultSuite(self) -> None:
         """
         By default, the loader should use L{DestructiveTestSuite}
         """
         loader = trial._getLoader(self.config)
         self.assertEqual(loader.suiteFactory, DestructiveTestSuite)
 
-    def test_untilFailureSuite(self):
+    def test_untilFailureSuite(self) -> None:
         """
         The C{until-failure} configuration uses the L{TestSuite} to keep
         instances alive across runs.
@@ -117,20 +220,20 @@ class SuiteUsedTests(unittest.SynchronousTestCase):
 
 
 class TestModuleTests(unittest.SynchronousTestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.config = trial.Options()
 
-    def tearDown(self):
-        self.config = None
+    def tearDown(self) -> None:
+        self.config = None  # type: ignore[assignment]
 
-    def test_testNames(self):
+    def test_testNames(self) -> None:
         """
         Check that the testNames helper method accurately collects the
         names of tests in suite.
         """
         self.assertEqual(testNames(self), [self.id()])
 
-    def assertSuitesEqual(self, test1, names):
+    def assertSuitesEqual(self, test1: TestSuite, names: list[str]) -> None:
         loader = TestLoader()
         names1 = testNames(test1)
         names2 = testNames(TestSuite(map(loader.loadByName, names)))
@@ -138,10 +241,10 @@ class TestModuleTests(unittest.SynchronousTestCase):
         names2.sort()
         self.assertEqual(names1, names2)
 
-    def test_baseState(self):
+    def test_baseState(self) -> None:
         self.assertEqual(0, len(self.config["tests"]))
 
-    def test_testmoduleOnModule(self):
+    def test_testmoduleOnModule(self) -> None:
         """
         Check that --testmodule loads a suite which contains the tests
         referred to in test-case-name inside its parameter.
@@ -151,7 +254,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
             trial._getSuite(self.config), ["twisted.trial.test.test_log"]
         )
 
-    def test_testmoduleTwice(self):
+    def test_testmoduleTwice(self) -> None:
         """
         When the same module is specified with two --testmodule flags, it
         should only appear once in the suite.
@@ -162,7 +265,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
             trial._getSuite(self.config), ["twisted.trial.test.test_log"]
         )
 
-    def test_testmoduleOnSourceAndTarget(self):
+    def test_testmoduleOnSourceAndTarget(self) -> None:
         """
         If --testmodule is specified twice, once for module A and once for
         a module which refers to module A, then make sure module A is only
@@ -174,7 +277,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
             trial._getSuite(self.config), ["twisted.trial.test.test_log"]
         )
 
-    def test_testmoduleOnSelfModule(self):
+    def test_testmoduleOnSelfModule(self) -> None:
         """
         When given a module that refers to *itself* in the test-case-name
         variable, check that --testmodule only adds the tests once.
@@ -184,7 +287,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
             trial._getSuite(self.config), ["twisted.trial.test.moduleself"]
         )
 
-    def test_testmoduleOnScript(self):
+    def test_testmoduleOnScript(self) -> None:
         """
         Check that --testmodule loads tests referred to in test-case-name
         buffer variables.
@@ -195,7 +298,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
             ["twisted.trial.test.test_log", "twisted.trial.test.test_runner"],
         )
 
-    def test_testmoduleOnNonexistentFile(self):
+    def test_testmoduleOnNonexistentFile(self) -> None:
         """
         Check that --testmodule displays a meaningful error message when
         passed a non-existent filename.
@@ -210,7 +313,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         finally:
             sys.stderr = stderr
 
-    def test_testmoduleOnEmptyVars(self):
+    def test_testmoduleOnEmptyVars(self) -> None:
         """
         Check that --testmodule adds no tests to the suite for modules
         which lack test-case-name buffer variables.
@@ -218,7 +321,7 @@ class TestModuleTests(unittest.SynchronousTestCase):
         self.config.opt_testmodule(sibpath("novars.py"))
         self.assertEqual(0, len(self.config["tests"]))
 
-    def test_testmoduleOnModuleName(self):
+    def test_testmoduleOnModuleName(self) -> None:
         """
         Check that --testmodule does *not* support module names as arguments
         and that it displays a meaningful error message.
@@ -233,17 +336,17 @@ class TestModuleTests(unittest.SynchronousTestCase):
         finally:
             sys.stderr = stderr
 
-    def test_parseLocalVariable(self):
+    def test_parseLocalVariable(self) -> None:
         declaration = "-*- test-case-name: twisted.trial.test.test_tests -*-"
         localVars = trial._parseLocalVariables(declaration)
         self.assertEqual({"test-case-name": "twisted.trial.test.test_tests"}, localVars)
 
-    def test_trailingSemicolon(self):
+    def test_trailingSemicolon(self) -> None:
         declaration = "-*- test-case-name: twisted.trial.test.test_tests; -*-"
         localVars = trial._parseLocalVariables(declaration)
         self.assertEqual({"test-case-name": "twisted.trial.test.test_tests"}, localVars)
 
-    def test_parseLocalVariables(self):
+    def test_parseLocalVariables(self) -> None:
         declaration = (
             "-*- test-case-name: twisted.trial.test.test_tests; " "foo: bar -*-"
         )
@@ -252,15 +355,15 @@ class TestModuleTests(unittest.SynchronousTestCase):
             {"test-case-name": "twisted.trial.test.test_tests", "foo": "bar"}, localVars
         )
 
-    def test_surroundingGuff(self):
+    def test_surroundingGuff(self) -> None:
         declaration = "## -*- test-case-name: " "twisted.trial.test.test_tests -*- #"
         localVars = trial._parseLocalVariables(declaration)
         self.assertEqual({"test-case-name": "twisted.trial.test.test_tests"}, localVars)
 
-    def test_invalidLine(self):
+    def test_invalidLine(self) -> None:
         self.assertRaises(ValueError, trial._parseLocalVariables, "foo")
 
-    def test_invalidDeclaration(self):
+    def test_invalidDeclaration(self) -> None:
         self.assertRaises(ValueError, trial._parseLocalVariables, "-*- foo -*-")
         self.assertRaises(
             ValueError, trial._parseLocalVariables, "-*- foo: bar; qux -*-"
@@ -269,15 +372,15 @@ class TestModuleTests(unittest.SynchronousTestCase):
             ValueError, trial._parseLocalVariables, "-*- foo: bar: baz; qux: qax -*-"
         )
 
-    def test_variablesFromFile(self):
+    def test_variablesFromFile(self) -> None:
         localVars = trial.loadLocalVariables(sibpath("moduletest.py"))
         self.assertEqual({"test-case-name": "twisted.trial.test.test_log"}, localVars)
 
-    def test_noVariablesInFile(self):
+    def test_noVariablesInFile(self) -> None:
         localVars = trial.loadLocalVariables(sibpath("novars.py"))
         self.assertEqual({}, localVars)
 
-    def test_variablesFromScript(self):
+    def test_variablesFromScript(self) -> None:
         localVars = trial.loadLocalVariables(sibpath("scripttest.py"))
         self.assertEqual(
             {
@@ -288,22 +391,22 @@ class TestModuleTests(unittest.SynchronousTestCase):
             localVars,
         )
 
-    def test_getTestModules(self):
+    def test_getTestModules(self) -> None:
         modules = trial.getTestModules(sibpath("moduletest.py"))
         self.assertEqual(modules, ["twisted.trial.test.test_log"])
 
-    def test_getTestModules_noVars(self):
+    def test_getTestModules_noVars(self) -> None:
         modules = trial.getTestModules(sibpath("novars.py"))
         self.assertEqual(len(modules), 0)
 
-    def test_getTestModules_multiple(self):
+    def test_getTestModules_multiple(self) -> None:
         modules = trial.getTestModules(sibpath("scripttest.py"))
         self.assertEqual(
             set(modules),
             {"twisted.trial.test.test_log", "twisted.trial.test.test_runner"},
         )
 
-    def test_looksLikeTestModule(self):
+    def test_looksLikeTestModule(self) -> None:
         for filename in ["test_script.py", "twisted/trial/test/test_script.py"]:
             self.assertTrue(
                 trial.isTestFile(filename),
@@ -325,7 +428,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
     Test the C{without-module} flag.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a L{trial.Options} object to be used in the tests, and save
         C{sys.modules}.
@@ -333,7 +436,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.config = trial.Options()
         self.savedModules = dict(sys.modules)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         """
         Restore C{sys.modules}.
         """
@@ -343,7 +446,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
             else:
                 sys.modules.pop(module, None)
 
-    def _checkSMTP(self):
+    def _checkSMTP(self) -> object:
         """
         Try to import the C{smtplib} module, and return it.
         """
@@ -351,7 +454,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
 
         return smtplib
 
-    def _checkIMAP(self):
+    def _checkIMAP(self) -> object:
         """
         Try to import the C{imaplib} module, and return it.
         """
@@ -359,7 +462,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
 
         return imaplib
 
-    def test_disableOneModule(self):
+    def test_disableOneModule(self) -> None:
         """
         Check that after disabling a module, it can't be imported anymore.
         """
@@ -370,7 +473,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         # Then the function should succeed
         self.assertIsInstance(self._checkSMTP(), types.ModuleType)
 
-    def test_disableMultipleModules(self):
+    def test_disableMultipleModules(self) -> None:
         """
         Check that several modules can be disabled at once.
         """
@@ -384,7 +487,7 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.assertIsInstance(self._checkSMTP(), types.ModuleType)
         self.assertIsInstance(self._checkIMAP(), types.ModuleType)
 
-    def test_disableAlreadyImportedModule(self):
+    def test_disableAlreadyImportedModule(self) -> None:
         """
         Disabling an already imported module should produce a warning.
         """
@@ -407,23 +510,28 @@ class CoverageTests(unittest.SynchronousTestCase):
     if getattr(sys, "gettrace", None) is None:
         skip = "Cannot test trace hook installation without inspection API."
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Arrange for the current trace hook to be restored when the
         test is complete.
         """
         self.addCleanup(sys.settrace, sys.gettrace())
 
-    def test_tracerInstalled(self):
+    def test_tracerInstalled(self) -> None:
         """
         L{trial.Options} handles C{"--coverage"} by installing a trace
         hook to record coverage information.
         """
         options = trial.Options()
         options.parseOptions(["--coverage"])
-        self.assertEqual(sys.gettrace(), options.tracer.globaltrace)
+        assert options.tracer is not None
+        self.assertEqual(
+            sys.gettrace(),
+            # the globaltrace attribute of trace.Trace is undocumented
+            options.tracer.globaltrace,
+        )
 
-    def test_coverdirDefault(self):
+    def test_coverdirDefault(self) -> None:
         """
         L{trial.Options.coverdir} returns a L{FilePath} based on the default
         for the I{temp-directory} option if that option is not specified.
@@ -434,7 +542,7 @@ class CoverageTests(unittest.SynchronousTestCase):
             FilePath(".").descendant([options["temp-directory"], "coverage"]),
         )
 
-    def test_coverdirOverridden(self):
+    def test_coverdirOverridden(self) -> None:
         """
         If a value is specified for the I{temp-directory} option,
         L{trial.Options.coverdir} returns a child of that path.
@@ -450,13 +558,13 @@ class OptionsTests(unittest.TestCase):
     Tests for L{trial.Options}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Build an L{Options} object to be used in the tests.
         """
         self.options = trial.Options()
 
-    def test_getWorkerArguments(self):
+    def test_getWorkerArguments(self) -> None:
         """
         C{_getWorkerArguments} discards options like C{random} as they only
         matter in the manager, and forwards options like C{recursionlimit} or
@@ -474,7 +582,7 @@ class OptionsTests(unittest.TestCase):
         args.remove("--disablegc")
         self.assertEqual(["--recursionlimit", "2000"], args)
 
-    def test_jobsConflictWithDebug(self):
+    def test_jobsConflictWithDebug(self) -> None:
         """
         C{parseOptions} raises a C{UsageError} when C{--debug} is passed along
         C{--jobs} as it's not supported yet.
@@ -486,7 +594,7 @@ class OptionsTests(unittest.TestCase):
         )
         self.assertEqual("You can't specify --debug when using --jobs", str(error))
 
-    def test_jobsConflictWithProfile(self):
+    def test_jobsConflictWithProfile(self) -> None:
         """
         C{parseOptions} raises a C{UsageError} when C{--profile} is passed
         along C{--jobs} as it's not supported yet.
@@ -498,7 +606,7 @@ class OptionsTests(unittest.TestCase):
         )
         self.assertEqual("You can't specify --profile when using --jobs", str(error))
 
-    def test_jobsConflictWithDebugStackTraces(self):
+    def test_jobsConflictWithDebugStackTraces(self) -> None:
         """
         C{parseOptions} raises a C{UsageError} when C{--debug-stacktraces} is
         passed along C{--jobs} as it's not supported yet.
@@ -514,19 +622,7 @@ class OptionsTests(unittest.TestCase):
             "You can't specify --debug-stacktraces when using --jobs", str(error)
         )
 
-    def test_jobsConflictWithExitFirst(self):
-        """
-        C{parseOptions} raises a C{UsageError} when C{--exitfirst} is passed
-        along C{--jobs} as it's not supported yet.
-
-        @see: U{http://twistedmatrix.com/trac/ticket/6436}
-        """
-        error = self.assertRaises(
-            UsageError, self.options.parseOptions, ["--jobs", "4", "--exitfirst"]
-        )
-        self.assertEqual("You can't specify --exitfirst when using --jobs", str(error))
-
-    def test_orderConflictWithRandom(self):
+    def test_orderConflictWithRandom(self) -> None:
         """
         C{parseOptions} raises a C{UsageError} when C{--order} is passed along
         with C{--random}.
@@ -544,35 +640,37 @@ class MakeRunnerTests(unittest.TestCase):
     Tests for the L{_makeRunner} helper.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.options = trial.Options()
 
-    def test_jobs(self):
+    def test_jobs(self) -> None:
         """
         L{_makeRunner} returns a L{DistTrialRunner} instance when the C{--jobs}
-        option is passed, and passes the C{workerNumber} and C{workerArguments}
-        parameters to it.
+        option is passed.  The L{DistTrialRunner} knows how many workers to
+        run and the C{workerArguments} to pass to them.
         """
         self.options.parseOptions(["--jobs", "4", "--force-gc"])
         runner = trial._makeRunner(self.options)
+        assert isinstance(runner, DistTrialRunner)
         self.assertIsInstance(runner, DistTrialRunner)
-        self.assertEqual(4, runner._workerNumber)
+        self.assertEqual(4, runner._maxWorkers)
         self.assertEqual(["--force-gc"], runner._workerArguments)
 
-    def test_dryRunWithJobs(self):
+    def test_dryRunWithJobs(self) -> None:
         """
         L{_makeRunner} returns a L{TrialRunner} instance in C{DRY_RUN} mode
         when the C{--dry-run} option is passed, even if C{--jobs} is set.
         """
         self.options.parseOptions(["--jobs", "4", "--dry-run"])
         runner = trial._makeRunner(self.options)
+        assert isinstance(runner, TrialRunner)
         self.assertIsInstance(runner, TrialRunner)
         self.assertEqual(TrialRunner.DRY_RUN, runner.mode)
 
-    def test_DebuggerNotFound(self):
+    def test_DebuggerNotFound(self) -> None:
         namedAny = trial.reflect.namedAny
 
-        def namedAnyExceptdoNotFind(fqn):
+        def namedAnyExceptdoNotFind(fqn: str) -> object:
             if fqn == "doNotFind":
                 raise trial.reflect.ModuleNotFound(fqn)
             return namedAny(fqn)
@@ -584,13 +682,14 @@ class MakeRunnerTests(unittest.TestCase):
 
         self.assertRaises(trial._DebuggerNotFound, trial._makeRunner, options)
 
-    def test_exitfirst(self):
+    def test_exitfirst(self) -> None:
         """
         Passing C{--exitfirst} wraps the reporter with a
         L{reporter._ExitWrapper} that stops on any non-success.
         """
         self.options.parseOptions(["--exitfirst"])
         runner = trial._makeRunner(self.options)
+        assert isinstance(runner, TrialRunner)
         self.assertTrue(runner._exitFirst)
 
 
@@ -599,18 +698,18 @@ class RunTests(unittest.TestCase):
     Tests for the L{run} function.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         # don't re-parse cmdline options, because if --reactor was passed to
         # the test run trial will try to restart the (already running) reactor
         self.patch(trial.Options, "parseOptions", lambda self: None)
 
-    def test_debuggerNotFound(self):
+    def test_debuggerNotFound(self) -> None:
         """
         When a debugger is not found, an error message is printed to the user.
 
         """
 
-        def _makeRunner(*args, **kwargs):
+        def _makeRunner(*args: object, **kwargs: object) -> None:
             raise trial._DebuggerNotFound("foo")
 
         self.patch(trial, "_makeRunner", _makeRunner)
@@ -628,11 +727,11 @@ class TestArgumentOrderTests(unittest.TestCase):
     Tests for the order-preserving behavior on provided command-line tests.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.config = trial.Options()
         self.loader = TestLoader()
 
-    def test_preserveArgumentOrder(self):
+    def test_preserveArgumentOrder(self) -> None:
         """
         Multiple tests passed on the command line are not reordered.
         """
@@ -657,10 +756,10 @@ class OrderTests(unittest.TestCase):
     Tests for the --order option.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.config = trial.Options()
 
-    def test_alphabetical(self):
+    def test_alphabetical(self) -> None:
         """
         --order=alphabetical causes trial to run tests alphabetically within
         each test case.
@@ -682,7 +781,7 @@ class OrderTests(unittest.TestCase):
             ],
         )
 
-    def test_alphabeticalModule(self):
+    def test_alphabeticalModule(self) -> None:
         """
         --order=alphabetical causes trial to run test classes within a given
         module alphabetically.
@@ -705,7 +804,7 @@ class OrderTests(unittest.TestCase):
             ],
         )
 
-    def test_alphabeticalPackage(self):
+    def test_alphabeticalPackage(self) -> None:
         """
         --order=alphabetical causes trial to run test modules within a given
         package alphabetically, with tests within each module alphabetized.
@@ -718,7 +817,7 @@ class OrderTests(unittest.TestCase):
         self.assertTrue(names, msg="Failed to load any tests!")
         self.assertEqual(names, sorted(names))
 
-    def test_toptobottom(self):
+    def test_toptobottom(self) -> None:
         """
         --order=toptobottom causes trial to run test methods within a given
         test case from top to bottom as they are defined in the body of the
@@ -741,7 +840,7 @@ class OrderTests(unittest.TestCase):
             ],
         )
 
-    def test_toptobottomModule(self):
+    def test_toptobottomModule(self) -> None:
         """
         --order=toptobottom causes trial to run test classes within a given
         module from top to bottom as they are defined in the module's source.
@@ -764,7 +863,7 @@ class OrderTests(unittest.TestCase):
             ],
         )
 
-    def test_toptobottomPackage(self):
+    def test_toptobottomPackage(self) -> None:
         """
         --order=toptobottom causes trial to run test modules within a given
         package alphabetically, with tests within each module run top to
@@ -782,7 +881,7 @@ class OrderTests(unittest.TestCase):
             sorted(names, key=lambda name: name.split(".")[:4]),
         )
 
-    def test_toptobottomMissingSource(self):
+    def test_toptobottomMissingSource(self) -> None:
         """
         --order=toptobottom detects the source line of methods from modules
         whose source file is missing.
@@ -796,17 +895,19 @@ class OrderTests(unittest.TestCase):
                 """
         from twisted.trial.unittest import TestCase
         class TestMissing(TestCase):
-            def test_second(self): pass
-            def test_third(self): pass
-            def test_fourth(self): pass
-            def test_first(self): pass
+            def test_second(self) -> None: pass
+            def test_third(self) -> None: pass
+            def test_fourth(self) -> None: pass
+            def test_first(self) -> None: pass
         """
             ).encode("utf8")
         )
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
-        from twisted_toptobottom_temp import test_missing  # type: ignore[import]
+        from twisted_toptobottom_temp import (  # type: ignore[import-not-found]
+            test_missing,
+        )
 
         self.addCleanup(sys.modules.pop, "twisted_toptobottom_temp")
         self.addCleanup(sys.modules.pop, test_missing.__name__)
@@ -828,7 +929,7 @@ class OrderTests(unittest.TestCase):
             ],
         )
 
-    def test_unknownOrder(self):
+    def test_unknownOrder(self) -> None:
         """
         An unknown order passed to --order raises a L{UsageError}.
         """
@@ -843,18 +944,18 @@ class HelpOrderTests(unittest.TestCase):
     Tests for the --help-orders flag.
     """
 
-    def test_help_ordersPrintsSynopsisAndQuits(self):
+    def test_help_ordersPrintsSynopsisAndQuits(self) -> None:
         """
         --help-orders prints each of the available orders and then exits.
         """
-        self.patch(sys, "stdout", StringIO())
+        self.patch(sys, "stdout", stdout := StringIO())
 
         exc = self.assertRaises(
             SystemExit, trial.Options().parseOptions, ["--help-orders"]
         )
         self.assertEqual(exc.code, 0)
 
-        output = sys.stdout.getvalue()
+        output = stdout.getvalue()
 
         msg = "%r with its description not properly described in %r"
         for orderName, (orderDesc, _) in trial._runOrders.items():

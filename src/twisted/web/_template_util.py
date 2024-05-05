@@ -24,7 +24,7 @@ from typing import (
     cast,
 )
 from xml.sax import handler, make_parser
-from xml.sax.xmlreader import Locator
+from xml.sax.xmlreader import AttributesNSImpl, Locator
 
 from zope.interface import implementer
 
@@ -269,7 +269,7 @@ class _SourceFragmentElement(Element):
         C{"snippetHighlightLine"}.  Other lines will be given a I{class} of
         C{"snippetLine"}.
         """
-        for (lineNumber, sourceLine) in self._getSourceLines():
+        for lineNumber, sourceLine in self._getSourceLines():
             newTag = tag.clone()
             if lineNumber == self.frame[2]:
                 cssClass = "snippetHighlightLine"
@@ -390,9 +390,9 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
     Document Object Model.
     """
 
-    def __init__(self, sourceFilename: str):
+    def __init__(self, sourceFilename: Optional[str]):
         """
-        @param sourceFilename: the filename to load the XML out of.
+        @param sourceFilename: the filename the XML was loaded out of.
         """
         self.sourceFilename = sourceFilename
         self.prefixMap = _NSContext()
@@ -462,7 +462,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self,
         namespaceAndName: Tuple[str, str],
         qname: Optional[str],
-        attrs: Mapping[Tuple[Optional[str], str], str],
+        attrs: AttributesNSImpl,
     ) -> None:
         """
         Gets called when we encounter a new xmlns attribute.
@@ -505,14 +505,14 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = OrderedDict(attrs)
-        for k, v in list(attrs.items()):
+        ordered = OrderedDict(attrs)
+        for k, v in list(ordered.items()):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
             if justTheName == "render":
                 render = v
-                del attrs[k]
+                del ordered[k]
 
         # nonTemplateAttrs is a dictionary mapping attributes that are *not* in
         # TEMPLATE_NAMESPACE to their values.  Those in TEMPLATE_NAMESPACE were
@@ -522,7 +522,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # preserving the xml namespace prefix given in the document.
 
         nonTemplateAttrs = OrderedDict()
-        for (attrNs, attrName), v in attrs.items():
+        for (attrNs, attrName), v in ordered.items():
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
                 attrKey = attrName
@@ -632,7 +632,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.current.append(Comment(content))
 
 
-def _flatsaxParse(fl: Union[FilePath, IO[AnyStr], str]) -> List["Flattenable"]:
+def _flatsaxParse(fl: Union[IO[AnyStr], str]) -> List["Flattenable"]:
     """
     Perform a SAX parse of an XML document with the _ToStan class.
 
@@ -856,7 +856,7 @@ class XMLFile:
     An L{ITemplateLoader} that loads and parses XML from a file.
     """
 
-    def __init__(self, path: FilePath):
+    def __init__(self, path: FilePath[Any]):
         """
         Run the parser on a file.
 
@@ -873,7 +873,7 @@ class XMLFile:
         self._loadedTemplate: Optional[List["Flattenable"]] = None
         """The loaded document, or L{None}, if not loaded."""
 
-        self._path: FilePath = path
+        self._path: FilePath[Any] = path
         """The file that is being loaded from."""
 
     def _loadDoc(self) -> List["Flattenable"]:
@@ -1034,9 +1034,9 @@ class _TagFactory:
     """
     A factory for L{Tag} objects; the implementation of the L{tags} object.
 
-    This allows for the syntactic convenience of C{from twisted.web.html import
-    tags; tags.a(href="linked-page.html")}, where 'a' can be basically any HTML
-    tag.
+    This allows for the syntactic convenience of C{from twisted.web.template
+    import tags; tags.a(href="linked-page.html")}, where 'a' can be basically
+    any HTML tag.
 
     The class is not exposed publicly because you only ever need one of these,
     and we already made it for you.

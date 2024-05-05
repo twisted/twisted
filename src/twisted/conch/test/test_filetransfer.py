@@ -12,11 +12,13 @@ import re
 import struct
 from unittest import skipIf
 
+from hamcrest import assert_that, equal_to
+
 from twisted.internet import defer
 from twisted.internet.error import ConnectionLost
+from twisted.internet.testing import StringTransport
 from twisted.protocols import loopback
 from twisted.python import components
-from twisted.python.compat import _PY37PLUS
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
@@ -530,48 +532,6 @@ class OurServerOurClientTests(SFTPTestBase):
         return self.assertFailure(d, NotImplementedError)
 
     @defer.inlineCallbacks
-    @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
-    def test_openDirectoryIterator(self):
-        """
-        Check that the object returned by
-        L{filetransfer.FileTransferClient.openDirectory} can be used
-        as an iterator.
-        """
-
-        # This function is a little more complicated than it would be
-        # normally, since we need to call _emptyBuffers() after
-        # creating any SSH-related Deferreds, but before waiting on
-        # them via yield.
-
-        d = self.client.openDirectory(b"")
-        self._emptyBuffers()
-        openDir = yield d
-
-        filenames = set()
-        try:
-            for f in openDir:
-                self._emptyBuffers()
-                (filename, _, fileattrs) = yield f
-                filenames.add(filename)
-        finally:
-            d = openDir.close()
-            self._emptyBuffers()
-            yield d
-
-        self._emptyBuffers()
-
-        self.assertEqual(
-            filenames,
-            {
-                b".testHiddenFile",
-                b"testDirectory",
-                b"testRemoveFile",
-                b"testRenameFile",
-                b"testfile1",
-            },
-        )
-
-    @defer.inlineCallbacks
     def test_openDirectoryIteratorDeprecated(self):
         """
         Using client.openDirectory as an iterator is deprecated.
@@ -850,6 +810,71 @@ class ConstantsTests(TestCase):
         )
         for k, v in constants.items():
             self.assertEqual(v, getattr(filetransfer, k))
+
+
+# We don't run on Windows, as we don't have an SFTP file server implemented in conch.ssh for Windows.
+# As soon as there is such an implementation, we can run these tests on Windows.
+@skipIf(not unix, "can't run on non-posix computers")
+@skipIf(not cryptography, "Cannot run without cryptography")
+class RawPacketDataServerTests(TestCase):
+    """
+    Tests for L{filetransfer.FileTransferServer} which explicitly craft
+    certain less common situations to exercise their handling.
+    """
+
+    def setUp(self):
+        self.fts = filetransfer.FileTransferServer(avatar=TestAvatar())
+
+    def test_closeInvalidHandle(self):
+        """
+        A close request with an unknown handle receives an FX_NO_SUCH_FILE error
+        response.
+        """
+        transport = StringTransport()
+        self.fts.makeConnection(transport)
+
+        # any four bytes
+        requestId = b"1234"
+        # The handle to close, arbitrary bytes.
+        handle = b"invalid handle"
+
+        # Construct a message packet
+        # https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-13#section-4
+        close = common.NS(
+            # Packet type - SSH_FXP_CLOSE
+            # https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-13#section-4.3
+            bytes([4])
+            + requestId
+            + common.NS(handle)
+        )
+
+        self.fts.dataReceived(close)
+
+        # An SSH_FXP_STATUS message
+        # https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-13#section-9.1
+        expected = common.NS(
+            # Packet type SSH_FXP_STATUS
+            # https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-13#section-4.3
+            bytes([101])
+            +
+            # The same request id
+            requestId
+            +
+            # A four byte status code.  SSH_FX_NO_SUCH_FILE in this case.
+            bytes([0, 0, 0, 2])
+            +
+            # Error message
+            common.NS(b"No such file or directory")
+            +
+            # error message language tag - conch doesn't send one at all,
+            # though maybe it should
+            common.NS(b"")
+        )
+
+        assert_that(
+            transport.value(),
+            equal_to(expected),
+        )
 
 
 @skipIf(not cryptography, "Cannot run without cryptography")

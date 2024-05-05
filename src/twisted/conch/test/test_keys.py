@@ -20,11 +20,11 @@ cryptography = requireModule("cryptography")
 if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
 
-pyasn1 = requireModule("pyasn1")
 
-
-if cryptography and pyasn1:
+if cryptography:
     from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
 
@@ -40,11 +40,8 @@ def skipWithoutEd25519(f):
 
 
 class KeyTests(unittest.TestCase):
-
     if cryptography is None:
         skip = skipCryptography
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
 
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
@@ -273,10 +270,6 @@ class KeyTests(unittest.TestCase):
             keys.Key.fromString(
                 keydata.privateRSA_openssh_encrypted, passphrase=b"encrypted"
             ),
-            keys.Key.fromString(keydata.privateRSA_openssh),
-        )
-        self.assertEqual(
-            keys.Key.fromString(keydata.privateRSA_openssh_alternate),
             keys.Key.fromString(keydata.privateRSA_openssh),
         )
         self._testPublicPrivateFromString(
@@ -767,6 +760,30 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertRaises(RuntimeError, keys.Key(self).type)
         self.assertRaises(RuntimeError, keys.Key(self).sshType)
 
+    def test_supportedSignatureAlgorithms(self):
+        """
+        L{keys.Key.supportedSignatureAlgorithms} returns the appropriate
+        public key signature algorithms for each key type.
+        """
+        self.assertEqual(
+            keys.Key(self.rsaObj).supportedSignatureAlgorithms(),
+            [b"rsa-sha2-512", b"rsa-sha2-256", b"ssh-rsa"],
+        )
+        self.assertEqual(
+            keys.Key(self.dsaObj).supportedSignatureAlgorithms(), [b"ssh-dss"]
+        )
+        self.assertEqual(
+            keys.Key(self.ecObj).supportedSignatureAlgorithms(),
+            [b"ecdsa-sha2-nistp256"],
+        )
+        if ED25519_SUPPORTED:
+            self.assertEqual(
+                keys.Key(self.ed25519Obj).supportedSignatureAlgorithms(),
+                [b"ssh-ed25519"],
+            )
+        self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
+        self.assertRaises(RuntimeError, keys.Key(self).supportedSignatureAlgorithms)
+
     def test_fromBlobUnsupportedType(self):
         """
         A C{BadKeyError} error is raised whey the blob has an unsupported
@@ -1125,10 +1142,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes an RSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
-        self.assertEqual(key.toString("openssh"), keydata.privateRSA_openssh)
-        self.assertEqual(
-            key.toString("openssh", passphrase=b"encrypted"),
-            keydata.privateRSA_openssh_encrypted,
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateRSA_openssh)
+        self.assertTrue(
+            key.toString("openssh", passphrase=b"encrypted").find(b"DEK-Info") > 0
         )
         self.assertEqual(
             key.public().toString("openssh"), keydata.publicRSA_openssh[:-8]
@@ -1161,7 +1177,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes a DSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
-        self.assertEqual(key.toString("openssh"), keydata.privateDSA_openssh)
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateDSA_openssh)
         self.assertEqual(
             key.public().toString("openssh", comment=b"comment"),
             keydata.publicDSA_openssh,
@@ -1308,13 +1324,57 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_signAndVerifyRSA(self):
         """
-        Signed data can be verified using RSA.
+        Signed data can be verified using RSA (with SHA-1, the default).
         """
         data = b"some-data"
         key = keys.Key.fromString(keydata.privateRSA_openssh)
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-1.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"ssh-rsa")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA1()
+            )
+        )
+
+    def test_signAndVerifyRSASHA256(self):
+        """
+        Signed data can be verified using RSA with SHA-256.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        signature = key.sign(data, signatureType=b"rsa-sha2-256")
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-256.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-256")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA256()
+            )
+        )
+
+    def test_signAndVerifyRSASHA512(self):
+        """
+        Signed data can be verified using RSA with SHA-512.
+        """
+        data = b"some-data"
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        signature = key.sign(data, signatureType=b"rsa-sha2-512")
+        self.assertTrue(key.public().verify(signature, data))
+        self.assertTrue(key.verify(signature, data))
+        # Verify that the signature uses SHA-512.
+        signatureType, signature = common.getNS(signature)
+        self.assertEqual(signatureType, b"rsa-sha2-512")
+        self.assertIsNone(
+            key._keyObject.public_key().verify(
+                common.getNS(signature)[0], data, padding.PKCS1v15(), hashes.SHA512()
+            )
+        )
 
     def test_signAndVerifyDSA(self):
         """
@@ -1357,6 +1417,27 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         signature = key.sign(data)
         self.assertTrue(key.public().verify(signature, data))
         self.assertTrue(key.verify(signature, data))
+
+    def test_signWithWrongAlgorithm(self):
+        """
+        L{keys.Key.sign} raises L{keys.BadSignatureAlgorithmError} when
+        asked to sign with a public key algorithm that doesn't make sense
+        with the given key.
+        """
+        key = keys.Key.fromString(keydata.privateRSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
+        key = keys.Key.fromString(keydata.privateECDSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.sign,
+            b"some data",
+            signatureType=b"ssh-dss",
+        )
 
     def test_verifyRSA(self):
         """
@@ -1594,8 +1675,8 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
 
     def test_noRegeneration(self):
@@ -1606,15 +1687,15 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
         keyContent = keyFile.getContent()
 
-        # Set the key size to 1024 bits. Since it exists already, it will find
-        # the 512 bit key, and not generate a 1024 bit key.
-        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
-        self.assertEqual(key.size(), 512)
+        # Set the key size to 2048 bits. Since it exists already, it will find
+        # the 1024 bit key, and not generate a 2048 bit key.
+        key = keys._getPersistentRSAKey(keyFile, keySize=2048)
+        self.assertEqual(key.size(), 1024)
         self.assertEqual(keyFile.getContent(), keyContent)
 
     def test_keySizeZero(self):
@@ -1625,6 +1706,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
         key._keyObject = None
         self.assertEqual(key.size(), 0)

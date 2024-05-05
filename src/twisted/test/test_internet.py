@@ -24,7 +24,7 @@ except ImportError:
 else:
     ssl = _ssl
 
-if ssl and not ssl.supported:  # type: ignore[attr-defined]
+if ssl and not ssl.supported:
     ssl = None
 
 
@@ -1033,7 +1033,6 @@ class ResolveTests(TestCase):
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
         with open(helperPath, "w") as helperFile:
-
             # Eeueuuggg
             reactorName = reactor.__module__
 

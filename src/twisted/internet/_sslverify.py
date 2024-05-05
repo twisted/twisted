@@ -2,20 +2,21 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
+from typing import Dict
 
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -159,11 +160,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError  # type: ignore[import]
-        from service_identity.pyopenssl import (  # type: ignore[import]
-            verify_hostname,
-            verify_ip_address,
-        )
+        from service_identity import VerificationError
+        from service_identity.pyopenssl import verify_hostname, verify_ip_address
 
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
@@ -257,7 +255,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(dict):
+class DistinguishedName(Dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -433,8 +431,8 @@ class Certificate(CertBase):
     def __repr__(self) -> str:
         return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
-            self.getSubject().commonName,
-            self.getIssuer().commonName,
+            self.getSubject().get("commonName", ""),
+            self.getIssuer().get("commonName", ""),
         )
 
     def __eq__(self, other: object) -> bool:
@@ -508,7 +506,7 @@ class Certificate(CertBase):
         """
         return PublicKey(self.original.get_pubkey())
 
-    def dump(self, format=crypto.FILETYPE_ASN1):
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         return crypto.dump_certificate(format, self.original)
 
     def serialNumber(self):
@@ -1273,9 +1271,9 @@ class OpenSSLCertificateOptions:
     @type _cipherString: L{unicode}
 
     @ivar _defaultMinimumTLSVersion: The default TLS version that will be
-        negotiated. This should be a "safe default", with wide client and
+        negotiated.  This should be a "safe default", with wide client and
         server support, vs an optimally secure one that excludes a large number
-        of users. As of late 2016, TLSv1.0 is that safe default.
+        of users.  As of May 2022, TLSv1.2 is that safe default.
     @type _defaultMinimumTLSVersion: L{TLSVersion} constant
     """
 
@@ -1285,7 +1283,7 @@ class OpenSSLCertificateOptions:
 
     _OP_NO_TLSv1_3 = _tlsDisableFlags[TLSVersion.TLSv1_3]
 
-    _defaultMinimumTLSVersion = TLSVersion.TLSv1_0
+    _defaultMinimumTLSVersion = TLSVersion.TLSv1_2
 
     @_mutuallyExclusiveArguments(
         [
@@ -1331,11 +1329,11 @@ class OpenSSLCertificateOptions:
         @param method: Deprecated, use a combination of
             C{insecurelyLowerMinimumTo}, C{raiseMinimumTo}, or
             C{lowerMaximumSecurityTo} instead.  The SSL protocol to use, one of
-            C{SSLv23_METHOD}, C{SSLv2_METHOD}, C{SSLv3_METHOD}, C{TLSv1_METHOD}
-            (or any other method constants provided by pyOpenSSL).  By default,
-            a setting will be used which allows TLSv1.0, TLSv1.1, and TLSv1.2.
-            Can not be used with C{insecurelyLowerMinimumTo},
-            C{raiseMinimumTo}, or C{lowerMaximumSecurityTo}
+            C{TLS_METHOD}, C{TLSv1_2_METHOD}, or C{TLSv1_2_METHOD} (or any
+            future method constants provided by pyOpenSSL).  By default, a
+            setting will be used which allows TLSv1.2 and TLSv1.3.  Can not be
+            used with C{insecurelyLowerMinimumTo}, C{raiseMinimumTo}, or
+            C{lowerMaximumSecurityTo}.
 
         @param verify: Please use a C{trustRoot} keyword argument instead,
             since it provides the same functionality in a less error-prone way.
@@ -1489,7 +1487,7 @@ class OpenSSLCertificateOptions:
         self._mode = SSL.MODE_RELEASE_BUFFERS
 
         if method is None:
-            self.method = SSL.SSLv23_METHOD
+            self.method = SSL.TLS_METHOD
 
             if raiseMinimumTo:
                 if lowerMaximumSecurityTo and raiseMinimumTo > lowerMaximumSecurityTo:
@@ -1654,13 +1652,7 @@ class OpenSSLCertificateOptions:
                 verifyFlags |= SSL.VERIFY_CLIENT_ONCE
             self.trustRoot._addCACertsToContext(ctx)
 
-        # It'd be nice if pyOpenSSL let us pass None here for this behavior (as
-        # the underlying OpenSSL API call allows NULL to be passed).  It
-        # doesn't, so we'll supply a function which does the same thing.
-        def _verifyCallback(conn, cert, errno, depth, preverify_ok):
-            return preverify_ok
-
-        ctx.set_verify(verifyFlags, _verifyCallback)
+        ctx.set_verify(verifyFlags)
         if self.verifyDepth is not None:
             ctx.set_verify_depth(self.verifyDepth)
 
@@ -1722,13 +1714,13 @@ class OpenSSLCipher:
 @lru_cache(maxsize=32)
 def _expandCipherString(cipherString, method, options):
     """
-    Expand C{cipherString} according to C{method} and C{options} to a tuple
-    of explicit ciphers that are supported by the current platform.
+    Expand C{cipherString} according to C{method} and C{options} to a tuple of
+    explicit ciphers that are supported by the current platform.
 
     @param cipherString: An OpenSSL cipher string to expand.
     @type cipherString: L{unicode}
 
-    @param method: An OpenSSL method like C{SSL.TLSv1_METHOD} used for
+    @param method: An OpenSSL method like C{SSL.TLS_METHOD} used for
         determining the effective ciphers.
 
     @param options: OpenSSL options like C{SSL.OP_NO_SSLv3} ORed together.
@@ -1810,7 +1802,7 @@ class OpenSSLAcceptableCiphers:
         return cls(
             _expandCipherString(
                 nativeString(cipherString),
-                SSL.SSLv23_METHOD,
+                SSL.TLS_METHOD,
                 SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3,
             )
         )

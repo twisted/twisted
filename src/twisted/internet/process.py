@@ -9,6 +9,7 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 
 Maintainer: Itamar Shtull-Trauring
 """
+from __future__ import annotations
 
 import errno
 import gc
@@ -18,7 +19,17 @@ import signal
 import stat
 import sys
 import traceback
-from typing import Callable, Dict, Optional
+from collections import defaultdict
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
+_PS_CLOSE: int
+_PS_DUP2: int
+
+if not TYPE_CHECKING:
+    try:
+        from os import POSIX_SPAWN_CLOSE as _PS_CLOSE, POSIX_SPAWN_DUP2 as _PS_DUP2
+    except ImportError:
+        pass
 
 from zope.interface import implementer
 
@@ -55,10 +66,10 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers: Dict[int, Callable] = {}
+reapProcessHandlers: Dict[int, _BaseProcess] = {}
 
 
-def reapAllProcesses():
+def reapAllProcesses() -> None:
     """
     Reap all registered processes.
     """
@@ -349,24 +360,49 @@ class _BaseProcess(BaseProcess):
                 # Reset signal handling to the default
                 signal.signal(signalnum, signal.SIG_DFL)
 
+    def _trySpawnInsteadOfFork(
+        self, path, uid, gid, executable, args, environment, kwargs
+    ):
+        """
+        Try to use posix_spawnp() instead of fork(), if possible.
+
+        This implementation returns False because the non-PTY subclass
+        implements the actual logic; we can't yet use this for pty processes.
+
+        @return: a boolean indicating whether posix_spawnp() was used or not.
+        """
+        return False
+
     def _fork(self, path, uid, gid, executable, args, environment, **kwargs):
         """
         Fork and then exec sub-process.
 
         @param path: the path where to run the new process.
         @type path: L{bytes} or L{unicode}
+
         @param uid: if defined, the uid used to run the new process.
         @type uid: L{int}
+
         @param gid: if defined, the gid used to run the new process.
         @type gid: L{int}
+
         @param executable: the executable to run in a new process.
         @type executable: L{str}
+
         @param args: arguments used to create the new process.
         @type args: L{list}.
+
         @param environment: environment used for the new process.
         @type environment: L{dict}.
+
         @param kwargs: keyword arguments to L{_setupChild} method.
         """
+
+        if self._trySpawnInsteadOfFork(
+            path, uid, gid, executable, args, environment, kwargs
+        ):
+            return
+
         collectorEnabled = gc.isenabled()
         gc.disable()
         try:
@@ -595,19 +631,96 @@ def _listOpenFDs():
     return detector._listOpenFDs()
 
 
+def _getFileActions(
+    fdState: List[Tuple[int, bool]],
+    childToParentFD: Dict[int, int],
+    doClose: int,
+    doDup2: int,
+) -> List[Tuple[int, ...]]:
+    """
+    Get the C{file_actions} parameter for C{posix_spawn} based on the
+    parameters describing the current process state.
+
+    @param fdState: A list of 2-tuples of (file descriptor, close-on-exec
+        flag).
+
+    @param doClose: the integer to use for the 'close' instruction
+
+    @param doDup2: the integer to use for the 'dup2' instruction
+    """
+    fdStateDict = dict(fdState)
+    parentToChildren: Dict[int, List[int]] = defaultdict(list)
+    for inChild, inParent in childToParentFD.items():
+        parentToChildren[inParent].append(inChild)
+    allocated = set(fdStateDict)
+    allocated |= set(childToParentFD.values())
+    allocated |= set(childToParentFD.keys())
+    nextFD = 0
+
+    def allocateFD() -> int:
+        nonlocal nextFD
+        while nextFD in allocated:
+            nextFD += 1
+        allocated.add(nextFD)
+        return nextFD
+
+    result: List[Tuple[int, ...]] = []
+    relocations = {}
+    for inChild, inParent in sorted(childToParentFD.items()):
+        # The parent FD will later be reused by a child FD.
+        parentToChildren[inParent].remove(inChild)
+        if parentToChildren[inChild]:
+            new = relocations[inChild] = allocateFD()
+            result.append((doDup2, inChild, new))
+        if inParent in relocations:
+            result.append((doDup2, relocations[inParent], inChild))
+            if not parentToChildren[inParent]:
+                result.append((doClose, relocations[inParent]))
+        else:
+            if inParent == inChild:
+                if fdStateDict[inParent]:
+                    # If the child is attempting to inherit the parent as-is,
+                    # and it is not close-on-exec, the job is already done; we
+                    # can bail.  Otherwise...
+
+                    tempFD = allocateFD()
+                    # The child wants to inherit the parent as-is, so the
+                    # handle must be heritable.. dup2 makes the new descriptor
+                    # inheritable by default, *but*, per the man page, “if
+                    # fildes and fildes2 are equal, then dup2() just returns
+                    # fildes2; no other changes are made to the existing
+                    # descriptor”, so we need to dup it somewhere else and dup
+                    # it back before closing the temporary place we put it.
+                    result.extend(
+                        [
+                            (doDup2, inParent, tempFD),
+                            (doDup2, tempFD, inChild),
+                            (doClose, tempFD),
+                        ]
+                    )
+            else:
+                result.append((doDup2, inParent, inChild))
+
+    for eachFD, uninheritable in fdStateDict.items():
+        if eachFD not in childToParentFD and not uninheritable:
+            result.append((doClose, eachFD))
+
+    return result
+
+
 @implementer(IProcessTransport)
 class Process(_BaseProcess):
     """
     An operating-system Process.
 
     This represents an operating-system process with arbitrary input/output
-    pipes connected to it. Those pipes may represent standard input,
-    standard output, and standard error, or any other file descriptor.
+    pipes connected to it.  Those pipes may represent standard input, standard
+    output, and standard error, or any other file descriptor.
 
-    On UNIX, this is implemented using fork(), exec(), pipe()
-    and fcntl(). These calls may not exist elsewhere so this
-    code is not cross-platform. (also, windows can only select
-    on sockets...)
+    On UNIX, this is implemented using posix_spawnp() when possible (or fork(),
+    exec(), pipe() and fcntl() when not).  These calls may not exist elsewhere
+    so this code is not cross-platform.  (also, windows can only select on
+    sockets...)
     """
 
     debug = False
@@ -643,6 +756,7 @@ class Process(_BaseProcess):
         nuances of setXXuid on UNIX: it will assume that either your effective
         or real UID is 0.)
         """
+        self._reactor = reactor
         if not proto:
             assert "r" not in childFDs.values()
             assert "w" not in childFDs.values()
@@ -737,6 +851,57 @@ class Process(_BaseProcess):
         # callback.  That's probably not ideal.  The replacement API for
         # spawnProcess should improve upon this situation.
         registerReapProcessHandler(self.pid, self)
+
+    def _trySpawnInsteadOfFork(
+        self, path, uid, gid, executable, args, environment, kwargs
+    ):
+        """
+        Try to use posix_spawnp() instead of fork(), if possible.
+
+        @return: a boolean indicating whether posix_spawnp() was used or not.
+        """
+        if (
+            # no support for setuid/setgid anywhere but in QNX's
+            # posix_spawnattr_setcred
+            (uid is not None)
+            or (gid is not None)
+            or ((path is not None) and (os.path.abspath(path) != os.path.abspath(".")))
+            or getattr(self._reactor, "_neverUseSpawn", False)
+        ):
+            return False
+        fdmap = kwargs.get("fdmap")
+        fdState = []
+        for eachFD in _listOpenFDs():
+            try:
+                isCloseOnExec = fcntl.fcntl(eachFD, fcntl.F_GETFD, fcntl.FD_CLOEXEC)
+            except OSError:
+                pass
+            else:
+                fdState.append((eachFD, isCloseOnExec))
+        if environment is None:
+            environment = os.environ
+
+        setSigDef = [
+            everySignal
+            for everySignal in range(1, signal.NSIG)
+            if signal.getsignal(everySignal) == signal.SIG_IGN
+        ]
+
+        self.pid = os.posix_spawnp(
+            executable,
+            args,
+            environment,
+            file_actions=_getFileActions(
+                fdState, fdmap, doClose=_PS_CLOSE, doDup2=_PS_DUP2
+            ),
+            setsigdef=setSigDef,
+        )
+        self.status = -1
+        return True
+
+    if getattr(os, "posix_spawnp", None) is None:
+        # If there's no posix_spawn implemented, let the superclass handle it
+        del _trySpawnInsteadOfFork
 
     def _setupChild(self, fdmap):
         """

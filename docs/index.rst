@@ -7,7 +7,7 @@ Contents:
     :maxdepth: 2
     :includehidden:
 
-    installation/index
+    installation
     core/index
     conch/index
     mail/index
@@ -16,8 +16,14 @@ Contents:
     web/index
     words/index
     api/index
+    development/index
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 1
+   :caption: Quick links
 
-    historic/index
+   security
+   community
+   api/index
+   GitHub <https://github.com/twisted/twisted>
+   PyPI <https://pypi.org/project/twisted>

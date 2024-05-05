@@ -16,7 +16,7 @@ from warnings import catch_warnings, simplefilter
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None  # type: ignore[assignment,misc]
+    invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
 
@@ -263,7 +263,7 @@ deprecatedModuleAttribute(
 
         def makeSomeFiles(pathobj, dirdict):
             pathdict = {}
-            for (key, value) in dirdict.items():
+            for key, value in dirdict.items():
                 child = pathobj.child(key)
                 if isinstance(value, bytes):
                     pathdict[key] = child
@@ -303,7 +303,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module  # type: ignore[import]
+        from package import module  # type: ignore[import-not-found]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -433,7 +433,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module  # type: ignore[import]
+        from twisted_private_helper import module  # type: ignore[import-not-found]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -500,11 +500,11 @@ def callTestFunction():
         self.package.moveTo(self.package.sibling(b"twisted_renamed_helper"))
 
         # Make sure importlib notices we've changed importable packages:
-        if invalidate_caches:
+        if invalidate_caches:  # type: ignore[truthy-function]
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module  # type: ignore[import]
+        from twisted_renamed_helper import module  # type: ignore[import-not-found]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -905,7 +905,6 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         )
 
     def test_deprecatedKeywordParameter(self):
-
         message = (
             "The 'foo' parameter to "
             "twisted.python.test.test_deprecate."

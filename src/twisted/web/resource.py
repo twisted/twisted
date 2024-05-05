@@ -1,11 +1,13 @@
-# -*- test-case-name: twisted.web.test.test_web -*-
+# -*- test-case-name: twisted.web.test.test_web, twisted.web.test.test_resource -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Implementation of the lowest-level Resource class.
-"""
 
+See L{twisted.web.pages} for some utility implementations.
+"""
+from __future__ import annotations
 
 __all__ = [
     "IResource",
@@ -18,11 +20,15 @@ __all__ = [
 ]
 
 import warnings
+from typing import Sequence
 
 from zope.interface import Attribute, Interface, implementer
 
+from incremental import Version
+
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
+from twisted.python.deprecate import deprecated
 from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
@@ -59,16 +65,18 @@ class IResource(Interface):
         @type request: L{twisted.web.server.Request}
         """
 
-    def putChild(path, child):
+    def putChild(path: bytes, child: "IResource") -> None:
         """
-        Put a child IResource implementor at the given path.
+        Put a child L{IResource} implementor at the given path.
 
         @param path: A single path component, to be interpreted relative to the
             path this resource is found at, at which to put the given child.
             For example, if resource A can be found at I{http://example.com/foo}
             then a call like C{A.putChild(b"bar", B)} will make resource B
             available at I{http://example.com/foo/bar}.
-        @type path: C{bytes}
+
+            The path component is I{not} URL-encoded -- pass C{b'foo bar'}
+            rather than C{b'foo%20bar'}.
         """
 
     def render(request):
@@ -103,12 +111,13 @@ class Resource:
     """
     Define a web-accessible resource.
 
-    This serves 2 main purposes; one is to provide a standard representation
+    This serves two main purposes: one is to provide a standard representation
     for what HTTP specification calls an 'entity', and the other is to provide
     an abstract directory structure for URL retrieval.
     """
 
     entityType = IResource
+    allowedMethods: Sequence[bytes]
 
     server = None
 
@@ -178,7 +187,7 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return NoResource("No such child resource.")
+        return _UnsafeNoResource()
 
     def getChildWithDefault(self, path, request):
         """
@@ -199,12 +208,17 @@ class Resource:
         return self.getChild(path, request)
 
     def getChildForRequest(self, request):
+        """
+        Deprecated in favor of L{getChildForRequest}.
+
+        @see: L{twisted.web.resource.getChildForRequest}.
+        """
         warnings.warn(
             "Please use module level getChildForRequest.", DeprecationWarning, 2
         )
         return getChildForRequest(self, request)
 
-    def putChild(self, path, child):
+    def putChild(self, path: bytes, child: IResource) -> None:
         """
         Register a static child.
 
@@ -213,24 +227,18 @@ class Resource:
         path to be ''.
 
         @param path: A single path component.
-        @type path: L{bytes}
 
         @param child: The child resource to register.
-        @type child: L{IResource}
 
         @see: L{IResource.putChild}
         """
         if not isinstance(path, bytes):
-            warnings.warn(
-                "Path segment must be bytes; "
-                "passing {} has never worked, and "
-                "will raise an exception in the future.".format(type(path)),
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
+            raise TypeError(f"Path segment must be bytes, but {path!r} is {type(path)}")
 
         self.children[path] = child
-        child.server = self.server
+        # IResource is incomplete and doesn't mention this server attribute, see
+        # https://github.com/twisted/twisted/issues/11717
+        child.server = self.server  # type: ignore[attr-defined]
 
     def render(self, request):
         """
@@ -286,20 +294,19 @@ def _computeAllowedMethods(resource):
     return allowedMethods
 
 
-class ErrorPage(Resource):
+class _UnsafeErrorPageBase(Resource):
     """
-    L{ErrorPage} is a resource which responds with a particular
-    (parameterized) status and a body consisting of HTML containing some
-    descriptive text.  This is useful for rendering simple error pages.
+    Base class for deprecated error page resources.
 
     @ivar template: A native string which will have a dictionary interpolated
         into it to generate the response body.  The dictionary has the following
         keys:
 
-          - C{"code"}: The status code passed to L{ErrorPage.__init__}.
-          - C{"brief"}: The brief description passed to L{ErrorPage.__init__}.
+          - C{"code"}: The status code passed to L{_UnsafeErrorPage.__init__}.
+          - C{"brief"}: The brief description passed to
+            L{_UnsafeErrorPage.__init__}.
           - C{"detail"}: The detailed description passed to
-            L{ErrorPage.__init__}.
+            L{_UnsafeErrorPage.__init__}.
 
     @ivar code: An integer status code which will be used for the response.
     @type code: C{int}
@@ -342,24 +349,65 @@ class ErrorPage(Resource):
         return self
 
 
-class NoResource(ErrorPage):
+class _UnsafeErrorPage(_UnsafeErrorPageBase):
     """
-    L{NoResource} is a specialization of L{ErrorPage} which returns the HTTP
-    response code I{NOT FOUND}.
+    L{_UnsafeErrorPage}, publicly available via the deprecated alias
+    C{ErrorPage}, is a resource which responds with a particular
+    (parameterized) status and a body consisting of HTML containing some
+    descriptive text.  This is useful for rendering simple error pages.
+
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
+    L{twisted.web.pages.errorPage} instead.
     """
 
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
+    )
+    def __init__(self, status, brief, detail):
+        _UnsafeErrorPageBase.__init__(self, status, brief, detail)
+
+
+class _UnsafeNoResource(_UnsafeErrorPageBase):
+    """
+    L{_UnsafeNoResource}, publicly available via the deprecated alias
+    C{NoResource}, is a specialization of L{_UnsafeErrorPage} which
+    returns the HTTP response code I{NOT FOUND}.
+
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
+    L{twisted.web.pages.notFound} instead.
+    """
+
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
+    )
     def __init__(self, message="Sorry. No luck finding that resource."):
-        ErrorPage.__init__(self, NOT_FOUND, "No Such Resource", message)
+        _UnsafeErrorPageBase.__init__(self, NOT_FOUND, "No Such Resource", message)
 
 
-class ForbiddenResource(ErrorPage):
+class _UnsafeForbiddenResource(_UnsafeErrorPageBase):
     """
-    L{ForbiddenResource} is a specialization of L{ErrorPage} which returns the
-    I{FORBIDDEN} HTTP response code.
+    L{_UnsafeForbiddenResource}, publicly available via the deprecated alias
+    C{ForbiddenResource} is a specialization of L{_UnsafeErrorPage} which
+    returns the I{FORBIDDEN} HTTP response code.
+
+    Deprecated in Twisted 22.10.0 because it permits HTML injection; use
+    L{twisted.web.pages.forbidden} instead.
     """
 
+    @deprecated(
+        Version("Twisted", 22, 10, 0),
+        "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
+    )
     def __init__(self, message="Sorry, resource is forbidden."):
-        ErrorPage.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+        _UnsafeErrorPageBase.__init__(self, FORBIDDEN, "Forbidden Resource", message)
+
+
+# Deliberately undocumented public aliases. See GHSA-vg46-2rrj-3647.
+ErrorPage = _UnsafeErrorPage
+NoResource = _UnsafeNoResource
+ForbiddenResource = _UnsafeForbiddenResource
 
 
 class _IEncodingResource(Interface):

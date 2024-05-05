@@ -39,10 +39,10 @@ else:
     # race-conditions duty. - hawkie
 
     try:
-        import pywintypes  # type: ignore[import]
-        from win32api import OpenProcess  # type: ignore[import]
+        import pywintypes
+        from win32api import OpenProcess
     except ImportError:
-        kill = None  # type: ignore[assignment,misc]
+        kill = None  # type: ignore[assignment]
     else:
         ERROR_ACCESS_DENIED = 5
         ERROR_INVALID_PARAMETER = 87

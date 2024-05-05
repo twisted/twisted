@@ -4,13 +4,16 @@
 """
 Tests for L{twisted.test.iosim}.
 """
+from __future__ import annotations
 
+from typing import Literal
 
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.protocol import Protocol
-from twisted.test.iosim import FakeTransport, connect
+from twisted.internet.task import Clock
+from twisted.test.iosim import FakeTransport, connect, connectedServerAndClient
 from twisted.trial.unittest import TestCase
 
 
@@ -19,7 +22,7 @@ class FakeTransportTests(TestCase):
     Tests for L{FakeTransport}.
     """
 
-    def test_connectionSerial(self):
+    def test_connectionSerial(self) -> None:
         """
         Each L{FakeTransport} receives a serial number that uniquely identifies
         it.
@@ -30,7 +33,7 @@ class FakeTransportTests(TestCase):
         self.assertIsInstance(b.serial, int)
         self.assertNotEqual(a.serial, b.serial)
 
-    def test_writeSequence(self):
+    def test_writeSequence(self) -> None:
         """
         L{FakeTransport.writeSequence} will write a sequence of L{bytes} to the
         transport.
@@ -42,7 +45,7 @@ class FakeTransportTests(TestCase):
 
         self.assertEqual(b"".join(a.stream), b"abcd")
 
-    def test_writeAfterClose(self):
+    def test_writeAfterClose(self) -> None:
         """
         L{FakeTransport.write} will accept writes after transport was closed,
         but the data will be silently discarded.
@@ -64,17 +67,17 @@ class StrictPushProducer:
 
     _state = "running"
 
-    def stopProducing(self):
+    def stopProducing(self) -> None:
         if self._state == "stopped":
             raise ValueError("Cannot stop already-stopped IPushProducer")
         self._state = "stopped"
 
-    def pauseProducing(self):
+    def pauseProducing(self) -> None:
         if self._state != "running":
             raise ValueError(f"Cannot pause {self._state} IPushProducer")
         self._state = "paused"
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if self._state != "paused":
             raise ValueError(f"Cannot resume {self._state} IPushProducer")
         self._state = "running"
@@ -85,14 +88,14 @@ class StrictPushProducerTests(TestCase):
     Tests for L{StrictPushProducer}.
     """
 
-    def _initial(self):
+    def _initial(self) -> StrictPushProducer:
         """
         @return: A new L{StrictPushProducer} which has not been through any state
             changes.
         """
         return StrictPushProducer()
 
-    def _stopped(self):
+    def _stopped(self) -> StrictPushProducer:
         """
         @return: A new, stopped L{StrictPushProducer}.
         """
@@ -100,7 +103,7 @@ class StrictPushProducerTests(TestCase):
         producer.stopProducing()
         return producer
 
-    def _paused(self):
+    def _paused(self) -> StrictPushProducer:
         """
         @return: A new, paused L{StrictPushProducer}.
         """
@@ -108,7 +111,7 @@ class StrictPushProducerTests(TestCase):
         producer.pauseProducing()
         return producer
 
-    def _resumed(self):
+    def _resumed(self) -> StrictPushProducer:
         """
         @return: A new L{StrictPushProducer} which has been paused and resumed.
         """
@@ -117,7 +120,7 @@ class StrictPushProducerTests(TestCase):
         producer.resumeProducing()
         return producer
 
-    def assertStopped(self, producer):
+    def assertStopped(self, producer: StrictPushProducer) -> None:
         """
         Assert that the given producer is in the stopped state.
 
@@ -126,7 +129,7 @@ class StrictPushProducerTests(TestCase):
         """
         self.assertEqual(producer._state, "stopped")
 
-    def assertPaused(self, producer):
+    def assertPaused(self, producer: StrictPushProducer) -> None:
         """
         Assert that the given producer is in the paused state.
 
@@ -135,7 +138,7 @@ class StrictPushProducerTests(TestCase):
         """
         self.assertEqual(producer._state, "paused")
 
-    def assertRunning(self, producer):
+    def assertRunning(self, producer: StrictPushProducer) -> None:
         """
         Assert that the given producer is in the running state.
 
@@ -144,28 +147,28 @@ class StrictPushProducerTests(TestCase):
         """
         self.assertEqual(producer._state, "running")
 
-    def test_stopThenStop(self):
+    def test_stopThenStop(self) -> None:
         """
         L{StrictPushProducer.stopProducing} raises L{ValueError} if called when
         the producer is stopped.
         """
         self.assertRaises(ValueError, self._stopped().stopProducing)
 
-    def test_stopThenPause(self):
+    def test_stopThenPause(self) -> None:
         """
         L{StrictPushProducer.pauseProducing} raises L{ValueError} if called when
         the producer is stopped.
         """
         self.assertRaises(ValueError, self._stopped().pauseProducing)
 
-    def test_stopThenResume(self):
+    def test_stopThenResume(self) -> None:
         """
         L{StrictPushProducer.resumeProducing} raises L{ValueError} if called when
         the producer is stopped.
         """
         self.assertRaises(ValueError, self._stopped().resumeProducing)
 
-    def test_pauseThenStop(self):
+    def test_pauseThenStop(self) -> None:
         """
         L{StrictPushProducer} is stopped if C{stopProducing} is called on a paused
         producer.
@@ -174,7 +177,7 @@ class StrictPushProducerTests(TestCase):
         producer.stopProducing()
         self.assertStopped(producer)
 
-    def test_pauseThenPause(self):
+    def test_pauseThenPause(self) -> None:
         """
         L{StrictPushProducer.pauseProducing} raises L{ValueError} if called on a
         paused producer.
@@ -182,7 +185,7 @@ class StrictPushProducerTests(TestCase):
         producer = self._paused()
         self.assertRaises(ValueError, producer.pauseProducing)
 
-    def test_pauseThenResume(self):
+    def test_pauseThenResume(self) -> None:
         """
         L{StrictPushProducer} is resumed if C{resumeProducing} is called on a
         paused producer.
@@ -191,7 +194,7 @@ class StrictPushProducerTests(TestCase):
         producer.resumeProducing()
         self.assertRunning(producer)
 
-    def test_resumeThenStop(self):
+    def test_resumeThenStop(self) -> None:
         """
         L{StrictPushProducer} is stopped if C{stopProducing} is called on a
         resumed producer.
@@ -200,7 +203,7 @@ class StrictPushProducerTests(TestCase):
         producer.stopProducing()
         self.assertStopped(producer)
 
-    def test_resumeThenPause(self):
+    def test_resumeThenPause(self) -> None:
         """
         L{StrictPushProducer} is paused if C{pauseProducing} is called on a
         resumed producer.
@@ -209,7 +212,7 @@ class StrictPushProducerTests(TestCase):
         producer.pauseProducing()
         self.assertPaused(producer)
 
-    def test_resumeThenResume(self):
+    def test_resumeThenResume(self) -> None:
         """
         L{StrictPushProducer.resumeProducing} raises L{ValueError} if called on a
         resumed producer.
@@ -217,7 +220,7 @@ class StrictPushProducerTests(TestCase):
         producer = self._resumed()
         self.assertRaises(ValueError, producer.resumeProducing)
 
-    def test_stop(self):
+    def test_stop(self) -> None:
         """
         L{StrictPushProducer} is stopped if C{stopProducing} is called in the
         initial state.
@@ -226,7 +229,7 @@ class StrictPushProducerTests(TestCase):
         producer.stopProducing()
         self.assertStopped(producer)
 
-    def test_pause(self):
+    def test_pause(self) -> None:
         """
         L{StrictPushProducer} is paused if C{pauseProducing} is called in the
         initial state.
@@ -235,7 +238,7 @@ class StrictPushProducerTests(TestCase):
         producer.pauseProducing()
         self.assertPaused(producer)
 
-    def test_resume(self):
+    def test_resume(self) -> None:
         """
         L{StrictPushProducer} raises L{ValueError} if C{resumeProducing} is called
         in the initial state.
@@ -249,7 +252,7 @@ class IOPumpTests(TestCase):
     Tests for L{IOPump}.
     """
 
-    def _testStreamingProducer(self, mode):
+    def _testStreamingProducer(self, mode: Literal["server", "client"]) -> None:
         """
         Connect a couple protocol/transport pairs to an L{IOPump} and then pump
         it.  Verify that a streaming producer registered with one of the
@@ -284,16 +287,28 @@ class IOPumpTests(TestCase):
         pump.pump()
         self.assertEqual("running", producer._state)
 
-    def test_serverStreamingProducer(self):
+    def test_serverStreamingProducer(self) -> None:
         """
         L{IOPump.pump} does not call C{resumeProducing} on a L{IPushProducer}
         (stream producer) registered with the server transport.
         """
         self._testStreamingProducer(mode="server")
 
-    def test_clientStreamingProducer(self):
+    def test_clientStreamingProducer(self) -> None:
         """
         L{IOPump.pump} does not call C{resumeProducing} on a L{IPushProducer}
         (stream producer) registered with the client transport.
         """
         self._testStreamingProducer(mode="client")
+
+    def test_timeAdvances(self) -> None:
+        """
+        L{IOPump.pump} advances time in the given L{Clock}.
+        """
+        time_passed = []
+        clock = Clock()
+        _, _, pump = connectedServerAndClient(Protocol, Protocol, clock=clock)
+        clock.callLater(0, lambda: time_passed.append(True))
+        self.assertFalse(time_passed)
+        pump.pump()
+        self.assertTrue(time_passed)

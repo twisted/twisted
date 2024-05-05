@@ -26,9 +26,7 @@ import inspect
 import os
 import platform
 import socket
-import sys
 import urllib.parse as urllib_parse
-import warnings
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
@@ -42,11 +40,6 @@ from urllib.parse import quote as urlquote, unquote as urlunquote
 from incremental import Version
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-
-if sys.version_info >= (3, 7, 0):
-    _PY37PLUS = True
-else:
-    _PY37PLUS = False
 
 if platform.python_implementation() == "PyPy":
     _PYPY = True
@@ -480,7 +473,7 @@ def bytesEnviron():
     encodekey = os.environ.encodekey
     encodevalue = os.environ.encodevalue
 
-    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}  # type: ignore[call-arg]
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
 
 def _constructMethod(cls, name, self):
@@ -501,35 +494,6 @@ def _constructMethod(cls, name, self):
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
-
-
-def _get_async_param(isAsync=None, **kwargs):
-    """
-    Provide a backwards-compatible way to get async param value that does not
-    cause a syntax error under Python 3.7.
-
-    @param isAsync: isAsync param value (should default to None)
-    @type isAsync: L{bool}
-
-    @param kwargs: keyword arguments of the caller (only async is allowed)
-    @type kwargs: L{dict}
-
-    @raise TypeError: Both isAsync and async specified.
-
-    @return: Final isAsync param value
-    @rtype: L{bool}
-    """
-    if "async" in kwargs:
-        warnings.warn(
-            "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    if isAsync is None and "async" in kwargs:
-        isAsync = kwargs.pop("async")
-    if kwargs:
-        raise TypeError
-    return bool(isAsync)
 
 
 def _pypy3BlockingHack():
@@ -651,6 +615,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_get_async_param",
     "Sequence",
 ]

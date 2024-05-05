@@ -5,11 +5,12 @@
 """
 PID file.
 """
+from __future__ import annotations
 
 import errno
 from os import getpid, kill, name as SYSTEM_NAME
 from types import TracebackType
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
 from zope.interface import Interface, implementer
 
@@ -106,7 +107,7 @@ class PIDFile:
         """
         return f"{int(pid)}\n".encode()
 
-    def __init__(self, filePath: FilePath) -> None:
+    def __init__(self, filePath: FilePath[Any]) -> None:
         """
         @param filePath: The path to the PID file on disk.
         """
@@ -253,7 +254,7 @@ class NonePIDFile:
         return None
 
 
-nonePIDFile = NonePIDFile()
+nonePIDFile: IPIDFile = NonePIDFile()
 
 
 class AlreadyRunningError(Exception):

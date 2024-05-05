@@ -42,7 +42,7 @@ class RandomFactory:
 
     getrandbits = getrandbits
 
-    def _osUrandom(self, nbytes):
+    def _osUrandom(self, nbytes: int) -> bytes:
         """
         Wrapper around C{os.urandom} that cleanly manage its absence.
         """
@@ -51,7 +51,7 @@ class RandomFactory:
         except (AttributeError, NotImplementedError) as e:
             raise SourceNotAvailable(e)
 
-    def secureRandom(self, nbytes, fallback=False):
+    def secureRandom(self, nbytes: int, fallback: bool = False) -> bytes:
         """
         Return a number of secure random bytes.
 
@@ -80,7 +80,7 @@ class RandomFactory:
         else:
             raise SecureRandomNotAvailable("No secure random source available")
 
-    def _randBits(self, nbytes):
+    def _randBits(self, nbytes: int) -> bytes:
         """
         Wrapper around C{os.getrandbits}.
         """
@@ -93,13 +93,13 @@ class RandomFactory:
     _maketrans = bytes.maketrans
     _BYTES = _maketrans(b"", b"")
 
-    def _randModule(self, nbytes):
+    def _randModule(self, nbytes: int) -> bytes:
         """
         Wrapper around the C{random} module.
         """
         return b"".join([bytes([random.choice(self._BYTES)]) for i in range(nbytes)])
 
-    def insecureRandom(self, nbytes):
+    def insecureRandom(self, nbytes: int) -> bytes:
         """
         Return a number of non secure random bytes.
 
@@ -109,11 +109,11 @@ class RandomFactory:
         @return: a string of random bytes.
         @rtype: C{str}
         """
-        for src in ("_randBits", "_randModule"):
-            try:
-                return getattr(self, src)(nbytes)
-            except SourceNotAvailable:
-                pass
+        try:
+            return self._randBits(nbytes)
+        except SourceNotAvailable:
+            pass
+        return self._randModule(nbytes)
 
 
 factory = RandomFactory()

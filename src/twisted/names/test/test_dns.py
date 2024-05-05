@@ -9,7 +9,6 @@ Tests for twisted.names.dns.
 
 import struct
 from io import BytesIO
-from typing import cast
 
 from zope.interface.verify import verifyClass
 
@@ -162,6 +161,12 @@ class Str2TimeTests(unittest.TestCase):
         If a non-integer prefix is given, L{dns.str2time} raises L{ValueError}.
         """
         self.assertRaises(ValueError, dns.str2time, "fooS")
+
+    def test_invalidSuffix(self) -> None:
+        """
+        If an invalid suffix is given, L{dns.str2time} raises L{ValueError}.
+        """
+        self.assertRaises(ValueError, dns.str2time, "1Q")
 
 
 class NameTests(unittest.TestCase):
@@ -614,7 +619,7 @@ class RoundtripDNSTests(unittest.TestCase):
             (100, 50, b"s", b"http+I2L+I2C+I2R", b"", b"_http._tcp.gatech.edu"),
         ]
 
-        for (order, preference, flags, service, regexp, replacement) in naptrs:
+        for order, preference, flags, service, regexp, replacement in naptrs:
             rin = dns.Record_NAPTR(
                 order, preference, flags, service, regexp, replacement
             )
@@ -1260,6 +1265,26 @@ class DatagramProtocolTests(unittest.TestCase):
         not raise an exception while processing it.
         """
         self.proto.datagramReceived(b"", address.IPv4Address("UDP", "127.0.0.1", 12345))
+        self.assertEqual(self.controller.messages, [])
+
+    def test_malformedMessage(self):
+        """
+        Test that when an unparsable message is received, datagramReceived does
+        not raise an exception while processing it.
+        """
+        # message with a reference loop - captured in the field.
+        unparsable = (
+            b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x02\x00\x02\x11WWWW"
+            b"WWWWWW-XXXXXX\x08_arduino\x04_tcp\x05local\x00\x00\xff\x80\x01\xc0"
+            b"7\x00\x0c\x00\x01\x00\x00\x11\x94\x00\x02\xc0V\xc0V\x00!\x00\x01\x00"
+            b"\x00\x11\x94\x00\x08\x00\x00\x00\x00 J\xc0\x8f\xc0V\x00\x10\x00\x01"
+            b'\x00\x00\x11\x94\x00K\x0eauth_upload=no board="ESP8266_WEMOS_D1MINIL'
+            b'ITE"\rssh_upload=no\x0ctcp_check=no\xc0\x8f\x00\x01\x00\x01\x00\x00'
+            b"\x00x\x00\x04\xc0\xa8\x01)"
+        )
+        self.proto.datagramReceived(
+            unparsable, address.IPv4Address("UDP", "127.0.0.1", 12345)
+        )
         self.assertEqual(self.controller.messages, [])
 
     def test_simpleQuery(self):
@@ -4840,15 +4865,12 @@ class Foo:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return cast(
-            str,
-            dns._compactRepr(
-                self,
-                alwaysShow="alwaysShowField".split(),
-                fieldNames="field1 field2 alwaysShowField".split(),
-                flagNames="flagTrue flagFalse".split(),
-                sectionNames="section1 section2".split(),
-            ),
+        return dns._compactRepr(
+            self,
+            alwaysShow="alwaysShowField".split(),
+            fieldNames="field1 field2 alwaysShowField".split(),
+            flagNames="flagTrue flagFalse".split(),
+            sectionNames="section1 section2".split(),
         )
 
 

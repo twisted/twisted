@@ -41,7 +41,7 @@ reactor.listen/connect* methods for more information.
 from random import random as _goodEnoughRandom
 from typing import List
 
-from automat import MethodicalMachine  # type: ignore[import]
+from automat import MethodicalMachine
 
 from twisted.application import service
 from twisted.internet import task
@@ -70,7 +70,6 @@ def _maybeGlobalReactor(maybeReactor):
 
 
 class _VolatileDataService(service.Service):
-
     volatile: List[str] = []
 
     def __getstate__(self):
@@ -925,7 +924,7 @@ class _ClientMachine:
         @param value: the value to fire the L{Deferred}s with.
         """
         self._awaitingConnected, waiting = [], self._awaitingConnected
-        for (w, remaining) in waiting:
+        for w, remaining in waiting:
             w.callback(value)
 
     @_machine.output()
@@ -938,7 +937,7 @@ class _ClientMachine:
         """
         ready = []
         notReady = []
-        for (w, remaining) in self._awaitingConnected:
+        for w, remaining in self._awaitingConnected:
             if remaining is None:
                 notReady.append((w, remaining))
             elif remaining <= 1:

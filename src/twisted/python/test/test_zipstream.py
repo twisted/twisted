@@ -175,7 +175,7 @@ class ZipstreamTests(unittest.TestCase):
 
     def test_invalidHeader(self):
         """
-        A zipfile entry with the wrong magic number should raise BadZipfile for
+        A zipfile entry with the wrong magic number should raise BadZipFile for
         readfile(), but that should not affect other files in the archive.
         """
         fn = self.makeZipFile(["test contents", "more contents"])
@@ -186,14 +186,14 @@ class ZipstreamTests(unittest.TestCase):
             scribble.seek(zeroOffset, 0)
             scribble.write(b"0" * 4)
         with zipstream.ChunkingZipFile(fn) as czf:
-            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            self.assertRaises(zipfile.BadZipFile, czf.readfile, "0")
             with czf.readfile("1") as zfe:
                 self.assertEqual(zfe.read(), b"more contents")
 
     def test_filenameMismatch(self):
         """
         A zipfile entry with a different filename than is found in the central
-        directory should raise BadZipfile.
+        directory should raise BadZipFile.
         """
         fn = self.makeZipFile([b"test contents", b"more contents"])
         with zipfile.ZipFile(fn, "r") as zf:
@@ -204,14 +204,14 @@ class ZipstreamTests(unittest.TestCase):
             scribble.write(info.FileHeader())
 
         with zipstream.ChunkingZipFile(fn) as czf:
-            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            self.assertRaises(zipfile.BadZipFile, czf.readfile, "0")
             with czf.readfile("1") as zfe:
                 self.assertEqual(zfe.read(), b"more contents")
 
     def test_unsupportedCompression(self):
         """
         A zipfile which describes an unsupported compression mechanism should
-        raise BadZipfile.
+        raise BadZipFile.
         """
         fn = self.mktemp()
         with zipfile.ZipFile(fn, "w") as zf:
@@ -223,7 +223,7 @@ class ZipstreamTests(unittest.TestCase):
             zi.compress_type = 1234
 
         with zipstream.ChunkingZipFile(fn) as czf:
-            self.assertRaises(zipfile.BadZipfile, czf.readfile, "0")
+            self.assertRaises(zipfile.BadZipFile, czf.readfile, "0")
 
     def test_extraData(self):
         """

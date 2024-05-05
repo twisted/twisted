@@ -13,12 +13,16 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
+from typing import Any, Callable, Dict, Set
 
 from zope.interface import implementer
 
-from twisted.internet import base, posixbase, selectreactor
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet import posixbase
+from twisted.internet.abstract import FileDescriptor
+from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
+from twisted.python.monkey import MonkeyPatcher
+from ._signals import _IWaker, _UnixWaker
 
 
 def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
@@ -48,14 +52,46 @@ def ensureNotImported(moduleNames, errorMessage, preventImports=[]):
         sys.modules[name] = None
 
 
-class GlibWaker(posixbase._UnixWaker):
+class GlibWaker(_UnixWaker):
     """
     Run scheduled events after waking up.
     """
 
-    def doRead(self):
-        posixbase._UnixWaker.doRead(self)
+    def __init__(self, reactor):
+        super().__init__()
+        self.reactor = reactor
+
+    def doRead(self) -> None:
+        super().doRead()
         self.reactor._simulate()
+
+
+def _signalGlue():
+    """
+    Integrate glib's wakeup file descriptor usage and our own.
+
+    Python supports only one wakeup file descriptor at a time and both Twisted
+    and glib want to use it.
+
+    This is a context manager that can be wrapped around the whole glib
+    reactor main loop which makes our signal handling work with glib's signal
+    handling.
+    """
+    from gi import _ossighelper as signalGlue
+
+    patcher = MonkeyPatcher()
+    patcher.addPatch(signalGlue, "_wakeup_fd_is_active", True)
+    return patcher
+
+
+def _loopQuitter(
+    idleAdd: Callable[[Callable[[], None]], None], loopQuit: Callable[[], None]
+) -> Callable[[], None]:
+    """
+    Combine the C{glib.idle_add} and C{glib.MainLoop.quit} functions into a
+    function suitable for crashing the reactor.
+    """
+    return lambda: idleAdd(loopQuit)
 
 
 @implementer(IReactorFDSet)
@@ -93,45 +129,65 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     # Install a waker that knows it needs to call C{_simulate} in order to run
     # callbacks queued from a thread:
-    _wakerFactory = GlibWaker
+    def _wakerFactory(self) -> _IWaker:
+        return GlibWaker(self)
 
-    def __init__(self, glib_module, gtk_module, useGtk=False):
+    def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
-        self._reads = set()
-        self._writes = set()
-        self._sources = {}
+        self._reads: Set[IReadDescriptor] = set()
+        self._writes: Set[IWriteDescriptor] = set()
+        self._sources: Dict[FileDescriptor, int] = {}
         self._glib = glib_module
-        self._gtk = gtk_module
-        posixbase.PosixReactorBase.__init__(self)
+
+        self._POLL_DISCONNECTED = (
+            glib_module.IOCondition.HUP
+            | glib_module.IOCondition.ERR
+            | glib_module.IOCondition.NVAL
+        )
+        self._POLL_IN = glib_module.IOCondition.IN
+        self._POLL_OUT = glib_module.IOCondition.OUT
+
+        # glib's iochannel sources won't tell us about any events that we haven't
+        # asked for, even if those events aren't sensible inputs to the poll()
+        # call.
+        self.INFLAGS = self._POLL_IN | self._POLL_DISCONNECTED
+        self.OUTFLAGS = self._POLL_OUT | self._POLL_DISCONNECTED
+
+        super().__init__()
 
         self._source_remove = self._glib.source_remove
         self._timeout_add = self._glib.timeout_add
 
-        def _mainquit():
-            if self._gtk.main_level():
-                self._gtk.main_quit()
+        self.context = self._glib.main_context_default()
+        self._pending = self.context.pending
+        self._iteration = self.context.iteration
+        self.loop = self._glib.MainLoop()
+        self._crash = _loopQuitter(self._glib.idle_add, self.loop.quit)
+        self._run = self.loop.run
 
-        if useGtk:
-            self._pending = self._gtk.events_pending
-            self._iteration = self._gtk.main_iteration_do
-            self._crash = _mainquit
-            self._run = self._gtk.main
-        else:
-            self.context = self._glib.main_context_default()
-            self._pending = self.context.pending
-            self._iteration = self.context.iteration
-            self.loop = self._glib.MainLoop()
-            self._crash = lambda: self._glib.idle_add(self.loop.quit)
-            self._run = self.loop.run
-
-    def _handleSignals(self):
+    def _reallyStartRunning(self):
+        """
+        Make sure the reactor's signal handlers are installed despite any
+        outside interference.
+        """
         # First, install SIGINT and friends:
-        base._SignalReactorMixin._handleSignals(self)
+        super()._reallyStartRunning()
+
         # Next, since certain versions of gtk will clobber our signal handler,
         # set all signal handlers again after the event loop has started to
-        # ensure they're *really* set. We don't call this twice so we don't
-        # leak file descriptors created in the SIGCHLD initialization:
-        self.callLater(0, posixbase.PosixReactorBase._handleSignals, self)
+        # ensure they're *really* set.
+        #
+        # We don't actually know which versions of gtk do this so this might
+        # be obsolete.  If so, that would be great and this whole method can
+        # go away.  Someone needs to find out, though.
+        #
+        # https://github.com/twisted/twisted/issues/11762
+
+        def reinitSignals():
+            self._signals.uninstall()
+            self._signals.install()
+
+        self.callLater(0, reinitSignals)
 
     # The input_add function in pygtk1 checks for objects with a
     # 'fileno' method and, if present, uses the result of that method
@@ -153,7 +209,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             fileno = source
             wrapper = callback
         return self._glib.io_add_watch(
-            fileno, condition, wrapper, priority=self._glib.PRIORITY_DEFAULT_IDLE
+            fileno,
+            self._glib.PRIORITY_DEFAULT_IDLE,
+            condition,
+            wrapper,
         )
 
     def _ioEventCallback(self, source, condition):
@@ -271,10 +330,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         Run the reactor.
         """
-        self.callWhenRunning(self._reschedule)
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        if self._started:
-            self._run()
+        with _signalGlue():
+            self.callWhenRunning(self._reschedule)
+            self.startRunning(installSignalHandlers=installSignalHandlers)
+            if self._started:
+                self._run()
 
     def callLater(self, *args, **kwargs):
         """
@@ -307,58 +367,3 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         """
         self.runUntilCurrent()
         self._reschedule()
-
-
-class PortableGlibReactorBase(selectreactor.SelectReactor):
-    """
-    Base class for GObject event loop reactors that works on Windows.
-
-    Sockets aren't supported by GObject's input_add on Win32.
-    """
-
-    def __init__(self, glib_module, gtk_module, useGtk=False):
-        self._simtag = None
-        self._glib = glib_module
-        self._gtk = gtk_module
-        selectreactor.SelectReactor.__init__(self)
-
-        self._source_remove = self._glib.source_remove
-        self._timeout_add = self._glib.timeout_add
-
-        def _mainquit():
-            if self._gtk.main_level():
-                self._gtk.main_quit()
-
-        if useGtk:
-            self._crash = _mainquit
-            self._run = self._gtk.main
-        else:
-            self.loop = self._glib.MainLoop()
-            self._crash = lambda: self._glib.idle_add(self.loop.quit)
-            self._run = self.loop.run
-
-    def crash(self):
-        selectreactor.SelectReactor.crash(self)
-        self._crash()
-
-    def run(self, installSignalHandlers=True):
-        self.startRunning(installSignalHandlers=installSignalHandlers)
-        self._timeout_add(0, self.simulate)
-        if self._started:
-            self._run()
-
-    def simulate(self):
-        """
-        Run simulation loops and reschedule callbacks.
-        """
-        if self._simtag is not None:
-            self._source_remove(self._simtag)
-        self.iterate()
-        timeout = min(self.timeout(), 0.01)
-        if timeout is None:
-            timeout = 0.01
-        self._simtag = self._timeout_add(
-            int(timeout * 1000),
-            self.simulate,
-            priority=self._glib.PRIORITY_DEFAULT_IDLE,
-        )
