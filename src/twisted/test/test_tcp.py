@@ -191,11 +191,9 @@ class ListeningTests(TestCase):
         if not hasattr(socket, "SO_REUSEPORT"):
             raise SkipTest("SO_REUSEPORT not supported")
         f = MyServerFactory()
-        p1 = reactor.listenTCP(0, f, interface="127.0.0.1", listenMultiple=True)
+        p1 = reactor.listenTCPReusePort(0, f, interface="127.0.0.1")
         self.addCleanup(p1.stopListening)
-        p2 = reactor.listenTCP(
-            p1._realPortNumber, f, interface="127.0.0.1", listenMultiple=True
-        )
+        p2 = reactor.listenTCPReusePort(p1._realPortNumber, f, interface="127.0.0.1")
         self.addCleanup(p2.stopListening)
         self.assertTrue(interfaces.IListeningPort.providedBy(p1))
         self.assertTrue(interfaces.IListeningPort.providedBy(p2))
