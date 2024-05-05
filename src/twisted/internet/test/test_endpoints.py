@@ -10,6 +10,7 @@ L{twisted.internet.endpoints}.
 from errno import EPERM
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 from unittest import skipIf
 
@@ -622,10 +623,21 @@ class ClientEndpointTestCaseMixin:
         self.assertConnectArgs(expectedClients[0], expectedArgs)
 
 
-class ServerEndpointTestCaseMixin:
+if TYPE_CHECKING:
+    CheckAsTestCase = unittest.TestCase
+else:
+    CheckAsTestCase = object
+
+
+class ServerEndpointTestCaseMixin(CheckAsTestCase):
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
+
+    # Annotate some test fixtures whose shape is annoying to describe because
+    # they predate type-checking
+    createServerEndpoint: Any
+    expectedServers: Any
 
     def test_interface(self):
         """
@@ -637,7 +649,7 @@ class ServerEndpointTestCaseMixin:
         )
         self.assertTrue(verifyObject(interfaces.IStreamServerEndpoint, ep))
 
-    def test_endpointListenSuccess(self):
+    def test_endpointListenSuccess(self) -> None:
         """
         An endpoint can listen and returns a deferred that gets called back
         with a port instance.
