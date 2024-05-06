@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -131,7 +132,7 @@ from twisted.protocols import basic, policies
 from twisted.python import log
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.failure import Failure
 from twisted.web._responses import (
     ACCEPTED,
@@ -769,6 +770,14 @@ class HTTPClient(basic.LineReceiver):
         if self.length == 0:
             self.handleResponseEnd()
             self.setLineMode(rest)
+
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.client.Agent instead.",
+    __name__,
+    HTTPClient.__name__,
+)
 
 
 # response codes that must have empty bodies

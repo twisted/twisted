@@ -5,7 +5,6 @@
 Test HTTP support.
 """
 
-
 import base64
 import calendar
 import random
@@ -20,6 +19,7 @@ from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
 
 import hamcrest
+from incremental import Version
 
 from twisted.internet import address
 from twisted.internet.error import ConnectionDone, ConnectionLost
@@ -4405,6 +4405,22 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
                     ]
                 ),
             )
+
+
+class HTTPClientDeprecationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{http.HTTPClient} is deprecated.
+    """
+
+    def test_deprecated(self):
+        """
+        Accessing L{http.HTTPClient} produces a deprecation warning.
+        """
+        self.getDeprecatedModuleAttribute(
+            "twisted.web.http",
+            "HTTPClient",
+            Version("Twisted", "NEXT", 0, 0),
+        )
 
 
 class HTTPClientSanitizationTests(unittest.SynchronousTestCase):
