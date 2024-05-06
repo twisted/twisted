@@ -372,6 +372,7 @@ For example:
 If you can't use the decorator add a call to :py:func:`warnings.warn()` at the beginning of the implementation.
 The warning should be of type :py:exc:`DeprecationWarning` and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
 The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
+
 If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
 
 .. code-block:: python
