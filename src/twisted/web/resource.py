@@ -173,15 +173,15 @@ class Resource:
         Retrieve a 'child' resource from me.
 
         Implement this to create dynamic resource generation -- resources which
-        are always available may be registered with self.putChild().
+        are always available may be registered with L{putChild()}.
 
         This will not be called if the class-level variable 'isLeaf' is set in
         your subclass; instead, the 'postpath' attribute of the request will be
         left as a list of the remaining path elements.
 
-        For example, the URL /foo/bar/baz will normally be::
+        For example, the URL C{/foo/bar/baz} will normally be:
 
-          | site.resource.getChild('foo').getChild('bar').getChild('baz').
+            site.resource.getChild('foo').getChild('bar').getChild('baz').
 
         However, if the resource returned by 'bar' has isLeaf set to true, then
         the getChild call will never be made on it.
@@ -189,14 +189,14 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return _UnsafeNoResource()
+        return pages.notFound()
 
     def getChildWithDefault(self, path, request):
         """
         Retrieve a static or dynamically generated child resource from me.
 
-        First checks if a resource was added manually by putChild, and then
-        call getChild to check for dynamic resources. Only override if you want
+        First checks if a resource was added manually by L{putChild}, and then
+        call L{getChild} to check for dynamic resources. Only override if you want
         to affect behaviour of all child lookups, rather than just dynamic
         ones.
 
