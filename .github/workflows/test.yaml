@@ -291,7 +291,7 @@ jobs:
         fail_ci_if_error: true
 
   benchmarks:
-    name: Benchmarks for Python $${{ matrix.python-version }}
+    name: Benchmarks for Python ${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: ["3.12", "pypy3.10"]
