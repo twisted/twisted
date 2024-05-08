@@ -3199,6 +3199,14 @@ class SimpleUtilityTests(TestCase):
         result = _resolveIPv6("::1", 123456)
         self.assertEqual(result[:2], ("::1", 123456))
 
+    def test_resolveIPv6UnderflowPort(self):
+        """
+        L{_resolveIPv6} preserves the requested port number, even when it a
+        negative number.
+        """
+        result = _resolveIPv6("::1", -1)
+        self.assertEqual(result[:2], ("::1", -1))
+
 
 class BuffersLogsTests(SynchronousTestCase):
     """
