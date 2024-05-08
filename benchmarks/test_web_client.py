@@ -1,4 +1,9 @@
-"""Benchmarks for C{HTTP11ClientProtocol}."""
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Benchmarks for C{HTTP11ClientProtocol}.
+"""
 
 from twisted.internet.testing import StringTransport
 from twisted.web._newclient import HTTP11ClientProtocol, Request

@@ -1,4 +1,9 @@
-"""Benchmarks for the C{twisted.web} server."""
+# Copyright (c) Twisted Matrix Laboratories.
+# See LICENSE for details.
+
+"""
+Benchmarks for the C{twisted.web} server.
+"""
 
 from twisted.internet.testing import StringTransport
 from twisted.web import resource, server

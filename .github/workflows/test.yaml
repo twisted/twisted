@@ -313,7 +313,7 @@ jobs:
         # codspeed runs this command under a CPU emulator, so it's super-slow.
         # As such, runnig the full `tox -e benchmarks-ci` here is too slow, so
         # we break it into two parts.
-        run: .tox/benchmarks-ci/bin/pytest --codspeed benchmarks/
+        run: python -m pytest --codspeed benchmarks/
 
   static-checks:
     runs-on: ubuntu-22.04
