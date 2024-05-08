@@ -291,6 +291,11 @@ jobs:
         fail_ci_if_error: true
 
   benchmarks:
+    name: Benchmarks for Python $${{ matrix.python-version }}
+    strategy:
+      matrix:
+        python-version: ["3.12", "pypy3.10"]
+
     runs-on: ubuntu-22.04
 
     steps:
@@ -299,7 +304,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        python-version: '${{ matrix.python-version }}'
 
     - name: Install dependencies
       run: |
