@@ -37,22 +37,21 @@ def test_http11_server_empty_request(benchmark):
     factory = server.Site(data)
 
     def go():
-        for _ in range(1000):
-            transport = StringTransport()
-            protocol = factory.buildProtocol(None)
-            protocol.makeConnection(transport)
-            protocol.dataReceived(
-                b"""\
-        GET / HTTP/1.1
-        Host: example.com
-        User-Agent: XXX
-        Time: XXXX
-        Content-Length: 0
+        transport = StringTransport()
+        protocol = factory.buildProtocol(None)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(
+            b"""\
+GET / HTTP/1.1
+Host: example.com
+User-Agent: XXX
+Time: XXXX
+Content-Length: 0
 
-        """.replace(
-                    b"\n", b"\r\n"
-                )
-            )  # + (b"X" * 100))
-            assert b"200 OK" in transport.io.getvalue()
+""".replace(
+                b"\n", b"\r\n"
+            )
+        )
+        assert b"200 OK" in transport.io.getvalue()
 
     benchmark(go)

@@ -26,16 +26,15 @@ def test_http_client_small_response(benchmark):
     """Measure the time to run a simple HTTP 1.1 client request."""
 
     def go():
-        for _ in range(1000):
-            protocol = HTTP11ClientProtocol()
-            protocol.makeConnection(StringTransport())
-            request = Request(
-                b"GET", b"/foo/bar", Headers({b"Host": [b"example.com"]}), None
-            )
-            response = protocol.request(request)
-            protocol.dataReceived(RESPONSE)
-            result = []
-            response.addCallback(result.append)
-            assert result
+        protocol = HTTP11ClientProtocol()
+        protocol.makeConnection(StringTransport())
+        request = Request(
+            b"GET", b"/foo/bar", Headers({b"Host": [b"example.com"]}), None
+        )
+        response = protocol.request(request)
+        protocol.dataReceived(RESPONSE)
+        result = []
+        response.addCallback(result.append)
+        assert result
 
     benchmark(go)
