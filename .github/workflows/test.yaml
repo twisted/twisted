@@ -431,6 +431,7 @@ jobs:
     runs-on: ubuntu-latest
     # Here should be the list of all the other jobs defined in this file.
     needs:
+      - benchmarks
       - testing
       - narrativedocs
       - apidocs
