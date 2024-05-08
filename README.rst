@@ -34,7 +34,7 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
+Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installations.rst>`_.
 
 
 Documentation and Support
