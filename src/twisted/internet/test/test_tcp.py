@@ -58,6 +58,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol, ServerFactory
 from twisted.internet.tcp import (
+    _NUMERIC_ONLY,
     Connection,
     Server,
     _BuffersLogs,
@@ -845,6 +846,58 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         """
         self.assertConnectPortError("invalid", ("service/proto not found ('invalid')",))
 
+    def test_getaddrinfo_negative_port(self):
+        """
+        When a negative port number is used,
+        L{socket.getaddrinfo} raises an exception on Linux and macOS,
+        while returning a result on Windows.
+
+        This is an assumption used in the implementation of L{twisted.internet.tcp._resolveIPv6}.
+        """
+
+        def resolve_negative_port():
+            """
+            Here to share the exact call between Windows and other OSes.
+            """
+            return socket.getaddrinfo("127.0.0.1", -1, 0, 0, 0, _NUMERIC_ONLY)
+
+        if platform.isWindows():
+            result = resolve_negative_port()
+            firstResolve = result[0]
+            addressResolve = firstResolve[4]
+            portResolve = addressResolve[1]
+            self.assertEqual(65535, portResolve)
+            return
+
+        with self.assertRaises(socket.gaierror):
+            resolve_negative_port()
+
+    def test_getaddrinfo_overflow_port(self):
+        """
+        When a invalid big port number is used,
+        L{socket.getaddrinfo} raises an exception macOS,
+        while returning a result on Linux and Windows.
+
+        This is an assumption used in the implementation of L{twisted.internet.tcp._resolveIPv6}.
+        """
+
+        def resolve_overflow_port():
+            """
+            Here to share the exact call between Windows and other OSes.
+            """
+            return socket.getaddrinfo("127.0.0.1", 123456, 0, 0, 0, _NUMERIC_ONLY)
+
+        if platform.isWindows() or platform.isLinux():
+            result = resolve_overflow_port()
+            firstResolve = result[0]
+            addressResolve = firstResolve[4]
+            portResolve = addressResolve[1]
+            self.assertEqual(57920, portResolve)
+            return
+
+        with self.assertRaises(socket.gaierror):
+            resolve_overflow_port()
+
     # This is used to count the number of calls in a single test run.
     # It is defined as a class member but used as an instance member.
     assertConnectPortErrorCalls = 0
@@ -1048,7 +1101,7 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
 
     def test_invalidServiceName(self):
         """
-        When connection is done with an invalid service name as port
+        When connection is done with an invalid service name as port,
         L{ServiceNameUnknownError} is raised.
         """
         reactor = self.buildReactor()

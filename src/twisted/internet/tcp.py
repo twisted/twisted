@@ -648,7 +648,7 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
             self.protocol.makeConnection(self)
 
 
-_NUMERIC_ONLY = socket.AI_NUMERICHOST | _AI_NUMERICSERV
+_NUMERIC_ONLY = socket.AI_NUMERICHOST | socket.AI_NUMERICSERV
 
 
 def _resolveIPv6(ip, port):
@@ -674,15 +674,18 @@ def _resolveIPv6(ip, port):
     """
     usedPort = port
     if isinstance(port, int):
-        # On macOS `getaddrinfo` will reject invalid port number while other
-        # systems accept it as long as it is an int.
-        # We pass a valid port which is later overwritten.
+        # On Linux and macOS `getaddrinfo` raises an exception on negative port number,
+        # while Windows accept it as long as it is an int.
+        # We pass a valid port to resolve the which is later overwritten.
         usedPort = 1
 
     result = socket.getaddrinfo(ip, usedPort, 0, 0, 0, _NUMERIC_ONLY)[0][4]
-    # On every platform except macOS, `getaddrinfo` will also `resolve` invalid port numbers into a
-    # valid one. Example 123456 is resolved as 57920, but we want to preserve the
-    # initial port number.
+    # On Windows and Linux `getaddrinfo` will also "resolve" invalid port numbers,
+    # and covert them into a valid one.
+    # Example 123456 is resolved as 57920, or -1 to 65535.
+    #
+    # We want to preserve the initial port number,
+    # so that later in possible error report we can report the original port number.
     result = (result[0], port, result[2], result[3])
     return result
 
