@@ -4,19 +4,296 @@
 
 """
 Tests for L{twisted.internet.defer.inlineCallbacks}.
-
-Some tests for inlineCallbacks are defined in L{twisted.test.test_defgen} as
-well.
 """
 
+import traceback
 
+from twisted.internet import reactor, task
 from twisted.internet.defer import (
     CancelledError,
     Deferred,
+    fail,
     inlineCallbacks,
     returnValue,
+    succeed,
 )
 from twisted.trial.unittest import SynchronousTestCase, TestCase
+
+
+def getThing():
+    d = Deferred()
+    reactor.callLater(0, d.callback, "hi")
+    return d
+
+
+def getOwie():
+    d = Deferred()
+
+    def CRAP():
+        d.errback(ZeroDivisionError("OMG"))
+
+    reactor.callLater(0, CRAP)
+    return d
+
+
+class TerminalException(Exception):
+    """
+    Just a specific exception type for use in inlineCallbacks tests in this
+    file.
+    """
+
+    pass
+
+
+class BasicTests(TestCase):
+    """
+    This test suite tests basic use cases of L{inlineCallbacks}. For more
+    complex tests see e.g. StackedInlineCallbacksTests.
+    """
+
+    @inlineCallbacks
+    def _genBasics(self):
+        x = yield getThing()
+
+        self.assertEqual(x, "hi")
+
+        try:
+            yield getOwie()
+        except ZeroDivisionError as e:
+            self.assertEqual(str(e), "OMG")
+        returnValue("WOOSH")
+
+    def testBasics(self):
+        """
+        Test that a normal inlineCallbacks works.  Tests yielding a
+        deferred which callbacks, as well as a deferred errbacks. Also
+        ensures returning a final value works.
+        """
+
+        return self._genBasics().addCallback(self.assertEqual, "WOOSH")
+
+    @inlineCallbacks
+    def _genProduceException(self):
+        yield getThing()
+        1 / 0
+
+    def testProducesException(self):
+        """
+        Ensure that a generator that produces an exception signals
+        a Failure condition on result deferred by converting the exception to
+        a L{Failure}.
+        """
+        return self.assertFailure(self._genProduceException(), ZeroDivisionError)
+
+    @inlineCallbacks
+    def _genNothing(self):
+        if False:
+            yield 1
+
+    def testNothing(self):
+        """Test that a generator which never yields results in None."""
+
+        return self._genNothing().addCallback(self.assertEqual, None)
+
+    @inlineCallbacks
+    def _genHandledTerminalFailure(self):
+        try:
+            yield fail(TerminalException("Handled Terminal Failure"))
+        except TerminalException:
+            pass
+
+    def testHandledTerminalFailure(self):
+        """
+        Create a Deferred Generator which yields a Deferred which fails and
+        handles the exception which results.  Assert that the Deferred
+        Generator does not errback its Deferred.
+        """
+        return self._genHandledTerminalFailure().addCallback(self.assertEqual, None)
+
+    @inlineCallbacks
+    def _genHandledTerminalAsyncFailure(self, d):
+        try:
+            yield d
+        except TerminalException:
+            pass
+
+    def testHandledTerminalAsyncFailure(self):
+        """
+        Just like testHandledTerminalFailure, only with a Deferred which fires
+        asynchronously with an error.
+        """
+        d = Deferred()
+        deferredGeneratorResultDeferred = self._genHandledTerminalAsyncFailure(d)
+        d.errback(TerminalException("Handled Terminal Failure"))
+        return deferredGeneratorResultDeferred.addCallback(self.assertEqual, None)
+
+    @inlineCallbacks
+    def _genStackUsage(self):
+        for x in range(5000):
+            # Test with yielding a deferred
+            yield succeed(1)
+        returnValue(0)
+
+    def testStackUsage(self):
+        """
+        Make sure we don't blow the stack when yielding immediately
+        available deferreds.
+        """
+        return self._genStackUsage().addCallback(self.assertEqual, 0)
+
+    @inlineCallbacks
+    def _genStackUsage2(self):
+        for x in range(5000):
+            # Test with yielding a random value
+            yield 1
+        returnValue(0)
+
+    def testStackUsage2(self):
+        """
+        Make sure we don't blow the stack when yielding immediately
+        available values.
+        """
+        return self._genStackUsage2().addCallback(self.assertEqual, 0)
+
+    def testYieldNonDeferred(self):
+        """
+        Ensure that yielding a non-deferred passes it back as the
+        result of the yield expression.
+
+        @return: A L{twisted.internet.Deferred}
+        @rtype: L{twisted.internet.Deferred}
+        """
+
+        def _test():
+            yield 5
+            returnValue(5)
+
+        _test = inlineCallbacks(_test)
+
+        return _test().addCallback(self.assertEqual, 5)
+
+    def testReturnNoValue(self):
+        """Ensure a standard python return results in a None result."""
+
+        def _noReturn():
+            yield 5
+            return
+
+        _noReturn = inlineCallbacks(_noReturn)
+
+        return _noReturn().addCallback(self.assertEqual, None)
+
+    def testReturnValue(self):
+        """Ensure that returnValue works."""
+
+        def _return():
+            yield 5
+            returnValue(6)
+
+        _return = inlineCallbacks(_return)
+
+        return _return().addCallback(self.assertEqual, 6)
+
+    def test_nonGeneratorReturn(self):
+        """
+        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
+        raised when a non-generator returns something other than a generator.
+        """
+
+        def _noYield():
+            return 5
+
+        _noYield = inlineCallbacks(_noYield)
+
+        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
+
+    def test_nonGeneratorReturnValue(self):
+        """
+        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
+        raised when a non-generator calls L{returnValue}.
+        """
+
+        def _noYield():
+            returnValue(5)
+
+        _noYield = inlineCallbacks(_noYield)
+
+        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
+
+    def test_internalDefGenReturnValueDoesntLeak(self):
+        """
+        When one inlineCallbacks calls another, the internal L{_DefGen_Return}
+        flow control exception raised by calling L{defer.returnValue} doesn't
+        leak into tracebacks captured in the caller.
+        """
+        clock = task.Clock()
+
+        @inlineCallbacks
+        def _returns():
+            """
+            This is the inner function using returnValue.
+            """
+            yield task.deferLater(clock, 0)
+            returnValue("actual-value-not-used-for-the-test")
+
+        @inlineCallbacks
+        def _raises():
+            try:
+                yield _returns()
+                raise TerminalException("boom returnValue")
+            except TerminalException:
+                return traceback.format_exc()
+
+        d = _raises()
+        clock.advance(0)
+        tb = self.successResultOf(d)
+
+        # The internal exception is not in the traceback.
+        self.assertNotIn("_DefGen_Return", tb)
+        # No other extra exception is in the traceback.
+        self.assertNotIn(
+            "During handling of the above exception, another exception occurred", tb
+        )
+        # Our targeted exception is in the traceback
+        self.assertIn("test_inlinecb.TerminalException: boom returnValue", tb)
+
+    def test_internalStopIterationDoesntLeak(self):
+        """
+        When one inlineCallbacks calls another, the internal L{StopIteration}
+        flow control exception generated when the inner generator returns
+        doesn't leak into tracebacks captured in the caller.
+
+        This is similar to C{test_internalDefGenReturnValueDoesntLeak} but the
+        inner function uses the "normal" return statemement rather than the
+        C{returnValue} helper.
+        """
+        clock = task.Clock()
+
+        @inlineCallbacks
+        def _returns():
+            yield task.deferLater(clock, 0)
+            return 6
+
+        @inlineCallbacks
+        def _raises():
+            try:
+                yield _returns()
+                raise TerminalException("boom normal return")
+            except TerminalException:
+                return traceback.format_exc()
+
+        d = _raises()
+        clock.advance(0)
+        tb = self.successResultOf(d)
+
+        # The internal exception is not in the traceback.
+        self.assertNotIn("StopIteration", tb)
+        # No other extra exception is in the traceback.
+        self.assertNotIn(
+            "During handling of the above exception, another exception occurred", tb
+        )
+        # Our targeted exception is in the traceback
+        self.assertIn("test_inlinecb.TerminalException: boom normal return", tb)
 
 
 class StopIterationReturnTests(TestCase):
