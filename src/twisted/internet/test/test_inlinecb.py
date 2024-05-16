@@ -49,6 +49,456 @@ def f(d):
         self.assertEqual(self.successResultOf(d2), 14)
 
 
+class StackedInlineCallbacksTests(TestCase):
+    """
+    We have an optimization that invokes generators directly when an
+    inlineCallbacks-decorated function yields value directly to yield of
+    another inlineCallbacks-decorated function.
+    """
+
+    def runCallbacksOnDeferreds(self, deferredList):
+        """
+        Given a list of L{Deferred}, value tuples, invokes each L{Deferred}
+        with the corresponding value. Depending on whether value is an
+        exception, either callback or errback is called.
+        """
+        for d, x in deferredList:
+            if isinstance(x, Exception):
+                d.errback(x)
+            else:
+                d.callback(x)
+
+    def test_nonCalledDeferredSingleYield(self):
+        """
+        Tests the case when a chain of L{inlineCallbacks} calls end up
+        yielding and blocking on a L{Deferred}.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        @inlineCallbacks
+        def f2(x):
+            expectations.append(("f2 enter", x))
+
+            x = yield f1(x)
+            x += 2
+
+            expectations.append(("f2 exit", x))
+            returnValue(x)
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+
+        self.assertEqual(self.successResultOf(res), 8)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f2 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f2 exit", 4),
+                ("f3 exit", 8),
+            ],
+        )
+
+    def test_nonCalledDeferredMultipleYields(self):
+        """
+        Tests the case when a chain of L{inlineCallbacks} calls end up yielding
+        and blocking on a L{Deferred}. In this case the same decorated function
+        is yielded multiple times.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        @inlineCallbacks
+        def f2(x):
+            expectations.append(("f2 enter", x))
+
+            x = yield f1(x)
+            x = yield f1(x)
+            x = yield f1(x)
+            x += 2
+
+            expectations.append(("f2 exit", x))
+            returnValue(x)
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f2(x)
+            x = yield f2(x)
+            x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        for d, x in deferredList:
+            d.callback(x)
+
+        self.assertEqual(self.successResultOf(res), 20)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f2 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f1 enter", 2),
+                ("f1 exit", 3),
+                ("f1 enter", 3),
+                ("f1 exit", 4),
+                ("f2 exit", 6),
+                ("f2 enter", 6),
+                ("f1 enter", 6),
+                ("f1 exit", 7),
+                ("f1 enter", 7),
+                ("f1 exit", 8),
+                ("f1 enter", 8),
+                ("f1 exit", 9),
+                ("f2 exit", 11),
+                ("f2 enter", 11),
+                ("f1 enter", 11),
+                ("f1 exit", 12),
+                ("f1 enter", 12),
+                ("f1 exit", 13),
+                ("f1 enter", 13),
+                ("f1 exit", 14),
+                ("f2 exit", 16),
+                ("f3 exit", 20),
+            ],
+        )
+
+    def test_intermediateAddCallbacksAndNoWaiting(self):
+        """
+        Tests the case when a L{Deferred} produced from L{inlineCallbacks} gets
+        a callback added via L{addCallback} and then yielded in a function
+        decorated with L{inlineCallbacks}. In this case the initial L{Deferred}
+        already has a value.
+        """
+        expectations = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            x = yield x
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        def f2(x):
+            expectations.append(("f2 enter", x))
+            x += 2
+            expectations.append(("f2 exit", x))
+            return x
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            d = f1(x)
+            d.addCallback(f2)
+            x = yield d
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        self.assertEqual(self.successResultOf(f3(1)), 8)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f2 enter", 2),
+                ("f2 exit", 4),
+                ("f3 exit", 8),
+            ],
+        )
+
+    def test_intermediateAddCallbacksAndWithWaitingFirstYield(self):
+        """
+        Tests the case when a L{Deferred} produced from L{inlineCallbacks} gets
+        a callback added via L{addCallback} and then yielded in a function
+        decorated with L{inlineCallbacks}. In this case the initial L{Deferred}
+        does not have a value and blocks entire callback chain.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        def f2(x):
+            expectations.append(("f2 enter", x))
+            x += 2
+            expectations.append(("f2 exit", x))
+            return x
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            d = f1(x)
+            d.addCallback(f2)
+            x = yield d
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+
+        self.assertEqual(self.successResultOf(res), 8)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f2 enter", 2),
+                ("f2 exit", 4),
+                ("f3 exit", 8),
+            ],
+        )
+
+    def test_intermediateAddCallbacksAndWithWaitingSecondYield(self):
+        """
+        Tests the case when a L{Deferred} produced from L{inlineCallbacks} gets
+        a callback added via L{addCallback} and then yielded in a function
+        decorated with L{inlineCallbacks}. In this case the initial L{Deferred}
+        does not have a value and blocks the entire callback chain.
+        Additionally, a subsequent L{Deferred} blocks the entire callback chain
+        again.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        def f2(x):
+            expectations.append(("f2 enter", x))
+            x += 2
+            expectations.append(("f2 exit", x))
+            return x
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f1(x)
+            d = f1(x)
+            d.addCallback(f2)
+            x = yield d
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+
+        self.assertEqual(self.successResultOf(res), 9)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f1 enter", 2),
+                ("f1 exit", 3),
+                ("f2 enter", 3),
+                ("f2 exit", 5),
+                ("f3 exit", 9),
+            ],
+        )
+
+    def test_raisesExceptionFromDeferredWithWaitingFirstCallback(self):
+        """
+        Tests the case when a function decorated with L{inlineCallbacks} yields
+        a L{Deferred} that results in a failure.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        class MyException(Exception):
+            pass
+
+        @inlineCallbacks
+        def f2(x):
+            expectations.append(("f2 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, MyException()))
+            x = yield d
+
+            # Above line throws an exception. The rest of the function will not
+            # be executed, but in case it is (error), it should still work so
+            # that assertions at the end of the test work.
+            expectations.append(("f2 exit", x))  # pragma: no cover
+            returnValue(x)  # pragma: no cover
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            with self.assertRaises(MyException):
+                x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+        self.assertEqual(self.successResultOf(res), 5)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f2 enter", 1),
+                ("f3 exit", 5),
+            ],
+        )
+
+    def test_raisesExceptionFromDeferredWithWaitingSecondCallback(self):
+        """
+        Tests the case when a function decorated with L{inlineCallbacks} blocks
+        on a L{Deferred} produced by another function decorated with
+        L{inlineCallbacks}. Once that unblocks, a L{Deferred} that results
+        in an failure is yielded.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        class MyException(Exception):
+            pass
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        @inlineCallbacks
+        def f2(x):
+            expectations.append(("f2 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, MyException()))
+            x = yield d
+
+            # Above line throws an exception. The rest of the function will not
+            # be executed, but in case it is (error), it should still work so
+            # that assertions at the end of the test work.
+            expectations.append(("f2 exit", x))  # pragma: no cover
+            returnValue(x)  # pragma: no cover
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f1(x)
+            with self.assertRaises(MyException):
+                x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+        self.assertEqual(self.successResultOf(res), 6)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f2 enter", 2),
+                ("f3 exit", 6),
+            ],
+        )
+
+
 class NonLocalExitTests(TestCase):
     """
     It's possible for L{returnValue} to be (accidentally) invoked at a stack
@@ -243,7 +693,12 @@ class CancellationTests(SynchronousTestCase):
             self.deferredGotten()
 
     @inlineCallbacks
-    def sampleInlineCB(self, getChildDeferred=None):
+    def stackedInlineCB(self, getChildDeferred):
+        x = yield getChildDeferred()
+        returnValue(x)
+
+    @inlineCallbacks
+    def sampleInlineCB(self, getChildDeferred=None, stacked=False, firstDeferred=None):
         """
         Generator for testing cascade cancelling cases.
 
@@ -253,7 +708,12 @@ class CancellationTests(SynchronousTestCase):
         if getChildDeferred is None:
             getChildDeferred = self.getDeferred
         try:
-            x = yield getChildDeferred()
+            if stacked:
+                if firstDeferred:
+                    yield firstDeferred
+                x = yield self.stackedInlineCB(getChildDeferred)
+            else:
+                x = yield getChildDeferred()
         except UntranslatedError:
             raise TranslatedError()
         except DontFail as df:
@@ -279,9 +739,14 @@ class CancellationTests(SynchronousTestCase):
         """
         self.deferredsOutstanding.pop(0).callback(result)
 
-    def test_cascadeCancellingOnCancel(self):
+    def doCascadeCancellingOnCancel(self, stacked=False, cancelOnSecondDeferred=False):
         """
         When C{D} cancelled, C{C} will be immediately cancelled too.
+
+        @param stacked: if True, tests stacked inline callbacks
+
+        @param cancelOnSecondDeferred: if True, tests cancellation on the
+            second yield in inlineCallbacks
         """
         childResultHolder = ["FAILURE"]
 
@@ -295,8 +760,17 @@ class CancellationTests(SynchronousTestCase):
             d.addErrback(_eb)
             return d
 
-        d = self.sampleInlineCB(getChildDeferred=getChildDeferred)
+        firstDeferred = None
+        if cancelOnSecondDeferred:
+            firstDeferred = Deferred()
+        d = self.sampleInlineCB(
+            getChildDeferred=getChildDeferred,
+            stacked=stacked,
+            firstDeferred=firstDeferred,
+        )
         d.addErrback(lambda result: None)
+        if firstDeferred:
+            firstDeferred.callback(1)
         d.cancel()
         self.assertEqual(
             childResultHolder[0],
@@ -304,19 +778,47 @@ class CancellationTests(SynchronousTestCase):
             "no cascade cancelling occurs",
         )
 
-    def test_errbackCancelledErrorOnCancel(self):
+    def test_CascadeCancellingOnCancel(self):
+        self.doCascadeCancellingOnCancel()
+
+    def test_CascadeCancellingOnCancelStacked(self):
+        self.doCascadeCancellingOnCancel(stacked=True)
+
+    def test_CascadeCancellingOnCancelStackedOnSecondDeferred(self):
+        self.doCascadeCancellingOnCancel(stacked=True, cancelOnSecondDeferred=True)
+
+    def doErrbackCancelledErrorOnCancel(
+        self, stacked=False, cancelOnSecondDeferred=False
+    ):
         """
         When C{D} cancelled, CancelledError from C{C} will be errbacked
         through C{D}.
-        """
-        d = self.sampleInlineCB()
-        d.cancel()
-        self.assertRaises(
-            CancelledError,
-            self.failureResultOf(d).raiseException,
-        )
 
-    def test_errorToErrorTranslation(self):
+        @param stacked: if True, tests stacked inline callbacks
+
+        @param cancelOnSecondDeferred: if True, tests cancellation on the
+            second yield in inlineCallbacks
+        """
+
+        firstDeferred = None
+        if cancelOnSecondDeferred:
+            firstDeferred = Deferred()
+        d = self.sampleInlineCB(stacked=stacked, firstDeferred=firstDeferred)
+        if firstDeferred:
+            firstDeferred.callback(1)
+        d.cancel()
+        self.assertRaises(CancelledError, self.failureResultOf(d).raiseException)
+
+    def test_ErrbackCancelledErrorOnCancel(self):
+        self.doErrbackCancelledErrorOnCancel()
+
+    def test_ErrbackCancelledErrorOnCancelStacked(self):
+        self.doErrbackCancelledErrorOnCancel(stacked=True)
+
+    def test_ErrbackCancelledErrorOnCancelStackedOnSecondDeferred(self):
+        self.doErrbackCancelledErrorOnCancel(stacked=True, cancelOnSecondDeferred=True)
+
+    def doErrorToErrorTranslation(self, stacked=False, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, and C raises a particular type of error, C{G}
         may catch that error at the point of yielding and translate it into
@@ -326,15 +828,26 @@ class CancellationTests(SynchronousTestCase):
         def cancel(it):
             it.errback(UntranslatedError())
 
+        firstDeferred = None
+        if cancelOnSecondDeferred:
+            firstDeferred = Deferred()
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda: a)
+        d = self.sampleInlineCB(lambda: a, stacked=stacked, firstDeferred=firstDeferred)
+        if firstDeferred:
+            firstDeferred.callback(1)
         d.cancel()
-        self.assertRaises(
-            TranslatedError,
-            self.failureResultOf(d).raiseException,
-        )
+        self.assertRaises(TranslatedError, self.failureResultOf(d).raiseException)
 
-    def test_errorToSuccessTranslation(self):
+    def test_ErrorToErrorTranslation(self):
+        self.doErrorToErrorTranslation()
+
+    def test_ErrorToErrorTranslationStacked(self):
+        self.doErrorToErrorTranslation(stacked=True)
+
+    def test_ErrorToErrorTranslationStackedOnSecondDeferred(self):
+        self.doErrorToErrorTranslation(stacked=True, cancelOnSecondDeferred=True)
+
+    def doErrorToSuccessTranslation(self, stacked=False, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, and C{C} raises a particular type of error,
         C{G} may catch that error at the point of yielding and translate it
@@ -344,14 +857,28 @@ class CancellationTests(SynchronousTestCase):
         def cancel(it):
             it.errback(DontFail(4321))
 
+        firstDeferred = None
+        if cancelOnSecondDeferred:
+            firstDeferred = Deferred()
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda: a)
+        d = self.sampleInlineCB(lambda: a, stacked=stacked, firstDeferred=firstDeferred)
         results = []
         d.addCallback(results.append)
+        if firstDeferred:
+            firstDeferred.callback(1)
         d.cancel()
         self.assertEquals(results, [4320])
 
-    def test_asynchronousCancellation(self):
+    def test_ErrorToSuccessTranslation(self):
+        self.doErrorToSuccessTranslation()
+
+    def test_ErrorToSuccessTranslationStacked(self):
+        self.doErrorToSuccessTranslation(stacked=True)
+
+    def test_ErrorToSuccessTranslationStackedOnSecondDeferred(self):
+        self.doErrorToSuccessTranslation(stacked=True, cancelOnSecondDeferred=True)
+
+    def doAsynchronousCancellation(self, stacked=False, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, it won't reach the callbacks added to it by
         application code until C{C} reaches the point in its callback chain
@@ -369,8 +896,24 @@ class CancellationTests(SynchronousTestCase):
             d.addErrback(deferMeMore)
             return d
 
-        d = self.sampleInlineCB(getChildDeferred=deferMe)
+        firstDeferred = None
+        if cancelOnSecondDeferred:
+            firstDeferred = Deferred()
+        d = self.sampleInlineCB(
+            getChildDeferred=deferMe, stacked=stacked, firstDeferred=firstDeferred
+        )
+        if firstDeferred:
+            firstDeferred.callback(1)
         d.cancel()
         self.assertNoResult(d)
         moreDeferred.callback(6543)
         self.assertEqual(self.successResultOf(d), 6544)
+
+    def test_AsynchronousCancellation(self):
+        self.doAsynchronousCancellation()
+
+    def test_AsynchronousCancellationStacked(self):
+        self.doAsynchronousCancellation(stacked=True)
+
+    def test_AsynchronousCancellationStackedOnSecondDeferred(self):
+        self.doAsynchronousCancellation(stacked=True, cancelOnSecondDeferred=True)
