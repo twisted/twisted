@@ -51,18 +51,6 @@ class BasicTests(TestCase):
     complex tests see e.g. StackedInlineCallbacksTests.
     """
 
-    @inlineCallbacks
-    def _genBasics(self):
-        x = yield getThing()
-
-        self.assertEqual(x, "hi")
-
-        try:
-            yield getOwie()
-        except ZeroDivisionError as e:
-            self.assertEqual(str(e), "OMG")
-        returnValue("WOOSH")
-
     def testBasics(self):
         """
         Test that a normal inlineCallbacks works.  Tests yielding a
@@ -70,12 +58,19 @@ class BasicTests(TestCase):
         ensures returning a final value works.
         """
 
-        return self._genBasics().addCallback(self.assertEqual, "WOOSH")
+        @inlineCallbacks
+        def _genBasics():
+            x = yield getThing()
 
-    @inlineCallbacks
-    def _genProduceException(self):
-        yield getThing()
-        1 / 0
+            self.assertEqual(x, "hi")
+
+            try:
+                yield getOwie()
+            except ZeroDivisionError as e:
+                self.assertEqual(str(e), "OMG")
+            returnValue("WOOSH")
+
+        return _genBasics().addCallback(self.assertEqual, "WOOSH")
 
     def testProducesException(self):
         """
@@ -83,24 +78,23 @@ class BasicTests(TestCase):
         a Failure condition on result deferred by converting the exception to
         a L{Failure}.
         """
-        return self.assertFailure(self._genProduceException(), ZeroDivisionError)
 
-    @inlineCallbacks
-    def _genNothing(self):
-        if False:
-            yield 1
+        @inlineCallbacks
+        def _genProduceException():
+            yield getThing()
+            1 / 0
+
+        return self.assertFailure(_genProduceException(), ZeroDivisionError)
 
     def testNothing(self):
         """Test that a generator which never yields results in None."""
 
-        return self._genNothing().addCallback(self.assertEqual, None)
+        @inlineCallbacks
+        def _genNothing():
+            if False:
+                yield 1
 
-    @inlineCallbacks
-    def _genHandledTerminalFailure(self):
-        try:
-            yield fail(TerminalException("Handled Terminal Failure"))
-        except TerminalException:
-            pass
+        return _genNothing().addCallback(self.assertEqual, None)
 
     def testHandledTerminalFailure(self):
         """
@@ -108,52 +102,63 @@ class BasicTests(TestCase):
         handles the exception which results.  Assert that the Deferred
         Generator does not errback its Deferred.
         """
-        return self._genHandledTerminalFailure().addCallback(self.assertEqual, None)
 
-    @inlineCallbacks
-    def _genHandledTerminalAsyncFailure(self, d):
-        try:
-            yield d
-        except TerminalException:
-            pass
+        @inlineCallbacks
+        def _genHandledTerminalFailure():
+            try:
+                yield fail(TerminalException("Handled Terminal Failure"))
+            except TerminalException:
+                pass
+
+        return _genHandledTerminalFailure().addCallback(self.assertEqual, None)
 
     def testHandledTerminalAsyncFailure(self):
         """
         Just like testHandledTerminalFailure, only with a Deferred which fires
         asynchronously with an error.
         """
+
+        @inlineCallbacks
+        def _genHandledTerminalAsyncFailure(d):
+            try:
+                yield d
+            except TerminalException:
+                pass
+
         d = Deferred()
-        deferredGeneratorResultDeferred = self._genHandledTerminalAsyncFailure(d)
+        deferredGeneratorResultDeferred = _genHandledTerminalAsyncFailure(d)
         d.errback(TerminalException("Handled Terminal Failure"))
         return deferredGeneratorResultDeferred.addCallback(self.assertEqual, None)
-
-    @inlineCallbacks
-    def _genStackUsage(self):
-        for x in range(5000):
-            # Test with yielding a deferred
-            yield succeed(1)
-        returnValue(0)
 
     def testStackUsage(self):
         """
         Make sure we don't blow the stack when yielding immediately
         available deferreds.
         """
-        return self._genStackUsage().addCallback(self.assertEqual, 0)
 
-    @inlineCallbacks
-    def _genStackUsage2(self):
-        for x in range(5000):
-            # Test with yielding a random value
-            yield 1
-        returnValue(0)
+        @inlineCallbacks
+        def _genStackUsage():
+            for x in range(5000):
+                # Test with yielding a deferred
+                yield succeed(1)
+            returnValue(0)
+
+        return _genStackUsage().addCallback(self.assertEqual, 0)
 
     def testStackUsage2(self):
         """
         Make sure we don't blow the stack when yielding immediately
         available values.
         """
-        return self._genStackUsage2().addCallback(self.assertEqual, 0)
+
+        @inlineCallbacks
+        def _genStackUsage2():
+            for x in range(5000):
+                # Test with yielding a random value
+                yield 1
+            returnValue(0)
+
+        return _genStackUsage2().addCallback(self.assertEqual, 0)
 
     def testYieldNonDeferred(self):
         """
