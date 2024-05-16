@@ -7,7 +7,9 @@ Tests for L{twisted.internet.inlineCallbacks}.
 """
 
 import traceback
-from typing import Any, Generator, Union
+import unittest as pyunit
+import weakref
+from typing import Any, Generator, List, Set, Union
 
 from twisted.internet import reactor, task
 from twisted.internet.defer import (
@@ -19,6 +21,7 @@ from twisted.internet.defer import (
     returnValue,
     succeed,
 )
+from twisted.python.compat import _PYPY
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
@@ -302,6 +305,42 @@ class BasicTests(TestCase):
         )
         # Our targeted exception is in the traceback
         self.assertIn("test_inlinecb.TerminalException: boom normal return", tb)
+
+    @pyunit.skipIf(_PYPY, "GC works differently on PyPy.")
+    def test_inlineCallbacksNoCircularReference(self) -> None:
+        """
+        When using L{defer.inlineCallbacks}, after the function exits, it will
+        not keep references to the function itself or the arguments.
+
+        This ensures that the machinery gets deallocated immediately rather than
+        waiting for a GC, on CPython.
+
+        The GC on PyPy works differently (del doesn't immediately deallocate the
+        object), so we skip the test.
+        """
+
+        # Create an object and weak reference to track if its gotten freed.
+        obj: Set[Any] = set()
+        objWeakRef = weakref.ref(obj)
+
+        @inlineCallbacks
+        def func(a: Any) -> Any:
+            yield a
+            return a
+
+        # Run the function
+        funcD = func(obj)
+        self.assertEqual(obj, self.successResultOf(funcD))
+
+        funcDWeakRef = weakref.ref(funcD)
+
+        # Delete the local references to obj and funcD.
+        del obj
+        del funcD
+
+        # The object has been freed if the weak reference returns None.
+        self.assertIsNone(objWeakRef())
+        self.assertIsNone(funcDWeakRef())
 
 
 class StopIterationReturnTests(TestCase):
@@ -1238,3 +1277,58 @@ class CancellationTests(SynchronousTestCase):
 
     def test_AsynchronousCancellationStackedOnSecondDeferred(self):
         self.doAsynchronousCancellation(stacked=True, cancelOnSecondDeferred=True)
+
+    def test_inlineCallbacksCancelCaptured(self) -> None:
+        """
+        Cancelling an L{defer.inlineCallbacks} correctly handles the function
+        catching the L{defer.CancelledError}.
+
+        The desired behavior is:
+            1. If the function is waiting on an inner deferred, that inner
+               deferred is cancelled, and a L{defer.CancelledError} is raised
+               within the function.
+            2. If the function catches that exception, execution continues, and
+               the deferred returned by the function is not resolved.
+            3. Cancelling the deferred again cancels any deferred the function
+               is waiting on, and the exception is raised.
+        """
+        canceller1Calls: List[Deferred[object]] = []
+        canceller2Calls: List[Deferred[object]] = []
+        d1: Deferred[object] = Deferred(canceller1Calls.append)
+        d2: Deferred[object] = Deferred(canceller2Calls.append)
+
+        @inlineCallbacks
+        def testFunc() -> Generator[Deferred[object], object, None]:
+            try:
+                yield d1
+            except Exception:
+                pass
+
+            yield d2
+
+        # Call the function, and ensure that none of the deferreds have
+        # completed or been cancelled yet.
+        funcD = testFunc()
+
+        self.assertNoResult(d1)
+        self.assertNoResult(d2)
+        self.assertNoResult(funcD)
+        self.assertEqual(canceller1Calls, [])
+        self.assertEqual(canceller1Calls, [])
+
+        # Cancel the deferred returned by the function, and check that the first
+        # inner deferred has been cancelled, but the returned deferred has not
+        # completed (as the function catches the raised exception).
+        funcD.cancel()
+
+        self.assertEqual(canceller1Calls, [d1])
+        self.assertEqual(canceller2Calls, [])
+        self.assertNoResult(funcD)
+
+        # Cancel the returned deferred again, this time the returned deferred
+        # should have a failure result, as the function did not catch the cancel
+        # exception raised by `d2`.
+        funcD.cancel()
+        failure = self.failureResultOf(funcD)
+        self.assertEqual(failure.type, CancelledError)
+        self.assertEqual(canceller2Calls, [d2])
