@@ -3,15 +3,17 @@
 # See LICENSE for details.
 
 """
-Tests for L{twisted.internet.defer.inlineCallbacks}.
+Tests for L{twisted.internet.inlineCallbacks}.
 """
 
 import traceback
+from typing import Any, Generator, Union
 
 from twisted.internet import reactor, task
 from twisted.internet.defer import (
     CancelledError,
     Deferred,
+    Failure,
     fail,
     inlineCallbacks,
     returnValue,
@@ -26,14 +28,15 @@ def getThing():
     return d
 
 
-def getOwie():
-    d = Deferred()
-
-    def CRAP():
-        d.errback(ZeroDivisionError("OMG"))
-
-    reactor.callLater(0, CRAP)
-    return d
+def getDivisionFailure(msg: Union[str, None] = None) -> Failure:
+    """
+    Make a L{Failure} of a divide-by-zero error.
+    """
+    try:
+        raise ZeroDivisionError(msg)
+    except BaseException:
+        f = Failure()
+    return f
 
 
 class TerminalException(Exception):
@@ -65,7 +68,7 @@ class BasicTests(TestCase):
             self.assertEqual(x, "hi")
 
             try:
-                yield getOwie()
+                yield getDivisionFailure("OMG")
             except ZeroDivisionError as e:
                 self.assertEqual(str(e), "OMG")
             returnValue("WOOSH")
@@ -928,6 +931,42 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertNotIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
+
+    def test_reraiseTracebacksFromDeferred(self) -> None:
+        """
+        L{defer.inlineCallbacks} that receives tracebacks from a regular Deferred and
+        re-raise tracebacks into their deferred should not lose their tracebacks.
+        """
+        f = getDivisionFailure("msg")
+        d: Deferred[None] = Deferred()
+        try:
+            f.raiseException()
+        except BaseException:
+            d.errback()
+
+        def ic(d: object) -> Generator[Any, Any, None]:
+            """
+            This is never called.
+            It is only used as the decorated function.
+            The resulting function is never called in this test.
+            This is used to make sure that if we wrap
+            an already failed deferred, inlineCallbacks
+            will not add any extra traceback frames.
+            """
+            yield d  # pragma: no cover
+
+        inlineCallbacks(ic)
+        newFailure = self.failureResultOf(d)
+        tb = traceback.extract_tb(newFailure.getTracebackObject())
+
+        self.assertEqual(len(tb), 3)
+        self.assertIn("test_inlinecb", tb[2][0])
+        self.assertEqual("getDivisionFailure", tb[2][2])
+        self.assertEqual("raise ZeroDivisionError(msg)", tb[2][3])
+
+        self.assertIn("test_inlinecb", tb[0][0])
+        self.assertEqual("test_reraiseTracebacksFromDeferred", tb[0][2])
+        self.assertEqual("f.raiseException()", tb[0][3])
 
 
 class UntranslatedError(Exception):

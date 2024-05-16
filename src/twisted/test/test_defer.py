@@ -82,20 +82,6 @@ class GenericError(Exception):
     pass
 
 
-def getDivisionFailure(*args: object, **kwargs: object) -> Failure:
-    """
-    Make a L{Failure} of a divide-by-zero error.
-
-    @param args: Any C{*args} are passed to Failure's constructor.
-    @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
-    """
-    try:
-        1 / 0
-    except BaseException:
-        f = Failure(*args, **kwargs)
-    return f
-
-
 def fakeCallbackCanceller(deferred: Deferred[str]) -> None:
     """
     A fake L{Deferred} canceller which callbacks the L{Deferred}
@@ -1701,42 +1687,6 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         localz, globalz = fail.frames[0][-2:]
         self.assertNotEqual([], localz)
         self.assertNotEqual([], globalz)
-
-    def test_inlineCallbacksTracebacks(self) -> None:
-        """
-        L{defer.inlineCallbacks} that re-raise tracebacks into their deferred
-        should not lose their tracebacks.
-        """
-        f = getDivisionFailure()
-        d: Deferred[None] = Deferred()
-        try:
-            f.raiseException()
-        except BaseException:
-            d.errback()
-
-        def ic(d: object) -> Generator[Any, Any, None]:  # pragma: no cover
-            """
-            This is never called.
-            It is only used as the decorated function.
-            The resulting function is never called in this test.
-            This is used to make sure that if we wrap
-            an already failed deferred, inlineCallbacks
-            will not add any extra traceback frames.
-            """
-            yield d
-
-        defer.inlineCallbacks(ic)
-        newFailure = self.failureResultOf(d)
-        tb = traceback.extract_tb(newFailure.getTracebackObject())
-
-        self.assertEqual(len(tb), 3)
-        self.assertIn("test_defer", tb[2][0])
-        self.assertEqual("getDivisionFailure", tb[2][2])
-        self.assertEqual("1 / 0", tb[2][3])
-
-        self.assertIn("test_defer", tb[0][0])
-        self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
-        self.assertEqual("f.raiseException()", tb[0][3])
 
     def test_fromCoroutine(self) -> None:
         """
@@ -4009,34 +3959,6 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
 
 class InlineCallbackTests(unittest.SynchronousTestCase):
-    def test_inlineCallbacksTracebacks(self) -> None:
-        """
-        L{defer.inlineCallbacks} that re-raise tracebacks into their deferred
-        should not lose their tracebacks.
-        """
-        f = getDivisionFailure()
-        d: Deferred[None] = Deferred()
-        try:
-            f.raiseException()
-        except BaseException:
-            d.errback()
-
-        def ic(d: object) -> Generator[Any, Any, None]:
-            yield d
-
-        defer.inlineCallbacks(ic)
-        newFailure = self.failureResultOf(d)
-        tb = traceback.extract_tb(newFailure.getTracebackObject())
-
-        self.assertEqual(len(tb), 3)
-        self.assertIn("test_defer", tb[2][0])
-        self.assertEqual("getDivisionFailure", tb[2][2])
-        self.assertEqual("1 / 0", tb[2][3])
-
-        self.assertIn("test_defer", tb[0][0])
-        self.assertEqual("test_inlineCallbacksTracebacks", tb[0][2])
-        self.assertEqual("f.raiseException()", tb[0][3])
-
     def test_fromCoroutineRequiresCoroutine(self) -> None:
         """
         L{Deferred.fromCoroutine} requires a coroutine object or a generator,
