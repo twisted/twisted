@@ -55,6 +55,11 @@ class BasicTests(TestCase):
     """
     This test suite tests basic use cases of L{inlineCallbacks}. For more
     complex tests see e.g. StackedInlineCallbacksTests.
+
+    Note that it is important to directly call addCallbacks and other
+    functions exposed as an API, because both L{inlineCallbacks} and
+    L{Deferred} may be optimized in ways that are only exercised in particular
+    situations.
     """
 
     def testBasics(self):
