@@ -103,7 +103,7 @@ class BasicTests(TestCase):
         @inlineCallbacks
         def _genNothing():
             if False:
-                yield 1
+                yield 1  # pragma: no cover
 
         return _genNothing().addCallback(self.assertEqual, None)
 
