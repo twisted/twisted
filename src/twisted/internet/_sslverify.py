@@ -363,8 +363,8 @@ class Certificate(CertBase):
     def __repr__(self) -> str:
         return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
-            self.getSubject().commonName,
-            self.getIssuer().commonName,
+            self.getSubject().get("commonName", ""),
+            self.getIssuer().get("commonName", ""),
         )
 
     def __eq__(self, other: object) -> bool:
