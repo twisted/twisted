@@ -9,10 +9,12 @@ Tests for L{twisted.internet._sslverify}.
 from __future__ import annotations
 
 import datetime
+import gc
 import itertools
 import textwrap
 from dataclasses import dataclass
 from unittest import skipIf
+from weakref import ref
 
 from zope.interface import implementer
 
@@ -20,6 +22,7 @@ from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
+from twisted.internet.address import IPv4Address
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.internet.interfaces import IOpenSSLContextFactory
 from twisted.internet.task import Clock
@@ -82,9 +85,13 @@ else:
 
 if not skipSSL:
     from twisted.internet import _sslverify as sslverify
-    from twisted.internet.ssl import VerificationError, platformTrust
-    from twisted.protocols.tls import TLSMemoryBIOFactory
-
+    from twisted.internet._sslverify import _verifyCB
+    from twisted.internet.ssl import (
+        VerificationError,
+        optionsForClientTLS,
+        platformTrust,
+    )
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -1216,6 +1223,39 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertIn("method", e.exception.args[0])
         self.assertIn("lowerMaximumSecurityTo", e.exception.args[0])
         self.assertIn("exclusive", e.exception.args[0])
+
+    def test_verifyCallbackCrashNoRetain(self) -> None:
+        """
+        Since circular references go through CFFI here, the verification
+        callback has to be very careful to avoid creating any circular
+        references which OpenSSL will hold on to.  Make sure that the
+        TLSMemoryBIOProtocol is no longer referenced after the verification
+        callback runs, even if it explodes with a totally unexpected error.
+        """
+        f = protocol.Factory.forProtocol(protocol.Protocol)
+        proto = TLSMemoryBIOProtocol(
+            TLSMemoryBIOFactory(
+                optionsForClientTLS("just-testing"),
+                True,
+                f,
+            ),
+            f.buildProtocol(IPv4Address("TCP", "192.168.1.1", 8123)),
+        )
+        r = ref(proto)
+        # intentional type check failure
+        cb = _verifyCB(proto, True, "just-testing")
+        # consistency check: we still retain a reference.
+        self.assertIsNot(r(), None)
+        # testing internal bug-reporting here, so we intentionally break its
+        # type contract and expect some random explosion. Just specifying
+        # AttributeError here so if behavior changes and it's something else we
+        # get notified in the future.
+        cb(None, None, None, 0, None)  # type:ignore
+        self.flushLoggedErrors(AttributeError)
+        del proto
+        gc.collect()
+        it = r()
+        self.assertIs(it, None)
 
     def test_tlsVersionRangeInOrder(self):
         """
