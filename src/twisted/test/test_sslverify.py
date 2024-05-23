@@ -2598,6 +2598,17 @@ class ALPNTests(TestCase):
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
         self.assertTrue(sslverify.ProtocolNegotiationSupport.ALPN in supportedProtocols)
 
+    def test_negotiateEmpty(self) -> None:
+        """
+        When negotiating with an empty acceptable protocols list, no protocol
+        is assigned but the connection is not lost.
+        """
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            serverProtocols=[], clientProtocols=[]
+        )
+        self.assertIs(negotiatedProtocol, None)
+        self.assertIs(lostReason, None)
+
 
 class NPNAndALPNAbsentTests(TestCase):
     """
