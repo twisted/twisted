@@ -6,11 +6,11 @@
 Tests for L{twisted.internet.inlineCallbacks}.
 """
 
+import sys
 import traceback
 import unittest as pyunit
 import weakref
 from typing import Any, Generator, List, Set, Union
-import sys
 from unittest import skipIf
 
 from twisted.internet import reactor, task
@@ -1094,7 +1094,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertEqual("test_reraiseTracebacksFromDeferred", tb[0][2])
         self.assertEqual("f.raiseException()", tb[0][3])
 
-    @skipIf(sys.version_info < (3, 13), 'new in Python 3.13')
+    @skipIf(sys.version_info < (3, 13), "new in Python 3.13")
     def test_forwardLotsOfTracebacks313(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
