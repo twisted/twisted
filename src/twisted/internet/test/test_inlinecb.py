@@ -1007,57 +1007,6 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
 
-    @skipIf(HAVE_PY3_12_OR_OLDER, "Needs Python 3.13 or newer")
-    def test_forwardLotsOfTracebacks_313(self):
-        """
-        Several Chained inlineCallbacks gives information about all generators
-        in prior versions, but tracebacks are more sparse in Python 3.13.
-
-        A wider test with 4 chained inline callbacks. Only the first callback
-        in the chain (calling) and its callback (calling2) are reported in the
-        traceback text.
-
-        Application stack-trace should be reported, and implementation details
-        like "throwExceptionIntoGenerator" symbols are omitted from the stack.
-
-        Note that the previous test is testing the simple case, and this one is
-        testing the deep recursion case.
-
-        That case needs specific code in failure.py to accomodate to stack
-        breakage introduced by throwExceptionIntoGenerator.
-
-        Hence we keep the two tests in order to sort out which code we
-        might have regression in.
-        """
-
-        @inlineCallbacks
-        def erroring():
-            yield "forcing generator"
-            raise Exception("Error Marker")
-
-        @inlineCallbacks
-        def calling3():
-            yield erroring()
-
-        @inlineCallbacks
-        def calling2():
-            yield calling3()
-
-        @inlineCallbacks
-        def calling():
-            yield calling2()
-
-        d = calling()
-        f = self.failureResultOf(d)
-        tb = f.getTraceback()
-        self.assertIn("in erroring", tb)
-        self.assertIn("in calling", tb)
-        self.assertIn("in calling2", tb)
-        self.assertIn("in calling3", tb)
-        self.assertNotIn("throwExceptionIntoGenerator", tb)
-        self.assertIn("Error Marker", tb)
-        self.assertIn("in erroring", f.getTraceback())
-
     def test_reraiseTracebacksFromDeferred(self) -> None:
         """
         L{defer.inlineCallbacks} that receives tracebacks from a regular Deferred and
