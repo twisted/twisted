@@ -216,7 +216,7 @@ class SSHCiphers:
         result.key = key
         return result
 
-    def _encrypt(self, blocks):
+    def encrypt(self, blocks):
         """
         Encrypt some data.
 
@@ -240,7 +240,7 @@ class SSHCiphers:
         """
         return self.decryptor.update(blocks)
 
-    def _makeMAC(self, seqid, data):
+    def makeMAC(self, seqid, data):
         """
         Create a message authentication code (MAC) for the given packet using
         the outgoing MAC values.
@@ -258,49 +258,6 @@ class SSHCiphers:
             return b""
         data = struct.pack(">L", seqid) + data
         return hmac.HMAC(self.outMAC.key, data, self.outMAC[0]).digest()
-
-    def createPacket(self, payload: bytes, outgoingPacketSequence: int) -> bytes:
-        """
-        Return the SSH packet at it should be sent to the peer over the wire.
-
-        `payload` is the actual data.
-        """
-        # Start by computing the required padding.
-        #
-        # Extra 1 byte for the padding length
-        payloadSize = len(payload) + 1
-
-        if not self.outMACType.endswith(b"-etm@openssh.com"):
-            # For not ETM, the packet length is also included.
-            payloadSize += 4
-
-        bs = self.encBlockSize
-        lenPad = bs - (payloadSize % bs)
-        if lenPad < 4:
-            lenPad = lenPad + bs
-
-        # Create the unencrypted packet.
-        payloadPacket = (
-            struct.pack("!B", lenPad) + payload + randbytes.secureRandom(lenPad)
-        )
-
-        if self.outMACType.endswith(b"-etm@openssh.com"):
-            # For Encrypt-then-MAC the total size is not encrypted.
-            encryptedPayload = self._encrypt(payloadPacket)
-            totalSizePacket = struct.pack("!L", len(encryptedPayload))
-            encryptedPacket = totalSizePacket + encryptedPayload
-            macTarget = encryptedPacket
-        else:
-            # For non ETM, we substract the 4 bytes added to compute the
-            # padding size.
-            # But we also encrypt the package lenth.
-            totalSizePacket = struct.pack("!L", payloadSize + lenPad - 4)
-            encryptedPacket = self._encrypt(totalSizePacket + payloadPacket)
-            macTarget = totalSizePacket + payloadPacket
-
-        macPacket = self._makeMAC(outgoingPacketSequence, macTarget)
-
-        return encryptedPacket + macPacket
 
     def verify(self, seqid, data, mac):
         """
@@ -323,6 +280,18 @@ class SSHCiphers:
         data = struct.pack(">L", seqid) + data
         outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
         return hmac.compare_digest(mac, outer)
+
+    def isOutMACETM(self) -> bool:
+        """
+        @return True if outgoing MAC is ETM.
+        """
+        return self.outMACType.endswith(b"-etm@openssh.com")
+
+    def isInMACETM(self) -> bool:
+        """
+        @return True if incoming MAC is ETM.
+        """
+        return self.inMACType.endswith(b"-etm@openssh.com")
 
 
 class _InvalidPacket(Exception):
@@ -691,13 +660,61 @@ class SSHTransportBase(protocol.Protocol):
                 payload
             ) + self.outgoingCompression.flush(2)
 
-        wirePacket = self.currentEncryptions.createPacket(
-            payload,
-            self.outgoingPacketSequence,
-        )
+        wirePacket = self._createPacket(payload)
 
         self.transport.write(wirePacket)
         self.outgoingPacketSequence += 1
+
+    def _createPacket(self, payload: bytes) -> bytes:
+        """
+        Return the SSH packet at it should be sent to the peer over the wire.
+
+        `payload` is the actual data.
+        """
+        # Start by computing the required padding.
+        #
+        # Extra 1 byte for the padding length
+        payloadSize = len(payload) + 1
+        isETM = self.currentEncryptions.isOutMACETM()
+
+        if not isETM:
+            # For not ETM, the packet length is also included.
+            payloadSize += 4
+
+        bs = self.currentEncryptions.encBlockSize
+        lenPad = bs - (payloadSize % bs)
+        if lenPad < 4:
+            lenPad = lenPad + bs
+
+        # Create the unencrypted packet.
+        payloadPacket = (
+            struct.pack("!B", lenPad) + payload + randbytes.secureRandom(lenPad)
+        )
+
+        if isETM:
+            # For Encrypt-then-MAC the total size is not encrypted.
+            encryptedPayload = self.currentEncryptions.encrypt(payloadPacket)
+            totalSizePacket = struct.pack("!L", len(encryptedPayload))
+            macTarget = totalSizePacket + encryptedPayload
+            macPacket = self.currentEncryptions.makeMAC(
+                self.outgoingPacketSequence, macTarget
+            )
+            return macTarget + macPacket
+
+        # For non ETM, we subtract the 4 bytes added to compute the
+        # padding size.
+        # But we also encrypt the package length.
+        totalSizePacket = struct.pack("!L", payloadSize + lenPad - 4)
+        encryptedPacket = self.currentEncryptions.encrypt(
+            totalSizePacket + payloadPacket
+        )
+        macTarget = totalSizePacket + payloadPacket
+
+        macPacket = self.currentEncryptions.makeMAC(
+            self.outgoingPacketSequence, macTarget
+        )
+
+        return encryptedPacket + macPacket
 
     def getPacket(self) -> bytes | None:
         """
@@ -711,7 +728,7 @@ class SSHTransportBase(protocol.Protocol):
             return
 
         try:
-            if self.currentEncryptions.inMACType.endswith(b"-etm@openssh.com"):
+            if self.currentEncryptions.isInMACETM():
                 payload = self._getPacketETM()
             else:
                 payload = self._getPacketMTE()
@@ -727,9 +744,16 @@ class SSHTransportBase(protocol.Protocol):
             # No packet received yet.
             return
 
-        packet = self._decompressPacket(payload)
+        if self.incomingCompression:
+            try:
+                payload = self.incomingCompression.decompress(payload)
+            except Exception:
+                self._log.failure("Error decompressing payload")
+                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, b"compression error")
+                return
+
         self.incomingPacketSequence += 1
-        return packet
+        return payload
 
     def _getPacketMTE(self) -> bytes | None:
         """
@@ -816,25 +840,6 @@ class SSHTransportBase(protocol.Protocol):
         paddingLen = struct.unpack("!B", packet[:1])[0]
         payload = packet[1:-paddingLen]
         return payload
-
-    def _decompressPacket(self, payload: bytes) -> bytes:
-        """
-        Decompress the packet if needed.
-
-        @param payload: The packet that might be compressed.
-
-        @return: The decompressed packet.
-        """
-        if not self.incomingCompression:
-            return payload
-
-        try:
-            return self.incomingCompression.decompress(payload)
-        except Exception:
-            # Tolerate any errors in decompression
-            self._log.failure("Error decompressing payload")
-            self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, b"compression error")
-            return
 
     def _unsupportedVersionReceived(self, remoteVersion):
         """
