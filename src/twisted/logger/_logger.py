@@ -6,10 +6,10 @@
 Logger class.
 """
 
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import contextmanager
 from dataclasses import dataclass
 from time import time
-from typing import Any, Iterator, Optional, cast
+from typing import Any, ContextManager, Iterator, Optional, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
@@ -279,7 +279,7 @@ class Logger:
 
     def handlingFailures(
         self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
-    ) -> AbstractContextManager[Operation]:
+    ) -> ContextManager[Operation]:
         """
         Run some application code, logging a failure and emitting a traceback
         in the event that any of it fails, but continuing on.  For example::
@@ -335,6 +335,8 @@ class Logger:
         else:
             op.succeeded = True
 
+    # Remove pointless additional call-stack frame, since the extra method is
+    # just defined to make the AST look correct for pydoctor.
     handlingFailures = _handlingFailures  # noqa
 
 
