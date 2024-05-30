@@ -138,6 +138,7 @@ Therefore, most of the time, you should be accepting the behavior of ``handlingF
 However, if you require more customization of behavior beyond catching everything and continuing on, you can use :py:meth:`failure <twisted.logger.Logger.failure>` directly, like so:
 
 .. code-block:: python
+
     try:
         1 / 0
     except ZeroDivisionError:
