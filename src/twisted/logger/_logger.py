@@ -6,7 +6,7 @@
 Logger class.
 """
 
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from time import time
 from typing import Any, Iterator, Optional, cast
@@ -277,10 +277,9 @@ class Logger:
         """
         self.emit(LogLevel.critical, format, **kwargs)
 
-    @contextmanager
     def handlingFailures(
         self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
-    ) -> Iterator[Operation]:
+    ) -> AbstractContextManager[Operation]:
         """
         Run some application code, logging a failure and emitting a traceback
         in the event that any of it fails, but continuing on.  For example::
@@ -314,9 +313,18 @@ class Logger:
 
         @see: L{Logger.failure}
 
-        @return: An L{Operation} which will have either its C{succeeded} or
-            C{failed} attribute set to C{True} upon completion of the code
-            within the code within the C{with} block.
+        @return: A context manager which yields an L{Operation} which will have
+            either its C{succeeded} or C{failed} attribute set to C{True} upon
+            completion of the code within the code within the C{with} block.
+        """
+        return self._handlingFailures(format, level, **kwargs)  # pragma: no cover
+
+    @contextmanager
+    def _handlingFailures(
+        self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
+    ) -> Iterator[Operation]:
+        """
+        Implementation of L{Logger.handlingFailures}.
         """
         op = Operation()
         try:
@@ -327,6 +335,14 @@ class Logger:
         else:
             op.succeeded = True
 
+    handlingFailures = _handlingFailures  # noqa
+
 
 _log = Logger()
-_loggerFor = lambda obj: _log.__get__(obj, obj.__class__)
+
+
+def _loggerFor(obj: object) -> Logger:
+    """
+    Get a L{Logger} instance attached to the given class.
+    """
+    return _log.__get__(obj, obj.__class__)
