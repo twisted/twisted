@@ -19,6 +19,11 @@ from ._levels import InvalidLogLevelError, LogLevel
 
 @dataclass
 class Operation:
+    """
+    An L{Operation} represents the status of code run with
+    L{Logger.handlingFailures}.
+    """
+
     succeeded: bool = False
     failed: bool = False
 
@@ -274,21 +279,49 @@ class Logger:
 
     @contextmanager
     def handlingFailures(
-        self, format: str, level: LogLevel = LogLevel.critical, **kw: object
+        self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
     ) -> Iterator[Operation]:
         """
-        Perform an operation, and if it fails, log a failure with the given
-        error message.  Use this when you have some application code which may
-        raise arbitrary errors, and you want to handle them.
+        Run some application code, logging a failure and emitting a traceback
+        in the event that any of it fails, but continuing on.  For example::
 
-        @return: an L{Operation} that indicates whether the code within the
+            log = Logger(...)
+
+            with log.handlingFailures("While frobbing {knob}:", knob=knob) as op:
+                frob(knob)
+            if op.succeeded:
+                log.info("frobbed {knob} successfully", knob=knob)
+
+        This method is generally meant to capture unexpected exceptions from
+        application code; an exception that is caught and handled somehow
+        should be logged, if appropriate, via L{Logger.error} instead.  If some
+        unknown exception occurs and your code doesn't know how to handle it,
+        as in the above example, then this method provides a means to describe
+        the failure in nerd-speak.  This is done at L{LogLevel.critical} by
+        default, since no corrective guidance can be offered to an
+        user/administrator, and the impact of the condition is unknown.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param level: a L{LogLevel} to use.
+
+        @param kwargs: additional key/value pairs to include in the event, if
+            it is emitted.  Note that values which are later mutated may result
+            in non-deterministic behavior from observers that schedule work for
+            later execution.
+
+        @return: An L{Operation} which will have either its C{succeeded} or
+            C{failed} attribute set to C{True} upon completion of the code
+            within the code within the C{with} block.
         """
         op = Operation()
         try:
             yield op
         except BaseException:
             op.failed = True
-            self.failure(format, None, level, **kw)
+            self.failure(format, None, level, **kwargs)
         else:
             op.succeeded = True
 
