@@ -312,6 +312,8 @@ class Logger:
             in non-deterministic behavior from observers that schedule work for
             later execution.
 
+        @see: L{Logger.failure}
+
         @return: An L{Operation} which will have either its C{succeeded} or
             C{failed} attribute set to C{True} upon completion of the code
             within the code within the C{with} block.
