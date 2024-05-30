@@ -373,7 +373,7 @@ class Failure(BaseException):
                     localz = f.f_locals.copy()
                 except AttributeError:
                     # Python 3.10 and later
-                    locals = f.f_locals or {}
+                    localz = f.f_locals or {}
                 if f.f_locals is f.f_globals:
                     globalz = {}
                 else:
@@ -405,7 +405,7 @@ class Failure(BaseException):
                     localz = f.f_locals.copy()
                 except AttributeError:
                     # Python 3.10 and later
-                    locals = f.f_locals or {}
+                    localz = f.f_locals or {}
                 if f.f_locals is f.f_globals:
                     globalz = {}
                 else:
