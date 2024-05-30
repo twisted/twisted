@@ -6,13 +6,21 @@
 Logger class.
 """
 
+from contextlib import contextmanager
+from dataclasses import dataclass
 from time import time
-from typing import Any, Optional, cast
+from typing import Any, Iterator, Optional, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
 from ._interfaces import ILogObserver, LogTrace
 from ._levels import InvalidLogLevelError, LogLevel
+
+
+@dataclass
+class Operation:
+    succeeded: bool = False
+    failed: bool = False
 
 
 class Logger:
@@ -263,6 +271,26 @@ class Logger:
             later execution.
         """
         self.emit(LogLevel.critical, format, **kwargs)
+
+    @contextmanager
+    def handlingFailures(
+        self, format: str, level: LogLevel = LogLevel.critical, **kw: object
+    ) -> Iterator[Operation]:
+        """
+        Perform an operation, and if it fails, log a failure with the given
+        error message.  Use this when you have some application code which may
+        raise arbitrary errors, and you want to handle them.
+
+        @return: an L{Operation} that indicates whether the code within the
+        """
+        op = Operation()
+        try:
+            yield op
+        except BaseException:
+            op.failed = True
+            self.failure(format, None, level, **kw)
+        else:
+            op.succeeded = True
 
 
 _log = Logger()
