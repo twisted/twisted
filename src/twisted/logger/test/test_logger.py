@@ -287,7 +287,6 @@ class LoggerTests(unittest.TestCase):
             events.append(event)
 
         log = TestLogger(observer=logged)
-
         reprd = 0
 
         class Reprable:
@@ -306,18 +305,15 @@ class LoggerTests(unittest.TestCase):
         [logged] = events
         events[:] = []
         f: Failure = logged["log_failure"]
-
         self.assertEqual(reprd, 0)
         self.assertEqual(
             formatEvent(logged), "while testing failure handling for <repr 1>"
         )
         self.assertEqual(reprd, 1)
         self.assertEqual(f.type, ZeroDivisionError)
-
         with log.handlingFailures("succeeding for {value}", value=Reprable()) as op2:
             self.assertEqual(op2.succeeded, False)
             self.assertEqual(op2.failed, False)
-
         self.assertEqual(reprd, 1)
         self.assertEqual(op2.succeeded, True)
         self.assertEqual(op2.failed, False)
