@@ -232,6 +232,10 @@ _ENCODED_CONTENT_TYPE_HEADER = _encodeName(b"content-type")
 _ENCODED_CONTENT_LENGTH_HEADER = _encodeName(b"content-length")
 _ENCODED_EXPECT_HEADER = _encodeName(b"expect")
 _ENCODED_CONNECTION_HEADER = _encodeName(b"connection")
+_ENCODED_TRANSFER_ENCODING_HEADER = _encodeName(b"transfer-encoding")
+_ENCODED_LAST_MODIFED_HEADER = _encodeName(b"last-modified")
+_ENCODED_ETAG_HEADER = _encodeName(b"etag")
+_ENCODED_SET_COOKIE_HEADER = _encodeName(b"set-cookie")
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -955,9 +959,7 @@ class Request:
 
         This method is not intended for users.
         """
-        cookieheaders = self.requestHeaders._getRawHeadersFaster(
-            _ENCODED_COOKIE_HEADER
-        )
+        cookieheaders = self.requestHeaders._getRawHeadersFaster(_ENCODED_COOKIE_HEADER)
 
         if cookieheaders is None:
             return
@@ -1225,25 +1227,34 @@ class Request:
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
-                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
+                self.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_TRANSFER_ENCODING_HEADER, [b"chunked"]
+                )
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader(b"last-modified"):
+                if self.responseHeaders._getRawHeadersFaster(
+                    _ENCODED_LAST_MODIFED_HEADER
+                ):
                     self._log.info(
                         "Warning: last-modified specified both in"
                         " header list and lastModified attribute."
                     )
                 else:
-                    self.responseHeaders.setRawHeaders(
-                        b"last-modified", [datetimeToString(self.lastModified)]
+                    self.responseHeaders._setRawHeadersFaster(
+                        _ENCODED_LAST_MODIFED_HEADER,
+                        [datetimeToString(self.lastModified)],
                     )
 
             if self.etag is not None:
-                self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
+                self.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_ETAG_HEADER, [self.etag]
+                )
 
             if self.cookies:
-                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
+                self.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_SET_COOKIE_HEADER, self.cookies
+                )
 
             self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
@@ -1558,7 +1569,7 @@ class Request:
             hostHeader = host
         else:
             hostHeader = b"%b:%d" % (host, port)
-        self.requestHeaders.setRawHeaders(b"host", [hostHeader])
+        self.requestHeaders._setRawHeadersFaster(_ENCODED_HOST_HEADER, [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
     @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
@@ -2521,9 +2532,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.gotLength(self.length)
         # Handle 'Expect: 100-continue' with automated 100 response code,
         # a simplistic implementation of RFC 2686 8.2.3:
-        expectContinue = req.requestHeaders._getRawHeadersTrusted(
-            _ENCODED_EXPECT_HEADER
-        )
+        expectContinue = req.requestHeaders._getRawHeadersFaster(_ENCODED_EXPECT_HEADER)
         if (
             expectContinue
             and expectContinue[0].lower() == b"100-continue"
@@ -2548,7 +2557,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             must be closed in order to indicate the completion of the response
             to C{request}.
         """
-        connection = request.requestHeaders._getRawHeadersTrusted(
+        connection = request.requestHeaders._getRawHeadersFaster(
             _ENCODED_CONNECTION_HEADER
         )
         if connection:
@@ -2569,7 +2578,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         if version == b"HTTP/1.1":
             if b"close" in tokens:
-                request.responseHeaders.setRawHeaders(b"connection", [b"close"])
+                request.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_CONNECTION_HEADER, [b"close"]
+                )
                 return False
             else:
                 return True
