@@ -47,6 +47,10 @@ from twisted.web.http import (
     PotentialDataLoss,
     _ChunkedTransferDecoder,
     _DataLoss,
+    _ENCODED_CONNECTION_HEADER,
+    _ENCODED_CONTENT_LENGTH_HEADER,
+    _ENCODED_HOST_HEADER,
+    _ENCODED_TRANSFER_ENCODING_HEADER,
     _IdentityTransferDecoder,
 )
 from twisted.web.http_headers import Headers
@@ -482,8 +486,8 @@ class HTTPClientParser(HTTPParser):
             self._finished(self.clearLineBuffer())
             self.response._bodyDataFinished()
         else:
-            transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                b"transfer-encoding"
+            transferEncodingHeaders = self.connHeaders._getRawHeadersFaster(
+                _ENCODED_TRANSFER_ENCODING_HEADER
             )
             if transferEncodingHeaders:
                 # This could be a KeyError.  However, that would mean we do not
@@ -687,7 +691,7 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
 
     @see: U{https://datatracker.ietf.org/doc/html/rfc9110#section-8.6}
     """
-    headers = connHeaders.getRawHeaders(b"content-length")
+    headers = connHeaders._getRawHeadersFaster(_ENCODED_CONTENT_LENGTH_HEADER)
     if headers is None:
         return None
 
@@ -787,7 +791,7 @@ class Request:
         return getattr(self._parsedURI, "toBytes", lambda: None)()
 
     def _writeHeaders(self, transport, TEorCL):
-        hosts = self.headers.getRawHeaders(b"host", ())
+        hosts = self.headers._getRawHeadersFaster(_ENCODED_HOST_HEADER) or []
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
 
@@ -1658,7 +1662,10 @@ class HTTP11ClientProtocol(Protocol):
             return
 
         reason = ConnectionDone("synthetic!")
-        connHeaders = self._parser.connHeaders.getRawHeaders(b"connection", ())
+        connHeaders = (
+            self._parser.connHeaders._getRawHeadersFaster(_ENCODED_CONNECTION_HEADER)
+            or []
+        )
         if (
             (b"close" in connHeaders)
             or self._state != "QUIESCENT"

@@ -34,7 +34,12 @@ from twisted.python.compat import nativeString, networkString
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
-from twisted.web.http import unquote
+from twisted.web.http import (
+    unquote,
+    _ENCODED_CONTENT_LENGTH_HEADER,
+    _ENCODED_CONTENT_TYPE_HEADER,
+)
+from twisted.web.http_headers import _encodeName
 
 NOT_DONE_YET = 1
 
@@ -50,6 +55,9 @@ __all__ = [
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
+
+_ENCODED_SERVER_HEADER = _encodeName(b"server")
+_ENCODED_DATE_HEADER = _encodeName(b"date")
 
 
 def quote(string, *args, **kwargs):
@@ -185,8 +193,10 @@ class Request(Copyable, http.Request, components.Componentized):
         self.site = self.channel.site
 
         # set various default headers
-        self.setHeader(b"server", version)
-        self.setHeader(b"date", http.datetimeToString())
+        self.responseHeaders._setRawHeadersFaster(_ENCODED_SERVER_HEADER, [version])
+        self.responseHeaders._setRawHeadersFaster(
+            _ENCODED_DATE_HEADER, [http.datetimeToString()]
+        )
 
         # Resource Identification
         self.prepath = []
@@ -221,8 +231,12 @@ class Request(Copyable, http.Request, components.Componentized):
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
             needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
-            contentType = self.responseHeaders.getRawHeaders(b"content-type")
-            contentLength = self.responseHeaders.getRawHeaders(b"content-length")
+            contentType = self.responseHeaders._getRawHeadersFaster(
+                _ENCODED_CONTENT_TYPE_HEADER
+            )
+            contentLength = self.responseHeaders._getRawHeadersFaster(
+                _ENCODED_CONTENT_LENGTH_HEADER
+            )
             contentLengthZero = contentLength and (contentLength[0] == b"0")
 
             if (
@@ -231,8 +245,8 @@ class Request(Copyable, http.Request, components.Componentized):
                 and self.defaultContentType is not None
                 and not contentLengthZero
             ):
-                self.responseHeaders.setRawHeaders(
-                    b"content-type", [self.defaultContentType]
+                self.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_CONTENT_TYPE_HEADER, [self.defaultContentType]
                 )
 
         # Only let the write happen if we're not generating a HEAD response by
@@ -354,10 +368,14 @@ class Request(Copyable, http.Request, components.Componentized):
                     slf=self,
                     resrc=resrc,
                 )
-                self.setHeader(b"content-length", b"%d" % (len(body),))
+                self.responseHeaders._setRawHeadersFaster(
+                    _ENCODED_CONTENT_LENGTH_HEADER, [b"%d" % (len(body),)]
+                )
             self.write(b"")
         else:
-            self.setHeader(b"content-length", b"%d" % (len(body),))
+            self.responseHeaders._setRawHeadersFaster(
+                _ENCODED_CONTENT_LENGTH_HEADER, [b"%d" % (len(body),)]
+            )
             self.write(body)
         self.finish()
 

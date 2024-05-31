@@ -37,7 +37,7 @@ from twisted.python.deprecate import (
 from twisted.python.failure import Failure
 from twisted.web import error, http
 from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _encodeName as _canonicalHeaderName
 from twisted.web.iweb import (
     UNKNOWN_LENGTH,
     IAgent,
@@ -1530,7 +1530,6 @@ class ContentDecoderAgent:
         return response
 
 
-_canonicalHeaderName = Headers()._encodeName
 _defaultSensitiveHeaders = frozenset(
     [
         b"Authorization",
