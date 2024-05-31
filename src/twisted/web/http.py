@@ -180,7 +180,7 @@ from twisted.web._responses import (
     UNSUPPORTED_MEDIA_TYPE,
     USE_PROXY,
 )
-from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace, _encodeName
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
@@ -224,6 +224,14 @@ monthname = [
 ]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+_ENCODED_HOST_HEADER = _encodeName(b"host")
+_ENCODED_COOKIE_HEADER = _encodeName(b"cookie")
+_ENCODED_CONTENT_TYPE_HEADER = _encodeName(b"content-type")
+_ENCODED_CONTENT_LENGTH_HEADER = _encodeName(b"content-length")
+_ENCODED_EXPECT_HEADER = _encodeName(b"expect")
+_ENCODED_CONNECTION_HEADER = _encodeName(b"connection")
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -947,7 +955,9 @@ class Request:
 
         This method is not intended for users.
         """
-        cookieheaders = self.requestHeaders.getRawHeaders(b"cookie")
+        cookieheaders = self.requestHeaders._getRawHeadersFaster(
+            _ENCODED_COOKIE_HEADER
+        )
 
         if cookieheaders is None:
             return
@@ -1002,7 +1012,7 @@ class Request:
 
         # Argument processing
         args = self.args
-        ctype = self.requestHeaders.getRawHeaders(b"content-type")
+        ctype = self.requestHeaders._getRawHeadersFaster(_ENCODED_CONTENT_TYPE_HEADER)
         if ctype is not None:
             ctype = ctype[0]
 
@@ -1206,7 +1216,12 @@ class Request:
             # persistent connections.
             if (
                 (version == b"HTTP/1.1")
-                and (self.responseHeaders.getRawHeaders(b"content-length") is None)
+                and (
+                    self.responseHeaders._getRawHeadersFaster(
+                        _ENCODED_CONTENT_LENGTH_HEADER
+                    )
+                    is None
+                )
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
@@ -1494,6 +1509,7 @@ class Request:
 
         @rtype: C{bytes}
         """
+        host = self.requestHeaders._getRawHeaderFaster(_ENCODED_HOST_HEADER)
         host = self.getHeader(b"host")
         if host is not None:
             match = _hostHeaderExpression.match(host)
@@ -2505,7 +2521,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.gotLength(self.length)
         # Handle 'Expect: 100-continue' with automated 100 response code,
         # a simplistic implementation of RFC 2686 8.2.3:
-        expectContinue = req.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = req.requestHeaders._getRawHeadersTrusted(
+            _ENCODED_EXPECT_HEADER
+        )
         if (
             expectContinue
             and expectContinue[0].lower() == b"100-continue"
@@ -2530,7 +2548,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             must be closed in order to indicate the completion of the response
             to C{request}.
         """
-        connection = request.requestHeaders.getRawHeaders(b"connection")
+        connection = request.requestHeaders._getRawHeadersTrusted(
+            _ENCODED_CONNECTION_HEADER
+        )
         if connection:
             tokens = [t.lower() for t in connection[0].split(b" ")]
         else:

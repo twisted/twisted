@@ -13,11 +13,13 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    NewType,
     Optional,
     Sequence,
     Tuple,
     TypeVar,
     Union,
+    cast,
     overload,
 )
 
@@ -36,6 +38,49 @@ def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
     @return: The sanitized header key or value.
     """
     return b" ".join(headerComponent.splitlines())
+
+
+# A header key whose values have been encoded to the appropriate format.
+# Specific contents are implementation specific and may change, so do not
+# create these directly.
+_EncodedHeader = NewType("_EncodedHeader", bytes)
+
+
+def _encodeName(name: Union[str, bytes]) -> _EncodedHeader:
+    """
+    Encode the name of a header (eg 'Content-Type') to an ISO-8859-1
+    encoded bytestring if required.  It will be canonicalized and
+    whitespace-sanitized.
+
+    @param name: A HTTP header name
+
+    @return: C{name}, encoded if required, lowercased
+    """
+    cache = Headers._canonicalHeaderCache
+
+    if canonicalName := cache.get(name, None):
+        return canonicalName
+
+    bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
+    mappings = Headers._caseMappings
+    result: _EncodedHeader
+    if bytes_name.lower() in mappings:
+        # Some headers have special capitalization:
+        result = mappings[bytes_name.lower()]
+    else:
+        result = _sanitizeLinearWhitespace(
+            b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
+        )
+
+    # In general, we should only see a very small number of header
+    # variations in the real world, so caching them is fine. However, an
+    # attacker could generate infinite header variations to fill up RAM, so
+    # we cap how many we cache. The performance degradation from lack of
+    # caching won't be that bad, and legit traffic won't hit it.
+    if len(cache) < Headers._MAX_CACHED_HEADERS:
+        cache[name] = result
+
+    return result
 
 
 @comparable
@@ -64,17 +109,17 @@ class Headers:
         header values as L{bytes}.
     """
 
-    _caseMappings: ClassVar[Dict[bytes, bytes]] = {
-        b"content-md5": b"Content-MD5",
-        b"dnt": b"DNT",
-        b"etag": b"ETag",
-        b"p3p": b"P3P",
-        b"te": b"TE",
-        b"www-authenticate": b"WWW-Authenticate",
-        b"x-xss-protection": b"X-XSS-Protection",
+    _caseMappings: ClassVar[Dict[bytes, _EncodedHeader]] = {
+        b"content-md5": _EncodedHeader(b"Content-MD5"),
+        b"dnt": _EncodedHeader(b"DNT"),
+        b"etag": _EncodedHeader(b"ETag"),
+        b"p3p": _EncodedHeader(b"P3P"),
+        b"te": _EncodedHeader(b"TE"),
+        b"www-authenticate": _EncodedHeader(b"WWW-Authenticate"),
+        b"x-xss-protection": _EncodedHeader(b"X-XSS-Protection"),
     }
 
-    _canonicalHeaderCache: ClassVar[Dict[Union[bytes, str], bytes]] = {}
+    _canonicalHeaderCache: ClassVar[Dict[Union[bytes, str], _EncodedHeader]] = {}
 
     _MAX_CACHED_HEADERS: ClassVar[int] = 10_000
 
@@ -84,7 +129,7 @@ class Headers:
         self,
         rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
     ) -> None:
-        self._rawHeaders: Dict[bytes, List[bytes]] = {}
+        self._rawHeaders: Dict[_EncodedHeader, List[bytes]] = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
@@ -109,39 +154,6 @@ class Headers:
             )
         return NotImplemented
 
-    def _encodeName(self, name: Union[str, bytes]) -> bytes:
-        """
-        Encode the name of a header (eg 'Content-Type') to an ISO-8859-1
-        encoded bytestring if required.  It will be canonicalized and
-        whitespace-sanitized.
-
-        @param name: A HTTP header name
-
-        @return: C{name}, encoded if required, lowercased
-        """
-        if canonicalName := self._canonicalHeaderCache.get(name, None):
-            return canonicalName
-
-        bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
-
-        if bytes_name.lower() in self._caseMappings:
-            # Some headers have special capitalization:
-            result = self._caseMappings[bytes_name.lower()]
-        else:
-            result = _sanitizeLinearWhitespace(
-                b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
-            )
-
-        # In general, we should only see a very small number of header
-        # variations in the real world, so caching them is fine. However, an
-        # attacker could generate infinite header variations to fill up RAM, so
-        # we cap how many we cache. The performance degradation from lack of
-        # caching won't be that bad, and legit traffic won't hit it.
-        if len(self._canonicalHeaderCache) < self._MAX_CACHED_HEADERS:
-            self._canonicalHeaderCache[name] = result
-
-        return result
-
     def copy(self):
         """
         Return a copy of itself with the same headers set.
@@ -158,7 +170,7 @@ class Headers:
 
         @return: C{True} if the header exists, otherwise C{False}.
         """
-        return self._encodeName(name) in self._rawHeaders
+        return _encodeName(name) in self._rawHeaders
 
     def removeHeader(self, name: AnyStr) -> None:
         """
@@ -168,7 +180,30 @@ class Headers:
 
         @return: L{None}
         """
-        self._rawHeaders.pop(self._encodeName(name), None)
+        self._rawHeaders.pop(_encodeName(name), None)
+
+    def _setRawHeadersFaster(self, name: _EncodedHeader, values: List[bytes]) -> None:
+        """
+        Like C{setRawHeaders}, but faster.
+
+        @param name: The name of the HTTP header to set the values for.
+
+        @param values: A list of bytes, each one being a header value of the
+            given name. These will be still be sanitized since otherwise it's
+            too easy for security bugs to allow unescaped whitespace through.
+
+        """
+        self._rawHeaders[name] = [_sanitizeLinearWhitespace(v) for v in values]
+
+    def _getRawHeaderFaster(self, name: _EncodedHeader) -> Optional[bytes]:
+        result = self._rawHeaders.get(name, None)
+        if result is not None:
+            return result[-1]
+        else:
+            return None
+
+    def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[bytes]:
+        return self._rawHeaders.get(name, None)
 
     def setRawHeaders(
         self, name: Union[str, bytes], values: Sequence[Union[str, bytes]]
@@ -186,7 +221,7 @@ class Headers:
 
         @return: L{None}
         """
-        _name = self._encodeName(name)
+        _name = _encodeName(name)
         encodedValues: List[bytes] = []
         for v in values:
             if isinstance(v, str):
@@ -205,7 +240,7 @@ class Headers:
 
         @param value: The value to set for the named header.
         """
-        self._rawHeaders.setdefault(self._encodeName(name), []).append(
+        self._rawHeaders.setdefault(_encodeName(name), []).append(
             _sanitizeLinearWhitespace(
                 value.encode("utf8") if isinstance(value, str) else value
             )
@@ -234,7 +269,7 @@ class Headers:
         @return: If the named header is present, a sequence of its
             values.  Otherwise, C{default}.
         """
-        encodedName = self._encodeName(name)
+        encodedName = _encodeName(name)
         values = self._rawHeaders.get(encodedName, [])
         if not values:
             return default
