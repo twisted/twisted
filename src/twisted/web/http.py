@@ -180,7 +180,7 @@ from twisted.web._responses import (
     UNSUPPORTED_MEDIA_TYPE,
     USE_PROXY,
 )
-from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace, _encodeName
+from twisted.web.http_headers import Headers, _encodeName, _sanitizeLinearWhitespace
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
