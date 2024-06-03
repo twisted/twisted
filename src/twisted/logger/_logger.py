@@ -25,7 +25,11 @@ class Operation:
     """
 
     succeeded: bool = False
-    failed: bool = False
+    failure: Failure | None = None
+
+    @property
+    def failed(self) -> bool:
+        return self.failure is not None
 
 
 class Logger:
@@ -330,8 +334,9 @@ class Logger:
         try:
             yield op
         except BaseException:
-            op.failed = True
-            self.failure(format, None, level, **kwargs)
+            failure = Failure()
+            op.failure = failure
+            self.failure(format, failure, level, **kwargs)
         else:
             op.succeeded = True
 
