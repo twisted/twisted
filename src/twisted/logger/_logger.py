@@ -6,6 +6,8 @@
 Logger class.
 """
 
+from __future__ import annotations
+
 from contextlib import contextmanager
 from dataclasses import dataclass
 from time import time
