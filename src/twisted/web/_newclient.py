@@ -40,7 +40,6 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.reflect import fullyQualifiedName
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
@@ -176,19 +175,6 @@ class RequestNotSent(Exception):
     to send a request using a protocol which is no longer connected to a
     server.
     """
-
-
-def _callAppFunction(function):
-    """
-    Call C{function}.  If it raises an exception, log it with a minimal
-    description of the source.
-
-    @return: L{None}
-    """
-    with _moduleLog.handlingFailures(
-        "Unexpected exception from {name}", name=fullyQualifiedName(function)
-    ):
-        function()
 
 
 class HTTPParser(LineReceiver):
@@ -1008,7 +994,10 @@ class Request:
         """
         # If bodyProducer is None, then the Deferred returned by writeTo has
         # fired already and this method cannot be called.
-        _callAppFunction(self.bodyProducer.stopProducing)
+        with _moduleLog.handlingFailures(
+            "while calling stopProducing() in stopWriting():"
+        ):
+            self.bodyProducer.stopProducing()
 
 
 class LengthEnforcingConsumer:
@@ -1065,7 +1054,10 @@ class LengthEnforcingConsumer:
             # we still have _finished which we can use to report the error to a
             # better place than the direct caller of this method (some
             # arbitrary application code).
-            _callAppFunction(self._producer.stopProducing)
+            with _moduleLog.handlingFailures(
+                "while calling stopProducing() in write():"
+            ):
+                self._producer.stopProducing()
             self._finished.errback(WrongBodyLength("too many bytes written"))
             self._allowNoMoreWrites()
 
