@@ -10,14 +10,14 @@ arbitrary foreign event loop, such as those you find in GUI toolkits.
 
 There are three things you'll need to do to use this reactor.
 
-Install the reactor at the beginning of your program, before importing
-the rest of Twisted::
+Install the reactor at the beginning of your program, before importing the rest
+of Twisted::
 
     | from twisted.internet import _threadedselect
     | _threadedselect.install()
 
-Interleave this reactor with your foreign event loop, at some point after
-your event loop is initialized::
+Interleave this reactor with your foreign event loop, at some point after your
+event loop is initialized::
 
     | from twisted.internet import reactor
     | reactor.interleave(foreignEventLoopWakerFunction)
@@ -31,27 +31,23 @@ reactor::
 
 In order for Twisted to do its work in the main thread (the thread that
 interleave is called from), a waker function is necessary.  The waker function
-will be called from a "background" thread with one argument: func.
-The waker function's purpose is to call func() from the main thread.
-Many GUI toolkits ship with appropriate waker functions.
-Some examples of this are wxPython's wx.callAfter (may be wxCallAfter in
-older versions of wxPython) or PyObjC's PyObjCTools.AppHelper.callAfter.
-These would be used in place of "foreignEventLoopWakerFunction" in the above
-example.
+will be called from a "background" thread with one argument: func.  The waker
+function's purpose is to call func() from the main thread.  Many GUI toolkits
+ship with appropriate waker functions.  One example of this is wxPython's
+wx.callAfter (may be wxCallAfter in older versions of wxPython).  These would
+be used in place of "foreignEventLoopWakerFunction" in the above example.
 
 The other integration point at which the foreign event loop and this reactor
-must integrate is shutdown.  In order to ensure clean shutdown of Twisted,
-you must allow for Twisted to come to a complete stop before quitting the
+must integrate is shutdown.  In order to ensure clean shutdown of Twisted, you
+must allow for Twisted to come to a complete stop before quitting the
 application.  Typically, you will do this by setting up an after shutdown
 trigger to stop your foreign event loop, and call reactor.stop() where you
 would normally have initiated the shutdown procedure for the foreign event
-loop.  Shutdown functions that could be used in place of
-"foreignEventloopStop" would be the ExitMainLoop method of the wxApp instance
-with wxPython, or the PyObjCTools.AppHelper.stopEventLoop function.
+loop.  Shutdown functions that could be used in place of "foreignEventloopStop"
+would be the ExitMainLoop method of the wxApp instance with wxPython.
 """
 
 import select
-import sys
 from errno import EBADF, EINTR
 from functools import partial
 from queue import Empty, Queue
@@ -63,7 +59,11 @@ from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import _NO_FILEDESC, _NO_FILENO
 from twisted.internet.selectreactor import _select
-from twisted.python import failure, log, threadable
+from twisted.logger import Logger
+from twisted.python import failure, threadable
+from twisted.python.log import callWithLogger as _callWithLogger
+
+_log = Logger()
 
 
 def dictRemove(dct, value):
@@ -112,18 +112,18 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.toThreadQueue.put((fn, args))
 
     def _preenDescriptorsInThread(self):
-        log.msg("Malformed file descriptor found.  Preening lists.")
+        _log.warn("Malformed file descriptor found.  Preening lists.")
         readers = self.reads.keys()
         writers = self.writes.keys()
         self.reads.clear()
         self.writes.clear()
         for selDict, selList in ((self.reads, readers), (self.writes, writers)):
             for selectable in selList:
-                try:
+                with _log.handlingFailures(
+                    "checking for selectability of FD {fd}", fd=selectable
+                ) as op:
                     select.select([selectable], [selectable], [selectable], 0)
-                except BaseException:
-                    log.msg("bad descriptor %s" % selectable)
-                else:
+                if op.succeeded:
                     selDict[selectable] = 1
 
     def _workerInThread(self):
@@ -149,17 +149,20 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             try:
                 r, w, ignored = _select(reads.keys(), writes.keys(), [], timeout)
                 break
-            except ValueError:
-                # Possibly a file descriptor has gone negative?
-                log.err()
-                self._preenDescriptorsInThread()
-            except TypeError:
-                # Something *totally* invalid (object w/o fileno, non-integral
-                # result) was passed
-                log.err()
+            except (ValueError, TypeError):
+                # Possible problems with file descriptors that were passed:
+                # ValueError may indicate that a file descriptor has gone
+                # negative, and TypeError indicates that something *totally*
+                # invalid (an object without a .fileno method, or such a method
+                # with a result that has a type other than `int`) was passed.
+                # This is probably a bug in application code that we *can*
+                # recover from, so we will log it and try to do that.
+                _log.failure(
+                    "while calling select() in threadedselectreactor with a possibly bad file descriptor:"
+                )
                 self._preenDescriptorsInThread()
             except OSError as se:
-                # select(2) encountered an error
+                # The select() system call encountered an error.
                 if se.args[0] in (0, 2):
                     # windows does this if it got an empty list
                     if (not reads) and (not writes):
@@ -180,14 +183,13 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         writes = self.writes
 
         _drdw = self._doReadOrWrite
-        _logrun = log.callWithLogger
         for selectables, method, dct in ((r, "doRead", reads), (w, "doWrite", writes)):
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 if selectable not in dct:
                     continue
                 # This for pausing input when we're not ready for more.
-                _logrun(selectable, _drdw, selectable, method, dct)
+                _callWithLogger(selectable, _drdw, selectable, method, dct)
 
     def _process_Failure(self, f):
         f.raiseException()
@@ -254,7 +256,9 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             while 1:
                 fn, args = self.toThreadQueue.get_nowait()
                 if fn is self._doIterationInThread:
-                    log.msg("Iteration is still in the thread queue!")
+                    _log.warn(
+                        "possible threadedselectreactor bug: iteration is still in the thread queue!"
+                    )
                 elif fn is raiseException and args[0] is SystemExit:
                     pass
                 else:
@@ -263,16 +267,17 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             pass
 
     def _doReadOrWrite(self, selectable, method, dict):
-        try:
+        with _log.handlingFailures(
+            "while handling selectable {sel}", sel=selectable
+        ) as op:
             why = getattr(selectable, method)()
             handfn = getattr(selectable, "fileno", None)
             if not handfn:
                 why = _NO_FILENO
             elif handfn() == -1:
                 why = _NO_FILEDESC
-        except BaseException:
-            why = sys.exc_info()[1]
-            log.err()
+        if op.failed:
+            why = op.failure.value
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
 
