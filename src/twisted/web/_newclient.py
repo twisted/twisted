@@ -185,12 +185,10 @@ def _callAppFunction(function):
 
     @return: L{None}
     """
-    try:
+    with _moduleLog.handlingFailures(
+        "Unexpected exception from {name}", name=fullyQualifiedName(function)
+    ):
         function()
-    except BaseException:
-        _moduleLog.failure(
-            "Unexpected exception from {name}", name=fullyQualifiedName(function)
-        )
 
 
 class HTTPParser(LineReceiver):
