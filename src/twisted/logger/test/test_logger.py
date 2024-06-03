@@ -278,7 +278,7 @@ class LoggerTests(unittest.TestCase):
 
     def test_handlingFailures(self) -> None:
         """
-        The handlingFailures context manager catches any BaseException and convert it into a logged Failure.
+        The handlingFailures context manager catches any BaseException and converts it into a logged Failure.
         """
         events = []
 
