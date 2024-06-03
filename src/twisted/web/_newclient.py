@@ -534,7 +534,12 @@ class HTTPClientParser(HTTPParser):
 
     def connectionLost(self, reason):
         if self.bodyDecoder is not None:
-            try:
+            # Handle exceptions from both the body decoder itself and the
+            # various invocations of _bodyDataFinished; treat them all as
+            # application code.  The response is part of the HTTP server and
+            # really shouldn't raise exceptions, but maybe there's some buggy
+            # application code somewhere making things difficult.
+            with _moduleLog.handlingFailures("while interacting with body decoder:"):
                 try:
                     self.bodyDecoder.noMoreData()
                 except PotentialDataLoss:
@@ -545,12 +550,6 @@ class HTTPClientParser(HTTPParser):
                     )
                 else:
                     self.response._bodyDataFinished()
-            except BaseException:
-                # Handle exceptions from both the except suites and the else
-                # suite.  Those functions really shouldn't raise exceptions,
-                # but maybe there's some buggy application code somewhere
-                # making things difficult.
-                self._log.failure("")
         elif self.state != DONE:
             if self._everReceivedData:
                 exceptionClass = ResponseFailed
@@ -1670,12 +1669,13 @@ class HTTP11ClientProtocol(Protocol):
 
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
-            try:
+            with _moduleLog.handlingFailures(
+                "while invoking quiescent callback:"
+            ) as op:
                 self._quiescentCallback(self)
-            except BaseException:
+            if op.failed:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
-                self._log.failure("")
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 
