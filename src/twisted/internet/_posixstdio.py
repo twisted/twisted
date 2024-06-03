@@ -14,7 +14,10 @@ Maintainer: James Y Knight
 from zope.interface import implementer
 
 from twisted.internet import error, interfaces, process
-from twisted.python import failure, log
+from twisted.logger import Logger
+from twisted.python.failure import Failure
+
+_log = Logger()
 
 
 @implementer(interfaces.IAddress)
@@ -107,12 +110,10 @@ class StandardIO:
         if _reader is not None and not _reader.disconnected:
             _reader.connectionLost(reason)
 
-        try:
+        with _log.handlingFailures("while calling stdio connectionLost:"):
             protocol.connectionLost(reason)
-        except BaseException:
-            log.err()
 
-    def _writeConnectionLost(self, reason):
+    def _writeConnectionLost(self, reason: Failure) -> None:
         self._writer = None
         if self.disconnecting:
             self.connectionLost(reason)
@@ -120,21 +121,23 @@ class StandardIO:
 
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            try:
+            with _log.handlingFailures(
+                "while calling stdio writeConnectionLost:"
+            ) as wcl:
                 p.writeConnectionLost()
-            except BaseException:
-                log.err()
-                self.connectionLost(failure.Failure())
+            if wcl.failed:
+                self.connectionLost(wcl.failure)
 
-    def _readConnectionLost(self, reason):
+    def _readConnectionLost(self, reason: Failure) -> None:
         self._reader = None
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            try:
+            with _log.handlingFailures(
+                "while calling stdio readConnectionLost:"
+            ) as rcl:
                 p.readConnectionLost()
-            except BaseException:
-                log.err()
-                self.connectionLost(failure.Failure())
+            if rcl.failed:
+                self.connectionLost(rcl.failure)
         else:
             self.connectionLost(reason)
 
