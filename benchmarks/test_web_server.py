@@ -31,7 +31,20 @@ class Data(resource.Resource):
         return self.data
 
 
-def test_http11_server_empty_request(benchmark):
+class ComplexData(Data):
+    """
+    Interact more with the request.
+    """
+
+    def render_GET(self, request):
+        request.setLastModified(123)
+        request.setETag(b"xykjlk")
+        _ = request.getRequestHostname()
+        request.setHost(b"example.com")
+        return Data.render_GET(self, request)
+
+
+def http11_server_empty_request(resource, benchmark):
     """Benchmark of handling an bodyless HTTP/1.1 request."""
     data = Data(b"This is a result hello hello" * 4, b"text/plain")
     factory = server.Site(data)
@@ -55,3 +68,15 @@ Content-Length: 0
         assert b"200 OK" in transport.io.getvalue()
 
     benchmark(go)
+
+
+def test_http1_server_empty_request(benchmark):
+    """Benchmark just returning some data."""
+    data = Data(b"This is a result hello hello" * 4, b"text/plain")
+    http11_server_empty_request(data, benchmark)
+
+
+def test_bit_more_complex_response(benchmark):
+    """Benchmark that also involves calling more request methods."""
+    data = ComplexData(b"This is a result hello hello" * 4, b"text/plain")
+    http11_server_empty_request(data, benchmark)
