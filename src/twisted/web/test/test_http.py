@@ -3583,7 +3583,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
-    def test_finishProducesLog(self):
+    def test_finishProducesLog(self) -> None:
         """
         L{http.Request.finish} will call the channel's factory to produce a log
         message.
@@ -3591,23 +3591,24 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         factory.timeOut = None
         factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True
+        factory._logDateTimeCall = True  # type:ignore
         factory.startFactory()
-        factory.logFile = BytesIO()
-        proto = factory.buildProtocol(None)
+        logFile = factory.logFile = BytesIO()
+        proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
         trans = StringTransport()
+        assert proto is not None
         proto.makeConnection(trans)
 
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()
+        proto._channel.requests[0].finish()  # type:ignore
 
         # A log message should be written out
-        self.assertIn(b'sometime "GET /path HTTP/1.1"', factory.logFile.getvalue())
+        self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
 
     def test_requestBodyTimeoutFromFactory(self):
         """
