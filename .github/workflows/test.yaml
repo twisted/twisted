@@ -299,7 +299,9 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        # Changing this will change the benchmark outcomes, this is expected and
+        # unavoidable.
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
