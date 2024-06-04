@@ -9,12 +9,11 @@ Test HTTP support.
 import base64
 import calendar
 import random
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from urllib.parse import urlparse, urlunsplit
+from urllib.parse import clear_cache, urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
@@ -34,6 +33,7 @@ from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -3592,8 +3592,30 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory.timeOut = None
         factory._logDateTime = "sometime"
         factory._logDateTimeCall = True  # type:ignore
+
+        # Here we are asserting a few legacy / compatibility features of the
+        # writable logFile attribute, which used to be effectively an
+        # IO[AnyStr] but was always trying to encode and write text to it.
+        # Clients should really not be accessing this attribute anyway, but we
+        # need a new way to configure the CLF log file before deprecating and
+        # removing it.
+
+        # Before the factory is started, it has no logFile attribute.
+        with self.assertRaises(AttributeError):
+            factory.logFile
         factory.startFactory()
+        # It starts off as the legacy global LoggingFile instance.
+        self.assertIs(factory.logFile, legacyGlobalLogFile)
+
+        # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
+        # get back a TextIOWrapper, wrapping our BytesIO.
         logFile = factory.logFile = BytesIO()
+        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+
+        # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
+        # now, even though the property's signature is such that it isn't.
+        assert isinstance(getBackLogFile, TextIOWrapper)
+        self.assertIs(getBackLogFile.buffer, logFile)
         proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
