@@ -237,7 +237,7 @@ _ENCODED_LAST_MODIFED_HEADER = _encodeName(b"last-modified")
 _ENCODED_ETAG_HEADER = _encodeName(b"etag")
 _ENCODED_SET_COOKIE_HEADER = _encodeName(b"set-cookie")
 _ENCODED_IF_MODIFIED_SINCE_HEADER = _encodeName(b"if-modified-since")
-_ENCODED_IF_NOT_MATCH_HEADER = _encodeName(b"if-not-match")
+_ENCODED_IF_NONE_MATCH_HEADER = _encodeName(b"if-none-match")
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -1455,7 +1455,7 @@ class Request:
             self.lastModified = when
 
         modifiedSince = self.requestHeaders._getRawHeaderLastFaster(
-            _ENCODED_IF_MODIFIED_SINCE
+            _ENCODED_IF_MODIFIED_SINCE_HEADER
         )
         if modifiedSince:
             firstPart = modifiedSince.split(b";", 1)[0]
@@ -1490,7 +1490,9 @@ class Request:
         if etag:
             self.etag = etag
 
-        tags = self.requestHeaders._getRawHeaderLastFaster(_ENCODED_IF_NOT_MATCH_HEADER)
+        tags = self.requestHeaders._getRawHeaderLastFaster(
+            _ENCODED_IF_NONE_MATCH_HEADER
+        )
         if tags:
             tags = tags.split()
             if (etag in tags) or (b"*" in tags):
