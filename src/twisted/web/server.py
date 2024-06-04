@@ -37,6 +37,11 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
     _ENCODED_CONTENT_LENGTH_HEADER,
     _ENCODED_CONTENT_TYPE_HEADER,
+    NO_CONTENT,
+    NOT_MODIFIED,
+    HTTPFactory,
+    Request as BaseRequest,
+    datetimeToString,
     unquote,
 )
 from twisted.web.http_headers import _encodeName
@@ -74,7 +79,7 @@ def _addressToTuple(addr):
 
 
 @implementer(iweb.IRequest)
-class Request(Copyable, http.Request, components.Componentized):
+class Request(Copyable, BaseRequest, components.Componentized):
     """
     An HTTP request.
 
@@ -100,7 +105,7 @@ class Request(Copyable, http.Request, components.Componentized):
     _log = Logger()
 
     def __init__(self, *args, **kw):
-        http.Request.__init__(self, *args, **kw)
+        BaseRequest.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -175,7 +180,7 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            http.Request.gotLength(self, length)
+            BaseRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -195,7 +200,7 @@ class Request(Copyable, http.Request, components.Componentized):
         # set various default headers
         self.responseHeaders._setRawHeadersFaster(_ENCODED_SERVER_HEADER, [version])
         self.responseHeaders._setRawHeadersFaster(
-            _ENCODED_DATE_HEADER, [http.datetimeToString()]
+            _ENCODED_DATE_HEADER, [datetimeToString()]
         )
 
         # Resource Identification
@@ -230,7 +235,7 @@ class Request(Copyable, http.Request, components.Componentized):
             # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
-            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
+            needsCT = self.code not in (NOT_MODIFIED, NO_CONTENT)
             contentType = self.responseHeaders._getRawHeadersFaster(
                 _ENCODED_CONTENT_TYPE_HEADER
             )
@@ -257,17 +262,17 @@ class Request(Copyable, http.Request, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            http.Request.write(self, data)
+            BaseRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{http.Request.finish} for possible encoding.
+        Override C{BaseRequest.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                http.Request.write(self, data)
-        return http.Request.finish(self)
+                BaseRequest.write(self, data)
+        return BaseRequest.finish(self)
 
     def render(self, resrc):
         """
@@ -766,7 +771,7 @@ version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
-class Site(http.HTTPFactory):
+class Site(HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 
