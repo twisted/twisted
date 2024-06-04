@@ -3352,7 +3352,7 @@ class HTTPFactory(protocol.ServerFactory):
         """
         Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
-        return open(path, "a", 1)
+        return open(path, "a", 1, newline="\n")
 
     def log(self, request: Request) -> None:
         """
