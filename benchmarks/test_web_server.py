@@ -70,13 +70,13 @@ Content-Length: 0
     benchmark(go)
 
 
-def test_http1_server_empty_request(benchmark):
+def test_http11_server_empty_request(benchmark):
     """Benchmark just returning some data."""
     data = Data(b"This is a result hello hello" * 4, b"text/plain")
     http11_server_empty_request(data, benchmark)
 
 
-def test_bit_more_complex_response(benchmark):
+def test_http11_server_bit_more_complex_response(benchmark):
     """Benchmark that also involves calling more request methods."""
     data = ComplexData(b"This is a result hello hello" * 4, b"text/plain")
     http11_server_empty_request(data, benchmark)
