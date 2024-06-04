@@ -7,6 +7,7 @@ An API for storing HTTP header names and values.
 """
 
 from typing import (
+    cast,
     AnyStr,
     ClassVar,
     Dict,
@@ -19,7 +20,6 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    cast,
     overload,
 )
 
@@ -68,8 +68,11 @@ def _encodeName(name: Union[str, bytes]) -> _EncodedHeader:
         # Some headers have special capitalization:
         result = mappings[bytes_name.lower()]
     else:
-        result = _sanitizeLinearWhitespace(
-            b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
+        result = cast(
+            _EncodedHeader,
+            _sanitizeLinearWhitespace(
+                b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
+            ),
         )
 
     # In general, we should only see a very small number of header
@@ -202,7 +205,7 @@ class Headers:
         else:
             return None
 
-    def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[bytes]:
+    def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[list[bytes]]:
         return self._rawHeaders.get(name, None)
 
     def setRawHeaders(

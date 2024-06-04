@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from twisted.trial.unittest import TestCase
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _encodeName
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
@@ -181,18 +181,17 @@ class BytesHeadersTests(TestCase):
         L{Headers._encodeName} returns the canonical capitalization for
         the given header.
         """
-        h = Headers()
-        self.assertEqual(h._encodeName(b"test"), b"Test")
-        self.assertEqual(h._encodeName(b"test-stuff"), b"Test-Stuff")
-        self.assertEqual(h._encodeName(b"content-md5"), b"Content-MD5")
-        self.assertEqual(h._encodeName(b"dnt"), b"DNT")
-        self.assertEqual(h._encodeName(b"etag"), b"ETag")
-        self.assertEqual(h._encodeName(b"p3p"), b"P3P")
-        self.assertEqual(h._encodeName(b"te"), b"TE")
-        self.assertEqual(h._encodeName(b"www-authenticate"), b"WWW-Authenticate")
-        self.assertEqual(h._encodeName(b"WWW-authenticate"), b"WWW-Authenticate")
-        self.assertEqual(h._encodeName(b"Www-Authenticate"), b"WWW-Authenticate")
-        self.assertEqual(h._encodeName(b"x-xss-protection"), b"X-XSS-Protection")
+        self.assertEqual(_encodeName(b"test"), b"Test")
+        self.assertEqual(_encodeName(b"test-stuff"), b"Test-Stuff")
+        self.assertEqual(_encodeName(b"content-md5"), b"Content-MD5")
+        self.assertEqual(_encodeName(b"dnt"), b"DNT")
+        self.assertEqual(_encodeName(b"etag"), b"ETag")
+        self.assertEqual(_encodeName(b"p3p"), b"P3P")
+        self.assertEqual(_encodeName(b"te"), b"TE")
+        self.assertEqual(_encodeName(b"www-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(_encodeName(b"WWW-authenticate"), b"WWW-Authenticate")
+        self.assertEqual(_encodeName(b"Www-Authenticate"), b"WWW-Authenticate")
+        self.assertEqual(_encodeName(b"x-xss-protection"), b"X-XSS-Protection")
 
     def test_getAllRawHeaders(self) -> None:
         """
