@@ -3301,6 +3301,7 @@ class HTTPFactory(protocol.ServerFactory):
                 newLogFile,  # type:ignore[arg-type]
                 "utf-8",
                 write_through=True,
+                newline="\n",
             )
         self._logFile = newLogFile
 
