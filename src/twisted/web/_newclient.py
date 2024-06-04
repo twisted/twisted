@@ -42,15 +42,15 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.reflect import fullyQualifiedName
 from twisted.web.http import (
+    _ENCODED_CONNECTION_HEADER,
+    _ENCODED_CONTENT_LENGTH_HEADER,
+    _ENCODED_HOST_HEADER,
+    _ENCODED_TRANSFER_ENCODING_HEADER,
     NO_CONTENT,
     NOT_MODIFIED,
     PotentialDataLoss,
     _ChunkedTransferDecoder,
     _DataLoss,
-    _ENCODED_CONNECTION_HEADER,
-    _ENCODED_CONTENT_LENGTH_HEADER,
-    _ENCODED_HOST_HEADER,
-    _ENCODED_TRANSFER_ENCODING_HEADER,
     _IdentityTransferDecoder,
 )
 from twisted.web.http_headers import Headers

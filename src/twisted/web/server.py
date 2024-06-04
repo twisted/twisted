@@ -35,9 +35,9 @@ from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
-    unquote,
     _ENCODED_CONTENT_LENGTH_HEADER,
     _ENCODED_CONTENT_TYPE_HEADER,
+    unquote,
 )
 from twisted.web.http_headers import _encodeName
 
