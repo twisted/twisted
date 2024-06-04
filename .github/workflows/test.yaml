@@ -299,8 +299,15 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        # Changing this will change the benchmark outcomes, this is expected and
-        # unavoidable.
+        # When you will need to change this to run the benchmarks
+        # on a different Python version,
+        # it will also change the benchmark results.
+        # This is expected and unavoidable.
+        # This is why it's best not to configure the default
+        # Python version here,
+        # but rather have an explicit Python version.
+        # The PRs that are changing the Python version can
+        # be merged by ignoring the benchmark results.
         python-version: '3.12'
 
     - name: Install dependencies
