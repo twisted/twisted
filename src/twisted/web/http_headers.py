@@ -5,6 +5,7 @@
 """
 An API for storing HTTP header names and values.
 """
+from __future__ import annotations
 
 from typing import (
     AnyStr,
@@ -209,7 +210,7 @@ class Headers:
         else:
             return None
 
-    def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[list[bytes]]:
+    def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[List[bytes]]:
         """
         Get the header values, if any.
 
