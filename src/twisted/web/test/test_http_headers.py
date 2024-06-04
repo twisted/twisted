@@ -309,6 +309,60 @@ class BytesHeadersTests(TestCase):
         )
 
 
+class FasterHeadersTests(TestCase):
+    """
+    Tests for L{Headers} faster APIs.
+    """
+
+    def test_missing(self) -> None:
+        """
+        L{Headers._getRawHeadersFaster} and L{Headers._getRawHeaderLastFaster}
+        return C{None} for missing headers.
+        """
+        headers = Headers()
+        self.assertEqual(headers._getRawHeaderLastFaster(_encodeName("x-test")), None)
+        self.assertEqual(headers._getRawHeadersFaster(_encodeName("x-test")), None)
+
+    def test_settingSanitizes(self) -> None:
+        """
+        L{Headers._setRawHeadersFaster} sanitizes the values.
+        """
+        headers = Headers()
+        name = _encodeName("etag")
+        headers._setRawHeadersFaster(name, bytesLinearWhitespaceComponents)
+        expected = [sanitizedBytes] * len(bytesLinearWhitespaceComponents)
+        self.assertEqual(headers.getRawHeaders(bytes(name)), expected)
+        self.assertEqual(headers._getRawHeadersFaster(name), expected)
+
+    def test_setIsGettable(self) -> None:
+        """
+        L{Headers.getRawHeaders}, L{Headers._getRawHeadersFaster} and
+        L{Headers._getRawHeaderLastFaster} can get values set by
+        L{Headers.setRawHeaders} and L{Headers._setRawHeadersFaster}.
+        """
+        headers = Headers()
+        name = _encodeName("etag")
+        name2 = _encodeName("x-wing")
+        headers.setRawHeaders("etag", [b"a", b"b"])
+        headers._setRawHeadersFaster(name2, [b"c", b"d"])
+        self.assertEqual(
+            (
+                headers.getRawHeaders(b"etag"),
+                headers._getRawHeaderLastFaster(name),
+                headers._getRawHeadersFaster(name),
+            ),
+            ([b"a", b"b"], b"b", [b"a", b"b"]),
+        )
+        self.assertEqual(
+            (
+                headers.getRawHeaders(b"x-wing"),
+                headers._getRawHeaderLastFaster(name2),
+                headers._getRawHeadersFaster(name2),
+            ),
+            ([b"c", b"d"], b"d", [b"c", b"d"]),
+        )
+
+
 class UnicodeHeadersTests(TestCase):
     """
     Tests for L{Headers}, using L{str} arguments for methods.

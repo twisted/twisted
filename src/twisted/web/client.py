@@ -15,7 +15,7 @@ import zlib
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import cast, TYPE_CHECKING, Iterable, Optional
+from typing import TYPE_CHECKING, Iterable, Optional
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer

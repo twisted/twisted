@@ -1520,7 +1520,7 @@ class Request:
 
         @rtype: C{bytes}
         """
-        host = self.requestHeaders._getRawHeaderFaster(_ENCODED_HOST_HEADER)
+        host = self.requestHeaders._getRawHeaderLastFaster(_ENCODED_HOST_HEADER)
         host = self.getHeader(b"host")
         if host is not None:
             match = _hostHeaderExpression.match(host)

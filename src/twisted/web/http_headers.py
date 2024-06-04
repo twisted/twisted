@@ -7,7 +7,6 @@ An API for storing HTTP header names and values.
 """
 
 from typing import (
-    cast,
     AnyStr,
     ClassVar,
     Dict,
@@ -20,6 +19,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    cast,
     overload,
 )
 
@@ -194,11 +194,15 @@ class Headers:
         @param values: A list of bytes, each one being a header value of the
             given name. These will be still be sanitized since otherwise it's
             too easy for security bugs to allow unescaped whitespace through.
-
         """
         self._rawHeaders[name] = [_sanitizeLinearWhitespace(v) for v in values]
 
-    def _getRawHeaderFaster(self, name: _EncodedHeader) -> Optional[bytes]:
+    def _getRawHeaderLastFaster(self, name: _EncodedHeader) -> Optional[bytes]:
+        """
+        Get the last header value, if any.
+
+        @param name: The name of the HTTP header to get the value for.
+        """
         result = self._rawHeaders.get(name, None)
         if result is not None:
             return result[-1]
@@ -206,6 +210,11 @@ class Headers:
             return None
 
     def _getRawHeadersFaster(self, name: _EncodedHeader) -> Optional[list[bytes]]:
+        """
+        Get the header values, if any.
+
+        @param name: The name of the HTTP header to get the values for.
+        """
         return self._rawHeaders.get(name, None)
 
     def setRawHeaders(
