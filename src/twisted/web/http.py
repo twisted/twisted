@@ -236,6 +236,7 @@ _ENCODED_TRANSFER_ENCODING_HEADER = _encodeName(b"transfer-encoding")
 _ENCODED_LAST_MODIFED_HEADER = _encodeName(b"last-modified")
 _ENCODED_ETAG_HEADER = _encodeName(b"etag")
 _ENCODED_SET_COOKIE_HEADER = _encodeName(b"set-cookie")
+_ENCODED_IF_MODIFIED_SINCE = _encodeName(b"if-modified-since")
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -1452,7 +1453,7 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modifiedSince = self.getHeader(b"if-modified-since")
+        modifiedSince = self.requestHeaders._getRawHeaderLastFaster(_ENCODED_IF_MODIFIED_SINCE)
         if modifiedSince:
             firstPart = modifiedSince.split(b";", 1)[0]
             try:
@@ -1521,7 +1522,6 @@ class Request:
         @rtype: C{bytes}
         """
         host = self.requestHeaders._getRawHeaderLastFaster(_ENCODED_HOST_HEADER)
-        host = self.getHeader(b"host")
         if host is not None:
             match = _hostHeaderExpression.match(host)
             if match is not None:
