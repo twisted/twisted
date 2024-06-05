@@ -3617,6 +3617,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # now, even though the property's signature is such that it isn't.
         assert isinstance(getBackLogFile, TextIOWrapper)
         self.assertIs(getBackLogFile.buffer, logFile)
+        factory.logFile = getBackLogFile
+        # If we set it to a text-based I/O (i.e.: anything other than an
+        # io.BufferedBase) it stays exactly the same, no modification.
+        self.assertIs(getBackLogFile, factory.logFile)
         proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
