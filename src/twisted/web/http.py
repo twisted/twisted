@@ -110,8 +110,16 @@ import time
 import warnings
 from email import message_from_bytes
 from email.message import EmailMessage, Message
-from io import BytesIO
-from typing import AnyStr, Callable, Dict, List, Optional, Tuple
+from io import BufferedIOBase, BytesIO, TextIOWrapper
+from typing import (
+    AnyStr,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol as TypingProtocol,
+    Tuple,
+)
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -125,7 +133,8 @@ from incremental import Version
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IProtocol
+from twisted.internet.interfaces import IAddress, IDelayedCall, IProtocol, IReactorTime
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
@@ -3187,6 +3196,21 @@ def _genericHTTPChannelProtocolFactory(self):
     return _GenericHTTPChannelProtocol(HTTPChannel())
 
 
+class _MinimalLogFile(TypingProtocol):
+    def write(self, data: str, /) -> object:
+        """
+        Write some data.
+        """
+
+    def close(self) -> None:
+        """
+        Close the file.
+        """
+
+
+value: type[_MinimalLogFile] = TextIOWrapper
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -3217,11 +3241,16 @@ class HTTPFactory(protocol.ServerFactory):
     protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
+    _logFile: _MinimalLogFile | None = None
 
-    timeOut = _REQUEST_TIMEOUT
+    timeOut: int | float | None = _REQUEST_TIMEOUT
 
     def __init__(
-        self, logPath=None, timeout=_REQUEST_TIMEOUT, logFormatter=None, reactor=None
+        self,
+        logPath: str | bytes | None = None,
+        timeout: int | float = _REQUEST_TIMEOUT,
+        logFormatter: IAccessLogFormatter | None = None,
+        reactor: IReactorTime | None = None,
     ):
         """
         @param logPath: File path to which access log messages will be written
@@ -3241,9 +3270,9 @@ class HTTPFactory(protocol.ServerFactory):
             timeouts and compute logging timestamps. Defaults to the global
             reactor.
         """
-        if not reactor:
-            from twisted.internet import reactor
-        self.reactor = reactor
+        if reactor is None:
+            from twisted.internet import reactor  # type:ignore[assignment]
+        self.reactor: IReactorTime = reactor  # type:ignore[assignment]
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3254,17 +3283,48 @@ class HTTPFactory(protocol.ServerFactory):
         self._logFormatter = logFormatter
 
         # For storing the cached log datetime and the callback to update it
-        self._logDateTime = None
-        self._logDateTimeCall = None
+        self._logDateTime: str | None = None
+        self._logDateTimeCall: IDelayedCall | None = None
 
-    def _updateLogDateTime(self):
+    logFile = property()
+    """
+    A file (object with C{write(data: str)} and C{close()} methods) that will
+    be used for logging HTTP requests and responses in the standard U{Combined
+    Log Format <https://en.wikipedia.org/wiki/Common_Log_Format>} .
+
+    @note: for backwards compatibility purposes, this may be I{set} to an
+        object with a C{write(data: bytes)} method, but these will be detected
+        (by checking if it's an instance of L{BufferedIOBase}) and replaced
+        with a L{TextIOWrapper} when retrieved by getting the attribute again.
+    """
+
+    @logFile.getter
+    def _get_logFile(self) -> _MinimalLogFile:
+        if self._logFile is None:
+            raise AttributeError("no log file present")
+        return self._logFile
+
+    @_get_logFile.setter
+    def _set_logFile(self, newLogFile: BufferedIOBase | _MinimalLogFile) -> None:
+        if isinstance(newLogFile, BufferedIOBase):
+            newLogFile = TextIOWrapper(
+                newLogFile,  # type:ignore[arg-type]
+                "utf-8",
+                write_through=True,
+                newline="\n",
+            )
+        self._logFile = newLogFile
+
+    logFile = _set_logFile
+
+    def _updateLogDateTime(self) -> None:
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
         self._logDateTime = datetimeToLogString(self.reactor.seconds())
         self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> Protocol | None:
         p = protocol.ServerFactory.buildProtocol(self, addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts
@@ -3272,53 +3332,45 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self.reactor.callLater
+        p.callLater = self.reactor.callLater  # type:ignore[union-attr]
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
-        p.timeOut = self.timeOut
+        p.timeOut = self.timeOut  # type:ignore[union-attr]
         return p
 
-    def startFactory(self):
+    def startFactory(self) -> None:
         """
         Set up request logging if necessary.
         """
         if self._logDateTimeCall is None:
             self._updateLogDateTime()
 
-        if self.logPath:
-            self.logFile = self._openLogFile(self.logPath)
-        else:
-            self.logFile = log.logfile
+        self._logFile = self._openLogFile(self.logPath) if self.logPath else log.logfile
 
-    def stopFactory(self):
-        if hasattr(self, "logFile"):
-            if self.logFile != log.logfile:
-                self.logFile.close()
-            del self.logFile
+    def stopFactory(self) -> None:
+        if self._logFile is not None:
+            if self._logFile != log.logfile:
+                self._logFile.close()
+            self._logFile = None
 
         if self._logDateTimeCall is not None and self._logDateTimeCall.active():
             self._logDateTimeCall.cancel()
             self._logDateTimeCall = None
 
-    def _openLogFile(self, path):
+    def _openLogFile(self, path: str | bytes) -> _MinimalLogFile:
         """
         Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
-        f = open(path, "ab", 1)
-        return f
+        return open(path, "a", 1, newline="\n")
 
-    def log(self, request):
+    def log(self, request: Request) -> None:
         """
         Write a line representing C{request} to the access log file.
 
         @param request: The request object about which to log.
-        @type request: L{Request}
         """
-        try:
-            logFile = self.logFile
-        except AttributeError:
-            pass
-        else:
+        logFile = self._logFile
+        if logFile is not None:
             line = self._logFormatter(self._logDateTime, request) + "\n"
-            logFile.write(line.encode("utf8"))
+            logFile.write(line)
