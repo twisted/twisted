@@ -3584,6 +3584,13 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
+    def test_stopFactoryInvalidState(self) -> None:
+        """
+        L{http.HTTPFactory.stopFactory} is a no-op (that does not raise an
+        exception) when the factory hasn't been started yet.
+        """
+        http.HTTPFactory().stopFactory()
+
     def test_finishProducesLog(self) -> None:
         """
         L{http.Request.finish} will call the channel's factory to produce a log
