@@ -13,7 +13,8 @@ from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
-from urllib.parse import clear_cache, urlparse, urlunsplit
+from urllib.parse import clear_cache  # type: ignore[attr-defined]
+from urllib.parse import urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
