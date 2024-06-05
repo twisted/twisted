@@ -3287,6 +3287,16 @@ class HTTPFactory(protocol.ServerFactory):
         self._logDateTimeCall: IDelayedCall | None = None
 
     logFile = property()
+    """
+    A file (object with C{write(data: str)} and C{close()} methods) that will
+    be used for logging HTTP requests and responses in the standard U{Combined
+    Log Format <https://en.wikipedia.org/wiki/Common_Log_Format>} .
+
+    @note: for backwards compatibility purposes, this may be I{set} to an
+        object with a C{write(data: bytes)} method, but these will be detected
+        (by checking if it's an instance of L{BufferedIOBase}) and replaced
+        with a L{TextIOWrapper} when retrieved by getting the attribute again.
+    """
 
     @logFile.getter
     def _get_logFile(self) -> _MinimalLogFile:
