@@ -7,15 +7,19 @@ Tests for L{twisted.internet.stdio}.
 @var properEnv: A copy of L{os.environ} which has L{bytes} keys/values on POSIX
     platforms and native L{str} keys/values on Windows.
 """
-
+from __future__ import annotations
 
 import itertools
 import os
 import sys
+from typing import Any, Callable
 from unittest import skipIf
 
 from twisted.internet import defer, error, protocol, reactor, stdio
+from twisted.internet.interfaces import IProcessTransport, IReactorProcess
+from twisted.internet.protocol import ProcessProtocol
 from twisted.python import filepath, log
+from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ConnectionLostNotifyingProtocol
@@ -51,12 +55,12 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     bytes received from the child process on each file descriptor.
     """
 
-    onDataReceived = None
+    onDataReceived: defer.Deferred[None] | None = None
 
-    def __init__(self):
-        self.onConnection = defer.Deferred()
-        self.onCompletion = defer.Deferred()
-        self.data = {}
+    def __init__(self) -> None:
+        self.onConnection: defer.Deferred[None] = defer.Deferred()
+        self.onCompletion: defer.Deferred[None] = defer.Deferred()
+        self.data: dict[str, bytes] = {}
 
     def connectionMade(self):
         self.onConnection.callback(None)
@@ -82,33 +86,39 @@ class StandardInputOutputTests(TestCase):
             "absence of win32process."
         )
 
-    def _spawnProcess(self, proto, sibling, *args, **kw):
+    def _spawnProcess(
+        self, proto: ProcessProtocol, sibling: str, *args: str, **kw: Any
+    ) -> IProcessTransport:
         """
-        Launch a child Python process and communicate with it using the
-        given ProcessProtocol.
+        Launch a child Python process and communicate with it using the given
+        ProcessProtocol.
 
-        @param proto: A L{ProcessProtocol} instance which will be connected
-        to the child process.
+        @param proto: A L{ProcessProtocol} instance which will be connected to
+            the child process.
 
-        @param sibling: The basename of a file containing the Python program
-        to run in the child process.
+        @param sibling: The basename of a file containing the Python program to
+            run in the child process.
 
-        @param *args: strings which will be passed to the child process on
-        the command line as C{argv[2:]}.
+        @param *args: strings which will be passed to the child process on the
+            command line as C{argv[2:]}.
 
         @param **kw: additional arguments to pass to L{reactor.spawnProcess}.
 
         @return: The L{IProcessTransport} provider for the spawned process.
         """
-        args = [
+        procargs = [
             sys.executable,
-            b"-m",
-            b"twisted.test." + sibling,
+            "-m",
+            "twisted.test." + sibling,
             reactor.__class__.__module__,
         ] + list(args)
-        return reactor.spawnProcess(proto, sys.executable, args, env=properEnv, **kw)
+        return IReactorProcess(reactor).spawnProcess(
+            proto, sys.executable, procargs, env=properEnv, **kw
+        )
 
-    def _requireFailure(self, d, callback):
+    def _requireFailure(
+        self, d: defer.Deferred[None], callback: Callable[[Failure], object]
+    ) -> defer.Deferred[None]:
         def cb(result):
             self.fail(f"Process terminated with non-Failure: {result!r}")
 
@@ -139,14 +149,8 @@ class StandardInputOutputTests(TestCase):
 
         return self._requireFailure(d, processEnded)
 
-    def test_readConnectionLost(self):
-        """
-        When stdin is closed and the protocol connected to it implements
-        L{IHalfCloseableProtocol}, the protocol's C{readConnectionLost} method
-        is called.
-        """
+    def exampleOutputsAndZeroExitCode(self, example: str) -> defer.Deferred[None]:
         errorLogFile = self.mktemp()
-        log.msg("Child process logging to " + errorLogFile)
         p = StandardIOTestProcessProtocol()
         p.onDataReceived = defer.Deferred()
 
@@ -162,8 +166,24 @@ class StandardInputOutputTests(TestCase):
 
         d = self._requireFailure(p.onDataReceived, processEnded)
 
-        self._spawnProcess(p, b"stdio_test_halfclose", errorLogFile)
+        self._spawnProcess(p, example, errorLogFile)
         return d
+
+    def test_readConnectionLost(self) -> defer.Deferred[None]:
+        """
+        When stdin is closed and the protocol connected to it implements
+        L{IHalfCloseableProtocol}, the protocol's C{readConnectionLost} method
+        is called.
+        """
+        return self.exampleOutputsAndZeroExitCode("stdio_test_halfclose")
+
+    def test_buggyReadConnectionLost(self) -> defer.Deferred[None]:
+        """
+        When stdin is closed and the protocol connnected to it implements
+        L{IHalfCloseableProtocol} but its C{readConnectionLost} method raises
+        an exception its regular C{connectionLost} method will be called.
+        """
+        return self.exampleOutputsAndZeroExitCode("stdio_test_halfclose_buggy")
 
     def test_lastWriteReceived(self):
         """
