@@ -87,7 +87,7 @@ class StandardInputOutputTests(TestCase):
         )
 
     def _spawnProcess(
-        self, proto: ProcessProtocol, sibling: str, *args: str, **kw: Any
+        self, proto: ProcessProtocol, sibling: str | bytes, *args: str, **kw: Any
     ) -> IProcessTransport:
         """
         Launch a child Python process and communicate with it using the given
@@ -106,6 +106,8 @@ class StandardInputOutputTests(TestCase):
 
         @return: The L{IProcessTransport} provider for the spawned process.
         """
+        if isinstance(sibling, bytes):
+            sibling = sibling.decode()
         procargs = [
             sys.executable,
             "-m",
