@@ -8,10 +8,10 @@ Logger class.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import time
-from typing import Any, ContextManager, Iterator, Optional, cast
+from types import TracebackType
+from typing import Any, ContextManager, Optional, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
@@ -32,6 +32,33 @@ class Operation:
     @property
     def failed(self) -> bool:
         return self.failure is not None
+
+
+@dataclass
+class _FailCtxMgr:
+    _log: Logger
+    _format: str
+    _level: LogLevel
+    _kwargs: dict[str, object]
+    _op: Operation = field(default_factory=Operation)
+
+    def __enter__(self) -> Operation:
+        return self._op
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> bool:
+        if exc_type is not None:
+            failure = Failure()
+            self._op.failure = failure
+            self._log.failure(self._format, failure, self._level, **self._kwargs)
+        else:
+            self._op.succeeded = True
+        return True
 
 
 class Logger:
@@ -323,28 +350,7 @@ class Logger:
             either its C{succeeded} or C{failed} attribute set to C{True} upon
             completion of the code within the code within the C{with} block.
         """
-        return self._handlingFailures(format, level, **kwargs)  # pragma: no cover
-
-    @contextmanager
-    def _handlingFailures(
-        self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
-    ) -> Iterator[Operation]:
-        """
-        Implementation of L{Logger.handlingFailures}.
-        """
-        op = Operation()
-        try:
-            yield op
-        except BaseException:
-            failure = Failure()
-            op.failure = failure
-            self.failure(format, failure, level, **kwargs)
-        else:
-            op.succeeded = True
-
-    # Remove pointless additional call-stack frame, since the extra method is
-    # just defined to make the AST look correct for pydoctor.
-    handlingFailures = _handlingFailures  # noqa
+        return _FailCtxMgr(self, format, level, kwargs)
 
 
 _log = Logger()
