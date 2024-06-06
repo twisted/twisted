@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from time import time
 from types import TracebackType
-from typing import Any, ContextManager, Optional, cast
+from typing import Any, ContextManager, Optional, Protocol, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
@@ -19,19 +19,18 @@ from ._interfaces import ILogObserver, LogTrace
 from ._levels import InvalidLogLevelError, LogLevel
 
 
-@dataclass
-class Operation:
-    """
-    An L{Operation} represents the status of code run with
-    L{Logger.handlingFailures}.
-    """
+class Operation(Protocol):
+    @property
+    def succeeded(self) -> bool:
+        ...
 
-    succeeded: bool = False
-    failure: Failure | None = None
+    @property
+    def failure(self) -> Failure | None:
+        ...
 
     @property
     def failed(self) -> bool:
-        return self.failure is not None
+        ...
 
 
 @dataclass
@@ -42,8 +41,15 @@ class _FailCtxMgr:
     _kwargs: dict[str, object]
     _op: Operation = field(default_factory=Operation)
 
+    succeeded: bool = False
+    failure: Failure | None = None
+
+    @property
+    def failed(self) -> bool:
+        return self.failure is not None
+
     def __enter__(self) -> Operation:
-        return self._op
+        return self
 
     def __exit__(
         self,
@@ -54,10 +60,10 @@ class _FailCtxMgr:
     ) -> bool:
         if exc_type is not None:
             failure = Failure()
-            self._op.failure = failure
+            self.failure = failure
             self._log.failure(self._format, failure, self._level, **self._kwargs)
         else:
-            self._op.succeeded = True
+            self.succeeded = True
         return True
 
 
