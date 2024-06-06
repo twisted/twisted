@@ -8,7 +8,7 @@ Logger class.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from time import time
 from types import TracebackType
 from typing import Any, ContextManager, Optional, Protocol, cast
@@ -39,7 +39,6 @@ class _FailCtxMgr:
     _format: str
     _level: LogLevel
     _kwargs: dict[str, object]
-    _op: Operation = field(default_factory=Operation)
 
     succeeded: bool = False
     failure: Failure | None = None
