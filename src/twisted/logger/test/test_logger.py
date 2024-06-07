@@ -278,7 +278,8 @@ class LoggerTests(unittest.TestCase):
 
     def test_handlingFailures(self) -> None:
         """
-        The handlingFailures context manager catches any BaseException and converts it into a logged Failure.
+        The L{Logger.handlingFailures} context manager catches any
+        L{BaseException} and converts it into a logged L{Failure}.
         """
         events = []
 
@@ -317,3 +318,37 @@ class LoggerTests(unittest.TestCase):
         self.assertEqual(reprd, 1)
         self.assertEqual(op2.succeeded, True)
         self.assertEqual(op2.failed, False)
+
+    def test_failureHandler(self) -> None:
+        """
+        The L{Logger.failureHandler} context manager can safely be shared
+        amongst multiple invocations and converts L{BaseException} into logged
+        L{Failure}s.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = TestLogger(observer=logged)
+
+        failureHandler = log.failureHandler("hello")
+        success = False
+        with failureHandler as fh:
+            success = True
+        self.assertIs(fh, None)
+        self.assertEqual(success, True)
+        self.assertEqual(events, [])
+        success = False
+
+        def raisebase() -> None:
+            raise KeyboardInterrupt()
+
+        with failureHandler as fh:
+            raisebase()
+
+        self.assertEqual(len(events), 1)
+        [logged] = events
+        f = logged["log_failure"]
+        self.assertEqual(f.type, KeyboardInterrupt)
