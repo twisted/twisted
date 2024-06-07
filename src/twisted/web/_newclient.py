@@ -325,6 +325,11 @@ class HTTPParser(LineReceiver):
         self.switchToBodyMode(None)
 
 
+_fastFailureHandler = _moduleLog.handlingFailures(
+    "while interacting with body decoder:"
+)
+
+
 class HTTPClientParser(HTTPParser):
     """
     An HTTP parser which only handles HTTP responses.
@@ -525,7 +530,7 @@ class HTTPClientParser(HTTPParser):
             # application code.  The response is part of the HTTP server and
             # really shouldn't raise exceptions, but maybe there's some buggy
             # application code somewhere making things difficult.
-            with _moduleLog.handlingFailures("while interacting with body decoder:"):
+            with _fastFailureHandler:
                 try:
                     self.bodyDecoder.noMoreData()
                 except PotentialDataLoss:
