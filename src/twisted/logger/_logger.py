@@ -8,7 +8,6 @@ Logger class.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from time import time
 from types import TracebackType
 from typing import Any, Callable, ContextManager, Optional, Protocol, cast
@@ -33,11 +32,12 @@ class Operation(Protocol):
         ...
 
 
-@dataclass
 class _FailCtxMgr:
-    _fail: Callable[[Failure], None]
     succeeded: bool = False
     failure: Failure | None = None
+
+    def __init__(self, fail: Callable[[Failure], None]) -> None:
+        self._fail = fail
 
     @property
     def failed(self) -> bool:
