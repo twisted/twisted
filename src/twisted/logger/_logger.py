@@ -62,6 +62,27 @@ class _FailCtxMgr:
         return True
 
 
+class _FastFailCtxMgr:
+    def __init__(self, fail: Callable[[Failure], None]) -> None:
+        self._fail = fail
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+        /,
+    ) -> bool:
+        if exc_type is not None:
+            failure = Failure()
+            self.failure = failure
+            self._fail(failure)
+        return True
+
+
 class Logger:
     """
     A L{Logger} emits log messages to an observer.  You should instantiate it
@@ -211,25 +232,32 @@ class Logger:
             d.addErrback(lambda f: log.failure("While frobbing {knob}",
                                                f, knob=knob))
 
-        This method is generally meant to capture unexpected exceptions in
-        code; an exception that is caught and handled somehow should be logged,
-        if appropriate, via L{Logger.error} instead.  If some unknown exception
+        This method is meant to capture unexpected exceptions in code; an
+        exception that is caught and handled somehow should be logged, if
+        appropriate, via L{Logger.error} instead.  If some unknown exception
         occurs and your code doesn't know how to handle it, as in the above
-        example, then this method provides a means to describe the failure in
-        nerd-speak.  This is done at L{LogLevel.critical} by default, since no
-        corrective guidance can be offered to an user/administrator, and the
-        impact of the condition is unknown.
+        example, then this method provides a means to describe the failure.
+        This is done at L{LogLevel.critical} by default, since no corrective
+        guidance can be offered to an user/administrator, and the impact of the
+        condition is unknown.
 
         @param format: a message format using new-style (PEP 3101) formatting.
             The logging event (which is a L{dict}) is used to render this
             format string.
+
         @param failure: a L{Failure} to log.  If L{None}, a L{Failure} is
             created from the exception in flight.
+
         @param level: a L{LogLevel} to use.
+
         @param kwargs: additional key/value pairs to include in the event.
             Note that values which are later mutated may result in
             non-deterministic behavior from observers that schedule work for
             later execution.
+
+        @see: L{Logger.failureHandler}
+
+        @see: L{Logger.handlingFailures}
         """
         if failure is None:
             failure = Failure()
@@ -320,19 +348,20 @@ class Logger:
 
             log = Logger(...)
 
-            with log.handlingFailures("While frobbing {knob}:", knob=knob) as op:
-                frob(knob)
-            if op.succeeded:
-                log.info("frobbed {knob} successfully", knob=knob)
+            def frameworkCode() -> None:
+                with log.handlingFailures("While frobbing {knob}:", knob=knob) as op:
+                    frob(knob)
+                if op.succeeded:
+                    log.info("frobbed {knob} successfully", knob=knob)
 
-        This method is generally meant to capture unexpected exceptions from
-        application code; an exception that is caught and handled somehow
-        should be logged, if appropriate, via L{Logger.error} instead.  If some
-        unknown exception occurs and your code doesn't know how to handle it,
-        as in the above example, then this method provides a means to describe
-        the failure in nerd-speak.  This is done at L{LogLevel.critical} by
-        default, since no corrective guidance can be offered to an
-        user/administrator, and the impact of the condition is unknown.
+        This method is meant to capture unexpected exceptions from application
+        code; an exception that is caught and handled somehow should be logged,
+        if appropriate, via L{Logger.error} instead.  If some unknown exception
+        occurs and your code doesn't know how to handle it, as in the above
+        example, then this method provides a means to describe the failure.
+        This is done at L{LogLevel.critical} by default, since no corrective
+        guidance can be offered to an user/administrator, and the impact of the
+        condition is unknown.
 
         @param format: a message format using new-style (PEP 3101) formatting.
             The logging event (which is a L{dict}) is used to render this
@@ -346,12 +375,58 @@ class Logger:
             later execution.
 
         @see: L{Logger.failure}
+        @see: L{Logger.failureHandler}
 
         @return: A context manager which yields an L{Operation} which will have
             either its C{succeeded} or C{failed} attribute set to C{True} upon
             completion of the code within the code within the C{with} block.
         """
         return _FailCtxMgr(lambda f: self.failure(format, f, level, **kwargs))
+
+    def failureHandler(
+        self,
+        staticMessage: str,
+        level: LogLevel = LogLevel.critical,
+    ) -> ContextManager[None]:
+        """
+        For performance-sensitive frameworks that needs to handle potential
+        failures from frequently-called application code, and do not need to
+        include detailed structured information about the failure nor inspect
+        the result of the operation, this method returns a context manager that
+        will log exceptions and continue, that can be shared across multiple
+        invocations.  It should be instantiated at module scope to avoid
+        additional object creations.
+
+        For example::
+
+            log = Logger(...)
+            ignoringFrobErrors = log.failureHandler("while frobbing:")
+
+            def hotLoop() -> None:
+                with ignoringFrobErrors:
+                    frob()
+
+        This method is meant to capture unexpected exceptions from application
+        code; an exception that is caught and handled somehow should be logged,
+        if appropriate, via L{Logger.error} instead.  If some unknown exception
+        occurs and your code doesn't know how to handle it, as in the above
+        example, then this method provides a means to describe the failure in
+        nerd-speak.  This is done at L{LogLevel.critical} by default, since no
+        corrective guidance can be offered to an user/administrator, and the
+        impact of the condition is unknown.
+
+        @param format: a message format using new-style (PEP 3101) formatting.
+            The logging event (which is a L{dict}) is used to render this
+            format string.
+
+        @param level: a L{LogLevel} to use.
+
+        @see: L{Logger.failure}
+
+        @return: A context manager which does not return a value, but will
+            always exit from exceptions.
+        """
+        return _FastFailCtxMgr(lambda f: self.failure(staticMessage, f, level))
 
 
 _log = Logger()

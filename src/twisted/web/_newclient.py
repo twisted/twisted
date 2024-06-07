@@ -325,8 +325,15 @@ class HTTPParser(LineReceiver):
         self.switchToBodyMode(None)
 
 
-_fastFailureHandler = _moduleLog.handlingFailures(
-    "while interacting with body decoder:"
+_ignoreDecoderErrors = _moduleLog.failureHandler("while interacting with body decoder:")
+_ignoreStopProducerStopWriting = _moduleLog.failureHandler(
+    "while calling stopProducing() in stopWriting():"
+)
+_ignoreStopProducerWrite = _moduleLog.failureHandler(
+    "while calling stopProducing() in write():"
+)
+_ignoreQuiescentCallback = _moduleLog.failureHandler(
+    "while invoking quiescent callback:"
 )
 
 
@@ -530,7 +537,7 @@ class HTTPClientParser(HTTPParser):
             # application code.  The response is part of the HTTP server and
             # really shouldn't raise exceptions, but maybe there's some buggy
             # application code somewhere making things difficult.
-            with _fastFailureHandler:
+            with _ignoreDecoderErrors:
                 try:
                     self.bodyDecoder.noMoreData()
                 except PotentialDataLoss:
@@ -999,7 +1006,7 @@ class Request:
         """
         # If bodyProducer is None, then the Deferred returned by writeTo has
         # fired already and this method cannot be called.
-        with _moduleLog.handlingFailures(
+        with _ignoreStopProducerStopWriting(
             "while calling stopProducing() in stopWriting():"
         ):
             self.bodyProducer.stopProducing()
@@ -1059,9 +1066,7 @@ class LengthEnforcingConsumer:
             # we still have _finished which we can use to report the error to a
             # better place than the direct caller of this method (some
             # arbitrary application code).
-            with _moduleLog.handlingFailures(
-                "while calling stopProducing() in write():"
-            ):
+            with _ignoreStopProducerWrite:
                 self._producer.stopProducing()
             self._finished.errback(WrongBodyLength("too many bytes written"))
             self._allowNoMoreWrites()
@@ -1667,9 +1672,7 @@ class HTTP11ClientProtocol(Protocol):
 
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
-            with _moduleLog.handlingFailures(
-                "while invoking quiescent callback:"
-            ) as op:
+            with _ignoreQuiescentCallback as op:
                 self._quiescentCallback(self)
             if op.failed:
                 # If callback throws exception, just log it and disconnect;
