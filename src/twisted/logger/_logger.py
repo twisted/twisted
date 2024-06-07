@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, ContextManager, Optional, Protocol, cast
+from typing import Any, Callable, ContextManager, Optional, Protocol, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
@@ -35,11 +35,7 @@ class Operation(Protocol):
 
 @dataclass
 class _FailCtxMgr:
-    _log: Logger
-    _format: str
-    _level: LogLevel
-    _kwargs: dict[str, object]
-
+    _fail: Callable[[Failure], None]
     succeeded: bool = False
     failure: Failure | None = None
 
@@ -60,7 +56,7 @@ class _FailCtxMgr:
         if exc_type is not None:
             failure = Failure()
             self.failure = failure
-            self._log.failure(self._format, failure, self._level, **self._kwargs)
+            self._fail(failure)
         else:
             self.succeeded = True
         return True
@@ -355,7 +351,7 @@ class Logger:
             either its C{succeeded} or C{failed} attribute set to C{True} upon
             completion of the code within the code within the C{with} block.
         """
-        return _FailCtxMgr(self, format, level, kwargs)
+        return _FailCtxMgr(lambda f: self.failure(format, f, level, **kwargs))
 
 
 _log = Logger()
