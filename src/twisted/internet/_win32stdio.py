@@ -20,8 +20,8 @@ from twisted.internet.interfaces import (
     IPushProducer,
     ITransport,
 )
-from twisted.python.failure import Failure
 from twisted.logger import Logger
+from twisted.python.failure import Failure
 
 _log = Logger()
 
