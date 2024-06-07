@@ -1095,9 +1095,10 @@ def makeStatefulDispatcher(name, template):
 
     @return: The dispatcher function.
     """
+    pfx = f"_{name}_"
 
     def dispatcher(self, *args, **kwargs):
-        func = getattr(self, "_" + name + "_" + self._state, None)
+        func = getattr(self, f"{pfx}{self._state}", None)
         if func is None:
             raise RuntimeError(f"{self!r} has no {name} method in state {self._state}")
         return func(*args, **kwargs)
