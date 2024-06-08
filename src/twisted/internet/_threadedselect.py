@@ -308,7 +308,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self._cleanUpThread()
 
     def iterate(self, timeout: float = 0.0) -> None:
-        if self._iterationQueue is None and self.mainWaker is None:
+        if self._iterationQueue is None and self.mainWaker is None:  # pragma: no branch
             self._testMainLoopSetup()
         self.wakeUp()
         super().iterate(timeout)

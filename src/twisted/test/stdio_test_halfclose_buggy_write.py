@@ -48,7 +48,7 @@ class HalfCloseProtocol(protocol.Protocol):
         This may only be invoked after C{readConnectionLost}.  If it happens
         otherwise, mark it as an error and shut down.
         """
-        if self.wasWriteConnectionLost:
+        if self.wasWriteConnectionLost:  # pragma: no branch
             self.exitCode = 0
         reactor.stop()
 
@@ -57,7 +57,7 @@ class HalfCloseProtocol(protocol.Protocol):
         raise ValueError("something went wrong")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no branch
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], "w"))
     reactor: IReactorCore

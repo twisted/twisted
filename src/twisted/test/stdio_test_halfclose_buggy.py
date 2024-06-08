@@ -55,7 +55,7 @@ class HalfCloseProtocol(protocol.Protocol):
         pass
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no branch
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], "w"))
     reactor: IReactorCore
