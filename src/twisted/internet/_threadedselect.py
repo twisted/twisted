@@ -104,13 +104,19 @@ def _threadsafeSelect(
         except OSError as se:
             # The select() system call encountered an error.
             if se.args[0] == EINTR:
-                return
+                # EINTR is hard to replicate in tests using an actual select(),
+                # and I don't want to dedicate effort to testing this function
+                # when it needs to be refactored with selectreactor.
+
+                return  # pragma: no cover
             elif se.args[0] == EBADF:
                 preen = True
                 break
             else:
-                # OK, I really don't know what's going on.  Blow up.
-                raise
+                # OK, I really don't know what's going on.  Blow up.  Never
+                # mind with the coverage here, since we are just trying to make
+                # sure we don't swallow an exception.
+                raise  # pragma: no cover
         else:
             r, w, ignored = result
             break
