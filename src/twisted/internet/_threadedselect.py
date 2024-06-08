@@ -58,7 +58,6 @@ from zope.interface import implementer
 from twisted._threads import ThreadWorker
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
-from twisted.internet.posixbase import _NO_FILEDESC
 from twisted.internet.selectreactor import _preenDescriptors, _select
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger as _callWithLogger
@@ -99,27 +98,12 @@ def _threadsafeSelect(
             result = _select(readints, writeints, [], timeout)
         except ValueError:
             # Possible problems with file descriptors that were passed:
-            # ValueError may indicate that a file descriptor has gone negative,
-            preen = True
-            break
-        except TypeError:
-            # and TypeError indicates that something *totally* invalid (an
-            # object without a .fileno method, or such a method with a result
-            # that has a type other than `int`) was passed.  This is probably a
-            # bug in application code that we *can* recover from, so we will
-            # log it and try to do that.
-            _log.failure("while calling select() in a thread")
+            # ValueError may indicate that a file descriptor has gone negative.
             preen = True
             break
         except OSError as se:
             # The select() system call encountered an error.
-            if se.args[0] in (0, 2):
-                # windows does this if it got an empty list
-                if (len(readmap) + len(writemap)) == 0:
-                    return
-                else:
-                    raise
-            elif se.args[0] == EINTR:
+            if se.args[0] == EINTR:
                 return
             elif se.args[0] == EBADF:
                 preen = True
@@ -133,17 +117,15 @@ def _threadsafeSelect(
     handleResult(r, w, readmap, writemap, preen)
 
 
-def _noWaker(work: Callable[[], None]) -> None:
-    raise RuntimeError("threaded select reactor not interleaved")
-
-
 @implementer(IReactorFDSet)
 class ThreadedSelectReactor(posixbase.PosixReactorBase):
     """A threaded select() based reactor - runs on all POSIX platforms and on
     Win32.
     """
 
-    def __init__(self, waker: Callable[[Callable[[], None]], None] = _noWaker) -> None:
+    def __init__(
+        self, waker: Callable[[Callable[[], None]], None] | None = None
+    ) -> None:
         self.reads: set[IReadDescriptor] = set()
         self.writes: set[IWriteDescriptor] = set()
         posixbase.PosixReactorBase.__init__(self)
@@ -160,19 +142,13 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.wakeUp()
         return tple
 
-    def _mapOneEntry(self, selectable: Any) -> int | None:
-        with _log.handlingFailures("determining fileno for selectability"):
-            fd: int = selectable.fileno()
-            return fd
-        return None  # type:ignore[unreachable]
-
-    def _doReadOrWrite(self, selectable, method):
+    def _doReadOrWrite(self, selectable: object, method: str) -> None:
         with _log.handlingFailures(
             "while handling selectable {sel}", sel=selectable
         ) as op:
             why = getattr(selectable, method)()
-        if op.failed:
-            why = op.failure.value
+        if (fail := op.failure) is not None:
+            why = fail.value
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
 
@@ -184,11 +160,13 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             (False, self.writes, writes),
         ]:
             for each in fdmap:  # type:ignore[attr-defined]
-                asfd = self._mapOneEntry(each)
-                if asfd is None:
-                    self._disconnectSelectable(each, _NO_FILEDESC, isRead)
-                else:
-                    d[asfd] = each
+                d[each.fileno()] = each
+
+        mainWaker = self.mainWaker
+        assert mainWaker is not None, (
+            "neither .interleave() nor .mainLoop() / .run() called, "
+            "but we are somehow running the reactor"
+        )
 
         def callReadsAndWrites(
             r: list[int],
@@ -197,7 +175,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             writemap: dict[int, IWriteDescriptor],
             preen: bool,
         ) -> None:
-            @self.mainWaker
+            @mainWaker
             def onMainThread() -> None:
                 if preen:
                     _preenDescriptors(
@@ -218,7 +196,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
                 self.runUntilCurrent()
                 if self._started and keepGoing:
-                    self._selectOnce(self.timeout(), True)
+                    # see coverage note in .interleave()
+                    self._selectOnce(self.timeout(), True)  # pragma: no cover
                 else:
                     self._cleanUpThread()
 
@@ -251,9 +230,14 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
         See the module docstring for more information.
         """
-        self.mainWaker = waker
-        self.startRunning(installSignalHandlers)
-        self._selectOnce(0.0, True)
+        # TODO: This method is excluded from coverage because it only happens
+        # in the case where we are actually running on a foreign event loop,
+        # and twisted's test suite isn't set up that way.  It would be nice to
+        # add some dedicated tests for ThreadedSelectReactor that covered this
+        # case.
+        self.mainWaker = waker  # pragma: no cover
+        self.startRunning(installSignalHandlers)  # pragma: no cover
+        self._selectOnce(0.0, True)  # pragma: no cover
 
     def addReader(self, reader: IReadDescriptor) -> None:
         """Add a FileDescriptor for notification of data available to read."""
@@ -318,7 +302,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self._cleanUpThread()
 
     def iterate(self, timeout: float = 0.0) -> None:
-        if self._iterationQueue is None and self.mainWaker is _noWaker:
+        if self._iterationQueue is None and self.mainWaker is None:
             self._testMainLoopSetup()
         self.wakeUp()
         super().iterate(timeout)
