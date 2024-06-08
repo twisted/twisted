@@ -46,21 +46,21 @@ would normally have initiated the shutdown procedure for the foreign event
 loop.  Shutdown functions that could be used in place of "foreignEventloopStop"
 would be the ExitMainLoop method of the wxApp instance with wxPython.
 """
+from __future__ import annotations
 
 from errno import EBADF, EINTR
-from functools import partial
 from queue import Empty, Queue
 from threading import Thread
-from typing import Any
+from typing import Any, Callable
 
 from zope.interface import implementer
 
+from twisted._threads import ThreadWorker
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.internet.posixbase import _NO_FILEDESC
 from twisted.internet.selectreactor import _preenDescriptors, _select
 from twisted.logger import Logger
-from twisted.python import failure, threadable
 from twisted.python.log import callWithLogger as _callWithLogger
 
 _log = Logger()
@@ -70,22 +70,86 @@ def raiseException(e):
     raise e
 
 
+def _threadsafeSelect(
+    timeout: float | None,
+    readmap: dict[int, IReadDescriptor],
+    writemap: dict[int, IWriteDescriptor],
+    handleResult: Callable[
+        [
+            list[int],
+            list[int],
+            dict[int, IReadDescriptor],
+            dict[int, IWriteDescriptor],
+            bool,
+        ],
+        None,
+    ],
+) -> None:
+    """
+    Invoke C{select}.  This will be called in a non-main thread, so it is very
+    careful to work only on integers and avoid calling any application code.
+    """
+    preen = False
+    r = []
+    w = []
+    while 1:
+        readints = readmap.keys()
+        writeints = writemap.keys()
+        try:
+            result = _select(readints, writeints, [], timeout)
+        except ValueError:
+            # Possible problems with file descriptors that were passed:
+            # ValueError may indicate that a file descriptor has gone negative,
+            preen = True
+            break
+        except TypeError:
+            # and TypeError indicates that something *totally* invalid (an
+            # object without a .fileno method, or such a method with a result
+            # that has a type other than `int`) was passed.  This is probably a
+            # bug in application code that we *can* recover from, so we will
+            # log it and try to do that.
+            _log.failure("while calling select() in a thread")
+            preen = True
+            break
+        except OSError as se:
+            # The select() system call encountered an error.
+            if se.args[0] in (0, 2):
+                # windows does this if it got an empty list
+                if (len(readmap) + len(writemap)) == 0:
+                    return
+                else:
+                    raise
+            elif se.args[0] == EINTR:
+                return
+            elif se.args[0] == EBADF:
+                preen = True
+                break
+            else:
+                # OK, I really don't know what's going on.  Blow up.
+                raise
+        else:
+            r, w, ignored = result
+            break
+    handleResult(r, w, readmap, writemap, preen)
+
+
+def _noWaker(work: Callable[[], None]) -> None:
+    raise RuntimeError("threaded select reactor not interleaved")
+
+
 @implementer(IReactorFDSet)
 class ThreadedSelectReactor(posixbase.PosixReactorBase):
     """A threaded select() based reactor - runs on all POSIX platforms and on
     Win32.
     """
 
-    def __init__(self) -> None:
-        threadable.init(1)
+    def __init__(self, waker: Callable[[Callable[[], None]], None] = _noWaker) -> None:
         self.reads: set[IReadDescriptor] = set()
         self.writes: set[IWriteDescriptor] = set()
-        self.toThreadQueue: Queue[Any] = Queue()
-        self.toMainThread: Queue[Any] = Queue()
-        self.workerThread = None
-        self.mainWaker = None
         posixbase.PosixReactorBase.__init__(self)
-        self.addSystemEventTrigger("after", "shutdown", self._mainLoopShutdown)
+        self._selectorThread: ThreadWorker | None = None
+        self.mainWaker = waker
+        self._iterationQueue: Queue[Callable[[], None]] | None = None
 
     def wakeUp(self):
         # we want to wake up from any thread
@@ -96,185 +160,11 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         self.wakeUp()
         return tple
 
-    def _sendToMain(self, msg, *args):
-        self.toMainThread.put((msg, args))
-        if self.mainWaker is not None:
-            self.mainWaker()
-
-    def _sendToThread(self, fn, *args):
-        self.toThreadQueue.put((fn, args))
-
-    def _workerInThread(self):
-        try:
-            while 1:
-                fn, args = self.toThreadQueue.get()
-                fn(*args)
-        except SystemExit:
-            pass  # Exception indicates this thread should exit
-        except BaseException:
-            f = failure.Failure()
-            self._sendToMain("Failure", f)
-
-    def _doIterationInThread(
-        self, timeout: float, readmap: dict[int, object], writemap: dict[int, object]
-    ) -> None:
-        """Run one iteration of the I/O monitor loop.
-
-        This will run all selectables who had input or output readiness
-        waiting for them.
-        """
-        preen = False
-        r = []
-        w = []
-        while 1:
-            readints = readmap.keys()
-            writeints = writemap.keys()
-            try:
-                result = _select(readints, writeints, [], timeout)
-            except (ValueError, TypeError):
-                # Possible problems with file descriptors that were passed:
-                # ValueError may indicate that a file descriptor has gone
-                # negative, and TypeError indicates that something *totally*
-                # invalid (an object without a .fileno method, or such a method
-                # with a result that has a type other than `int`) was passed.
-                # This is probably a bug in application code that we *can*
-                # recover from, so we will log it and try to do that.
-                preen = True
-                break
-            except OSError as se:
-                # The select() system call encountered an error.
-                if se.args[0] in (0, 2):
-                    # windows does this if it got an empty list
-                    if (len(readmap) + len(writemap)) == 0:
-                        return
-                    else:
-                        raise
-                elif se.args[0] == EINTR:
-                    return
-                elif se.args[0] == EBADF:
-                    preen = True
-                    break
-                else:
-                    # OK, I really don't know what's going on.  Blow up.
-                    raise
-            else:
-                r, w, ignored = result
-                break
-        _log.info("end thread, back to main")
-        self._sendToMain("Notify", r, w, preen, readmap, writemap)
-
-    def _process_Notify(
-        self,
-        r: list[int],
-        w: list[int],
-        preen: bool,
-        readmap: dict[int, IReadDescriptor],
-        writemap: dict[int, IWriteDescriptor],
-    ) -> None:
-        if preen:
-            _preenDescriptors(self.reads, self.writes, self._disconnectSelectable)
-            return
-        _drdw = self._doReadOrWrite
-        for readable in r:
-            rselectable = readmap[readable]
-            _callWithLogger(rselectable, _drdw, rselectable, "doRead")
-        for writable in w:
-            wselectable = writemap[writable]
-            _callWithLogger(wselectable, _drdw, wselectable, "doWrite")
-
-    def _process_Failure(self, f):
-        f.raiseException()
-
-    def ensureWorkerThread(self):
-        if self.workerThread is None or not self.workerThread.isAlive():
-            self.workerThread = Thread(target=self._workerInThread)
-            self.workerThread.start()
-
     def _mapOneEntry(self, selectable: Any) -> int | None:
         with _log.handlingFailures("determining fileno for selectability"):
             fd: int = selectable.fileno()
             return fd
         return None  # type:ignore[unreachable]
-
-    def _dispatchIteration(self, timeout: float) -> None:
-        reads: dict[int, object] = {}
-        writes: dict[int, object] = {}
-        for isRead, fdmap, d in [
-            (True, self.reads, reads),
-            (False, self.writes, writes),
-        ]:
-            for each in fdmap:  # type:ignore[attr-defined]
-                asfd = self._mapOneEntry(each)
-                if asfd is None:
-                    self._disconnectSelectable(each, _NO_FILEDESC, isRead)
-                else:
-                    d[asfd] = each
-        self._sendToThread(self._doIterationInThread, timeout, reads, writes)
-
-    def doThreadIteration(self, timeout):
-        self._dispatchIteration(timeout)
-        self.ensureWorkerThread()
-        msg, args = self.toMainThread.get()
-        getattr(self, "_process_" + msg)(*args)
-
-    doIteration = doThreadIteration
-
-    def _interleave(self):
-        while self.running:
-            self.runUntilCurrent()
-            t2 = self.timeout()
-            t = self.running and t2
-            self._dispatchIteration(t)
-            yield None
-            msg, args = self.toMainThread.get_nowait()
-            getattr(self, "_process_" + msg)(*args)
-
-    def interleave(self, waker, *args, **kw):
-        """
-        interleave(waker) interleaves this reactor with the
-        current application by moving the blocking parts of
-        the reactor (select() in this case) to a separate
-        thread.  This is typically useful for integration with
-        GUI applications which have their own event loop
-        already running.
-
-        See the module docstring for more information.
-        """
-        self.startRunning(*args, **kw)
-        loop = self._interleave()
-
-        def mainWaker(waker=waker, loop=loop):
-            waker(partial(next, loop))
-
-        self.mainWaker = mainWaker
-        next(loop)
-        self.ensureWorkerThread()
-
-    def _mainLoopShutdown(self):
-        self.mainWaker = None
-        if self.workerThread is not None:
-            self._sendToThread(raiseException, SystemExit)
-            self.wakeUp()
-            try:
-                while 1:
-                    msg, args = self.toMainThread.get_nowait()
-            except Empty:
-                pass
-            self.workerThread.join()
-            self.workerThread = None
-        try:
-            while 1:
-                fn, args = self.toThreadQueue.get_nowait()
-                if fn is self._doIterationInThread:
-                    _log.warn(
-                        "possible threadedselectreactor bug: iteration is still in the thread queue!"
-                    )
-                elif fn is raiseException and args[0] is SystemExit:
-                    pass
-                else:
-                    fn(*args)
-        except Empty:
-            pass
 
     def _doReadOrWrite(self, selectable, method):
         with _log.handlingFailures(
@@ -285,6 +175,85 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             why = op.failure.value
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
+
+    def _selectOnce(self, timeout: float | None) -> None:
+        reads: dict[int, Any] = {}
+        writes: dict[int, Any] = {}
+        for isRead, fdmap, d in [
+            (True, self.reads, reads),
+            (False, self.writes, writes),
+        ]:
+            for each in fdmap:  # type:ignore[attr-defined]
+                asfd = self._mapOneEntry(each)
+                if asfd is None:
+                    self._disconnectSelectable(each, _NO_FILEDESC, isRead)
+                else:
+                    d[asfd] = each
+
+        def callReadsAndWrites(
+            r: list[int],
+            w: list[int],
+            readmap: dict[int, IReadDescriptor],
+            writemap: dict[int, IWriteDescriptor],
+            preen: bool,
+        ) -> None:
+            @self.mainWaker
+            def onMainThread() -> None:
+                if preen:
+                    _preenDescriptors(
+                        self.reads, self.writes, self._disconnectSelectable
+                    )
+                    return
+                _drdw = self._doReadOrWrite
+
+                for readable in r:
+                    rselectable = readmap[readable]
+                    if rselectable in self.reads:
+                        _callWithLogger(rselectable, _drdw, rselectable, "doRead")
+
+                for writable in w:
+                    wselectable = writemap[writable]
+                    if wselectable in self.writes:
+                        _callWithLogger(wselectable, _drdw, wselectable, "doWrite")
+
+                self.runUntilCurrent()
+                if self._started:
+                    self._selectOnce(self.timeout())
+                else:
+                    self._cleanUpThread()
+
+        if self._selectorThread is None:
+            self._selectorThread = ThreadWorker(
+                lambda target: Thread(target=target).start(), Queue()
+            )
+        self._selectorThread.do(
+            lambda: _threadsafeSelect(timeout, reads, writes, callReadsAndWrites)
+        )
+
+    def _cleanUpThread(self) -> None:
+        """
+        Ensure that the selector thread is stopped.
+        """
+        oldThread, self._selectorThread = self._selectorThread, None
+        if oldThread is not None:
+            oldThread.quit()
+
+    def interleave(
+        self,
+        waker: Callable[[Callable[[], None]], None],
+        installSignalHandlers: bool = True,
+    ) -> None:
+        """
+        interleave(waker) interleaves this reactor with the current application
+        by moving the blocking parts of the reactor (select() in this case) to
+        a separate thread.  This is typically useful for integration with GUI
+        applications which have their own event loop already running.
+
+        See the module docstring for more information.
+        """
+        self.mainWaker = waker
+        self.startRunning(installSignalHandlers)
+        self._selectOnce(0.0)
 
     def addReader(self, reader: IReadDescriptor) -> None:
         """Add a FileDescriptor for notification of data available to read."""
@@ -327,14 +296,48 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         posixbase.PosixReactorBase.crash(self)
         self.wakeUp()
 
-    def run(self, installSignalHandlers=True):
-        q = Queue()
-        self.interleave(q.put, installSignalHandlers=installSignalHandlers)
-        while self.running:
-            try:
-                q.get()()
-            except StopIteration:
-                break
+    # The following methods are mostly for test-suite support, to make
+    # ThreadedSelectReactor behave like another reactor you might call run()
+    # on.
+    def _testMainLoopSetup(self) -> None:
+        """
+        Mostly for compliance with L{IReactorCore} and usability with the
+        tests, set up a fake blocking main-loop; make the "foreign" main loop
+        we are interfacing with be C{self.mainLoop()}, that is reading from a
+        basic Queue.
+        """
+        self._iterationQueue = Queue()
+        self.mainWaker = self._iterationQueue.put
+        self._selectOnce(0.0)
+
+    def _uninstallHandler(self) -> None:
+        """
+        Handle uninstallation to ensure that cleanup is properly performed by
+        ReactorBuilder tests.
+        """
+        super()._uninstallHandler()
+        self._cleanUpThread()
+
+    def iterate(self, timeout: float = 0.0) -> None:
+        if self._iterationQueue is None and self.mainWaker is _noWaker:
+            self._testMainLoopSetup()
+        self.wakeUp()
+        super().iterate(timeout)
+
+    def doIteration(self, timeout: float | None) -> None:
+        assert self._iterationQueue is not None
+        try:
+            work = self._iterationQueue.get(timeout=timeout)
+        except Empty:
+            return
+        work()
+
+    def mainLoop(self) -> None:
+        """
+        This should not normally be run.
+        """
+        self._testMainLoopSetup()
+        super().mainLoop()
 
 
 def install():
