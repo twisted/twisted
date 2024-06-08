@@ -14,6 +14,7 @@ from __future__ import annotations
 __all__ = ["install", "CFReactor"]
 
 import sys
+import time
 
 from zope.interface import implementer
 
@@ -46,6 +47,7 @@ from CoreFoundation import (
 
 from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet.posixbase import _NO_FILEDESC, PosixReactorBase
+from twisted.logger import Logger
 from twisted.python import log
 
 # We know that we're going to run on macOS so we can just pick the
@@ -53,6 +55,7 @@ from twisted.python import log
 # so lets more things get type checked.
 from ._signals import _UnixWaker
 
+_log = Logger()
 _READ = 0
 _WRITE = 1
 _preserveSOError = 1 << 6
@@ -87,6 +90,32 @@ class _WakerPlus(_UnixWaker):
         result = super().doRead()
         self.reactor._scheduleSimulate()
         return result
+
+
+def _1hzWakeUp() -> object:
+    def nothing(timer: object, extra: object) -> None:
+        print(f"1hz wakeup {time.time()}")
+
+    flags = 0
+    order = 0
+    interval = 1.0
+
+    timer = CFRunLoopTimerCreate(
+        kCFAllocatorDefault,
+        CFAbsoluteTimeGetCurrent(),
+        interval,
+        flags,
+        order,
+        nothing,
+        None,
+    )
+    loop = CFRunLoopGetCurrent()
+    CFAbsoluteTimeGetCurrent()
+    CFRunLoopAddTimer(loop, timer, kCFRunLoopCommonModes)
+    return timer
+
+
+_1hz = _1hzWakeUp()
 
 
 @implementer(IReactorFDSet)
@@ -494,6 +523,11 @@ class CFReactor(PosixReactorBase):
             # If the reactor is not running (e.g. we are scheduling callLater
             # calls before starting the reactor) we should not be scheduling
             # CFRunLoopTimers against the global CFRunLoop.
+            print(
+                """
+            _scheduleSimulate early-out due to un-started reactor
+            """
+            )
             return
 
         # runUntilCurrent acts on 3 things: _justStopped to process the
@@ -505,10 +539,13 @@ class CFReactor(PosixReactorBase):
 
         fireDate = CFAbsoluteTimeGetCurrent() + timeout
 
-        def simulate(cftimer, extra):
-            self._currentSimulator = None
-            self.runUntilCurrent()
-            self._scheduleSimulate()
+        def simulate(cftimer: object, extra: object) -> None:
+            try:
+                self._currentSimulator = None
+                self.runUntilCurrent()
+                self._scheduleSimulate()
+            except BaseException:
+                _log.failure("while running CoreFoundation simulate timer")
 
         c = self._currentSimulator = CFRunLoopTimerCreate(
             kCFAllocatorDefault, fireDate, 0, 0, 0, simulate, None
@@ -536,7 +573,17 @@ class CFReactor(PosixReactorBase):
         """
         PosixReactorBase.crash(self)
         if not self._inCFLoop:
+            print(
+                f"""
+            skipping CFRunLoopStop at {time.time()}
+            """
+            )
             return
+        print(
+            f"""
+        calling CFRunLoopStop at {time.time()}
+        """
+        )
         CFRunLoopStop(self._cfrunloop)
 
     def iterate(self, delay=0):

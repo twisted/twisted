@@ -10,6 +10,7 @@ This module implements the worker classes.
 """
 
 import os
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
 from unittest import TestCase
 
@@ -369,6 +370,22 @@ class NotRunning(Exception):
     """
 
 
+@dataclass
+class IndexPrefix:
+    _index: int
+    _stream: TextIO
+
+    def write(self, data: str) -> None:
+        lines = data.split("\n")
+        if not lines[-1]:
+            lines.pop()
+        else:
+            lines[-1] += "%"
+        for line in lines:
+            self._stream.write(f"{self._index}: {line}\n")
+        self._stream.flush()
+
+
 class LocalWorker(ProcessProtocol):
     """
     Local process worker protocol. This worker runs as a local process and
@@ -384,6 +401,7 @@ class LocalWorker(ProcessProtocol):
 
     def __init__(
         self,
+        index: int,
         ampProtocol: LocalWorkerAMP,
         logDirectory: FilePath[Any],
         logFile: TextIO,
@@ -392,6 +410,7 @@ class LocalWorker(ProcessProtocol):
         self._logDirectory = logDirectory
         self._logFile = logFile
         self.endDeferred: Deferred[None] = Deferred()
+        self._index = index
 
     async def exit(self) -> None:
         """
@@ -407,14 +426,20 @@ class LocalWorker(ProcessProtocol):
         except ProcessDone:
             pass
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         """
         When connection is made, create the AMP protocol instance.
         """
         self._ampProtocol.makeConnection(LocalWorkerTransport(self.transport))
         self._logDirectory.makedirs(ignoreExistingDirectory=True)
-        self._outLog = self._logDirectory.child("out.log").open("w")
-        self._errLog = self._logDirectory.child("err.log").open("w")
+        from sys import stderr, stdout
+
+        self._outLog = IndexPrefix(
+            self._index, stdout
+        )  # self._logDirectory.child("out.log").open("w")
+        self._errLog = IndexPrefix(
+            self._index, stderr
+        )  # self._logDirectory.child("err.log").open("w")
         self._ampProtocol.setTestStream(self._logFile)
         d = self._ampProtocol.callRemote(
             workercommands.Start,
@@ -429,8 +454,8 @@ class LocalWorker(ProcessProtocol):
         On connection lost, close the log files that we're managing for stdin
         and stdout.
         """
-        self._outLog.close()
-        self._errLog.close()
+        # self._outLog.close()
+        # self._errLog.close()
         self.transport = None
 
     def processEnded(self, reason: Failure) -> None:
@@ -447,13 +472,13 @@ class LocalWorker(ProcessProtocol):
         Send data received from stdout to log.
         """
 
-        self._outLog.write(data)
+        self._outLog.write(data.decode())
 
     def errReceived(self, data):
         """
         Write error data to log.
         """
-        self._errLog.write(data)
+        self._errLog.write(data.decode())
 
     def childDataReceived(self, childFD, data):
         """
