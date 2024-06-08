@@ -10,6 +10,7 @@ Future Plans::
 
 Maintainer: James Y Knight
 """
+from __future__ import annotations
 
 from zope.interface import implementer
 
