@@ -56,8 +56,10 @@ from twisted.internet.interfaces import (
     _ISupportsExitSignalCapturing,
 )
 from twisted.internet.protocol import ClientFactory
-from twisted.python import log, reflect
+from twisted.logger import Logger
+from twisted.python import reflect
 from twisted.python.failure import Failure
+from twisted.python.log import callWithLogger as _callWithLogger
 from twisted.python.runtime import platform, seconds as runtimeSeconds
 from ._signals import SignalHandling, _WithoutSignalHandling, _WithSignalHandling
 
@@ -72,6 +74,11 @@ if platform.supportsThreads():
     from twisted.python.threadpool import ThreadPool
 else:
     ThreadPool = None  # type: ignore[misc, assignment]
+
+_log = Logger()
+_topHandler = _log.failureHandler("Unexpected error in main loop")
+_threadCallHandler = _log.failureHandler("while calling from thread")
+_systemEventHandler = _log.failureHandler("While calling system event trigger handler")
 
 
 @implementer(IDelayedCall)
@@ -494,13 +501,11 @@ class _ThreePhaseEvent:
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
-            try:
+            result = None
+            with _systemEventHandler:
                 result = callable(*args, **kwargs)
-            except BaseException:
-                log.err()
-            else:
-                if isinstance(result, Deferred):
-                    beforeResults.append(result)
+            if isinstance(result, Deferred):
+                beforeResults.append(result)
         DeferredList(beforeResults).addCallback(self._continueFiring)
 
     def _continueFiring(self, ignored: object) -> None:
@@ -512,10 +517,8 @@ class _ThreePhaseEvent:
         for phase in self.during, self.after:
             while phase:
                 callable, args, kwargs = phase.pop(0)
-                try:
+                with _systemEventHandler:
                     callable(*args, **kwargs)
-                except BaseException:
-                    log.err()
 
 
 @implementer(IReactorPluggableNameResolver, IReactorPluggableResolver)
@@ -698,19 +701,13 @@ class ReactorBase(PluggableResolverMixin):
 
     def mainLoop(self) -> None:
         while self._started:
-            try:
-                while self._started:
-                    # Advance simulation time in delayed event
-                    # processors.
-                    self.runUntilCurrent()
-                    t2 = self.timeout()
-                    t = self.running and t2
-                    self.doIteration(t)
-            except BaseException:
-                log.msg("Unexpected error in main loop.")
-                log.err()
-            else:
-                log.msg("Main loop terminated.")  # type:ignore[unreachable]
+            with _topHandler:
+                # Advance simulation time in delayed event processors.
+                self.runUntilCurrent()
+                t2 = self.timeout()
+                t = self.running and t2
+                self.doIteration(t)
+        _log.info("Main loop terminated.")
 
     # override in subclasses
 
@@ -815,7 +812,7 @@ class ReactorBase(PluggableResolverMixin):
         @param number: See handler specification in L{signal.signal}
         @param frame: See handler specification in L{signal.signal}
         """
-        log.msg("Received SIGINT, shutting down.")
+        _log.info("Received SIGINT, shutting down.")
         self.callFromThread(self.stop)
         self._exitSignal = number
 
@@ -826,7 +823,7 @@ class ReactorBase(PluggableResolverMixin):
         @param number: See handler specification in L{signal.signal}
         @param frame: See handler specification in L{signal.signal}
         """
-        log.msg("Received SIGBREAK, shutting down.")
+        _log.info("Received SIGBREAK, shutting down.")
         self.callFromThread(self.stop)
         self._exitSignal = number
 
@@ -837,7 +834,7 @@ class ReactorBase(PluggableResolverMixin):
         @param number: See handler specification in L{signal.signal}
         @param frame: See handler specification in L{signal.signal}
         """
-        log.msg("Received SIGTERM, shutting down.")
+        _log.info("Received SIGTERM, shutting down.")
         self.callFromThread(self.stop)
         self._exitSignal = number
 
@@ -845,7 +842,7 @@ class ReactorBase(PluggableResolverMixin):
         """Disconnect every reader, and writer in the system."""
         selectables = self.removeAll()
         for reader in selectables:
-            log.callWithLogger(
+            _callWithLogger(
                 reader, reader.connectionLost, Failure(main.CONNECTION_LOST)
             )
 
@@ -1059,10 +1056,8 @@ class ReactorBase(PluggableResolverMixin):
             count = 0
             total = len(self.threadCallQueue)
             for f, a, kw in self.threadCallQueue:
-                try:
+                with _threadCallHandler:
                     f(*a, **kw)
-                except BaseException:
-                    log.err()
                 count += 1
                 if count == total:
                     break
@@ -1085,21 +1080,20 @@ class ReactorBase(PluggableResolverMixin):
                 heappush(self._pendingTimedCalls, call)
                 continue
 
-            try:
+            with _log.handlingFailures(
+                "while handling timed call {previous()}",
+                previous=lambda creator=call.creator: (
+                    ""
+                    if creator is None
+                    else "\n"
+                    + (" C: from a DelayedCall created here:\n")
+                    + " C:"
+                    + "".join(creator).rstrip().replace("\n", "\n C:")
+                    + "\n"
+                ),
+            ):
                 call.called = 1
                 call.func(*call.args, **call.kw)
-            except BaseException:
-                log.err()
-                if call.creator is not None:
-                    e = "\n"
-                    e += (
-                        " C: previous exception occurred in "
-                        + "a DelayedCall created here:\n"
-                    )
-                    e += " C:"
-                    e += "".join(call.creator).rstrip().replace("\n", "\n C:")
-                    e += "\n"
-                    log.msg(e)
 
         if (
             self._cancellations > 50
