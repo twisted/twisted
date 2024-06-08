@@ -13,7 +13,8 @@ Maintainer: James Y Knight
 
 from zope.interface import implementer
 
-from twisted.internet import error, interfaces, process
+from twisted.internet import interfaces, process
+from twisted.internet.interfaces import IProtocol, IReactorFDSet
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 
@@ -37,10 +38,16 @@ class StandardIO:
     disconnected = False
     disconnecting = False
 
-    def __init__(self, proto, stdin=0, stdout=1, reactor=None):
+    def __init__(
+        self,
+        proto: IProtocol,
+        stdin: int = 0,
+        stdout: int = 1,
+        reactor: IReactorFDSet | None = None,
+    ):
         if reactor is None:
-            from twisted.internet import reactor
-        self.protocol = proto
+            from twisted.internet import reactor  # type:ignore[assignment]
+        self.protocol: IProtocol = proto
 
         self._writer = process.ProcessWriter(reactor, self, "write", stdout)
         self._reader = process.ProcessReader(reactor, self, "read", stdin)
@@ -78,21 +85,16 @@ class StandardIO:
         return PipeAddress()
 
     # Callbacks from process.ProcessReader/ProcessWriter
-    def childDataReceived(self, fd, data):
+    def childDataReceived(self, fd: str, data: bytes) -> None:
         self.protocol.dataReceived(data)
 
-    def childConnectionLost(self, fd, reason):
+    def childConnectionLost(self, fd: str, reason: Failure) -> None:
         if self.disconnected:
             return
-
-        if reason.value.__class__ == error.ConnectionDone:
-            # Normal close
-            if fd == "read":
-                self._readConnectionLost(reason)
-            else:
-                self._writeConnectionLost(reason)
+        if fd == "read":
+            self._readConnectionLost(reason)
         else:
-            self.connectionLost(reason)
+            self._writeConnectionLost(reason)
 
     def connectionLost(self, reason):
         self.disconnected = True
@@ -102,7 +104,7 @@ class StandardIO:
         _writer = self._writer
         protocol = self.protocol
         self._reader = self._writer = None
-        self.protocol = None
+        self.protocol = None  # type:ignore[assignment]
 
         if _writer is not None and not _writer.disconnected:
             _writer.connectionLost(reason)

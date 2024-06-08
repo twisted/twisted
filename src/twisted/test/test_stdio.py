@@ -56,6 +56,7 @@ class StandardIOTestProcessProtocol(protocol.ProcessProtocol):
     """
 
     onDataReceived: defer.Deferred[None] | None = None
+    transport: IProcessTransport
 
     def __init__(self) -> None:
         self.onConnection: defer.Deferred[None] = defer.Deferred()
@@ -151,14 +152,19 @@ class StandardInputOutputTests(TestCase):
 
         return self._requireFailure(d, processEnded)
 
-    def exampleOutputsAndZeroExitCode(self, example: str) -> defer.Deferred[None]:
+    def exampleOutputsAndZeroExitCode(
+        self, example: str, out: bool = False
+    ) -> defer.Deferred[None]:
         errorLogFile = self.mktemp()
         p = StandardIOTestProcessProtocol()
         p.onDataReceived = defer.Deferred()
 
-        def cbBytes(ignored):
+        def cbBytes(ignored: None) -> defer.Deferred[None]:
             d = p.onCompletion
-            p.transport.closeStdin()
+            if out:
+                p.transport.closeStdout()
+            else:
+                p.transport.closeStdin()
             return d
 
         p.onDataReceived.addCallback(cbBytes)
@@ -186,6 +192,16 @@ class StandardInputOutputTests(TestCase):
         an exception its regular C{connectionLost} method will be called.
         """
         return self.exampleOutputsAndZeroExitCode("stdio_test_halfclose_buggy")
+
+    def test_buggyWriteConnectionLost(self) -> defer.Deferred[None]:
+        """
+        When stdin is closed and the protocol connnected to it implements
+        L{IHalfCloseableProtocol} but its C{readConnectionLost} method raises
+        an exception its regular C{connectionLost} method will be called.
+        """
+        return self.exampleOutputsAndZeroExitCode(
+            "stdio_test_halfclose_buggy_write", out=True
+        )
 
     def test_lastWriteReceived(self):
         """

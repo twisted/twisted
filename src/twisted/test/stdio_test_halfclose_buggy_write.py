@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_buggyReadConnectionLost -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_buggyWriteConnectionLost -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -27,7 +27,8 @@ class HalfCloseProtocol(protocol.Protocol):
     otherwise it will be set to C{1} to indicate failure.
     """
 
-    exitCode = None
+    exitCode = 9
+    wasWriteConnectionLost = False
     transport: ITransport
 
     def connectionMade(self) -> None:
@@ -41,19 +42,19 @@ class HalfCloseProtocol(protocol.Protocol):
         This is the desired event.  Once it has happened, stop the reactor so
         the process will exit.
         """
-        raise ValueError("something went wrong")
 
     def connectionLost(self, reason: object = None) -> None:
         """
         This may only be invoked after C{readConnectionLost}.  If it happens
         otherwise, mark it as an error and shut down.
         """
-        self.exitCode = 0
+        if self.wasWriteConnectionLost:
+            self.exitCode = 0
         reactor.stop()
 
     def writeConnectionLost(self) -> None:
-        # IHalfCloseableProtocol.writeConnectionLost
-        pass
+        self.wasWriteConnectionLost = True
+        raise ValueError("something went wrong")
 
 
 if __name__ == "__main__":
