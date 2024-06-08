@@ -4,8 +4,8 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost}
-to test that IHalfCloseableProtocol.readConnectionLost works for process
+L{twisted.test.test_stdio.StandardInputOutputTests.test_buggyWriteConnectionLost}
+to test that IHalfCloseableProtocol.writeConnectionLost works for stdio
 transports.
 """
 
