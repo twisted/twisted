@@ -323,6 +323,10 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         posixbase.PosixReactorBase.stop(self)
         self.wakeUp()
 
+    def crash(self):
+        posixbase.PosixReactorBase.crash(self)
+        self.wakeUp()
+
     def run(self, installSignalHandlers=True):
         q = Queue()
         self.interleave(q.put, installSignalHandlers=installSignalHandlers)
