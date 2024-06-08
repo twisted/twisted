@@ -1062,7 +1062,9 @@ def _tolerateErrors(wrapped):
 
     def infoCallback(connection, where, ret):
         with _log.handlingFailures("Error during info_callback") as op:
-            return wrapped(connection, where, ret)
+            result = wrapped(connection, where, ret)
+            return result
+
         if (f := op.failure) is not None:
             connection.get_app_data().failVerification(f)
 
