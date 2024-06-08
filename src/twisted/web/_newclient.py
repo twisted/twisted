@@ -27,7 +27,7 @@ Various other classes in this module support this usage:
 """
 
 import re
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from zope.interface import implementer
 
@@ -332,9 +332,6 @@ _ignoreStopProducerStopWriting = _moduleLog.failureHandler(
 _ignoreStopProducerWrite = _moduleLog.failureHandler(
     "while calling stopProducing() in write():"
 )
-_ignoreQuiescentCallback = _moduleLog.failureHandler(
-    "while invoking quiescent callback:"
-)
 
 
 class HTTPClientParser(HTTPParser):
@@ -362,7 +359,7 @@ class HTTPClientParser(HTTPParser):
         b"chunked": _ChunkedTransferDecoder,
     }
 
-    bodyDecoder = None
+    bodyDecoder: _IdentityTransferDecoder | None = None
     _log = Logger()
 
     def __init__(self, request, finisher):
@@ -530,7 +527,7 @@ class HTTPClientParser(HTTPParser):
         self._responseDeferred.callback(self.response)
         del self._responseDeferred
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure | None = None) -> None:
         if self.bodyDecoder is not None:
             # Handle exceptions from both the body decoder itself and the
             # various invocations of _bodyDataFinished; treat them all as
@@ -996,7 +993,7 @@ class Request:
         else:
             return self._writeToBodyProducerContentLength(transport)
 
-    def stopWriting(self):
+    def stopWriting(self) -> None:
         """
         Stop writing this request to the transport.  This can only be called
         after C{writeTo} and before the L{Deferred} returned by C{writeTo}
@@ -1006,9 +1003,7 @@ class Request:
         """
         # If bodyProducer is None, then the Deferred returned by writeTo has
         # fired already and this method cannot be called.
-        with _ignoreStopProducerStopWriting(
-            "while calling stopProducing() in stopWriting():"
-        ):
+        with _ignoreStopProducerStopWriting:
             self.bodyProducer.stopProducing()
 
 
@@ -1539,11 +1534,11 @@ class HTTP11ClientProtocol(Protocol):
     """
 
     _state = "QUIESCENT"
-    _parser = None
-    _finishedRequest = None
-    _currentRequest = None
+    _parser: HTTPClientParser | None = None
+    _finishedRequest: Deferred[Response] | None = None
+    _currentRequest: Request | None = None
     _transportProxy = None
-    _responseDeferred = None
+    _responseDeferred: Deferred[Response] | None = None
     _log = Logger()
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1624,7 +1619,7 @@ class HTTP11ClientProtocol(Protocol):
 
         return self._finishedRequest
 
-    def _finishResponse(self, rest):
+    def _finishResponse(self, rest: bytes) -> None:
         """
         Called by an L{HTTPClientParser} to indicate that it has parsed a
         complete response.
@@ -1636,10 +1631,16 @@ class HTTP11ClientProtocol(Protocol):
 
     _finishResponse = makeStatefulDispatcher("finishResponse", _finishResponse)
 
-    def _finishResponse_WAITING(self, rest):
+    def _finishResponse_WAITING(self, rest: bytes) -> None:
         # Currently the rest parameter is ignored. Don't forget to use it if
         # we ever add support for pipelining. And maybe check what trailers
         # mean.
+        if TYPE_CHECKING:
+            assert self._responseDeferred is not None
+            assert self._finishedRequest is not None
+            assert self._currentRequest is not None
+            assert self.transport is not None
+
         if self._state == "WAITING":
             self._state = "QUIESCENT"
         else:
@@ -1668,11 +1669,14 @@ class HTTP11ClientProtocol(Protocol):
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
-            self.transport.resumeProducing()
+            producer: IPushProducer = self.transport  # type:ignore[assignment]
+            producer.resumeProducing()
 
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
-            with _ignoreQuiescentCallback as op:
+            with _moduleLog.handlingFailures(
+                "while invoking quiescent callback:"
+            ) as op:
                 self._quiescentCallback(self)
             if op.failed:
                 # If callback throws exception, just log it and disconnect;
