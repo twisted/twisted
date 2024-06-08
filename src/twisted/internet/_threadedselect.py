@@ -176,7 +176,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         if why:
             self._disconnectSelectable(selectable, why, method == "doRead")
 
-    def _selectOnce(self, timeout: float | None) -> None:
+    def _selectOnce(self, timeout: float | None, keepGoing: bool) -> None:
         reads: dict[int, Any] = {}
         writes: dict[int, Any] = {}
         for isRead, fdmap, d in [
@@ -217,8 +217,8 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
                         _callWithLogger(wselectable, _drdw, wselectable, "doWrite")
 
                 self.runUntilCurrent()
-                if self._started:
-                    self._selectOnce(self.timeout())
+                if self._started and keepGoing:
+                    self._selectOnce(self.timeout(), True)
                 else:
                     self._cleanUpThread()
 
@@ -253,7 +253,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """
         self.mainWaker = waker
         self.startRunning(installSignalHandlers)
-        self._selectOnce(0.0)
+        self._selectOnce(0.0, True)
 
     def addReader(self, reader: IReadDescriptor) -> None:
         """Add a FileDescriptor for notification of data available to read."""
@@ -308,7 +308,6 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         """
         self._iterationQueue = Queue()
         self.mainWaker = self._iterationQueue.put
-        self._selectOnce(0.0)
 
     def _uninstallHandler(self) -> None:
         """
@@ -326,6 +325,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
 
     def doIteration(self, timeout: float | None) -> None:
         assert self._iterationQueue is not None
+        self._selectOnce(timeout, False)
         try:
             work = self._iterationQueue.get(timeout=timeout)
         except Empty:
