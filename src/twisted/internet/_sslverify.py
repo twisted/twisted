@@ -28,12 +28,15 @@ from twisted.internet.interfaces import (
     IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
 )
-from twisted.python import log, util
+from twisted.logger import Logger
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
+from twisted.python.util import nameToLabel
 from ._idna import _idnaBytes
+
+_log = Logger()
 
 
 class TLSVersion(Names):
@@ -344,7 +347,7 @@ class DistinguishedName(Dict[str, bytes]):
             return set(mapping.values())
 
         for k in sorted(uniqueValues(_x509names)):
-            label = util.nameToLabel(k)
+            label = nameToLabel(k)
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
@@ -1058,11 +1061,9 @@ def _tolerateErrors(wrapped):
     """
 
     def infoCallback(connection, where, ret):
-        try:
+        with _log.handlingFailures("Error during info_callback") as op:
             return wrapped(connection, where, ret)
-        except BaseException:
-            f = Failure()
-            log.err(f, "Error during info_callback")
+        if (f := op.failure) is not None:
             connection.get_app_data().failVerification(f)
 
     return infoCallback
