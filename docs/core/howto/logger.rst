@@ -101,26 +101,24 @@ For example:
 This example will show the string "object with value 7 doing a task" because the ``log_source`` key is automatically set to the ``MyObject`` instance that the ``Logger`` is retrieved from.
 
 
-Capturing Failures
-~~~~~~~~~~~~~~~~~~
+Handling Failures
+~~~~~~~~~~~~~~~~~
 
-:py:class:`Logger <twisted.logger.Logger>` provides a :py:meth:`failure <twisted.logger.Logger.failure>` method, which allows one to capture a :py:class:`Failure <twisted.python.failure.Failure>` object conveniently:
+:py:class:`Logger <twisted.logger.Logger>` provides a :py:meth:`failure <twisted.logger.Logger.handlingFailures>` method, which allows one to run some application code, then capture a :py:class:`Failure <twisted.python.failure.Failure>` in the log stream if that code raises an exception:
 
 .. code-block:: python
 
     from twisted.logger import Logger
     log = Logger()
 
-    try:
+    with log.handlingFailures("While doing some math:"):
         1 / 0
-    except BaseException:
-        log.failure("Math is hard!")
 
 The emitted event will have the ``"log_failure"`` key set, which is a :py:class:`Failure <twisted.python.failure.Failure>` that captures the exception.
 This can be used by my observers to obtain a traceback.
-For example, :py:class:`FileLogObserver <twisted.logger.FileLogObserver>` will append the traceback to it's output::
+For example, :py:class:`FileLogObserver <twisted.logger.FileLogObserver>` will append the traceback to its output::
 
-    Math is hard!
+    While doing some math:
 
     Traceback (most recent call last):
     --- <exception caught here> ---
@@ -128,10 +126,25 @@ For example, :py:class:`FileLogObserver <twisted.logger.FileLogObserver>` will a
         1/0
     exceptions.ZeroDivisionError: integer division or modulo by zero
 
-Note that this API is meant to capture unexpected and unhandled errors (that is: bugs, which is why tracebacks are preserved).
+Note that this API is meant to capture **unexpected and otherwise unhandled** errors (in other words: bugs, which is why tracebacks are preserved).
 As such, it defaults to logging at the :py:attr:`critical <twisted.logger.LogLevel.critical>` level.
-It is generally more appropriate to instead use `log.error()` when logging an expected error condition that was appropriately handled by the software.
+It is generally more appropriate to instead use ``log.error()`` when logging an expected type of error condition that was fully handled by your code.
+To put it differently, use ``.handlingFailures(...)`` for handling bugs in your code, and ``.error()`` for handling errors in input data, user configuration, and the like.
 
+``.handlingFailures(...)`` is intended for frameworks (such as Twisted itself) which call out to “application code”, where misbehavior on the part of the application should not corrupt the state of the framework itself.
+For example, a buggy protocol implementation will not cause the entire Twisted reactor to crash and exit, it will log a traceback, disconnect the protocol which caused the exception, and keep running.
+
+Therefore, most of the time, you should be accepting the behavior of ``handlingFailures``, of catching everything via ``BaseException``.
+However, if you require more customization of behavior beyond catching everything and continuing on, you can use :py:meth:`failure <twisted.logger.Logger.failure>` directly, like so:
+
+.. code-block:: python
+
+    try:
+        1 / 0
+    except ZeroDivisionError:
+        log.failure("While dividing by zero, specifically:")
+
+The ``.failure`` method requires a log message, but can discover an exception on the stack automatically, so if it is called from within an ``except:`` block it will do the right thing.
 
 Namespaces
 ~~~~~~~~~~
