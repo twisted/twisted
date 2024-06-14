@@ -548,6 +548,26 @@ class Request(Copyable, BaseRequest, components.Componentized):
 
         return urlpath.URLPath.fromRequest(self)
 
+    def URL(self):
+        """
+        Return URL object of this request object.
+
+        @return: the URL
+        @rtype: L{hyperlink.DecodedURL}
+        """
+
+        # Pre process to decode from bytes data
+        _allascii = b"".join([chr(x).encode('ascii') for x in range(1, 128)])
+        quoted = quote(self.prePathURL(), safe=_allascii)
+        if isinstance(quoted, bytes):
+            # This will only be bytes on python 2, where we can transform it
+            # into unicode.  On python 3, urlquote always returns str.
+            quoted = quoted.decode("ascii")
+
+        from hyperlink import DecodedURL
+        return DecodedURL.fromText(quoted)
+
+
     def rememberRootURL(self):
         """
         Remember the currently-processed part of the URL for later
