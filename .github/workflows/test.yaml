@@ -290,7 +290,38 @@ jobs:
         name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
 
+  benchmarks:
+    runs-on: ubuntu-22.04
 
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        # When you will need to change this to run the benchmarks
+        # on a different Python version,
+        # it will also change the benchmark results.
+        # This is expected and unavoidable.
+        # This is why it's best not to configure the default
+        # Python version here,
+        # but rather have an explicit Python version.
+        # The PRs that are changing the Python version can
+        # be merged by ignoring the benchmark results.
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install . pytest pytest-codspeed
+
+    - name: Run benchmarks
+      uses: CodSpeedHQ/action@v2
+      with:
+        token: ${{ secrets.CODSPEED_TOKEN }}
+        # codspeed runs this command under a CPU emulator, so it's super-slow,
+        # so we try to just do the benchmarks and nothing else.
+        run: python -m pytest --codspeed benchmarks/
 
   static-checks:
     runs-on: ubuntu-22.04
@@ -408,6 +439,7 @@ jobs:
     runs-on: ubuntu-latest
     # Here should be the list of all the other jobs defined in this file.
     needs:
+      - benchmarks
       - testing
       - narrativedocs
       - apidocs

@@ -1,1 +1,1 @@
-Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installations.rst>`_.
+Additional instructions for installing this software can be found in `the installation instructions <https://docs.twisted.org/en/latest/installation.html>`_.
