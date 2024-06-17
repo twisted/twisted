@@ -702,6 +702,12 @@ class FlattenerErrorTests(SynchronousTestCase):
         exc = RuntimeError("example")
         failing.errback(exc)
         failure = self.failureResultOf(flattening, FlattenerError)
+        if IS_PYTHON_313:
+            maybe_deferred = ""
+            column_marker = "[ ^]*\nRuntimeError: example\n"
+        else:
+            maybe_deferred = "\n                      <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>"
+            column_marker = ""
         self.assertRegex(
             str(failure.value),
             re.compile(
@@ -709,12 +715,12 @@ class FlattenerErrorTests(SynchronousTestCase):
                     """\
                     Exception while flattening:
                       \\[<unrenderable>\\]
-                      <unrenderable>
-                      <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>
+                      <unrenderable>""" + maybe_deferred +
+                    """
                       File ".*", line \\d*, in _flattenTree
                         element = await element.*
-                    """
-                ),
+                    """ 
+                )+ column_marker,
                 flags=re.MULTILINE,
             ),
         )
