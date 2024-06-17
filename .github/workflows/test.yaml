@@ -150,6 +150,9 @@ jobs:
             # FIXME:https://github.com/twisted/twisted/issues/12062
             # Add full twisted.test
             trial-target: 'twisted.conch twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.web twisted.words'
+            # DELETEME Disable concurrency for now just to see if that helps
+            # reproduce segfaults more clearly:
+            trial-args: ''
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
