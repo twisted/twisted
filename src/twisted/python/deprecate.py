@@ -262,8 +262,7 @@ def _appendToDocstring(thingWithDoc, textToAppend):
         trailer = docstringLines[-1]
         spaces = ""
         if not trailer.strip():
-            # On Python 3.13 the docstring is already stripped.
-            # For older Python version we keep the trailer.
+            # Deal with differences between Python 3.13 and older versions.
             spaces = docstringLines.pop()
         docstringLines.extend(["", spaces + textToAppend, spaces])
         docstringLines = [l.lstrip(" ") for l in docstringLines]
