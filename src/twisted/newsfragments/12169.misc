@@ -1,0 +1,1 @@
+Added more tests for ``twisted.internet.defer.inlineCallbacks`` decorator.

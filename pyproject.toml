@@ -384,8 +384,6 @@ module = [
   "psycopg",
   "MySQLdb",
   "kinterbasdb",
-
-  "SOAPpy",
 ]
 
 [[tool.mypy.overrides]]
@@ -734,7 +732,6 @@ module = [
     'twisted.web.proxy',
     'twisted.web.resource',
     'twisted.web.server',
-    'twisted.web.soap',
     'twisted.web.static',
     'twisted.web.sux',
     'twisted.web.tap',
@@ -749,7 +746,6 @@ module = [
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
     'twisted.web.test.test_proxy',
-    'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
