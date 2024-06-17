@@ -432,7 +432,9 @@ async def _flattenTree(
             roots = []
             for generator in stack:
                 roots.append(generator.gi_frame.f_locals["root"])
-            roots.append(frame.f_locals["root"])
+            # Python 3.13 doesn't have "root" in f_locals:
+            if "root" in frame.f_locals:
+                roots.append(frame.f_locals["root"])
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             stack.append(element)
