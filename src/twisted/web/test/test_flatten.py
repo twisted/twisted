@@ -715,12 +715,14 @@ class FlattenerErrorTests(SynchronousTestCase):
                     """\
                     Exception while flattening:
                       \\[<unrenderable>\\]
-                      <unrenderable>""" + maybe_deferred +
-                    """
+                      <unrenderable>"""
+                    + maybe_deferred
+                    + """
                       File ".*", line \\d*, in _flattenTree
                         element = await element.*
-                    """ 
-                )+ column_marker,
+                    """
+                )
+                + column_marker,
                 flags=re.MULTILINE,
             ),
         )
