@@ -139,7 +139,7 @@ jobs:
           # Pre-release Python 3.13 with default settings.
           # For now, no dependencies as cffi doesn't work on 3.13.
           # No coverage also.
-          - python-version: '3.13.0-beta.2'
+          - python-version: '3.13-dev'
             tox-env: 'nodeps-nocov-posix'
             job-name: 'nodeps-nocov-3.13'
             skip-coverage: yes
@@ -152,7 +152,7 @@ jobs:
             trial-target: 'twisted.conch twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.web twisted.words'
             # DELETEME Disable concurrency for now just to see if that helps
             # reproduce segfaults more clearly:
-            trial-args: ''
+            trial-args: '--reactor=default'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
