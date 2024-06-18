@@ -418,7 +418,6 @@ async def _flattenTree(
 
     while stack:
         try:
-            frame = stack[-1].gi_frame
             element = next(stack[-1])
             if isinstance(element, Deferred):
                 # Before suspending flattening for an unknown amount of time,
