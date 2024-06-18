@@ -153,6 +153,7 @@ jobs:
             # DELETEME Disable concurrency for now just to see if that helps
             # reproduce segfaults more clearly:
             trial-args: '--reactor=default'
+            tox-wrapper: catchsegv
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
@@ -264,7 +265,8 @@ jobs:
           libcairo2-dev \
           libffi-dev \
           gir1.2-gtk-3.0 \
-          xvfb
+          xvfb \
+          glibc-tools
 
     - name: Test
       run: |
