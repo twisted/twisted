@@ -428,13 +428,11 @@ async def _flattenTree(
         except StopIteration:
             stack.pop()
         except Exception as e:
-            stack.pop()
             roots = []
             for generator in stack:
-                roots.append(generator.gi_frame.f_locals["root"])
-            # Python 3.13 doesn't have "root" in f_locals:
-            if "root" in frame.f_locals:
-                roots.append(frame.f_locals["root"])
+                if generator.gi_frame is not None:
+                    roots.append(generator.gi_frame.f_locals["root"])
+            stack.pop()
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             stack.append(element)
