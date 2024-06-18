@@ -142,6 +142,7 @@ jobs:
           - python-version: '3.13-dev'
             tox-env: 'nodeps-nocov-posix'
             job-name: 'nodeps-nocov-3.13'
+            platform-deps: 'gtk-platform'
             skip-coverage: yes
             # FIXME:https://github.com/twisted/twisted/issues/12060
             # Also add twisted.python
