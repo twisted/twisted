@@ -38,7 +38,6 @@ dependencies = [
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
     "typing_extensions >= 4.2.0",
-    "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
@@ -68,6 +67,7 @@ dev-release = [
 
 # All the extra tools used to help with the development process.
 dev = [
+    "twisted[test]",
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
@@ -113,6 +113,7 @@ macos-platform = [
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
+    "twisted-iocpsupport >= 1.0.2",
 ]
 
 osx-platform = [
