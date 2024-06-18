@@ -142,7 +142,6 @@ jobs:
           - python-version: '3.13-dev'
             tox-env: 'nodeps-nocov-posix'
             job-name: 'nodeps-nocov-3.13'
-            platform-deps: 'gtk-platform'
             skip-coverage: yes
             # FIXME:https://github.com/twisted/twisted/issues/12060
             # Also add twisted.python
@@ -154,7 +153,6 @@ jobs:
             # DELETEME Disable concurrency for now just to see if that helps
             # reproduce segfaults more clearly:
             trial-args: '--reactor=default'
-            tox-wrapper: catchsegv
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
@@ -266,8 +264,7 @@ jobs:
           libcairo2-dev \
           libffi-dev \
           gir1.2-gtk-3.0 \
-          xvfb \
-          glibc-tools
+          xvfb
 
     - name: Test
       run: |
