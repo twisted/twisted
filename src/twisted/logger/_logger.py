@@ -19,17 +19,33 @@ from ._levels import InvalidLogLevelError, LogLevel
 
 
 class Operation(Protocol):
+    """
+    An L{Operation} represents the success (or lack thereof) of code performed
+    within the body of the L{Logger.failureHandler} context manager.
+    """
+
     @property
     def succeeded(self) -> bool:
-        ...
+        """
+        Did the operation succeed?  C{True} iff the code completed without
+        raising an exception; C{False} while the code is running and C{False}
+        if it raises an exception.
+        """
 
     @property
     def failure(self) -> Failure | None:
-        ...
+        """
+        Did the operation raise an exception?  If so, this L{Failure} is that
+        exception.
+        """
 
     @property
     def failed(self) -> bool:
-        ...
+        """
+        Did the operation fail?  C{True} iff the code raised an exception;
+        C{False} while the code is running and C{False} if it completed without
+        error.
+        """
 
 
 class _FailCtxMgr:
