@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost -*-
+# -*- test-case-name: twisted.test.test_stdio.StandardInputOutputTests.test_buggyReadConnectionLost -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -14,7 +14,7 @@ import sys
 from zope.interface import implementer
 
 from twisted.internet import protocol, stdio
-from twisted.internet.interfaces import IHalfCloseableProtocol
+from twisted.internet.interfaces import IHalfCloseableProtocol, IReactorCore, ITransport
 from twisted.python import log, reflect
 
 
@@ -27,42 +27,41 @@ class HalfCloseProtocol(protocol.Protocol):
     """
 
     exitCode = None
+    transport: ITransport
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         """
         Signal the parent process that we're ready.
         """
         self.transport.write(b"x")
 
-    def readConnectionLost(self):
+    def readConnectionLost(self) -> None:
         """
         This is the desired event.  Once it has happened, stop the reactor so
         the process will exit.
         """
-        self.exitCode = 0
-        reactor.stop()
+        raise ValueError("something went wrong")
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: object = None) -> None:
         """
         This may only be invoked after C{readConnectionLost}.  If it happens
         otherwise, mark it as an error and shut down.
         """
-        if self.exitCode is None:
-            self.exitCode = 1
-            log.err(reason, "Unexpected call to connectionLost")
+        self.exitCode = 0
         reactor.stop()
 
-    def writeConnectionLost(self):
+    def writeConnectionLost(self) -> None:
         # IHalfCloseableProtocol.writeConnectionLost
         pass
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no branch
     reflect.namedAny(sys.argv[1]).install()
-    log.startLogging(open(sys.argv[2], "wb"))
-    from twisted.internet import reactor
+    log.startLogging(open(sys.argv[2], "w"))
+    reactor: IReactorCore
+    from twisted.internet import reactor  # type:ignore[assignment]
 
     halfCloseProtocol = HalfCloseProtocol()
     stdio.StandardIO(halfCloseProtocol)
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()
     sys.exit(halfCloseProtocol.exitCode)
