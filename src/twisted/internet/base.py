@@ -76,6 +76,9 @@ else:
     ThreadPool = None  # type: ignore[misc, assignment]
 
 _log = Logger()
+
+# Pre-allocate some static application-code failure logging handlers so that we
+# do not need to allocate them in performance-sensitive bits of code below.
 _topHandler = _log.failureHandler("Unexpected error in main loop")
 _threadCallHandler = _log.failureHandler("while calling from thread")
 _systemEventHandler = _log.failureHandler("While calling system event trigger handler")
