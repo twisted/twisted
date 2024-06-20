@@ -104,15 +104,18 @@ This example will show the string "object with value 7 doing a task" because the
 Handling Failures
 ~~~~~~~~~~~~~~~~~
 
-:py:class:`Logger <twisted.logger.Logger>` provides a :py:meth:`failure <twisted.logger.Logger.failuresHandled>` method, which allows one to run some application code, then capture a :py:class:`Failure <twisted.python.failure.Failure>` in the log stream if that code raises an exception:
+:py:class:`Logger <twisted.logger.Logger>` provides a :py:meth:`failuresHandled <twisted.logger.Logger.failuresHandled>` method, which allows one to run some application code, then capture a :py:class:`Failure <twisted.python.failure.Failure>` in the log stream if that code raises an exception:
 
 .. code-block:: python
 
     from twisted.logger import Logger
     log = Logger()
 
-    with log.failuresHandled("While doing some math:"):
+    with log.failuresHandled("While doing some math:") as math:
         1 / 0
+
+    if math.succeeded:
+        print("Surprisingly, division by zero is possible.")
 
 The emitted event will have the ``"log_failure"`` key set, which is a :py:class:`Failure <twisted.python.failure.Failure>` that captures the exception.
 This can be used by my observers to obtain a traceback.
@@ -126,12 +129,27 @@ For example, :py:class:`FileLogObserver <twisted.logger.FileLogObserver>` will a
         1/0
     exceptions.ZeroDivisionError: integer division or modulo by zero
 
-Note that this API is meant to capture **unexpected and otherwise unhandled** errors (in other words: bugs, which is why tracebacks are preserved).
+This API is meant to capture **unexpected and otherwise unhandled** errors (in other words: bugs, which is why tracebacks are preserved).
 As such, it defaults to logging at the :py:attr:`critical <twisted.logger.LogLevel.critical>` level.
 It is generally more appropriate to instead use ``log.error()`` when logging an expected type of error condition that was fully handled by your code.
 To put it differently, use ``.failuresHandled(...)`` for handling bugs in your code, and ``.error()`` for handling errors in input data, user configuration, and the like.
 
-``.failuresHandled(...)`` is intended for frameworks (such as Twisted itself) which call out to “application code”, where misbehavior on the part of the application should not corrupt the state of the framework itself.
+The ``as`` clause binds an :py:class:`Operation <twisted.logger.Operation>` object that allows you to determine whether the code under the ``with`` block succeeded or failed, and inspect its failure if so.
+For more performance-sensitive applications, a simpler context manager which does *not* provide an :py:class:`Operation <twisted.logger.Operation>` is also available, :py:meth:`failureHandler <twisted.logger.Logger.failureHandler>`.
+Since :py:meth:`failureHandler <twisted.logger.Logger.failureHandler>` is designed to be created once and used repeatedly, it does not allow for passing any placeholder parameters or inspecting the result of the operation.  Using it would look more like this:
+
+.. code-block:: python
+
+     from twisted.logger import Logger
+     log = Logger()
+
+     dividingByZero = log.failureHandler("While doing some math:")
+
+     def later() -> None:
+         with dividingByZero:
+             1 / 0
+
+``.failuresHandled(...)`` and ``.failureHandler(...)`` are intended for frameworks (such as Twisted itself) which call out to “application code”, where misbehavior on the part of the application should not corrupt the state of the framework itself.
 For example, a buggy protocol implementation will not cause the entire Twisted reactor to crash and exit, it will log a traceback, disconnect the protocol which caused the exception, and keep running.
 
 Therefore, most of the time, you should be accepting the behavior of ``failuresHandled``, of catching everything via ``BaseException``.
