@@ -41,7 +41,7 @@ class BaseProcess:
                 stacklevel=0,
             )
         else:
-            with _log.handlingFailures("while calling processExited:"):
+            with _log.failuresHandled("while calling processExited:"):
                 processExited(Failure(reason))
 
     def processEnded(self, status):
@@ -62,5 +62,5 @@ class BaseProcess:
             reason = self._getReason(self.status)
             proto = self.proto
             self.proto = None
-            with _log.handlingFailures("while calling processEnded:"):
+            with _log.failuresHandled("while calling processEnded:"):
                 proto.processEnded(Failure(reason))

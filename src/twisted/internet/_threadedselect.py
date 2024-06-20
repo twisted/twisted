@@ -149,7 +149,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
         return tple
 
     def _doReadOrWrite(self, selectable: object, method: str) -> None:
-        with _log.handlingFailures(
+        with _log.failuresHandled(
             "while handling selectable {sel}", sel=selectable
         ) as op:
             why = getattr(selectable, method)()

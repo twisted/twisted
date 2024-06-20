@@ -69,7 +69,7 @@ class StandardIO(_pollingfile._PollingTimer):
         self.proto.dataReceived(data)
 
     def readConnectionLost(self):
-        with _log.handlingFailures("read connection lost") as op:
+        with _log.failuresHandled("read connection lost") as op:
             if IHalfCloseableProtocol.providedBy(self.proto):
                 self.proto.readConnectionLost()
         self.checkConnLost()
@@ -77,7 +77,7 @@ class StandardIO(_pollingfile._PollingTimer):
             self.loseConnection()
 
     def writeConnectionLost(self):
-        with _log.handlingFailures("write connection lost") as op:
+        with _log.failuresHandled("write connection lost") as op:
             if IHalfCloseableProtocol.providedBy(self.proto):
                 self.proto.writeConnectionLost()
         self.checkConnLost()

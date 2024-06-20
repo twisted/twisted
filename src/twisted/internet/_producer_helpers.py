@@ -61,12 +61,12 @@ class _PullToPush:
         unregistered, which should result in streaming stopping.
         """
         while True:
-            with _log.handlingFailures(
+            with _log.failuresHandled(
                 "while calling resumeProducing on {producer}", producer=self._producer
             ) as op:
                 self._producer.resumeProducing()
             if op.failed:
-                with _log.handlingFailures(
+                with _log.failuresHandled(
                     "while calling unregisterProducer on {consumer}",
                     consumer=self._consumer,
                 ) as handlingop:

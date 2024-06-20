@@ -257,7 +257,7 @@ class Logger:
 
         @see: L{Logger.failureHandler}
 
-        @see: L{Logger.handlingFailures}
+        @see: L{Logger.failuresHandled}
         """
         if failure is None:
             failure = Failure()
@@ -339,7 +339,7 @@ class Logger:
         """
         self.emit(LogLevel.critical, format, **kwargs)
 
-    def handlingFailures(
+    def failuresHandled(
         self, format: str, level: LogLevel = LogLevel.critical, **kwargs: object
     ) -> ContextManager[Operation]:
         """
@@ -349,7 +349,7 @@ class Logger:
             log = Logger(...)
 
             def frameworkCode() -> None:
-                with log.handlingFailures("While frobbing {knob}:", knob=knob) as op:
+                with log.failuresHandled("While frobbing {knob}:", knob=knob) as op:
                     frob(knob)
                 if op.succeeded:
                     log.info("frobbed {knob} successfully", knob=knob)

@@ -1080,7 +1080,7 @@ class ReactorBase(PluggableResolverMixin):
                 heappush(self._pendingTimedCalls, call)
                 continue
 
-            with _log.handlingFailures(
+            with _log.failuresHandled(
                 "while handling timed call {previous()}",
                 previous=lambda creator=call.creator: (
                     ""

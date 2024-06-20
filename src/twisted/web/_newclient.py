@@ -1676,9 +1676,7 @@ class HTTP11ClientProtocol(Protocol):
 
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
-            with _moduleLog.handlingFailures(
-                "while invoking quiescent callback:"
-            ) as op:
+            with _moduleLog.failuresHandled("while invoking quiescent callback:") as op:
                 self._quiescentCallback(self)
             if op.failed:
                 # If callback throws exception, just log it and disconnect;

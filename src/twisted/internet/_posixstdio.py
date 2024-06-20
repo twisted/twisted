@@ -113,7 +113,7 @@ class StandardIO:
         if _reader is not None and not _reader.disconnected:
             _reader.connectionLost(reason)
 
-        with _log.handlingFailures("while calling stdio connectionLost:"):
+        with _log.failuresHandled("while calling stdio connectionLost:"):
             protocol.connectionLost(reason)
 
     def _writeConnectionLost(self, reason: Failure) -> None:
@@ -124,7 +124,7 @@ class StandardIO:
 
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            with _log.handlingFailures(
+            with _log.failuresHandled(
                 "while calling stdio writeConnectionLost:"
             ) as wcl:
                 p.writeConnectionLost()
@@ -135,9 +135,7 @@ class StandardIO:
         self._reader = None
         p = interfaces.IHalfCloseableProtocol(self.protocol, None)
         if p:
-            with _log.handlingFailures(
-                "while calling stdio readConnectionLost:"
-            ) as rcl:
+            with _log.failuresHandled("while calling stdio readConnectionLost:") as rcl:
                 p.readConnectionLost()
             if rcl.failed:
                 self.connectionLost(rcl.failure)

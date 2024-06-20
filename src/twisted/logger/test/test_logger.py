@@ -276,9 +276,9 @@ class LoggerTests(unittest.TestCase):
         log = TestLogger(observer=publisher)
         log.info("Hello.", log_trace=[])
 
-    def test_handlingFailures(self) -> None:
+    def test_failuresHandled(self) -> None:
         """
-        The L{Logger.handlingFailures} context manager catches any
+        The L{Logger.failuresHandled} context manager catches any
         L{BaseException} and converts it into a logged L{Failure}.
         """
         events = []
@@ -296,7 +296,7 @@ class LoggerTests(unittest.TestCase):
                 reprd += 1
                 return f"<repr {reprd}>"
 
-        with log.handlingFailures(
+        with log.failuresHandled(
             "while testing failure handling for {value}", value=Reprable()
         ) as operation:
             1 / 0
@@ -312,7 +312,7 @@ class LoggerTests(unittest.TestCase):
         )
         self.assertEqual(reprd, 1)
         self.assertEqual(f.type, ZeroDivisionError)
-        with log.handlingFailures("succeeding for {value}", value=Reprable()) as op2:
+        with log.failuresHandled("succeeding for {value}", value=Reprable()) as op2:
             self.assertEqual(op2.succeeded, False)
             self.assertEqual(op2.failed, False)
         self.assertEqual(reprd, 1)
