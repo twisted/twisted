@@ -4,8 +4,8 @@ Benchmarks for line parsing protocols.
 
 import pytest
 
-from twisted.protocols.basic import LineReceiver, LineOnlyReceiver
 from twisted.internet.protocol import Protocol
+from twisted.protocols.basic import LineOnlyReceiver, LineReceiver
 from twisted.test.proto_helpers import StringTransport
 
 
@@ -21,6 +21,7 @@ def test_lineReceiver(benchmark, chunkSize):
     """
     Parses lines, but can in theory also parse raw data.
     """
+
     class MyLineReceiver(LineReceiver):
         def lineReceived(self, _):
             pass
@@ -37,6 +38,7 @@ def test_lineOnlyReceiver(benchmark, chunkSize):
     """
     Parses only lines.
     """
+
     class MyLineReceiver(LineOnlyReceiver):
         def lineReceived(self, line):
             pass

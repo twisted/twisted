@@ -1,4 +1,4 @@
-from twisted.internet.defer import succeed, ensureDeferred, Deferred
+from twisted.internet.defer import Deferred, ensureDeferred, succeed
 
 
 def test_deferred_await(benchmark):
