@@ -1,0 +1,1 @@
+Replace dns client ANY request with A and AAAA requests
