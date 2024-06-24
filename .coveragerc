@@ -11,6 +11,7 @@ source=
    src/twisted
    */site-packages/twisted
    *\site-packages\twisted
+   benchmarks
 
 [report]
 precision = 2
