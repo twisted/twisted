@@ -1009,7 +1009,7 @@ def _stopReactor(reactor):
     Stop the reactor and allow it to be re-started later.
     """
     reactor.stop()
-    # Allow for on shutdown hooks to execute.
+    # Let the shutdown hooks to execute.
     reactor.iterate()
     reactor._startedBefore = False
     reactor._started = False
