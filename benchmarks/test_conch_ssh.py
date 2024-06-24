@@ -15,6 +15,7 @@ from twisted.internet.endpoints import (
     connectProtocol,
     serverFromString,
 )
+from twisted.internet.testing import benchmarkWithReactor
 
 PUBLIC_KEY = (
     b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az6"
@@ -69,44 +70,6 @@ class BenchmarkSSHServerFactory(SSHFactory):
     def __init__(self):
         # Called by the client once disconnected.
         self.clientDisconnected = Deferred()
-
-
-def _runReactor(callback):
-    """
-    (re)Start a reactor that might have been previously started.
-    """
-    deferred = callback()
-    deferred.addBoth(lambda _: _stopReactor())
-    reactor._startedBefore = False
-    reactor._started = False
-    reactor._justStopped = False
-    reactor.run(installSignalHandlers=False)
-
-
-def _stopReactor():
-    """
-    Stop the reactor and allow it to be re-started later.
-    """
-    reactor.stop()
-    reactor.iterate()
-    reactor._startedBefore = False
-    reactor._started = False
-    reactor._justStopped = False
-    reactor.running = False
-    # Start running has consumed the startup events, so we need
-    # to restore them.
-    reactor.addSystemEventTrigger("during", "startup", reactor._reallyStartRunning)
-
-
-def benchmarkWithReactor(test_target):
-    """
-    Decorator for running the test with the benchmark.
-    """
-
-    def benchmark_test(benchmark):
-        benchmark(_runReactor, test_target)
-
-    return benchmark_test
 
 
 @benchmarkWithReactor

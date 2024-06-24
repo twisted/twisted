@@ -16,7 +16,7 @@ from zope.interface.verify import verifyClass
 
 from typing_extensions import ParamSpec, Self
 
-from twisted.internet import address, error, protocol, task
+from twisted.internet import address, error, protocol, reactor, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred
@@ -967,3 +967,41 @@ class EventLoggingObserver(Sequence[LogEvent]):
         publisher.addObserver(obs)
         testInstance.addCleanup(lambda: publisher.removeObserver(obs))
         return obs
+
+
+def benchmarkWithReactor(test_target):
+    """
+    Decorator for running a benchmark tests that loops the reactor.
+    """
+
+    def benchmark_test(benchmark):
+        benchmark(_runReactor, test_target)
+
+    return benchmark_test
+
+
+def _runReactor(callback):
+    """
+    (re)Start a reactor that might have been previously started.
+    """
+    deferred = callback()
+    deferred.addBoth(lambda _: _stopReactor())
+    reactor._startedBefore = False
+    reactor._started = False
+    reactor._justStopped = False
+    reactor.run(installSignalHandlers=False)
+
+
+def _stopReactor():
+    """
+    Stop the reactor and allow it to be re-started later.
+    """
+    reactor.stop()
+    reactor.iterate()
+    reactor._startedBefore = False
+    reactor._started = False
+    reactor._justStopped = False
+    reactor.running = False
+    # Start running has consumed the startup events, so we need
+    # to restore them.
+    reactor.addSystemEventTrigger("during", "startup", reactor._reallyStartRunning)
