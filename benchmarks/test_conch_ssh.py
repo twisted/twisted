@@ -5,8 +5,6 @@
 Benchmark for SSH connection setup between a Conch client and server using RSA
 keys.
 """
-import pytest
-
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.transport import SSHClientTransport
@@ -17,7 +15,6 @@ from twisted.internet.endpoints import (
     connectProtocol,
     serverFromString,
 )
-from twisted.python.reactor_unittest import ReactorTestCase, benchmarkWithReactor
 
 PUBLIC_KEY = (
     b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az6"
@@ -74,38 +71,64 @@ class BenchmarkSSHServerFactory(SSHFactory):
         self.clientDisconnected = Deferred()
 
 
-class SSHTests(ReactorTestCase):
+def _runReactor(callback):
     """
-    Tests for the SSH protocol.
+    (re)Start a reactor that might have been previously started.
+    """
+    deferred = callback()
+    deferred.addBoth(lambda _: _stopReactor())
+    reactor._startedBefore = False
+    reactor._started = False
+    reactor._justStopped = False
+    reactor.run(installSignalHandlers=False)
+
+
+def _stopReactor():
+    """
+    Stop the reactor and allow it to be re-started later.
+    """
+    reactor.stop()
+    reactor.iterate()
+    reactor._startedBefore = False
+    reactor._started = False
+    reactor._justStopped = False
+    reactor.running = False
+    # Start running has consumed the startup events, so we need
+    # to restore them.
+    reactor.addSystemEventTrigger("during", "startup", reactor._reallyStartRunning)
+
+
+def benchmarkWithReactor(test_target):
+    """
+    Decorator for running the test with the benchmark.
     """
 
-    @pytest.fixture(autouse=True)
-    def setupBenchmark(self, benchmark):
-        """
-        Setup benchmark for unittest usage.
-        """
-        self.benchmark = benchmark
+    def benchmark_test(benchmark):
+        benchmark(_runReactor, test_target)
 
-    @benchmarkWithReactor()
-    @inlineCallbacks
-    def test_connect_and_disconnect(self):
-        """
-        This is the test for key exchange for both client and server.
-        Once KEX is done the client disconnects.
-        """
-        serverFactory = BenchmarkSSHServerFactory()
-        serverEndpoint = serverFromString(reactor, "tcp:0:interface=127.0.0.1")
-        serverPort = yield serverEndpoint.listen(serverFactory)
+    return benchmark_test
 
-        clientProtocol = BenchmarkSSHClientTransport()
-        clientProtocol.factory = serverFactory
 
-        clientEndpoint = TCP4ClientEndpoint(
-            reactor,
-            "127.0.0.1",
-            serverPort.getHost().port,
-            timeout=5,
-        )
-        yield connectProtocol(clientEndpoint, clientProtocol)
-        yield serverFactory.clientDisconnected
-        yield serverPort.stopListening()
+@benchmarkWithReactor
+@inlineCallbacks
+def test_connect_and_disconnect():
+    """
+    This is the test for key exchange for both client and server.
+    Once KEX is done the client disconnects.
+    """
+    serverFactory = BenchmarkSSHServerFactory()
+    serverEndpoint = serverFromString(reactor, "tcp:0:interface=127.0.0.1")
+    serverPort = yield serverEndpoint.listen(serverFactory)
+
+    clientProtocol = BenchmarkSSHClientTransport()
+    clientProtocol.factory = serverFactory
+
+    clientEndpoint = TCP4ClientEndpoint(
+        reactor,
+        "127.0.0.1",
+        serverPort.getHost().port,
+        timeout=5,
+    )
+    yield connectProtocol(clientEndpoint, clientProtocol)
+    yield serverFactory.clientDisconnected
+    yield serverPort.stopListening()
