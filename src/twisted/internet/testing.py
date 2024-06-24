@@ -16,7 +16,7 @@ from zope.interface.verify import verifyClass
 
 from typing_extensions import ParamSpec, Self
 
-from twisted.internet import address, error, protocol, reactor, task
+from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred, inlineCallbacks
@@ -972,6 +972,9 @@ class EventLoggingObserver(Sequence[LogEvent]):
 def benchmarkWithReactor(test_target):
     """
     Decorator for running a benchmark tests that loops the reactor.
+
+    This is designed to decorate test method executed using pytest and
+    pytest-benchmark.
     """
 
     @inlineCallbacks
@@ -988,15 +991,20 @@ def _runReactor(callback):
     """
     (re)Start a reactor that might have been previously started.
     """
+    # Delay to import to prevent side-effect in normal tests that are
+    # expecting to import twisted.internet.testing while no reactor is
+    # installed.
+    from twisted.internet import reactor
+
     deferred = callback()
-    deferred.addBoth(lambda _: _stopReactor())
+    deferred.addBoth(lambda _: _stopReactor(reactor))
     reactor._startedBefore = False
     reactor._started = False
     reactor._justStopped = False
     reactor.run(installSignalHandlers=False)
 
 
-def _stopReactor():
+def _stopReactor(reactor):
     """
     Stop the reactor and allow it to be re-started later.
     """
