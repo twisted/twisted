@@ -316,7 +316,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install .[conch] pytest pytest-codspeed
+        python -m pip install .[conch] pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
       uses: CodSpeedHQ/action@v2
@@ -325,6 +325,20 @@ jobs:
         # codspeed runs this command under a CPU emulator, so it's super-slow,
         # so we try to just do the benchmarks and nothing else.
         run: python -m pytest --codspeed benchmarks/
+
+    - name: Collect benchmarks coverage
+      run: |
+        pytest --benchmark-min-rounds 1 --benchmark-max-time 0.00001 --cov benchmarks --cov twisted --cov-config=.coveragerc  benchmarks
+        coverage xml
+
+    - name: Publish benchmarks coverage
+      uses: codecov/codecov-action@v3
+      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
+      with:
+        files: coverage.xml
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-benchmarks
+        fail_ci_if_error: true
+
 
   static-checks:
     runs-on: ubuntu-22.04
