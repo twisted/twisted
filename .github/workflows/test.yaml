@@ -293,6 +293,7 @@ jobs:
         name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
 
+
   benchmarks:
     runs-on: ubuntu-22.04
 
@@ -334,8 +335,9 @@ jobs:
         # measurements.
         pytest \
           --benchmark-min-rounds 1 --benchmark-max-time 0.00001 \
+          --benchmark-columns=rounds \
           --cov benchmarks --cov twisted --cov-config=.coveragerc \
-          --cov-report=xml --cov-report=term:skip-covered \
+          --cov-report=xml \
           benchmarks
 
     - name: Publish benchmarks coverage
@@ -345,6 +347,13 @@ jobs:
         files: coverage.xml
         name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-benchmarks
         fail_ci_if_error: true
+
+    - name: Fail on missing benchmarks coverage
+      run: |
+        # This makes sure that the benchmark tests always have 100% coverage.
+        # Make sure the include expression is escaped to prevent shell
+        # expansion.
+        coverage report --fail-under=100 --include 'benchmarks/*'
 
 
   static-checks:
