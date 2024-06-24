@@ -9,7 +9,7 @@ from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.internet import reactor
-from twisted.internet.defer import Deferred, inlineCallbacks, succeed
+from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import (
     TCP4ClientEndpoint,
     connectProtocol,
@@ -73,7 +73,6 @@ class BenchmarkSSHServerFactory(SSHFactory):
 
 
 @benchmarkWithReactor
-@inlineCallbacks
 def test_connect_and_disconnect():
     """
     This is the test for key exchange for both client and server.

@@ -19,7 +19,7 @@ from typing_extensions import ParamSpec, Self
 from twisted.internet import address, error, protocol, reactor, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
     IConnector,
@@ -974,8 +974,12 @@ def benchmarkWithReactor(test_target):
     Decorator for running a benchmark tests that loops the reactor.
     """
 
+    @inlineCallbacks
+    def deferredWrapper():
+        return test_target()
+
     def benchmark_test(benchmark):
-        benchmark(_runReactor, test_target)
+        benchmark(_runReactor, deferredWrapper)
 
     return benchmark_test
 
@@ -997,6 +1001,7 @@ def _stopReactor():
     Stop the reactor and allow it to be re-started later.
     """
     reactor.stop()
+    # Allow for on shutdown hooks to execute.
     reactor.iterate()
     reactor._startedBefore = False
     reactor._started = False
