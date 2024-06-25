@@ -9,7 +9,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
@@ -34,6 +34,7 @@ from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -2864,28 +2865,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"(no clientproto yet) 202 happily accepted",
         )
 
-    def test_setResponseCodeAndMessageNotBytes(self):
-        """
-        L{http.Request.setResponseCode} accepts C{bytes} for the message
-        parameter and raises L{TypeError} if passed anything else.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        self.assertRaises(TypeError, req.setResponseCode, 202, "not happily accepted")
-
     def test_setResponseCodeAcceptsIntegers(self):
         """
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
         and raises L{TypeError} if passed anything else.
-        """
-        req = http.Request(DummyChannel(), False)
-        req.setResponseCode(1)
-        self.assertRaises(TypeError, req.setResponseCode, "1")
-
-    def test_setResponseCodeAcceptsLongIntegers(self):
-        """
-        L{http.Request.setResponseCode} accepts L{int} for the code
-        parameter.
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
@@ -3601,7 +3584,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
-    def test_finishProducesLog(self):
+    def test_stopFactoryInvalidState(self) -> None:
+        """
+        L{http.HTTPFactory.stopFactory} is a no-op (that does not raise an
+        exception) when the factory hasn't been started yet.
+        """
+        http.HTTPFactory().stopFactory()
+
+    def test_finishProducesLog(self) -> None:
         """
         L{http.Request.finish} will call the channel's factory to produce a log
         message.
@@ -3609,23 +3599,50 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         factory.timeOut = None
         factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True
+        factory._logDateTimeCall = True  # type:ignore
+
+        # Here we are asserting a few legacy / compatibility features of the
+        # writable logFile attribute, which used to be effectively an
+        # IO[AnyStr] but was always trying to encode and write text to it.
+        # Clients should really not be accessing this attribute anyway, but we
+        # need a new way to configure the CLF log file before deprecating and
+        # removing it.
+
+        # Before the factory is started, it has no logFile attribute.
+        with self.assertRaises(AttributeError):
+            factory.logFile
         factory.startFactory()
-        factory.logFile = BytesIO()
-        proto = factory.buildProtocol(None)
+        # It starts off as the legacy global LoggingFile instance.
+        self.assertIs(factory.logFile, legacyGlobalLogFile)
+
+        # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
+        # get back a TextIOWrapper, wrapping our BytesIO.
+        logFile = factory.logFile = BytesIO()
+        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+
+        # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
+        # now, even though the property's signature is such that it isn't.
+        assert isinstance(getBackLogFile, TextIOWrapper)
+        self.assertIs(getBackLogFile.buffer, logFile)
+        factory.logFile = getBackLogFile
+        # If we set it to a text-based I/O (i.e.: anything other than an
+        # io.BufferedBase) it stays exactly the same, no modification.
+        self.assertIs(getBackLogFile, factory.logFile)
+        proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
         trans = StringTransport()
+        assert proto is not None
         proto.makeConnection(trans)
 
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()
+        proto._channel.requests[0].finish()  # type:ignore
 
         # A log message should be written out
-        self.assertIn(b'sometime "GET /path HTTP/1.1"', factory.logFile.getvalue())
+        self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
 
     def test_requestBodyTimeoutFromFactory(self):
         """

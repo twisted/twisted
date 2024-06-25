@@ -20,7 +20,10 @@ from twisted.internet.interfaces import (
     IPushProducer,
     ITransport,
 )
+from twisted.logger import Logger
 from twisted.python.failure import Failure
+
+_log = Logger()
 
 
 @implementer(IAddress)
@@ -66,14 +69,20 @@ class StandardIO(_pollingfile._PollingTimer):
         self.proto.dataReceived(data)
 
     def readConnectionLost(self):
-        if IHalfCloseableProtocol.providedBy(self.proto):
-            self.proto.readConnectionLost()
+        with _log.failuresHandled("read connection lost") as op:
+            if IHalfCloseableProtocol.providedBy(self.proto):
+                self.proto.readConnectionLost()
         self.checkConnLost()
+        if not op.succeeded and not self.disconnecting:
+            self.loseConnection()
 
     def writeConnectionLost(self):
-        if IHalfCloseableProtocol.providedBy(self.proto):
-            self.proto.writeConnectionLost()
+        with _log.failuresHandled("write connection lost") as op:
+            if IHalfCloseableProtocol.providedBy(self.proto):
+                self.proto.writeConnectionLost()
         self.checkConnLost()
+        if not op.succeeded and not self.disconnecting:
+            self.loseConnection()
 
     connsLost = 0
 

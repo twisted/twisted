@@ -319,27 +319,6 @@ no ``help`` attribute is specified, the
 method's documentation string is used instead.
 
 
-
-
-
-SOAP Support
-------------
-
-
-
-From the point of view of a Twisted developer, there is little difference
-between XML-RPC support and SOAP support. Here is an example of SOAP usage:
-
-
-
-
-
-:download:`soap.rpy <listings/soap.rpy>`
-
-.. literalinclude:: listings/soap.rpy
-
-
-
 Creating an XML-RPC Client
 --------------------------
 
@@ -434,36 +413,3 @@ responses.
 
 An example Twisted application that does this can be found in
 ``docs/web/examples/xmlrpc-debug.py`` .
-
-
-
-
-Serving SOAP and XML-RPC simultaneously
----------------------------------------
-
-
-
-:py:class:`twisted.web.xmlrpc.XMLRPC` and :py:class:`twisted.web.soap.SOAPPublisher` are both :py:class:`Resource <twisted.web.resource.Resource>` s.  So, to serve both XML-RPC and
-SOAP in the one web server, you can use the :py:meth:`putChild <twisted.web.resource.IResource.putChild>` method of Resource.
-
-
-
-
-The following example uses an empty :py:class:`resource.Resource <twisted.web.resource.Resource>` as the root resource for
-a :py:class:`Site <twisted.web.server.Site>` , and then
-adds ``/RPC2`` and ``/SOAP`` paths to it.
-
-
-
-
-
-:download:`xmlAndSoapQuote.py <listings/xmlAndSoapQuote.py>`
-
-.. literalinclude:: listings/xmlAndSoapQuote.py
-
-
-Refer to :ref:`Twisted Web
-Development <web-howto-using-twistedweb-development>` for more details about Resources.
-
-
-
