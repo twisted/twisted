@@ -1090,7 +1090,8 @@ class Deferred(Awaitable[_SelfResultT]):
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
                 else:
-                    if isinstance(current.result, Deferred):
+                    # isinstance() with Awaitable subclass is expensive:
+                    if current.result.__class__ in _DEFERRED_SUBCLASSES:
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         resultResult = getattr(current.result, "result", _NO_RESULT)
@@ -1321,6 +1322,12 @@ class Deferred(Awaitable[_SelfResultT]):
         if iscoroutine(coro) or inspect.isgenerator(coro):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
+
+    def __init_subclass__(cls, **kwargs):
+        _DEFERRED_SUBCLASSES.append(cls)
+
+
+_DEFERRED_SUBCLASSES = [Deferred]
 
 
 def ensureDeferred(
