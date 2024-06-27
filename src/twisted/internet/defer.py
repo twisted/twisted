@@ -1092,29 +1092,31 @@ class Deferred(Awaitable[_SelfResultT]):
                 else:
                     # isinstance() with Awaitable subclass is expensive:
                     if type(current.result) in _DEFERRED_SUBCLASSES:
+                        # Can't use cast() cause it's in the performance hot path:
+                        currentResult: Deferred[_SelfResultT] = current.result  # type: ignore[assignment]
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(current.result, "result", _NO_RESULT)
+                        resultResult = getattr(currentResult, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
                             or type(resultResult) in _DEFERRED_SUBCLASSES
-                            or current.result.paused
+                            or currentResult.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            current._chainedTo = current.result
+                            current._chainedTo = currentResult
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
                             # append to the callbacks list directly instead of
                             # using addCallbacks.
-                            current.result.callbacks.append(current._continuation())
+                            currentResult.callbacks.append(current._continuation())
                             break
                         else:
                             # Yep, it did.  Steal it.
-                            current.result.result = None
+                            currentResult.result = None
                             # Make sure _debugInfo's failure state is updated.
-                            if current.result._debugInfo is not None:
-                                current.result._debugInfo.failResult = None
+                            if currentResult._debugInfo is not None:
+                                currentResult._debugInfo.failResult = None
                             current.result = resultResult
 
             if finished:
@@ -1323,7 +1325,9 @@ class Deferred(Awaitable[_SelfResultT]):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls: Type[Deferred[Any]], **kwargs: Any):
+        # Whenever a subclass is created, record it in L{_DEFERRED_SUBCLASSES}
+        # so we can emulate C{isinstance()} more efficiently.
         _DEFERRED_SUBCLASSES.append(cls)
 
 

@@ -1811,13 +1811,13 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # been freed.
         self.assertIsNone(weakCanceller())
 
-    def test_DEFERRED_SUBCLASSES(self):
+    def test_DEFERRED_SUBCLASSES(self) -> None:
         """
         C{_DEFERRED_SUBCLASSES} includes all subclasses of L{Deferred}.
         """
         self.assertEqual(defer._DEFERRED_SUBCLASSES, [Deferred, DeferredList])
 
-        class D2(Deferred):
+        class D2(Deferred[int]):
             pass
 
         self.assertEqual(defer._DEFERRED_SUBCLASSES, [Deferred, DeferredList, D2])
