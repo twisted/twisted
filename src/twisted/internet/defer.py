@@ -1097,7 +1097,7 @@ class Deferred(Awaitable[_SelfResultT]):
                         resultResult = getattr(current.result, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
-                            or isinstance(resultResult, Deferred)
+                            or type(resultResult) in _DEFERRED_SUBCLASSES
                             or current.result.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
