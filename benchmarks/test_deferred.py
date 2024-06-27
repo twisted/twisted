@@ -92,7 +92,9 @@ def test_deferred_chained_already_fired(benchmark):
         d3 = Deferred()
         d2.callback(123)
         d3.callback(456)
-        d.callback(lambda _: d2)
+        d.addCallback(lambda _: d2)
+        d.addCallback(lambda _: d3)
+        d.callback(123)
 
     benchmark(go)
 
