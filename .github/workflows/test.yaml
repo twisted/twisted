@@ -138,11 +138,9 @@ jobs:
 
           # Pre-release Python 3.13 with default settings.
           # For now, no dependencies as cffi doesn't work on 3.13.
-          # No coverage also.
           - python-version: '3.13-dev'
-            tox-env: 'nodeps-nocov-posix'
-            job-name: 'nodeps-nocov-3.13'
-            skip-coverage: yes
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-3.13'
             # FIXME:https://github.com/twisted/twisted/issues/12060
             # Also add twisted.python
             # FIXME:https://github.com/twisted/twisted/issues/12062

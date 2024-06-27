@@ -26,8 +26,10 @@ Various other classes in this module support this usage:
     response.
 """
 
+from __future__ import annotations
+
 import re
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from zope.interface import implementer
 
@@ -40,7 +42,6 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from twisted.python.reflect import fullyQualifiedName
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
@@ -176,21 +177,6 @@ class RequestNotSent(Exception):
     to send a request using a protocol which is no longer connected to a
     server.
     """
-
-
-def _callAppFunction(function):
-    """
-    Call C{function}.  If it raises an exception, log it with a minimal
-    description of the source.
-
-    @return: L{None}
-    """
-    try:
-        function()
-    except BaseException:
-        _moduleLog.failure(
-            "Unexpected exception from {name}", name=fullyQualifiedName(function)
-        )
 
 
 class HTTPParser(LineReceiver):
@@ -341,6 +327,15 @@ class HTTPParser(LineReceiver):
         self.switchToBodyMode(None)
 
 
+_ignoreDecoderErrors = _moduleLog.failureHandler("while interacting with body decoder:")
+_ignoreStopProducerStopWriting = _moduleLog.failureHandler(
+    "while calling stopProducing() in stopWriting():"
+)
+_ignoreStopProducerWrite = _moduleLog.failureHandler(
+    "while calling stopProducing() in write():"
+)
+
+
 class HTTPClientParser(HTTPParser):
     """
     An HTTP parser which only handles HTTP responses.
@@ -366,7 +361,7 @@ class HTTPClientParser(HTTPParser):
         b"chunked": _ChunkedTransferDecoder,
     }
 
-    bodyDecoder = None
+    bodyDecoder: _IdentityTransferDecoder | None = None
     _log = Logger()
 
     def __init__(self, request, finisher):
@@ -534,9 +529,14 @@ class HTTPClientParser(HTTPParser):
         self._responseDeferred.callback(self.response)
         del self._responseDeferred
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure | None = None) -> None:
         if self.bodyDecoder is not None:
-            try:
+            # Handle exceptions from both the body decoder itself and the
+            # various invocations of _bodyDataFinished; treat them all as
+            # application code.  The response is part of the HTTP server and
+            # really shouldn't raise exceptions, but maybe there's some buggy
+            # application code somewhere making things difficult.
+            with _ignoreDecoderErrors:
                 try:
                     self.bodyDecoder.noMoreData()
                 except PotentialDataLoss:
@@ -547,12 +547,6 @@ class HTTPClientParser(HTTPParser):
                     )
                 else:
                     self.response._bodyDataFinished()
-            except BaseException:
-                # Handle exceptions from both the except suites and the else
-                # suite.  Those functions really shouldn't raise exceptions,
-                # but maybe there's some buggy application code somewhere
-                # making things difficult.
-                self._log.failure("")
         elif self.state != DONE:
             if self._everReceivedData:
                 exceptionClass = ResponseFailed
@@ -1001,7 +995,7 @@ class Request:
         else:
             return self._writeToBodyProducerContentLength(transport)
 
-    def stopWriting(self):
+    def stopWriting(self) -> None:
         """
         Stop writing this request to the transport.  This can only be called
         after C{writeTo} and before the L{Deferred} returned by C{writeTo}
@@ -1011,7 +1005,8 @@ class Request:
         """
         # If bodyProducer is None, then the Deferred returned by writeTo has
         # fired already and this method cannot be called.
-        _callAppFunction(self.bodyProducer.stopProducing)
+        with _ignoreStopProducerStopWriting:
+            self.bodyProducer.stopProducing()
 
 
 class LengthEnforcingConsumer:
@@ -1068,7 +1063,8 @@ class LengthEnforcingConsumer:
             # we still have _finished which we can use to report the error to a
             # better place than the direct caller of this method (some
             # arbitrary application code).
-            _callAppFunction(self._producer.stopProducing)
+            with _ignoreStopProducerWrite:
+                self._producer.stopProducing()
             self._finished.errback(WrongBodyLength("too many bytes written"))
             self._allowNoMoreWrites()
 
@@ -1101,9 +1097,10 @@ def makeStatefulDispatcher(name, template):
 
     @return: The dispatcher function.
     """
+    pfx = f"_{name}_"
 
     def dispatcher(self, *args, **kwargs):
-        func = getattr(self, "_" + name + "_" + self._state, None)
+        func = getattr(self, f"{pfx}{self._state}", None)
         if func is None:
             raise RuntimeError(f"{self!r} has no {name} method in state {self._state}")
         return func(*args, **kwargs)
@@ -1539,11 +1536,11 @@ class HTTP11ClientProtocol(Protocol):
     """
 
     _state = "QUIESCENT"
-    _parser = None
-    _finishedRequest = None
-    _currentRequest = None
+    _parser: HTTPClientParser | None = None
+    _finishedRequest: Deferred[Response] | None = None
+    _currentRequest: Request | None = None
     _transportProxy = None
-    _responseDeferred = None
+    _responseDeferred: Deferred[Response] | None = None
     _log = Logger()
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1624,7 +1621,7 @@ class HTTP11ClientProtocol(Protocol):
 
         return self._finishedRequest
 
-    def _finishResponse(self, rest):
+    def _finishResponse(self, rest: bytes) -> None:
         """
         Called by an L{HTTPClientParser} to indicate that it has parsed a
         complete response.
@@ -1636,10 +1633,16 @@ class HTTP11ClientProtocol(Protocol):
 
     _finishResponse = makeStatefulDispatcher("finishResponse", _finishResponse)
 
-    def _finishResponse_WAITING(self, rest):
+    def _finishResponse_WAITING(self, rest: bytes) -> None:
         # Currently the rest parameter is ignored. Don't forget to use it if
         # we ever add support for pipelining. And maybe check what trailers
         # mean.
+        if TYPE_CHECKING:
+            assert self._responseDeferred is not None
+            assert self._finishedRequest is not None
+            assert self._currentRequest is not None
+            assert self.transport is not None
+
         if self._state == "WAITING":
             self._state = "QUIESCENT"
         else:
@@ -1668,16 +1671,16 @@ class HTTP11ClientProtocol(Protocol):
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
-            self.transport.resumeProducing()
+            producer: IPushProducer = self.transport  # type:ignore[assignment]
+            producer.resumeProducing()
 
             # We call the quiescent callback first, to ensure connection gets
             # added back to connection pool before we finish the request.
-            try:
+            with _moduleLog.failuresHandled("while invoking quiescent callback:") as op:
                 self._quiescentCallback(self)
-            except BaseException:
+            if op.failed:
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
-                self._log.failure("")
                 self.transport.loseConnection()
             self._disconnectParser(reason)
 

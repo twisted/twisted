@@ -72,7 +72,7 @@ dev = [
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
-    "coverage >= 6b1, <7",
+    "coverage ~= 7.5",
 ]
 
 tls = [
