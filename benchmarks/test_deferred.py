@@ -117,5 +117,6 @@ def test_deferred_chained_not_fired(benchmark):
         d.addCallback(lambda _: d3)
         d2.callback(123)
         d4.callback(57)
+        d.callback(7)
 
     benchmark(go)
