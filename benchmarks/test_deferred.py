@@ -128,4 +128,3 @@ def test_deferred_chained_not_fired(benchmark):
     l = []
     d.addCallback(l.append)
     assert l[0] == 57
-
