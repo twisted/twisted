@@ -368,12 +368,7 @@ class Failure(BaseException):
 
         while f:
             if captureVars:
-                try:
-                    # Python 3.8 and 3.9
-                    localz = f.f_locals.copy()
-                except AttributeError:
-                    # Python 3.10 and later
-                    localz = f.f_locals or {}
+                localz = f.f_locals.copy()
                 if f.f_locals is f.f_globals:
                     globalz = {}
                 else:
@@ -400,12 +395,7 @@ class Failure(BaseException):
         while tb is not None:
             f = tb.tb_frame
             if captureVars:
-                try:
-                    # Python 3.8 and 3.9
-                    localz = f.f_locals.copy()
-                except AttributeError:
-                    # Python 3.10 and later
-                    localz = f.f_locals or {}
+                localz = f.f_locals.copy()
                 if f.f_locals is f.f_globals:
                     globalz = {}
                 else:
