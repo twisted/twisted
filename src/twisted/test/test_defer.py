@@ -1815,13 +1815,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         C{_DEFERRED_SUBCLASSES} includes all subclasses of L{Deferred}.
         """
-        self.assertEqual(defer._DEFERRED_SUBCLASSES, [Deferred, DeferredList])
+        self.assertEqual(defer._DEFERRED_SUBCLASSES[:2], [Deferred, DeferredList])
 
         class D2(Deferred[int]):
             pass
 
-        self.assertEqual(defer._DEFERRED_SUBCLASSES, [Deferred, DeferredList, D2])
+        self.assertEqual(defer._DEFERRED_SUBCLASSES[-1], D2)
         defer._DEFERRED_SUBCLASSES.pop(-1)
+
+        # There are other potential subclasses, e.g. twisted.persisted.crefutil
+        # has a Deferred subclass:
+        for klass in defer._DEFERRED_SUBCLASSES:
+            self.assertTrue(issubclass(klass, Deferred))
 
 
 class DummyCanceller:
