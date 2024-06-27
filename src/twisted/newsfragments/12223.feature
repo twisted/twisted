@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred.addCallback now runs about 10% faster.
