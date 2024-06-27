@@ -106,10 +106,14 @@ def test_deferred_chained_not_fired(benchmark):
     def go():
         d = Deferred()
         d2 = Deferred()
+        # d3 has its own chained result:
         d3 = Deferred()
+        d4 = Deferred()
+        d3.addCallback(lambda _: d4)
+        d3.callback(123)
         d.addCallback(lambda _: d2)
         d.addCallback(lambda _: d3)
         d2.callback(123)
-        d3.callback(456)
+        d4.callback(57)
 
     benchmark(go)
