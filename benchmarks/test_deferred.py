@@ -95,11 +95,12 @@ def test_deferred_chained_already_fired(benchmark):
         d.addCallback(lambda _: d2)
         d.addCallback(lambda _: d3)
         d.callback(123)
-        l = []
-        d.addCallback(l.append)
-        assert l[0] == 456
+        return d
 
-    benchmark(go)
+    d = benchmark(go)
+    l = []
+    d.addCallback(l.append)
+    assert l[0] == 456
 
 
 def test_deferred_chained_not_fired(benchmark):
@@ -121,8 +122,10 @@ def test_deferred_chained_not_fired(benchmark):
         d2.callback(123)
         d4.callback(57)
         d.callback(7)
-        l = []
-        d.addCallback(l.append)
-        assert l[0] == 57
+        return d
 
-    benchmark(go)
+    d = benchmark(go)
+    l = []
+    d.addCallback(l.append)
+    assert l[0] == 57
+
