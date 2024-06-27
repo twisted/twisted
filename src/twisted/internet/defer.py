@@ -1091,7 +1091,7 @@ class Deferred(Awaitable[_SelfResultT]):
                     current.result = Failure(captureVars=self.debug)
                 else:
                     # isinstance() with Awaitable subclass is expensive:
-                    if current.result.__class__ in _DEFERRED_SUBCLASSES:
+                    if type(current.result) in _DEFERRED_SUBCLASSES:
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
                         resultResult = getattr(current.result, "result", _NO_RESULT)
