@@ -1811,6 +1811,21 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # been freed.
         self.assertIsNone(weakCanceller())
 
+    def test_isInstance(self):
+        """
+        C{isinstance()} correctly identifies instances of classes that subclass
+        L{Deferred}.
+        """
+        self.assertIsInstance(Deferred(), Deferred)
+        self.assertIsInstance(DeferredList([]), Deferred)
+
+        class D2(Deferred):
+            pass
+
+        self.assertIsInstance(D2(), Deferred)
+
+        self.assertNotIsInstance(3, Deferred)
+
 
 class DummyCanceller:
     """
