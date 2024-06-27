@@ -1023,13 +1023,18 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             [
                 pyExe,
                 b"-c",
-                networkString(
-                    "import os, sys; "
-                    "env = dict(os.environ); "
+                (
+                    b"import os, sys; "
+                    b"env = dict(os.environ); "
                     # LC_CTYPE is set by python, see https://peps.python.org/pep-0538/
-                    'env.pop("LC_CTYPE", None); '
-                    'env.pop("__CF_USER_TEXT_ENCODING", None); '
-                    "sys.stderr.write(str(sorted(env.items())))"
+                    b'env.pop("LC_CTYPE", None); '
+                    # The C{COLUMNS} and C{LINES} might be automatically
+                    # added by Python depending on whether the environment
+                    # is detected as interactive or not.
+                    b'env.pop("COLUMNS", None); '
+                    b'env.pop("LINES", None); '
+                    b'env.pop("__CF_USER_TEXT_ENCODING", None); '
+                    b"sys.stderr.write(str(sorted(env.items())))"
                 ),
             ],
             usePTY=self.usePTY,
@@ -1044,6 +1049,8 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         self.runReactor(reactor)
 
         expectedEnv.pop("LC_CTYPE", None)
+        expectedEnv.pop("COLUMNS", None)
+        expectedEnv.pop("LINES", None)
         expectedEnv.pop("__CF_USER_TEXT_ENCODING", None)
         self.assertEqual(
             bytes(str(sorted(expectedEnv.items())), "utf-8"),
