@@ -1,0 +1,1 @@
+twisted.internet.defer.succeed() is significantly faster, and awaiting Deferred has also been sped up.
