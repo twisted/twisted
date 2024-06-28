@@ -595,6 +595,15 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addCallback(l.append)
         self.assertEqual(l, ["success"])
 
+    def test_succeedMatchesManualSuccess(self) -> None:
+        """
+        C{defer.succeed(x)} is the same as as C{d = Deferred(); d.callback(x)}.
+        """
+        d: Deferred[str] = Deferred()
+        d.callback("success")
+        d2: Deferred[str] = defer.succeed("success")
+        self.assertEqual(d.__dict__, d2.__dict__)
+
     def testImmediateFailure(self) -> None:
         l: List[Failure] = []
         d: Deferred[None] = defer.fail(GenericError("fail"))

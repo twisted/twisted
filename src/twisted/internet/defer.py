@@ -117,7 +117,11 @@ def succeed(result: _T) -> "Deferred[_T]":
            method.
     """
     d: Deferred[_T] = Deferred()
-    d.callback(result)
+    # This violate abstraction boundaries, so code that is not internal to
+    # Twisted shouldn't do it, but it's a significant performance optimization:
+    d.result = result
+    d.called = True
+    d._chainedTo = None
     return d
 
 
