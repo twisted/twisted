@@ -1163,26 +1163,26 @@ class Deferred(Awaitable[_SelfResultT]):
     __repr__ = __str__
 
     def __iter__(self) -> "Deferred[_SelfResultT]":
-        return self
+        while True:
+            if self.paused:
+                # If we're paused, we have no result to give
+                yield self
+                continue
 
-    @_extraneous
-    def send(self, value: object = None) -> "Deferred[_SelfResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
+            result = getattr(self, "result", _NO_RESULT)
+            if result is _NO_RESULT:
+                yield self
+                continue
 
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            raise result.value
-        else:
-            raise StopIteration(result)
+            if isinstance(result, Failure):
+                # Clear the failure on debugInfo so it doesn't raise "unhandled
+                # exception"
+                assert self._debugInfo is not None
+                self._debugInfo.failResult = None
+                result.value.__failure__ = result
+                raise result.value
+            else:
+                return result
 
     # For PEP-492 support (async/await)
     # type note: base class "Awaitable" defined the type as:
@@ -1192,8 +1192,6 @@ class Deferred(Awaitable[_SelfResultT]):
     #     this method can be replaced by `__await__ = __iter__`.
     def __await__(self) -> Generator[Any, None, _SelfResultT]:
         return self.__iter__()  # type: ignore[return-value]
-
-    __next__ = send
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_SelfResultT]":
         """
