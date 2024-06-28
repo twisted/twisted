@@ -3569,7 +3569,7 @@ class EnsureDeferredTests(unittest.TestCase):
 
         def run() -> Generator[Deferred[str], None, str]:
             d = defer.succeed("foo")
-            res = cast(str, (yield from d))
+            res = yield from d
             return res
 
         # It's a generator...

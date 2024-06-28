@@ -1162,7 +1162,7 @@ class Deferred(Awaitable[_SelfResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred[_SelfResultT]":
+    def __iter__(self) -> Generator[Deferred[_SelfResultT], None, _SelfResultT]:
         while True:
             if self.paused:
                 # If we're paused, we have no result to give
@@ -1182,16 +1182,9 @@ class Deferred(Awaitable[_SelfResultT]):
                 result.value.__failure__ = result
                 raise result.value
             else:
-                return result
+                return result  # type: ignore[return-value]
 
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _SelfResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _SelfResultT]:
-        return self.__iter__()  # type: ignore[return-value]
+    __await__ = __iter__
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_SelfResultT]":
         """
