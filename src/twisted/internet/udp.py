@@ -198,8 +198,14 @@ class Port(base.BasePort):
             # Create a new socket and make it listen
             try:
                 skt = self.createInternetSocket()
-                skt.bind((self.interface, self.port))
-            except OSError as le:
+                if self.addressFamily == socket.AF_INET6:
+                    addr = socket.getaddrinfo(
+                        self.interface, self.port, 0, 0, 0, socket.AI_NUMERICHOST
+                    )[0][4]
+                else:
+                    addr = (self.interface, self.port)
+                skt.bind(addr)
+            except (socket.error, OSError) as le:
                 raise error.CannotListenError(self.interface, self.port, le)
         else:
             # Re-use the externally specified socket
