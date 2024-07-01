@@ -608,7 +608,7 @@ class MaildirMailbox(pop3.Mailbox):
         Move each message marked for deletion from the I{.Trash/} subfolder back
         to its original position.
         """
-        for (real, trash) in self.deleted.items():
+        for real, trash in self.deleted.items():
             try:
                 os.rename(trash, real)
             except OSError as e:

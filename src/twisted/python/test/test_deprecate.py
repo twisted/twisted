@@ -263,7 +263,7 @@ deprecatedModuleAttribute(
 
         def makeSomeFiles(pathobj, dirdict):
             pathdict = {}
-            for (key, value) in dirdict.items():
+            for key, value in dirdict.items():
                 child = pathobj.child(key)
                 if isinstance(value, bytes):
                     pathdict[key] = child
@@ -303,7 +303,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module  # type: ignore[import]
+        from package import module  # type: ignore[import-not-found]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -433,7 +433,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module  # type: ignore[import]
+        from twisted_private_helper import module  # type: ignore[import-not-found]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -504,7 +504,7 @@ def callTestFunction():
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module  # type: ignore[import]
+        from twisted_renamed_helper import module  # type: ignore[import-not-found]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -876,12 +876,11 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
             "something.foobar"
-            " instead.\n"
-            "    ",
+            " instead.\n",
         )
 
     def test_deprecatedReplacementWithCallable(self):
@@ -897,15 +896,13 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "%s.dummyReplacementMethod instead.\n"
-            "    " % (__name__,),
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
+            "{}.dummyReplacementMethod instead.\n".format(__name__),
         )
 
     def test_deprecatedKeywordParameter(self):
-
         message = (
             "The 'foo' parameter to "
             "twisted.python.test.test_deprecate."
@@ -994,15 +991,11 @@ class AppendToDocstringTests(SynchronousTestCase):
             This is a multi-line docstring.
             """
 
-        def expectedDocstring():
-            """
-            This is a multi-line docstring.
-
-            Appended text.
-            """
-
         _appendToDocstring(multiLineDocstring, "Appended text.")
-        self.assertEqual(expectedDocstring.__doc__, multiLineDocstring.__doc__)
+        self.assertEqual(
+            "\n" "This is a multi-line docstring.\n" "\n" "Appended text.\n",
+            multiLineDocstring.__doc__,
+        )
 
 
 class MutualArgumentExclusionTests(SynchronousTestCase):

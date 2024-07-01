@@ -9,6 +9,8 @@ import errno
 import getpass
 import os
 import random
+import re
+import socket
 import string
 from io import BytesIO
 
@@ -23,12 +25,47 @@ from twisted.internet.interfaces import IConsumer
 from twisted.protocols import basic, ftp, loopback
 from twisted.python import failure, filepath, runtime
 from twisted.test import proto_helpers
+from twisted.test.testutils import HAS_IPV6, skipWithoutIPv6
 from twisted.trial.unittest import TestCase
 
 if not runtime.platform.isWindows():
     nonPOSIXSkip = None
 else:
     nonPOSIXSkip = "Cannot run on Windows"
+
+
+def _hasIPv4MappedAddresses():
+    """Returns True if the system supports IPv4-mapped IPv6 addresses."""
+    if not HAS_IPV6:
+        return False
+    server = None
+    client = None
+    has_ipv4_mapped_addresses = False
+
+    try:
+        server = socket.socket(socket.AF_INET6)
+        server.bind(("::", 0))
+        server.listen(1)
+        client = socket.socket(socket.AF_INET)
+        client.connect(("127.0.0.1", server.getsockname()[1]))
+        has_ipv4_mapped_addresses = True
+    except OSError:
+        pass
+
+    if client:
+        client.close()
+    if server:
+        server.close()
+    return has_ipv4_mapped_addresses
+
+
+HAS_IPV4_MAPPED_ADDRESSES = _hasIPv4MappedAddresses()
+
+
+def skipWithoutIPv4MappedAddresses(f):
+    if not HAS_IPV4_MAPPED_ADDRESSES:
+        f.skip = "Does not work on systems without IPv4-mapped IPv6 addresses."
+    return f
 
 
 class Dummy(basic.LineReceiver):
@@ -85,6 +122,7 @@ class FTPServerTestCase(TestCase):
 
     clientFactory = ftp.FTPClientBasic
     userAnonymous = "anonymous"
+    bindAddress = "127.0.0.1"
 
     def setUp(self):
         # Keep a list of the protocols created so we can make sure they all
@@ -112,7 +150,9 @@ class FTPServerTestCase(TestCase):
         p.registerChecker(users_checker, credentials.IUsernamePassword)
 
         self.factory = ftp.FTPFactory(portal=p, userAnonymous=self.userAnonymous)
-        self.port = port = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
+        self.port = port = reactor.listenTCP(
+            0, self.factory, interface=self.bindAddress
+        )
         self.addCleanup(port.stopListening)
 
         # Hook the server's buildProtocol to make the protocol instance
@@ -216,6 +256,17 @@ class FTPServerTestCase(TestCase):
             ["230 User logged in, proceed"],
             chainDeferred=d,
         )
+
+    def decodeExtendedAddressLine(self, line):
+        """
+        Decode an FTP response specifying a protocol/address/port combination,
+        using the syntax defined in RFC 2428 sections 2 and 3.
+
+        @return: a 3-tuple of (protocol, host, port).
+        """
+        match = re.search(r"\((.*)\)", line)
+        self.assertIsNotNone(match, f"No extended address found in {line}")
+        return ftp.decodeExtendedAddress(match.group(1))
 
 
 class FTPAnonymousTests(FTPServerTestCase):
@@ -332,7 +383,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         """
         return self.assertCommandFailed(
             "PASS foo",
-            ["503 Incorrect sequence of commands: " "USER required before PASS"],
+            ["503 Incorrect sequence of commands: USER required before PASS"],
         )
 
     def test_NoParamsForUSER(self):
@@ -458,7 +509,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             "RETR foo",
             [
                 "503 Incorrect sequence of commands: "
-                "PORT or PASV required before RETR"
+                "PORT, PASV, EPRT, or EPSV required before RETR"
             ],
             chainDeferred=d,
         )
@@ -474,7 +525,7 @@ class BasicFTPServerTests(FTPServerTestCase):
             "STOR foo",
             [
                 "503 Incorrect sequence of commands: "
-                "PORT or PASV required before STOR"
+                "PORT, PASV, EPRT, or EPSV required before STOR"
             ],
             chainDeferred=d,
         )
@@ -529,6 +580,150 @@ class BasicFTPServerTests(FTPServerTestCase):
         d.addCallback(cb)
         # Semi-reasonable way to force cleanup
         d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+    @skipWithoutIPv6
+    def test_PASVDeniedIfIPv6(self):
+        """
+        The C{PASV} command is rejected for IPv6 clients.  Use C{EPSV}
+        instead.
+        """
+        port = reactor.listenTCP(0, self.factory, interface="::1")
+        self.addCleanup(port.stopListening)
+        portNum = port.getHost().port
+        clientCreator = protocol.ClientCreator(reactor, self.clientFactory)
+        d = clientCreator.connectTCP("::1", portNum)
+
+        def gotClient(client):
+            self.client = client
+            self.addCleanup(self.client.transport.loseConnection)
+
+        d.addCallback(gotClient)
+        d.addCallback(lambda _: self._anonymousLogin())
+        return self.assertCommandFailed(
+            "PASV",
+            ["502 PASV available only for IPv4 (use EPSV instead)"],
+            chainDeferred=d,
+        )
+
+    def test_EPSVALLBeforePASV(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{PASV}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse("EPSV ALL", ["200 EPSV ALL OK"], chainDeferred=d)
+        self.assertCommandFailed(
+            "PASV",
+            ["503 Incorrect sequence of commands: may not send PASV after EPSV ALL"],
+            chainDeferred=d,
+        )
+        return d
+
+    def test_EPSV(self):
+        """
+        When the client sends the command C{EPSV}, the server responds with a
+        port, and is listening on that port.
+        """
+        d = self._anonymousLogin()
+        d.addCallback(lambda _: self.client.queueStringCommand("EPSV"))
+
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+    def test_EPSVWithProtocol(self):
+        """
+        When the client sends the command C{EPSV} with a network protocol
+        number, the server responds with a port, and is listening on that
+        port.
+        """
+        d = self._anonymousLogin()
+        d.addCallback(lambda _: self.client.queueStringCommand("EPSV 2"))
+
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+    def test_EPSVWithBadProtocol(self):
+        """
+        Sending EPSV with a bad protocol number returns a suitable error.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandFailed(
+            "EPSV nonsense",
+            ["501 syntax error in argument(s) nonsense."],
+            chainDeferred=d,
+        )
+        self.assertCommandFailed(
+            "EPSV 65535",
+            ["522 Network protocol not supported, use (1,2)"],
+            chainDeferred=d,
+        )
+        return d
+
+    def test_EPSVALLBeforeEPSV(self):
+        """
+        The client may send the command C{EPSV ALL} before C{EPSV}.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse("EPSV ALL", ["200 EPSV ALL OK"], chainDeferred=d)
+        d.addCallback(lambda _: self.client.queueStringCommand("EPSV"))
+
+        def cb(responseLines):
+            """
+            Extract the port from the response, and verify the server is
+            listening on the port it claims to be.
+            """
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
+            self.assertEqual(port, self.serverProtocol.dtpPort.getHost().port)
+
+        d.addCallback(cb)
+        d.addCallback(lambda _: self.serverProtocol.transport.loseConnection())
+        return d
+
+    def test_EPSVALLBeforePORT(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{PORT}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse("EPSV ALL", ["200 EPSV ALL OK"], chainDeferred=d)
+        self.assertCommandFailed(
+            "PORT " + ftp.encodeHostPort("127.0.0.1", 0),
+            ["503 Incorrect sequence of commands: may not send PORT after EPSV ALL"],
+            chainDeferred=d,
+        )
+        return d
+
+    def test_EPSVALLBeforeEPRT(self):
+        """
+        When the client sends the command C{EPSV ALL}, a subsequent C{EPRT}
+        command is rejected.
+        """
+        d = self._anonymousLogin()
+        self.assertCommandResponse("EPSV ALL", ["200 EPSV ALL OK"], chainDeferred=d)
+        self.assertCommandFailed(
+            "EPRT |1|127.0.0.1|0|",
+            ["503 Incorrect sequence of commands: may not send EPRT after EPSV ALL"],
+            chainDeferred=d,
+        )
         return d
 
     def test_SYST(self):
@@ -590,7 +785,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         C{listenFactory} should be raised to the caller of L{FTP.getDTPPort}.
         """
 
-        def listenFactory(portNumber, factory):
+        def listenFactory(portNumber, factory, **kwargs):
             raise RuntimeError()
 
         self.serverProtocol.listenFactory = listenFactory
@@ -607,7 +802,7 @@ class BasicFTPServerTests(FTPServerTestCase):
         first successful result from L{FTP.listenFactory} should be returned.
         """
 
-        def listenFactory(portNumber, factory):
+        def listenFactory(portNumber, factory, **kwargs):
             if portNumber in (22032, 22033, 22034):
                 raise error.CannotListenError("localhost", portNumber, "error")
             return portNumber
@@ -791,6 +986,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any FTP error raised by STOR while transferring the file is returned
         to the client.
         """
+
         # Make a failing file writer.
         class FailingFileWriter(ftp._FileWriter):
             def receive(self):
@@ -851,6 +1047,7 @@ class FTPServerAdvancedClientTests(FTPServerTestCase):
         Any errors during reading a file inside a RETR should be returned to
         the client.
         """
+
         # Make a failing file reading.
         class FailingFileReader(ftp._FileReader):
             def send(self, consumer):
@@ -894,6 +1091,13 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         d = self.client.queueStringCommand("PASV")
 
         def gotPASV(responseLines):
+            # ftp.decodeHostPort is more lenient than this, but we want to
+            # be extra-careful to ensure that nothing odd sneaks into the
+            # response that might confuse connection-tracking
+            # implementations.
+            self.assertRegex(
+                responseLines[-1], r"^227 Entering Passive Mode \((?:\d+,){5}\d+\)\.$"
+            )
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
             cc = protocol.ClientCreator(reactor, _BufferingProtocol)
             return cc.connectTCP("127.0.0.1", port)
@@ -1239,7 +1443,49 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         return d.addCallback(checkDownload)
 
 
+@skipWithoutIPv4MappedAddresses
+class FTPServerIPv4MappedPasvDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    The C{PASV} command doesn't work for IPv6 connections (that's why
+    C{EPSV} was invented).  However, it's possible to use it from an IPv4
+    client connecting to a dual-stack server using IPv4-mapped addresses, if
+    the system's IPv6 stack supports that.
+    """
+
+    bindAddress = "::"
+
+
+@skipWithoutIPv6
+class FTPServerEpsvDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    EPSV data connection.
+    """
+
+    def _makeDataConnection(self, ignored=None):
+        """
+        Establish a passive data connection (i.e. client connecting to
+        server).
+
+        @param ignored: ignored
+        @return: L{Deferred.addCallback}
+        """
+        d = self.client.queueStringCommand("EPSV")
+
+        def gotEPSV(responseLines):
+            _, _, port = self.decodeExtendedAddressLine(responseLines[-1][4:])
+            cc = protocol.ClientCreator(reactor, _BufferingProtocol)
+            return cc.connectTCP("::1", port)
+
+        return d.addCallback(gotEPSV)
+
+
 class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    Test the C{PORT} command.
+
+    This opens a data connection to a given address and port.
+    """
+
     def setUp(self):
         self.dataPorts = []
         return FTPServerPasvDataConnectionTests.setUp(self)
@@ -1267,7 +1513,8 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
         """
         Tear down the connection.
 
-        @return: L{defer.DeferredList}
+        @return: a L{defer.DeferredList} that fires when all open data ports
+            have been closed.
         """
         l = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
         d = defer.maybeDeferred(FTPServerPasvDataConnectionTests.tearDown, self)
@@ -1276,13 +1523,15 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
 
     def test_PORTCannotConnect(self):
         """
-        Listen on a port, and immediately stop listening as a way to find a
-        port number that is definitely closed.
+        When C{PORT} is asked to connect to a closed port, it returns a
+        suitable error.
         """
         # Login
         d = self._anonymousLogin()
 
         def loggedIn(ignored):
+            # Listen on a port, and immediately stop listening as a way to
+            # find a port number that should be closed.
             port = reactor.listenTCP(0, protocol.Factory(), interface="127.0.0.1")
             portNum = port.getHost().port
             d = port.stopListening()
@@ -1319,6 +1568,111 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
             self.assertEqual([b"ceva.txt", b"test.txt"], filenames)
 
         return d.addCallback(checkDownload)
+
+
+class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
+    """
+    Test the C{EPRT} command.
+
+    This opens a data connection to a given protocol, address, and port, in
+    a format compatible with both IPv4 and IPv6.
+    """
+
+    def setUp(self):
+        self.dataPorts = []
+        return FTPServerPasvDataConnectionTests.setUp(self)
+
+    def _makeDataConnection(self, ignored=None):
+        # Establish an active data connection (i.e. server connecting to
+        # client).
+        deferred = defer.Deferred()
+
+        class DataFactory(protocol.ServerFactory):
+            protocol = _BufferingProtocol
+
+            def buildProtocol(self, addr):
+                p = protocol.ServerFactory.buildProtocol(self, addr)
+                reactor.callLater(0, deferred.callback, p)
+                return p
+
+        dataPort = reactor.listenTCP(0, DataFactory(), interface="127.0.0.1")
+        self.dataPorts.append(dataPort)
+        cmd = "EPRT |1|127.0.0.1|%s|" % dataPort.getHost().port
+        self.client.queueStringCommand(cmd)
+        return deferred
+
+    def tearDown(self):
+        """
+        Tear down the connection.
+
+        @return: a L{defer.DeferredList} that fires when all open data ports
+            have been closed.
+        """
+        dl = [defer.maybeDeferred(port.stopListening) for port in self.dataPorts]
+        d = defer.maybeDeferred(FTPServerPasvDataConnectionTests.tearDown, self)
+        dl.append(d)
+        return defer.DeferredList(dl, fireOnOneErrback=True)
+
+    def test_EPRTCannotConnect(self):
+        """
+        When C{EPRT} is asked to connect to a closed port, it returns a
+        suitable error.
+        """
+        # Login
+        d = self._anonymousLogin()
+
+        def loggedIn(ignored):
+            # Listen on a port, and immediately stop listening as a way to
+            # find a port number that should be closed.
+            port = reactor.listenTCP(0, protocol.Factory(), interface="127.0.0.1")
+            portNum = port.getHost().port
+            d = port.stopListening()
+            d.addCallback(lambda _: portNum)
+            return d
+
+        d.addCallback(loggedIn)
+
+        # Tell the server to connect to that port with an EPRT command, and
+        # verify that it fails with the right error.
+        def gotPortNum(portNum):
+            return self.assertCommandFailed(
+                "EPRT |1|127.0.0.1|%s|" % portNum, ["425 Can't open data connection."]
+            )
+
+        return d.addCallback(gotPortNum)
+
+    def test_EPRTBadAddress(self):
+        """
+        C{EPRT} returns a syntax error if it can't decode the address.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT nonsense",
+            ["501 syntax error in argument(s) nonsense."],
+            chainDeferred=d,
+        )
+
+    def test_EPRTInvalidNetworkProtocol(self):
+        """
+        C{EPRT} returns a syntax error if the network protocol is ill-formed.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT |not-a-protocol|127.0.0.1|12345|",
+            ["501 syntax error in argument(s) not-a-protocol."],
+            chainDeferred=d,
+        )
+
+    def test_EPRTUnsupportedNetworkProtocol(self):
+        """
+        C{EPRT} returns an error if the network protocol is unsupported.
+        """
+        d = self._anonymousLogin()
+        return self.assertCommandFailed(
+            "EPRT |3|127.0.0.1|12345|",
+            ["522 Network protocol not supported, use (1,2)"],
+            chainDeferred=d,
+        )
 
 
 class DTPFactoryTests(TestCase):

@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-from typing import Dict, Type, TypeVar
+from typing import ClassVar, Dict, Type, TypeVar
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -122,7 +122,6 @@ class TransportPeer(amp.Argument):
 
 
 class Hello(amp.Command):
-
     commandName = b"hello"
 
     arguments = [
@@ -137,9 +136,9 @@ class Hello(amp.Command):
 
     response = [(b"hello", amp.String()), (b"print", amp.Unicode(optional=True))]
 
-    errors: Dict[Type[Exception], bytes] = {UnfriendlyGreeting: b"UNFRIENDLY"}
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {UnfriendlyGreeting: b"UNFRIENDLY"}
 
-    fatalErrors: Dict[Type[Exception], bytes] = {DeathThreat: b"DEAD"}
+    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {DeathThreat: b"DEAD"}
 
 
 class NoAnswerHello(Hello):
@@ -1073,7 +1072,7 @@ class BinaryProtocolTests(TestCase):
         An L{amp.BinaryBoxProtocol} can receive serialized AMP boxes with
         values of up to (2 ** 16 - 1) bytes.
         """
-        length = 2 ** 16 - 1
+        length = 2**16 - 1
         value = b"x" * length
         transport = StringTransport()
         protocol = amp.BinaryBoxProtocol(self)
@@ -1934,7 +1933,6 @@ class DroppyCert(IOSimCert):
 
 
 class SecurableProto(FactoryNotifier):
-
     factory = None
 
     def verifyFactory(self):
@@ -2138,7 +2136,9 @@ class BaseCommand(amp.Command):
     This provides a command that will be subclassed.
     """
 
-    errors: Dict[Type[Exception], bytes] = {InheritedError: b"INHERITED_ERROR"}
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {
+        InheritedError: b"INHERITED_ERROR"
+    }
 
 
 class InheritedCommand(BaseCommand):
@@ -2155,7 +2155,7 @@ class AddErrorsCommand(BaseCommand):
     """
 
     arguments = [(b"other", amp.Boolean())]
-    errors: Dict[Type[Exception], bytes] = {
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {
         OtherInheritedError: b"OTHER_INHERITED_ERROR"
     }
 
@@ -2331,7 +2331,6 @@ if ssl is not None:
 @skipIf(skipSSL, "SSL not available")
 @skipIf(reactorLacksSSL, "This test case requires SSL support in the reactor")
 class LiveFireTLSTests(LiveFireBase, TestCase):
-
     clientProto = SecurableProto
     serverProto = SecurableProto
 
@@ -2389,7 +2388,6 @@ class SlightlySmartTLS(SimpleSymmetricCommandProtocol):
 @skipIf(skipSSL, "SSL not available")
 @skipIf(reactorLacksSSL, "This test case requires SSL support in the reactor")
 class PlainVanillaLiveFireTests(LiveFireBase, TestCase):
-
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SimpleSymmetricCommandProtocol
 
@@ -2408,7 +2406,6 @@ class PlainVanillaLiveFireTests(LiveFireBase, TestCase):
 @skipIf(skipSSL, "SSL not available")
 @skipIf(reactorLacksSSL, "This test case requires SSL support in the reactor")
 class WithServerTLSVerificationTests(LiveFireBase, TestCase):
-
     clientProto = SimpleSymmetricCommandProtocol
     serverProto = SlightlySmartTLS
 
@@ -2980,6 +2977,7 @@ class ListOfDecimalNanTests(TestCase, ListOfTestsMixin):
         """
         L{ListOf.fromBox} reverses the operation performed by L{ListOf.toBox}.
         """
+
         # Helpers.  Decimal.is_{qnan,snan,signed}() are new in 2.6 (or 2.5.2,
         # but who's counting).
         def is_qnan(decimal):

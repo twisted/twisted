@@ -1,14 +1,7 @@
 
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
+:orphan:
 
-Installing Twisted
-==================
+Redirecting to new installation page
+====================================
 
-.. toctree::
-   :hidden:
-
-   howto/optional
-
-- :doc:`Installing Optional Dependencies <howto/optional>`: documentation on how to install Twisted's optional dependencies.
+The content of this page was moved to :doc:`Twisted installation </installation>`.

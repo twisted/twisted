@@ -40,7 +40,6 @@ def skipWithoutEd25519(f):
 
 
 class KeyTests(unittest.TestCase):
-
     if cryptography is None:
         skip = skipCryptography
 
@@ -1676,8 +1675,8 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
 
     def test_noRegeneration(self):
@@ -1688,15 +1687,15 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
         keyContent = keyFile.getContent()
 
-        # Set the key size to 1024 bits. Since it exists already, it will find
-        # the 512 bit key, and not generate a 1024 bit key.
-        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
-        self.assertEqual(key.size(), 512)
+        # Set the key size to 2048 bits. Since it exists already, it will find
+        # the 1024 bit key, and not generate a 2048 bit key.
+        key = keys._getPersistentRSAKey(keyFile, keySize=2048)
+        self.assertEqual(key.size(), 1024)
         self.assertEqual(keyFile.getContent(), keyContent)
 
     def test_keySizeZero(self):
@@ -1707,6 +1706,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
         key._keyObject = None
         self.assertEqual(key.size(), 0)

@@ -18,7 +18,7 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Type, Union, cast
+from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
@@ -154,6 +154,7 @@ class ReactorBuilder:
         )
 
         _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet._threadedselect.ThreadedSelectReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -174,7 +175,8 @@ class ReactorBuilder:
                     ]
                 )
 
-    reactorFactory = None
+    reactorFactory: Optional[Callable[[], object]] = None
+
     originalHandler = None
     requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
     skippedReactors: Dict[str, str] = {}
@@ -216,7 +218,7 @@ class ReactorBuilder:
                         % (process.reapProcessHandlers,)
                     )
 
-    def unbuildReactor(self, reactor):
+    def _unbuildReactor(self, reactor):
         """
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
@@ -247,6 +249,12 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
+        # Restore the original reactor state:
+        from twisted.internet import reactor as globalReactor
+
+        globalReactor.__dict__ = reactor._originalReactorDict
+        globalReactor.__class__ = reactor._originalReactorClass
+
     def buildReactor(self):
         """
         Create and return a reactor using C{self.reactorFactory}.
@@ -267,7 +275,14 @@ class ReactorBuilder:
                     "under itself"
                 )
         try:
+            assert self.reactorFactory is not None
             reactor = self.reactorFactory()
+            reactor._originalReactorDict = globalReactor.__dict__
+            reactor._originalReactorClass = globalReactor.__class__
+            # Make twisted.internet.reactor point to the new reactor,
+            # temporarily; this is undone in unbuildReactor().
+            globalReactor.__dict__ = reactor.__dict__
+            globalReactor.__class__ = reactor.__class__
         except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
@@ -286,7 +301,7 @@ class ReactorBuilder:
                     if not required.providedBy(reactor)
                 ]
                 if missing:
-                    self.unbuildReactor(reactor)
+                    self._unbuildReactor(reactor)
                     raise SkipTest(
                         "%s does not provide %s"
                         % (
@@ -294,7 +309,7 @@ class ReactorBuilder:
                             ",".join([fullyQualifiedName(x) for x in missing]),
                         )
                     )
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.addCleanup(self._unbuildReactor, reactor)
         return reactor
 
     def getTimeout(self):

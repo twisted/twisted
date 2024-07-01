@@ -54,7 +54,7 @@ class ResolverBase:
 
     def __init__(self):
         self.typeToMethod = {}
-        for (k, v) in typeToMethod.items():
+        for k, v in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
 
     def exceptionForCode(self, responseCode):

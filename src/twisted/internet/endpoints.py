@@ -22,7 +22,7 @@ from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
 
-from constantly import NamedConstant, Names  # type: ignore[import]
+from constantly import NamedConstant, Names
 from incremental import Version
 
 from twisted.internet import defer, error, fdesc, interfaces, threads
@@ -1674,7 +1674,7 @@ def _parse(description):
             kw[nativeString(sofar[0])] = sofar[1]
 
     sofar = ()
-    for (type, value) in _tokenize(description):
+    for type, value in _tokenize(description):
         if type is _STRING:
             sofar += (value,)
         elif value == colon:

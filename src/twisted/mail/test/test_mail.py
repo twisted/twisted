@@ -728,10 +728,10 @@ class MaildirDirdbmDomainTests(TestCase):
         attribute and creates a directory for each user.
         """
         toAdd = ((b"user1", b"pwd1"), (b"user2", b"pwd2"), (b"user3", b"pwd3"))
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.D.addUser(u, p)
 
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.assertTrue(u in self.D.dbm)
             self.assertEqual(self.D.dbm[u], p)
             self.assertTrue(os.path.exists(os.path.join(self.P, u)))

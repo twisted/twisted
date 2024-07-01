@@ -15,7 +15,7 @@ dynamic = [
     "optional-dependencies",
 ]
 description = "An asynchronous networking framework written in Python"
-license = "MIT"
+license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.8.0"
 authors = [
@@ -37,8 +37,7 @@ dependencies = [
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
-    "typing_extensions >= 4.0.0",
-    "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
+    "typing_extensions >= 4.2.0",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
@@ -61,19 +60,19 @@ test = [
 # release scripts and process.
 dev-release = [
     "towncrier ~= 23.6",
-    "pydoctor ~= 23.4.0",
-    "sphinx-rtd-theme ~= 1.2",
-    "readthedocs-sphinx-ext ~= 2.2",
+    "pydoctor ~= 23.9.0",
+    "sphinx-rtd-theme ~= 1.3",
     "sphinx >= 6, <7",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
+    "twisted[test]",
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
-    "coverage >= 6b1, <7",
+    "coverage ~= 7.5",
 ]
 
 tls = [
@@ -114,6 +113,7 @@ macos-platform = [
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
+    "twisted-iocpsupport >= 1.0.2",
 ]
 
 osx-platform = [
@@ -127,8 +127,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy~=1.5.1",
-    "mypy-zope~=1.0.1",
+    "mypy~=1.8",
+    "mypy-zope~=1.0.3",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -315,6 +315,78 @@ no_implicit_reexport = false
 # Disable some checks until the effected modules fully adopt mypy
 
 [[tool.mypy.overrides]]
+ignore_missing_imports = true
+follow_imports = "silent"
+follow_imports_for_stubs = true
+module = [
+
+  # pyobjc is not installed on linux
+  "CFNetwork",
+  "CoreFoundation",
+
+  # neither is pywin32
+  "pywintypes",
+  "win32api",
+  "win32con",
+  "win32com.*",
+  "win32event",
+  "win32file",
+  "win32pipe",
+  "win32process",
+  "win32security",
+  "win32console",
+
+  # pyserial is very optional
+  "serial",
+  "serial.*",
+
+  # GObject Introspection too
+  "gi",
+  "gi.repository.*",
+
+  # we need to clean this up, because it's ancient and probably unsupported,
+  # but as long as it's still imported, we don't want to type-check it
+  "gobject",
+  "pygtk",
+  "gtk",
+
+  # and wxPython
+  "wxPython.wx",
+  "wx",
+
+  # constantly doesn't have type stubs yet
+  "constantly",
+
+  # h2 doesn't have types yet and is optional besides
+  "h2.*",
+  "hpack.*",
+  "priority",
+
+  # subunit is untyped
+  "subunit",
+
+  # oh this is fun, not even totally sure what library this is, since it's not
+  # documented as an extra.
+  "utmp",
+
+  # automat is not typed, or typeable, at least until
+  # https://github.com/glyph/automat/pull/137 is landed
+  "automat",
+
+  # I think only used by `twisted.web.script.ResourceTemplate`
+  "quixote",
+
+  "cython_test_exception_raiser",
+
+  # various obscure database modules you shouldn't need installed in order to
+  # type-check
+  "pyPgSQL",
+  "psycopg",
+  "MySQLdb",
+  "kinterbasdb",
+]
+
+[[tool.mypy.overrides]]
 allow_untyped_defs = true
 check_untyped_defs = false
 module = [
@@ -358,21 +430,16 @@ module = [
     'twisted.conch.test.loopback',
     'twisted.conch.test.test_agent',
     'twisted.conch.test.test_cftp',
-    'twisted.conch.test.test_channel',
     'twisted.conch.test.test_checkers',
-    'twisted.conch.test.test_ckeygen',
     'twisted.conch.test.test_conch',
     'twisted.conch.test.test_connection',
     'twisted.conch.test.test_default',
     'twisted.conch.test.test_endpoints',
     'twisted.conch.test.test_filetransfer',
-    'twisted.conch.test.test_forwarding',
-    'twisted.conch.test.test_helper',
     'twisted.conch.test.test_insults',
     'twisted.conch.test.test_keys',
     'twisted.conch.test.test_knownhosts',
     'twisted.conch.test.test_manhole',
-    'twisted.conch.test.test_mixin',
     'twisted.conch.test.test_recvline',
     'twisted.conch.test.test_session',
     'twisted.conch.test.test_ssh',
@@ -413,7 +480,6 @@ module = [
     'twisted.internet.test._posixifaces',
     'twisted.internet.test.connectionmixins',
     'twisted.internet.test.reactormixins',
-    'twisted.internet.test.test_abstract',
     'twisted.internet.test.test_address',
     'twisted.internet.test.test_asyncioreactor',
     'twisted.internet.test.test_base',
@@ -441,7 +507,6 @@ module = [
     'twisted.internet.test.test_time',
     'twisted.internet.test.test_tls',
     'twisted.internet.test.test_udp',
-    'twisted.internet.test.test_udp_internals',
     'twisted.internet.test.test_unix',
     'twisted.internet.test.test_win32events',
     'twisted.internet.testing',
@@ -492,7 +557,6 @@ module = [
     'twisted.names.test.test_common',
     'twisted.names.test.test_dns',
     'twisted.names.test.test_examples',
-    'twisted.names.test.test_hosts',
     'twisted.names.test.test_names',
     'twisted.names.test.test_rootresolve',
     'twisted.names.test.test_server',
@@ -508,7 +572,6 @@ module = [
     'twisted.plugins.cred_unix',
     'twisted.positioning._sentence',
     'twisted.positioning.nmea',
-    'twisted.positioning.test.test_nmea',
     'twisted.positioning.test.test_sentence',
     'twisted.protocols.amp',
     'twisted.protocols.basic',
@@ -545,7 +608,6 @@ module = [
     'twisted.python.test.test_sendmsg',
     'twisted.python.test.test_shellcomp',
     'twisted.python.test.test_syslog',
-    'twisted.python.test.test_url',
     'twisted.python.test.test_urlpath',
     'twisted.python.test.test_util',
     'twisted.python.test.test_zipstream',
@@ -558,7 +620,6 @@ module = [
     'twisted.python.zipstream',
     'twisted.runner.inetd',
     'twisted.runner.procmon',
-    'twisted.runner.test.test_inetdconf',
     'twisted.runner.test.test_procmon',
     'twisted.scripts._twistd_unix',
     'twisted.scripts.test.test_scripts',
@@ -584,7 +645,6 @@ module = [
     'twisted.test.stdio_test_producer',
     'twisted.test.stdio_test_write',
     'twisted.test.stdio_test_writeseq',
-    'twisted.test.test_abstract',
     'twisted.test.test_adbapi',
     'twisted.test.test_amp',
     'twisted.test.test_application',
@@ -592,31 +652,21 @@ module = [
     'twisted.test.test_context',
     'twisted.test.test_cooperator',
     'twisted.test.test_defgen',
-    'twisted.test.test_dirdbm',
-    'twisted.test.test_error',
     'twisted.test.test_factories',
-    'twisted.test.test_failure',
     'twisted.test.test_fdesc',
     'twisted.test.test_ftp',
     'twisted.test.test_ftp_options',
     'twisted.test.test_ident',
     'twisted.test.test_internet',
     'twisted.test.test_iutils',
-    'twisted.test.test_log',
-    'twisted.test.test_logfile',
     'twisted.test.test_loopback',
     'twisted.test.test_main',
     'twisted.test.test_memcache',
-    'twisted.test.test_modules',
-    'twisted.test.test_paths',
     'twisted.test.test_pcp',
-    'twisted.test.test_persisted',
-    'twisted.test.test_plugin',
     'twisted.test.test_policies',
     'twisted.test.test_postfix',
     'twisted.test.test_process',
     'twisted.test.test_protocols',
-    'twisted.test.test_randbytes',
     'twisted.test.test_reflect',
     'twisted.test.test_sip',
     'twisted.test.test_sob',
@@ -633,7 +683,6 @@ module = [
     'twisted.test.test_threadable',
     'twisted.test.test_threadpool',
     'twisted.test.test_threads',
-    'twisted.test.test_tpfile',
     'twisted.test.test_twistd',
     'twisted.test.test_twisted',
     'twisted.test.test_udp',
@@ -659,20 +708,13 @@ module = [
     'twisted.trial.test.suppression',
     'twisted.trial.test.test_assertions',
     'twisted.trial.test.test_asyncassertions',
-    'twisted.trial.test.test_deferred',
-    'twisted.trial.test.test_keyboard',
-    'twisted.trial.test.test_loader',
     'twisted.trial.test.test_log',
     'twisted.trial.test.test_plugins',
-    'twisted.trial.test.test_pyunitcompat',
     'twisted.trial.test.test_reporter',
     'twisted.trial.test.test_runner',
-    'twisted.trial.test.test_script',
     'twisted.trial.test.test_suppression',
     'twisted.trial.test.test_testcase',
     'twisted.trial.test.test_tests',
-    'twisted.trial.test.test_util',
-    'twisted.trial.test.test_warning',
     'twisted.trial.test.weird',
     'twisted.trial.util',
     'twisted.web._auth.basic',
@@ -690,7 +732,6 @@ module = [
     'twisted.web.proxy',
     'twisted.web.resource',
     'twisted.web.server',
-    'twisted.web.soap',
     'twisted.web.static',
     'twisted.web.sux',
     'twisted.web.tap',
@@ -704,18 +745,13 @@ module = [
     'twisted.web.test.test_http2',
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
-    'twisted.web.test.test_pages',
     'twisted.web.test.test_proxy',
-    'twisted.web.test.test_resource',
-    'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
-    'twisted.web.test.test_tap',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
     'twisted.web.test.test_web',
     'twisted.web.test.test_webclient',
     'twisted.web.test.test_wsgi',
-    'twisted.web.test.test_xml',
     'twisted.web.test.test_xmlrpc',
     'twisted.web.twcgi',
     'twisted.web.wsgi',

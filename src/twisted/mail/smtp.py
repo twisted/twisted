@@ -209,7 +209,7 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     """
     datetime = time.strftime("%Y%m%d%H%M%S", time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2 ** 31 - 1)
+    rand = random.randrange(2**31 - 1)
     if uniq is None:
         uniq = ""
     else:
@@ -245,7 +245,7 @@ COMMAND, DATA, AUTH = "COMMAND", "DATA", "AUTH"
 
 
 # Character classes for parsing addresses
-atom = br"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
+atom = rb"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 
 
 class Address:
@@ -262,12 +262,12 @@ class Address:
     """
 
     tstring = re.compile(
-        br"""( # A string of
+        rb"""( # A string of
                            (?:"[^"]*" # quoted string
                            |\\. # backslash-escaped characted
                            |"""
         + atom
-        + br""" # atom character
+        + rb""" # atom character
                            )+|.) # or any single character""",
         re.X,
     )
@@ -325,7 +325,7 @@ class Address:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
 
-    dequotebs = re.compile(br"\\(.)")
+    dequotebs = re.compile(rb"\\(.)")
 
     def dequote(self, addr):
         """
@@ -342,7 +342,7 @@ class Address:
             if t[0] == b'"' and t[-1] == b'"':
                 res.append(t[1:-1])
             elif "\\" in t:
-                res.append(self.dequotebs.sub(br"\1", t))
+                res.append(self.dequotebs.sub(rb"\1", t))
             else:
                 res.append(t)
 
@@ -551,27 +551,27 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     # A string of quoted strings, backslash-escaped character or
     # atom characters + '@.,:'
-    qstring = br'("[^"]*"|\\.|' + atom + br"|[@.,:])+"
+    qstring = rb'("[^"]*"|\\.|' + atom + rb"|[@.,:])+"
 
     mail_re = re.compile(
-        br"""\s*FROM:\s*(?P<path><> # Empty <>
+        rb"""\s*FROM:\s*(?P<path><> # Empty <>
                           |<"""
         + qstring
-        + br"""> # <addr>
+        + rb"""> # <addr>
                           |"""
         + qstring
-        + br""" # addr
+        + rb""" # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $""",
         re.I | re.X,
     )
     rcpt_re = re.compile(
-        br"\s*TO:\s*(?P<path><"
+        rb"\s*TO:\s*(?P<path><"
         + qstring
-        + br"""> # <addr>
+        + rb"""> # <addr>
                           |"""
         + qstring
-        + br""" # addr
+        + rb""" # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $""",
         re.I | re.X,
@@ -670,7 +670,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.datafailed = None
 
         msgs = []
-        for (user, msgFunc) in recipients:
+        for user, msgFunc in recipients:
             try:
                 msg = msgFunc()
                 rcvdhdr = self.receivedHeader(helo, origin, [user])
@@ -768,7 +768,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _messageHandled(self, resultList):
         failures = 0
-        for (success, result) in resultList:
+        for success, result in resultList:
             if not success:
                 failures += 1
                 log.err(result)
@@ -826,7 +826,6 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # provided: try to perform an anonymous login and then invoke this
         # method again.
         if self.portal:
-
             result = self.portal.login(
                 cred.credentials.Anonymous(),
                 None,
@@ -1991,7 +1990,6 @@ class PLAINAuthenticator:
 
 
 class ESMTPSender(SenderMixin, ESMTPClient):
-
     requireAuthentication = True
     requireTransportSecurity = True
 
@@ -2055,7 +2053,6 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         requireTransportSecurity=True,
         hostname=None,
     ):
-
         SMTPSenderFactory.__init__(
             self, fromEmail, toEmail, file, deferred, retries, timeout
         )

@@ -601,7 +601,6 @@ class LoopbackTests(TestCase):
 
 
 class StartStopFactory(protocol.Factory):
-
     started = 0
     stopped = 0
 
@@ -617,7 +616,6 @@ class StartStopFactory(protocol.Factory):
 
 
 class ClientStartStopFactory(MyClientFactory):
-
     started = 0
     stopped = 0
 
@@ -1493,7 +1491,6 @@ class LargeBufferTests(TestCase):
 
 @implementer(IHalfCloseableProtocol)
 class MyHCProtocol(AccumulatingProtocol):
-
     readHalfClosed = False
     writeHalfClosed = False
 
@@ -1511,7 +1508,6 @@ class MyHCProtocol(AccumulatingProtocol):
 
 
 class MyHCFactory(protocol.ServerFactory):
-
     called = 0
     protocolConnectionMade = None
 

@@ -8,15 +8,19 @@ Test cases covering L{twisted.python.filepath}.
 from __future__ import annotations
 
 import errno
+import io
 import os
 import pickle
 import stat
+import sys
 import time
 from pprint import pformat
 from typing import IO, AnyStr, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
+
+from typing_extensions import NoReturn
 
 from twisted.python import filepath
 from twisted.python.filepath import FileMode, OtherAnyStr
@@ -47,15 +51,15 @@ class AbstractFilePathTests(BytesTestCase):
     f1content = b"file 1"
     f2content = b"file 2"
 
-    def _mkpath(self, *p):
+    def _mkpath(self, *p: bytes) -> bytes:
         x = os.path.abspath(os.path.join(self.cmn, *p))
         self.all.append(x)
         return x
 
-    def subdir(self, *dirname):
+    def subdir(self, *dirname: bytes) -> None:
         os.mkdir(self._mkpath(*dirname))
 
-    def subfile(self, *dirname):
+    def subfile(self, *dirname: bytes) -> io.BufferedWriter:
         return open(self._mkpath(*dirname), "wb")
 
     def setUp(self) -> None:
@@ -254,13 +258,19 @@ class FakeWindowsPath(filepath.FilePath[AnyStr]):
         )
 
 
+if sys.platform != "win32":
+
+    class WindowsError:
+        pass
+
+
 class ListingCompatibilityTests(BytesTestCase):
     """
     These tests verify compatibility with legacy behavior of directory listing.
     """
 
     @skipIf(not platform.isWindows(), "Only relevant on on Windows.")
-    def test_windowsErrorExcept(self):
+    def test_windowsErrorExcept(self) -> None:
         """
         Verify that when a WindowsError is raised from listdir, catching
         WindowsError works.
@@ -303,13 +313,13 @@ class ExplodingFile:
 
     closed = False
 
-    def read(self, n=0):
+    def read(self, n: int = 0) -> NoReturn:
         """
         @raise IOError: Always raised.
         """
         raise OSError()
 
-    def write(self, what):
+    def write(self, what: bytes) -> NoReturn:
         """
         @raise IOError: Always raised.
         """
@@ -1259,7 +1269,6 @@ class FilePathTests(AbstractFilePathTests):
         # super append mode should let us read and write and also position the
         # cursor at the end of the file, without erasing everything.
         with appender.open("a+") as f:
-
             # The order of these lines may seem surprising, but it is
             # necessary. The cursor is not at the end of the file until after
             # the first write.
@@ -1516,6 +1525,7 @@ class FilePathTests(AbstractFilePathTests):
         Verify that the right numbers come back from the right accessor methods
         for file inode/device/nlinks/uid/gid (in a POSIX environment)
         """
+
         # specify fake statinfo information
         class FakeStat:
             st_ino = 200

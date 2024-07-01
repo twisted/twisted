@@ -34,7 +34,7 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
+Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installations.rst>`_.
 
 
 Documentation and Support
@@ -88,7 +88,7 @@ Or, for speed, use pre-commit directly::
 Copyright
 ---------
 
-All of the code in this distribution is Copyright (c) 2001-2023 Twisted Matrix Laboratories.
+All of the code in this distribution is Copyright (c) 2001-2024 Twisted Matrix Laboratories.
 
 Twisted is made available under the MIT license.
 The included `LICENSE <LICENSE>`_ file describes this in detail.

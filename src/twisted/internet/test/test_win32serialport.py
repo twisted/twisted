@@ -19,7 +19,7 @@ testingForced = "TWISTED_FORCE_SERIAL_TESTS" in os.environ
 
 
 try:
-    import serial  # type: ignore[import]
+    import serial
 
     from twisted.internet import serialport
 except ImportError:

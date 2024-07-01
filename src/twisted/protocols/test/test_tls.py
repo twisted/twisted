@@ -5,12 +5,18 @@
 Tests for L{twisted.protocols.tls}.
 """
 
+from __future__ import annotations
 
 import gc
+from typing import Union
 
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
 
+from hypothesis import given, strategies as st
+
+from twisted.internet import reactor
+from twisted.internet.task import Clock, deferLater
 from twisted.python.compat import iterbytes
 
 try:
@@ -30,6 +36,7 @@ try:
     from twisted.protocols.tls import (
         TLSMemoryBIOFactory,
         TLSMemoryBIOProtocol,
+        _AggregateSmallWrites,
         _ProducerMembrane,
         _PullToPush,
     )
@@ -164,7 +171,11 @@ def buildTLSProtocol(
             contextFactory = ServerTLSContext(method=serverMethod)
         else:
             contextFactory = ClientTLSContext()
-    wrapperFactory = TLSMemoryBIOFactory(contextFactory, not server, clientFactory)
+
+    clock = Clock()
+    wrapperFactory = TLSMemoryBIOFactory(
+        contextFactory, not server, clientFactory, clock
+    )
     sslProtocol = wrapperFactory.buildProtocol(None)
 
     if transport is None:
@@ -235,6 +246,7 @@ def handshakingClientAndServer(
     @return: 3-tuple of client, server, L{twisted.test.iosim.IOPump}
     """
     authCert, serverCert = certificatesForAuthorityAndServer()
+    clock = Clock()
 
     @implementer(IHandshakeListener)
     class Client(AccumulatingProtocol):
@@ -269,16 +281,19 @@ def handshakingClientAndServer(
         optionsForClientTLS("example.com", trustRoot=authCert),
         isClient=True,
         wrappedFactory=ClientFactory.forProtocol(lambda: Client(999999)),
+        clock=clock,
     )
     serverF = TLSMemoryBIOFactory(
         serverCert.options(),
         isClient=False,
         wrappedFactory=ServerFactory.forProtocol(lambda: Server(999999)),
+        clock=clock,
     )
     client, server, pump = connectedServerAndClient(
         lambda: serverF.buildProtocol(None),
         lambda: clientF.buildProtocol(None),
         greet=False,
+        clock=clock,
     )
     return client, server, pump
 
@@ -318,6 +333,24 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         wrappedServerProtocol = server.wrappedProtocol
         pump.flush()
         self.assertEqual(wrappedServerProtocol.received, [])
+
+    def test_smalWriteBuffering(self):
+        """
+        If a small amount data is written to the TLS transport, it is only
+        delivered if time passes, indicating small-write buffering is in
+        effect.
+        """
+        client, server, pump = handshakingClientAndServer()
+        wrappedServerProtocol = server.wrappedProtocol
+        pump.flush()
+        self.assertEqual(wrappedServerProtocol.received, [])
+        client.write(b"hel")
+        client.write(b"lo")
+        self.assertEqual(wrappedServerProtocol.received, [])
+        pump.flush(advanceClock=False)
+        self.assertEqual(wrappedServerProtocol.received, [])
+        pump.flush(advanceClock=True)
+        self.assertEqual(b"".join(wrappedServerProtocol.received), b"hello")
 
 
 class TLSMemoryBIOTests(TestCase):
@@ -666,13 +699,19 @@ class TLSMemoryBIOTests(TestCase):
             def connectionMade(self):
                 try:
                     self.transport.write(notBytes)
+                    self.transport.write(b"bytes")
+                    self.transport.loseConnection()
                 except TypeError:
                     result.append(True)
-                self.transport.write(b"bytes")
-                self.transport.loseConnection()
+                    self.transport.abortConnection()
+
+        def flush_logged_errors():
+            self.assertEqual(len(self.flushLoggedErrors(ConnectionLost, TypeError)), 2)
 
         d = self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
-        return d.addCallback(lambda ign: self.assertEqual(result, [True]))
+        d.addBoth(lambda ign: self.assertEqual(result, [True]))
+        d.addBoth(lambda ign: deferLater(reactor, 0, flush_logged_errors))
+        return d
 
     def test_multipleWrites(self):
         """
@@ -721,7 +760,7 @@ class TLSMemoryBIOTests(TestCase):
         sent later.
         """
         data = b"some bytes"
-        factor = 2 ** 20
+        factor = 2**20
 
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
@@ -1212,6 +1251,7 @@ class TLSProducerTests(TestCase):
         # cannot be written. Thus writing bytes before the handshake should
         # cause the producer to be paused:
         clientProtocol.transport.write(b"hello")
+        tlsProtocol.factory._clock.advance(0)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
         self.assertTrue(tlsProtocol._producer._producerPaused)
@@ -1302,6 +1342,7 @@ class TLSProducerTests(TestCase):
         # haven't unregistered producer yet:
         clientProtocol.transport.write(b"hello")
         clientProtocol.transport.writeSequence([b" ", b"world"])
+        tlsProtocol.factory._clock.advance(0)
 
         # Unregister producer; this should trigger TLS shutdown:
         clientProtocol.transport.unregisterProducer()
@@ -1311,6 +1352,7 @@ class TLSProducerTests(TestCase):
         # Additional writes should not go through:
         clientProtocol.transport.write(b"won't")
         clientProtocol.transport.writeSequence([b"won't!"])
+        tlsProtocol.factory._clock.advance(0)
 
         # Finish TLS close handshake:
         self.flushTwoTLSProtocols(tlsProtocol, serverTLSProtocol)
@@ -1394,6 +1436,7 @@ class TLSProducerTests(TestCase):
         # WantReadError will be thrown, triggering the TLS transport's
         # producer code path.
         clientProtocol.transport.write(b"hello")
+        tlsProtocol.factory._clock.advance(0)
         self.assertEqual(producer.producerState, "paused")
         self.assertEqual(producer.producerHistory, ["pause"])
 
@@ -1709,7 +1752,7 @@ class NonStreamingProducerTests(TestCase):
         """
         consumer = StringTransport()
         done = self.resumeProducingRaises(
-            consumer, [(ZeroDivisionError, "failed, producing will be stopped")]
+            consumer, [(ZeroDivisionError, "while calling resumeProducing on")]
         )
 
         def cleanShutdown(ignore):
@@ -1735,8 +1778,8 @@ class NonStreamingProducerTests(TestCase):
         return self.resumeProducingRaises(
             consumer,
             [
-                (ZeroDivisionError, "failed, producing will be stopped"),
-                (RuntimeError, "failed to unregister producer"),
+                (ZeroDivisionError, "while calling resumeProducing"),
+                (RuntimeError, "while calling unregisterProducer"),
             ],
         )
 
@@ -1819,3 +1862,82 @@ class ServerNegotiationFactory(ServerFactory):
         @rtype: L{list} of L{bytes}
         """
         return self._acceptableProtocols
+
+
+class _AggregateSmallWritesTests(SynchronousTestCase):
+    """Tests for ``_AggregateSmallWrites``."""
+
+    # Hypothesis will repeatedly generate different lists which will be a
+    # combination of instances of ``bytes`` and ``None``, and pass that as the
+    # ``writes`` parameter. The ``bytes`` should be passed to
+    # L{_AggregateSmallWrites.write}, a ``None`` indicates that some time has
+    # passed, which should cause the aggregator to write data out.
+    @given(
+        st.lists(
+            st.one_of(
+                st.none(),
+                # We could use st.bytes(min_size=1, max_size=100_000), but if
+                # we did we'd waste time exploring different byte contents,
+                # which in this particular case don't matter. We just care
+                # about lengths, so long as misordering or truncating is likely
+                # to be noticed.
+                st.integers(min_value=1, max_value=100_000).map(
+                    lambda length: (b"0123456789ABCDEFGHIJ" * ((length // 20) + 1))[
+                        :length
+                    ]
+                ),
+            ),
+            max_size=1_000,
+        )
+    )
+    def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]) -> None:
+        """
+        A L{_AggregateSmallWrites} correctly aggregates data for the given
+        sequence of writes (indicated by bytes) and increments in the clock
+        (indicated by C{None}).
+
+        If multiple writes happen in between reactor iterations, they should
+        get written in a batch at the start of the next reactor iteration.
+        """
+        # Whenever the aggregate is flushed, it will write the bytes to this
+        # list:
+        result: list[bytes] = []
+
+        clock = Clock()
+        aggregate = _AggregateSmallWrites(result.append, clock)
+        for value in writes:
+            if value is None:
+                clock.advance(0)
+            else:
+                aggregate.write(value)
+
+        # Flush any remaining bytes:
+        aggregate.flush()
+
+        # Now, check the invariants:
+
+        # 1. All bytes passed to aggregate.write() should have been written
+        # out, in the correct order:
+        self.assertEqual(
+            b"".join(result), b"".join(value for value in writes if value is not None)
+        )
+
+        # 2. All writes happened either when the max buffer size was reached,
+        # or when the clock advanced:
+        small_writes = writes[:]
+        for chunk in result:
+            combined_length = len(chunk)
+            # Initial flushes have no side-effects:
+            while small_writes and small_writes[0] is None:
+                small_writes.pop(0)
+            small_writes_length = 0
+            while small_writes:
+                next_original_maybe_write = small_writes.pop(0)
+                if next_original_maybe_write is None:
+                    self.assertEqual(combined_length, small_writes_length)
+                    break
+                else:
+                    small_writes_length += len(next_original_maybe_write)
+                    if small_writes_length > aggregate.MAX_BUFFER_SIZE:
+                        self.assertEqual(combined_length, small_writes_length)
+                        break

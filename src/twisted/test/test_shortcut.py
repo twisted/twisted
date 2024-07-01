@@ -10,7 +10,7 @@ from twisted.trial import unittest
 
 skipReason = None
 try:
-    from win32com.shell import shell  # type: ignore[import]
+    from win32com.shell import shell
 
     from twisted.python import shortcut
 except ImportError:

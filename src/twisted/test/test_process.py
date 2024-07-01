@@ -246,7 +246,6 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
 
 class EchoProtocol(protocol.ProcessProtocol):
-
     s = b"1234567" * 1001
     n = 10
     finished = 0
@@ -608,7 +607,7 @@ class ProcessTests(unittest.TestCase):
             try:
                 import glob
 
-                import process_tester  # type: ignore[import]
+                import process_tester  # type: ignore[import-not-found]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -676,11 +675,11 @@ class ProcessTests(unittest.TestCase):
 
     def test_commandLine(self):
         args = [
-            br"a\"b ",
-            br"a\b ",
-            br' a\\"b',
-            br" a\\b",
-            br'"foo bar" "',
+            rb"a\"b ",
+            rb"a\b ",
+            rb' a\\"b',
+            rb" a\\b",
+            rb'"foo bar" "',
             b"\tab",
             b'"\\',
             b'a"b',
@@ -2267,7 +2266,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api  # type: ignore[import]
+        import win32api
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

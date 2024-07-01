@@ -97,7 +97,7 @@ class WorkerProtocol(AMP):
             suite.run(self._result)
 
         allSucceeded = True
-        for (success, result) in await DeferredList(results, consumeErrors=True):
+        for success, result in await DeferredList(results, consumeErrors=True):
             if success:
                 # Nothing to do here, proceed to the next result.
                 continue

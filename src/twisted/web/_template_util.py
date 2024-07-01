@@ -24,7 +24,7 @@ from typing import (
     cast,
 )
 from xml.sax import handler, make_parser
-from xml.sax.xmlreader import Locator
+from xml.sax.xmlreader import AttributesNSImpl, Locator
 
 from zope.interface import implementer
 
@@ -269,7 +269,7 @@ class _SourceFragmentElement(Element):
         C{"snippetHighlightLine"}.  Other lines will be given a I{class} of
         C{"snippetLine"}.
         """
-        for (lineNumber, sourceLine) in self._getSourceLines():
+        for lineNumber, sourceLine in self._getSourceLines():
             newTag = tag.clone()
             if lineNumber == self.frame[2]:
                 cssClass = "snippetHighlightLine"
@@ -462,7 +462,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self,
         namespaceAndName: Tuple[str, str],
         qname: Optional[str],
-        attrs: Mapping[Tuple[Optional[str], str], str],
+        attrs: AttributesNSImpl,
     ) -> None:
         """
         Gets called when we encounter a new xmlns attribute.
@@ -505,14 +505,14 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = OrderedDict(attrs)
-        for k, v in list(attrs.items()):
+        ordered = OrderedDict(attrs)
+        for k, v in list(ordered.items()):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
             if justTheName == "render":
                 render = v
-                del attrs[k]
+                del ordered[k]
 
         # nonTemplateAttrs is a dictionary mapping attributes that are *not* in
         # TEMPLATE_NAMESPACE to their values.  Those in TEMPLATE_NAMESPACE were
@@ -522,7 +522,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # preserving the xml namespace prefix given in the document.
 
         nonTemplateAttrs = OrderedDict()
-        for (attrNs, attrName), v in attrs.items():
+        for (attrNs, attrName), v in ordered.items():
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
                 attrKey = attrName
