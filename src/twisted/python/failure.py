@@ -365,7 +365,6 @@ class Failure(BaseException):
         #   with bareword "except:"s.  This premature exception
         #   catching means tracebacks generated here don't tend to show
         #   what called upon the PB object.
-
         while f:
             if captureVars:
                 localz = f.f_locals.copy()
@@ -645,17 +644,6 @@ class Failure(BaseException):
                 ]
                 for v in self.frames
             ]
-        else:
-            c["frames"] = [
-                [
-                    v[0],
-                    v[1],
-                    v[2],
-                    [],
-                    [],
-                ]
-                for v in self.frames
-            ]
 
         # Added 2003-06-23. See comment above in __init__
         c["tb"] = None
@@ -671,17 +659,6 @@ class Failure(BaseException):
                         v[2],
                         _safeReprVars(v[3]),
                         _safeReprVars(v[4]),
-                    ]
-                    for v in self.stack
-                ]
-            else:
-                c["stack"] = [
-                    [
-                        v[0],
-                        v[1],
-                        v[2],
-                        [],
-                        [],
                     ]
                     for v in self.stack
                 ]
