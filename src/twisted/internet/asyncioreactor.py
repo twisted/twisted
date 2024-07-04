@@ -9,20 +9,163 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_event_loop
-from typing import Dict, Optional, Type
+from asyncio import AbstractEventLoop, TimerHandle, get_event_loop
+from functools import partial
+from time import time as _time
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type
 
 from zope.interface import implementer
 
+from attrs import Factory, define, field
+
 from twisted.internet.abstract import FileDescriptor
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.interfaces import (
+    IConnector,
+    IDelayedCall,
+    IListeningPort,
+    IReactorFDSet,
+    IReactorTCP,
+    IReactorTime,
+    IReactorUDP,
+)
 from twisted.internet.posixbase import (
     _NO_FILEDESC,
     PosixReactorBase,
     _ContinuousPolling,
 )
+from twisted.internet.protocol import ClientFactory, DatagramProtocol, ServerFactory
+from twisted.internet.task import Clock
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
+
+
+@implementer(IDelayedCall)
+@define()
+class TimerHandleDelayedCall:
+    """
+    Timer handle delayed call.
+    """
+
+    _handle: TimerHandle
+    _callback: Callable[[], None]
+    _reactor: AsyncioLoopReactor
+    _canceled: bool = False
+    _called: bool = True
+
+    def active(self) -> bool:
+        """
+        Is this call yet to run, and not canceled?
+        """
+        return not self._canceled
+
+    def cancel(self) -> None:
+        """
+        Stop this timer handle.
+        """
+        self._canceled = True
+        self._handle.cancel()
+
+    def getTime(self) -> float:
+        """
+        get the time at which this should run
+        """
+        return self._reactor._monotonicDelta + self._handle.when()
+
+    def delay(self, secondsLater: float) -> None:
+        """
+        Delay this callable to run later.
+        """
+        firstWhen = self._handle.when()
+        self._handle.cancel()
+        self._handle = self._reactor._eventloop.call_at(
+            firstWhen + secondsLater, self._callback
+        )
+
+    def reset(self, secondsFromNow: float) -> None:
+        """
+        Reset this callable to run a certain number of seconds from now.
+        """
+        self._handle.cancel()
+        self._handle = self._reactor._eventloop.call_later(
+            secondsFromNow, self._callback
+        )
+
+
+@implementer(IReactorTime, IReactorTCP, IReactorUDP)
+@define()
+class AsyncioLoopReactor:
+    """
+    Rector running on top of L{asyncio.AbstractEventLoop}.
+    """
+
+    _eventloop: AbstractEventLoop = field(default=Factory(get_event_loop))
+    _delayedCalls: List[TimerHandleDelayedCall] = field(default=Factory(list))
+    _monotonicDelta: float = field(init=False)
+
+    def __attrs_post_init__(self) -> None:
+        self._monotonicDelta = _time() - self._eventloop.time()
+
+    def callLater(
+        self,
+        delay: float,
+        callable: Callable[..., Any],
+        *args: object,
+        **kwargs: object,
+    ) -> IDelayedCall:
+        """
+        Implement L{IReactorTime.callLater}
+        """
+        noArgsCallback = partial(callable, *args, **kwargs)
+        return TimerHandleDelayedCall(
+            self._eventloop.call_later(delay, noArgsCallback),
+            noArgsCallback,
+            self,
+        )
+
+    def getDelayedCalls(self) -> Sequence[IDelayedCall]:
+        """
+        get all delayed calls.
+        """
+        return self._delayedCalls[:]
+
+    def seconds(self) -> float:
+        """
+        Get the current wall clock time.
+        """
+        return self._monotonicDelta + self._eventloop.time()
+
+    def connectTCP(
+        self,
+        host: str,
+        port: int,
+        factory: ClientFactory,
+        timeout: float = 30,
+        bindAdress: Optional[Tuple[str, int]] = None,
+    ) -> IConnector:
+        """
+        Connect to the given TCP host and port.
+        """
+        # TODO
+
+    def listenTCP(
+        self, port: int, factory: ServerFactory, backlog: int = 50, interface: str = ""
+    ) -> IListeningPort:
+        """
+        Listen on the given TCP port.
+        """
+        # TODO
+
+    def listenUDP(
+        self,
+        port: int,
+        protocol: DatagramProtocol,
+        interface: str,
+        maxPacketSize: int,
+    ) -> IListeningPort:
+        """
+        Listen on the given UDP port.
+        """
+        # TODO
 
 
 @implementer(IReactorFDSet)
