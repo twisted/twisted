@@ -806,7 +806,6 @@ class ReactorBase(PluggableResolverMixin):
         """
         self._started = False
         self.running = False
-        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
 
     def sigInt(self, number: int, frame: Optional[FrameType] = None) -> None:
         """
@@ -938,6 +937,11 @@ class ReactorBase(PluggableResolverMixin):
         if self._registerAsIOThread:
             threadable.registerAsIOThread()
         self.fireSystemEvent("startup")
+        # TODO: test for calling crash() multiple times to make sure that
+        # _reallyStartRunning is called at the appropriate times (the only
+        # observable effect of which is that the signal handlers are installed
+        # multiple times)
+        self.addSystemEventTrigger("during", "startup", self._reallyStartRunning)
 
     def _reallyStartRunning(self) -> None:
         """
