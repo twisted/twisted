@@ -79,7 +79,7 @@ def test_connect_and_disconnect():
     Once KEX is done the client disconnects.
     """
     serverFactory = BenchmarkSSHServerFactory()
-    serverEndpoint = serverFromString(reactor, "tcp:0:interface=127.0.0.1")
+    serverEndpoint = TCP4ServerEndpoint(reactor, 0)
     serverPort = yield serverEndpoint.listen(serverFactory)
 
     clientProtocol = BenchmarkSSHClientTransport()
