@@ -1,0 +1,1 @@
+twisted.python.failure.Failure creation no longer records the place where it was created by default, unless captureVars=True. This reduces creation time by 60% at least, thereby speeding up Deferred error handling.
