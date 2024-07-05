@@ -243,6 +243,9 @@ class Failure(BaseException):
     C{locals().items()}/C{globals().items()} for that frame, or an empty tuple
     if those details were not captured.
 
+    C{stack} and local/global variables in C{frame} will only be captured if
+    C{captureVars=True} when constructing the L{Failure}.
+
     @ivar value: The exception instance responsible for this failure.
     @ivar type: The exception's class.
     @ivar stack: list of frames, innermost last, excluding C{Failure.__init__}.
@@ -366,20 +369,17 @@ class Failure(BaseException):
         #   catching means tracebacks generated here don't tend to show
         #   what called upon the PB object.
 
-        while f:
-            if captureVars:
-                localz = f.f_locals.copy()
-                if f.f_locals is f.f_globals:
-                    globalz = {}
-                else:
-                    globalz = f.f_globals.copy()
-                for d in globalz, localz:
-                    if "__builtins__" in d:
-                        del d["__builtins__"]
-                localz = localz.items()
-                globalz = globalz.items()
+        while captureVars and f:
+            localz = f.f_locals.copy()
+            if f.f_locals is f.f_globals:
+                globalz = {}
             else:
-                localz = globalz = ()
+                globalz = f.f_globals.copy()
+            for d in globalz, localz:
+                if "__builtins__" in d:
+                    del d["__builtins__"]
+            localz = localz.items()
+            globalz = globalz.items()
             stack.insert(
                 0,
                 (
