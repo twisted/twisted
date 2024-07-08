@@ -1624,8 +1624,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         fail = l[0]
         self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errbackWithNoArgs(self) -> None:
         """
@@ -1665,8 +1665,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errorInCallbackCapturesVarsWhenDebugging(self) -> None:
         """
@@ -1810,6 +1810,23 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # Once all local references have been dropped, the canceller should have
         # been freed.
         self.assertIsNone(weakCanceller())
+
+    def test_DEFERRED_SUBCLASSES(self) -> None:
+        """
+        C{_DEFERRED_SUBCLASSES} includes all subclasses of L{Deferred}.
+        """
+        self.assertEqual(defer._DEFERRED_SUBCLASSES[:2], [Deferred, DeferredList])
+
+        class D2(Deferred[int]):
+            pass
+
+        self.assertEqual(defer._DEFERRED_SUBCLASSES[-1], D2)
+        defer._DEFERRED_SUBCLASSES.pop(-1)
+
+        # There are other potential subclasses, e.g. twisted.persisted.crefutil
+        # has a Deferred subclass:
+        for klass in defer._DEFERRED_SUBCLASSES:
+            self.assertTrue(issubclass(klass, Deferred))
 
 
 class DummyCanceller:

@@ -32,11 +32,11 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
 )
 from twisted.logger import Logger
-from twisted.python import util
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
+from twisted.python.util import nameToLabel
 from ._idna import _idnaBytes
 from ._service_identity import (
     DNS_ID,
@@ -49,6 +49,8 @@ from ._service_identity import (
 
 if TYPE_CHECKING:
     from twisted.protocols.tls import TLSMemoryBIOProtocol
+
+_log = Logger()
 
 _log = Logger()
 
@@ -275,7 +277,7 @@ class DistinguishedName(Dict[str, bytes]):
             return set(mapping.values())
 
         for k in sorted(uniqueValues(_x509names)):
-            label = util.nameToLabel(k)
+            label = nameToLabel(k)
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
@@ -971,6 +973,38 @@ def platformTrust():
         Twisted.  At present, only OpenSSL is supported.
     """
     return OpenSSLDefaultPaths()
+
+
+def _tolerateErrors(wrapped):
+    """
+    Wrap up an C{info_callback} for pyOpenSSL so that if something goes wrong
+    the error is immediately logged and the connection is dropped if possible.
+
+    This wrapper exists because some versions of pyOpenSSL don't handle errors
+    from callbacks at I{all}, and those which do write tracebacks directly to
+    stderr rather than to a supplied logging system.  This reports unexpected
+    errors to the Twisted logging system.
+
+    Also, this terminates the connection immediately if possible because if
+    you've got bugs in your verification logic it's much safer to just give up.
+
+    @param wrapped: A valid C{info_callback} for pyOpenSSL.
+    @type wrapped: L{callable}
+
+    @return: A valid C{info_callback} for pyOpenSSL that handles any errors in
+        C{wrapped}.
+    @rtype: L{callable}
+    """
+
+    def infoCallback(connection: SSL.Connection, where: int, ret: int) -> object:
+        result = None
+        with _log.failuresHandled("Error during info_callback") as op:
+            result = wrapped(connection, where, ret)
+        if (f := op.failure) is not None:
+            connection.get_app_data().failVerification(f)
+        return result
+
+    return infoCallback
 
 
 @implementer(

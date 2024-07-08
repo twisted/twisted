@@ -48,6 +48,8 @@ from twisted.web.template import (
 )
 from twisted.web.test._util import FlattenTestCase
 
+IS_PYTHON_313 = sys.version_info[:2] >= (3, 13)
+
 
 class SerializationTests(FlattenTestCase, XMLAssertionMixin):
     """
@@ -650,17 +652,24 @@ class FlattenerErrorTests(SynchronousTestCase):
         else:
             self.fail("f() must raise RuntimeError")
 
+        if IS_PYTHON_313:
+            column_marker = "    ~^^\n"
+        else:
+            column_marker = ""
+
         self.assertEqual(
             str(FlattenerError(exc, [], tbinfo)),
             "Exception while flattening:\n"
             '  File "%s", line %d, in f\n'
             "    g()\n"
+            "%s"
             '  File "%s", line %d, in g\n'
             '    raise RuntimeError("reason")\n'
             "RuntimeError: reason\n"
             % (
                 HERE,
                 f.__code__.co_firstlineno + 1,
+                column_marker,
                 HERE,
                 g.__code__.co_firstlineno + 1,
             ),
@@ -693,6 +702,10 @@ class FlattenerErrorTests(SynchronousTestCase):
         exc = RuntimeError("example")
         failing.errback(exc)
         failure = self.failureResultOf(flattening, FlattenerError)
+        if IS_PYTHON_313:
+            column_marker = "[ ^]*\nRuntimeError: example\n"
+        else:
+            column_marker = ""
         self.assertRegex(
             str(failure.value),
             re.compile(
@@ -705,7 +718,8 @@ class FlattenerErrorTests(SynchronousTestCase):
                       File ".*", line \\d*, in _flattenTree
                         element = await element.*
                     """
-                ),
+                )
+                + column_marker,
                 flags=re.MULTILINE,
             ),
         )

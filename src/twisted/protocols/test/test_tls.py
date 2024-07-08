@@ -1848,7 +1848,7 @@ class NonStreamingProducerTests(TestCase):
         """
         consumer = StringTransport()
         done = self.resumeProducingRaises(
-            consumer, [(ZeroDivisionError, "failed, producing will be stopped")]
+            consumer, [(ZeroDivisionError, "while calling resumeProducing on")]
         )
 
         def cleanShutdown(ignore):
@@ -1874,8 +1874,8 @@ class NonStreamingProducerTests(TestCase):
         return self.resumeProducingRaises(
             consumer,
             [
-                (ZeroDivisionError, "failed, producing will be stopped"),
-                (RuntimeError, "failed to unregister producer"),
+                (ZeroDivisionError, "while calling resumeProducing"),
+                (RuntimeError, "while calling unregisterProducer"),
             ],
         )
 
