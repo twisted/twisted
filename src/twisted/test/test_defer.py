@@ -1624,8 +1624,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         fail = l[0]
         self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errbackWithNoArgs(self) -> None:
         """
@@ -1665,8 +1665,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errorInCallbackCapturesVarsWhenDebugging(self) -> None:
         """
