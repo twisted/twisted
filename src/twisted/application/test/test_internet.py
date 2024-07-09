@@ -905,7 +905,7 @@ class ClientServiceTests(SynchronousTestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
-        cq.connectQueue[0].errback(Exception("no connection"))
+        cq.connectQueue.pop(0).errback(Exception("no connection"))
         d = service.stopService()
         self.assertEqual(clock.getDelayedCalls(), [])
         self.successResultOf(d)
