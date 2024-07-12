@@ -376,15 +376,15 @@ class _Init:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
         self.s.connect(self.p)
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Stopped)
     def stop(self) -> Deferred[None]:
         return succeed(None)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Init)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -397,26 +397,26 @@ class _Connecting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
         ...
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
         self.s.stopConnecting()
         return waited
 
-    @machine.handle(_ClientMachineProto._connectionMade)
+    @machine.handle(_ClientMachineProto._connectionMade, enter=lambda: _Connected)
     def _connectionMade(self, protocol: _ReconnectingProtocolProxy) -> None:
         self.s._notifyWaiters(protocol)
 
-    @machine.handle(_ClientMachineProto._connectionFailed)
+    @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Waiting)
     def _connectionFailed(self, failure: Failure) -> None:
         self.s.wait(self.p)
         self.s._deliverConnectionFailure(failure)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Connecting)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -429,11 +429,11 @@ class _Waiting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Waiting)
     def start(self) -> None:
         ...
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Stopped)
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
         self.s.cancelConnectWaiters()
@@ -441,11 +441,11 @@ class _Waiting:
         self.s.finishStopping()
         return waited
 
-    @machine.handle(_ClientMachineProto._reconnect)
+    @machine.handle(_ClientMachineProto._reconnect, enter=lambda: _Connecting)
     def _reconnect(self) -> None:
         self.s.connect(self.p)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Waiting)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -458,22 +458,22 @@ class _Connected:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Connected)
     def start(self) -> None:
         ...
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
         self.s.disconnect()
         return waited
 
-    @machine.handle(_ClientMachineProto._clientDisconnected)
+    @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Waiting)
     def _clientDisconnected(self) -> None:
         self.s.forgetConnection()
         self.s.wait(self.p)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Connected)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -488,26 +488,26 @@ class _Disconnecting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Restarting)
     def start(self) -> None:
         self.s.resetFailedAttempts()
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
         return self.s.waitForStop()
 
-    @machine.handle(_ClientMachineProto._clientDisconnected)
+    @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Stopped)
     def _clientDisconnected(self) -> None:
         self.s.cancelConnectWaiters()
         self.s.finishStopping()
         self.s.forgetConnection()
 
-    @machine.handle(_ClientMachineProto._connectionFailed)
+    @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Stopped)
     def _connectionFailed(self, failure: Failure) -> None:
         self.s.cancelConnectWaiters()
         self.s.finishStopping()
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Disconnecting)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -520,20 +520,20 @@ class _Restarting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Restarting)
     def start(self) -> None:
         ...
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
         return self.s.waitForStop()
 
-    @machine.handle(_ClientMachineProto._clientDisconnected)
+    @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Connecting)
     def _clientDisconnected(self) -> None:
         self.s.finishStopping()
         self.s.connect(self.p)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Restarting)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
@@ -546,55 +546,19 @@ class _Stopped:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start)
+    @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
         self.s.connect(self.p)
 
-    @machine.handle(_ClientMachineProto.stop)
+    @machine.handle(_ClientMachineProto.stop, enter=lambda: _Stopped)
     def stop(self) -> Deferred[None]:
         return succeed(None)
 
-    @machine.handle(_ClientMachineProto.whenConnected)
+    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Stopped)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
         return fail(CancelledError())
-
-
-_Init.start.enter(_Connecting)
-_Init.stop.enter(_Stopped)
-_Init.whenConnected.enter(_Init)
-
-_Connecting.start.enter(_Connecting)
-_Connecting.stop.enter(_Disconnecting)
-_Connecting._connectionMade.enter(_Connected)
-_Connecting._connectionFailed.enter(_Waiting)
-_Connecting.whenConnected.enter(_Connecting)
-
-_Waiting.start.enter(_Waiting)
-_Waiting.stop.enter(_Stopped)
-_Waiting._reconnect.enter(_Connecting)
-_Waiting.whenConnected.enter(_Waiting)
-
-_Connected.start.enter(_Connected)
-_Connected.stop.enter(_Disconnecting)
-_Connected._clientDisconnected.enter(_Waiting)
-_Connected.whenConnected.enter(_Connected)
-
-_Disconnecting.start.enter(_Restarting)
-_Disconnecting.stop.enter(_Disconnecting)
-_Disconnecting._clientDisconnected.enter(_Stopped)
-_Disconnecting._connectionFailed.enter(_Stopped)
-_Disconnecting.whenConnected.enter(_Disconnecting)
-
-_Restarting.start.enter(_Restarting)
-_Restarting.stop.enter(_Disconnecting)
-_Restarting._clientDisconnected.enter(_Connecting)
-_Restarting.whenConnected.enter(_Restarting)
-
-_Stopped.start.enter(_Connecting)
-_Stopped.stop.enter(_Stopped)
-_Stopped.whenConnected.enter(_Stopped)
 
 
 def backoffPolicy(
