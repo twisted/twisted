@@ -340,7 +340,9 @@ class Failure(BaseException):
                 tb = self.value.__traceback__
 
         frames = self.frames = []
-        stack = self.stack = []
+
+        # Backwards compatibility, not used anymore:
+        self.stack = []
 
         # Added 2003-06-23 by Chris Armstrong. Yes, I actually have a
         # use case where I need this traceback object, and I've made
@@ -360,36 +362,6 @@ class Failure(BaseException):
             # stack, leaving it to start with our caller instead.
             f = f.f_back
             stackOffset -= 1
-
-        # Keeps the *full* stack.  Formerly in spread.pb.print_excFullStack:
-        #
-        #   The need for this function arises from the fact that several
-        #   PB classes have the peculiar habit of discarding exceptions
-        #   with bareword "except:"s.  This premature exception
-        #   catching means tracebacks generated here don't tend to show
-        #   what called upon the PB object.
-        while captureVars and f:
-            localz = f.f_locals.copy()
-            if f.f_locals is f.f_globals:
-                globalz = {}
-            else:
-                globalz = f.f_globals.copy()
-            for d in globalz, localz:
-                if "__builtins__" in d:
-                    del d["__builtins__"]
-            localz = localz.items()
-            globalz = globalz.items()
-            stack.insert(
-                0,
-                (
-                    f.f_code.co_name,
-                    f.f_code.co_filename,
-                    f.f_lineno,
-                    localz,
-                    globalz,
-                ),
-            )
-            f = f.f_back
 
         while tb is not None:
             f = tb.tb_frame

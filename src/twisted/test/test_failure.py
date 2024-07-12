@@ -38,6 +38,12 @@ def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
     """
     Make a C{Failure} of a divide-by-zero error.
     """
+    if captureVars:
+        exampleLocalVar = "xyz"
+        # Silence the linter as this variable is checked via
+        # the traceback.
+        exampleLocalVar
+
     try:
         1 / 0
     except BaseException:
@@ -154,8 +160,6 @@ class FailureTests(SynchronousTestCase):
 
         The body contains the stacktrace::
 
-          /twisted/trial/_synctest.py:1180: _run(...)
-          /twisted/python/util.py:1076: runWithWarningsSuppressed(...)
           --- <exception caught here> ---
           /twisted/test/test_failure.py:39: getDivisionFailure(...)
 
@@ -185,12 +189,6 @@ class FailureTests(SynchronousTestCase):
         @param cleanFailure: Enables L{Failure.cleanFailure}.
         @type cleanFailure: C{bool}
         """
-        if captureVars:
-            exampleLocalVar = "xyz"
-            # Silence the linter as this variable is checked via
-            # the traceback.
-            exampleLocalVar
-
         f = getDivisionFailure(captureVars=captureVars)
         out = StringIO()
         if cleanFailure:
