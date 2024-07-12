@@ -156,6 +156,8 @@ Twitter = "https://twitter.com/twistedmatrix"
 # This is here to enable backward compatible extra dependencies
 # that are defined using underscores.
 allow-ambiguous-features = true
+allow-direct-references = true
+
 
 [tool.hatch.version]
 source = "code"
