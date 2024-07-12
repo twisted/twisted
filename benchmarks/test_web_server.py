@@ -14,10 +14,8 @@ class Data(resource.Resource):
     This is a static, in-memory resource.
     """
 
+    # Being a leaf, we will not have getChild called on this resource.
     isLeaf = True
-
-    def getChild(self, name):
-        return self
 
     def __init__(self, data, type):
         resource.Resource.__init__(self)
