@@ -237,18 +237,21 @@ class Failure(BaseException):
     This is necessary because Python's built-in error mechanisms are
     inconvenient for asynchronous communication.
 
-    The C{stack} and C{frame} attributes contain frames.  Each frame is a tuple
+    The C{frame} attribute contain the traceback frames.  Each frame is a tuple
     of (funcName, fileName, lineNumber, localsItems, globalsItems), where
     localsItems and globalsItems are the contents of
     C{locals().items()}/C{globals().items()} for that frame, or an empty tuple
     if those details were not captured.
 
-    C{stack} and local/global variables in C{frame} will only be captured if
+    Local/global variables in C{frame} will only be captured if
     C{captureVars=True} when constructing the L{Failure}.
 
     @ivar value: The exception instance responsible for this failure.
+
     @ivar type: The exception's class.
+
     @ivar stack: list of frames, innermost last, excluding C{Failure.__init__}.
+
     @ivar frames: list of frames, innermost first.
     """
 
