@@ -223,11 +223,11 @@ class _ClientServiceStateCore:
     prepareConnection: Callable[[IProtocol], object] | None
     connectionInProgress: Deferred[None] | None = None
     stopWaiters: list[Deferred[None]] = field(default_factory=list)
-    _currentConnection: IProtocol | None = None
-    _awaitingConnected: list[tuple[Deferred[IProtocol], int | None]] = field(
+    currentConnection: IProtocol | None = None
+    awaitingConnected: list[tuple[Deferred[IProtocol], int | None]] = field(
         default_factory=list
     )
-    _retryCall: IDelayedCall | None = None
+    retryCall: IDelayedCall | None = None
     log: Logger = Logger()
     failedAttempts: int = 0
 
@@ -249,14 +249,14 @@ class _ClientServiceStateCore:
         """
         ready = []
         notReady: list[tuple[Deferred[IProtocol], int | None]] = []
-        for w, remaining in self._awaitingConnected:
+        for w, remaining in self.awaitingConnected:
             if remaining is None:
                 notReady.append((w, remaining))
             elif remaining <= 1:
                 ready.append(w)
             else:
                 notReady.append((w, remaining - 1))
-        self._awaitingConnected = notReady
+        self.awaitingConnected = notReady
         for w in ready:
             w.callback(f)
 
@@ -306,7 +306,7 @@ class _ClientServiceStateCore:
         )
 
     def disconnect(self) -> None:
-        transport = getattr(self._currentConnection, "transport", None)
+        transport = getattr(self.currentConnection, "transport", None)
         if transport is not None:
             # TODO: capture the transport in
             # _ReconnectingProtocolProxy.makeConnection() instead of relying on
@@ -315,11 +315,11 @@ class _ClientServiceStateCore:
 
     def _notifyWaiters(self, proxy: _ReconnectingProtocolProxy) -> None:
         self.failedAttempts = 0
-        self._currentConnection = proxy._protocol
-        self._unawait(self._currentConnection)
+        self.currentConnection = proxy._protocol
+        self._unawait(self.currentConnection)
 
     def _unawait(self, value: IProtocol | Failure) -> None:
-        self._awaitingConnected, waiting = [], self._awaitingConnected
+        self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
             w.callback(value)
 
@@ -332,16 +332,16 @@ class _ClientServiceStateCore:
             endpoint=self.endpoint,
             delay=delay,
         )
-        self._retryCall = self.clock.callLater(delay, proto._reconnect)
+        self.retryCall = self.clock.callLater(delay, proto._reconnect)
 
     def cancelConnectWaiters(self) -> None:
         self._unawait(Failure(CancelledError()))
 
     def stopRetrying(self) -> None:
-        rc = self._retryCall
+        rc = self.retryCall
         assert rc is not None
         rc.cancel()
-        self._retryCall = None
+        self.retryCall = None
 
     def finishStopping(self) -> None:
         self.stopWaiters, waiting = [], self.stopWaiters
@@ -349,7 +349,7 @@ class _ClientServiceStateCore:
             w.callback(None)
 
     def forgetConnection(self) -> None:
-        self._currentConnection = None
+        self.currentConnection = None
 
     def resetFailedAttempts(self) -> None:
         self.failedAttempts = 0
@@ -366,7 +366,7 @@ class _HasSP(TypingProtocol):
 
 def awaitingConnection(self: _HasSP, faf: int | None) -> Deferred[IProtocol]:
     result: Deferred[IProtocol] = Deferred()
-    self.s._awaitingConnected.append((result, faf))
+    self.s.awaitingConnected.append((result, faf))
     return result
 
 
@@ -477,7 +477,7 @@ class _Connected:
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
-        cc = self.s._currentConnection
+        cc = self.s.currentConnection
         assert cc is not None
         return succeed(cc)
 
