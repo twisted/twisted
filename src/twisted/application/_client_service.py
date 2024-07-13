@@ -451,15 +451,14 @@ class _Connected:
 
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
-        return self.s.waitForStop()
-
-    def disconnect(self) -> None:
+        waited = self.s.waitForStop()
         transport = getattr(self.protocol, "transport", None)
         assert transport is not None
         # TODO: capture the transport in
         # _ReconnectingProtocolProxy.makeConnection() instead of relying on
         # implicit / incorrect 'transport' attribute here.
         transport.loseConnection()
+        return waited
 
     @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Waiting)
     def _clientDisconnected(self) -> None:
