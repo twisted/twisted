@@ -403,7 +403,7 @@ class _Waiting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start, enter=lambda: _Waiting)
+    @machine.handle(_ClientMachineProto.start)
     def start(self) -> None:
         ...
 
@@ -424,7 +424,7 @@ class _Waiting:
     def _reconnect(self) -> None:
         ...
 
-    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Waiting)
+    @machine.handle(_ClientMachineProto.whenConnected)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
