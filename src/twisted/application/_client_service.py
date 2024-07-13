@@ -433,9 +433,7 @@ class _Connected:
     protocol: _ReconnectingProtocolProxy
 
     def __automat_post_enter__(self) -> None:
-        print("Connected APE?")
         self.s._unawait(self.protocol._protocol)
-        print("Connected APE!")
 
     @machine.handle(_ClientMachineProto.start)
     def start(self) -> None:
