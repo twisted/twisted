@@ -397,7 +397,7 @@ class _Connecting:
         return awaitingConnection(self, failAfterFailures)
 
 
-@machine.state()
+@machine.state(persist=False)
 @dataclass
 class _Waiting:
     s: _ClientServiceStateCore
