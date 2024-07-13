@@ -229,8 +229,6 @@ class _ClientServiceStateCore:
         default_factory=list
     )
 
-    connectionInProgress: Deferred[None] | None = None
-    currentConnection: IProtocol | None = None
     retryCall: IDelayedCall | None = None
     failedAttempts: int = 0
 
@@ -239,11 +237,6 @@ class _ClientServiceStateCore:
     def waitForStop(self) -> Deferred[None]:
         self.stopWaiters.append(Deferred())
         return self.stopWaiters[-1]
-
-    def stopConnecting(self) -> None:
-        cip = self.connectionInProgress
-        assert cip is not None
-        cip.cancel()
 
     def _deliverConnectionFailure(self, f: Failure) -> None:
         """
@@ -291,33 +284,6 @@ class _ClientServiceStateCore:
             )
         return succeed(protocol)
 
-    def connect(self, proto: _ClientMachineProto) -> None:
-        factoryProxy = _DisconnectFactory(
-            self.factory, lambda _: proto._clientDisconnected()
-        )
-
-        connecting: Deferred[IProtocol] = self.endpoint.connect(factoryProxy)
-        # endpoint.connect() is actually generic on the type of the protocol,
-        # but this is not expressible via zope.interface, so we have to cast
-        # https://github.com/Shoobx/mypy-zope/issues/95
-        connectingProxy: Deferred[
-            _ReconnectingProtocolProxy
-        ] = connecting  # type:ignore[assignment]
-
-        self.connectionInProgress = (
-            connectingProxy.addCallback(self._runPrepareConnection)
-            .addCallback(proto._connectionMade)
-            .addErrback(proto._connectionFailed)
-        )
-
-    def disconnect(self) -> None:
-        transport = getattr(self.currentConnection, "transport", None)
-        if transport is not None:
-            # TODO: capture the transport in
-            # _ReconnectingProtocolProxy.makeConnection() instead of relying on
-            # implicit / incorrect 'transport' attribute here.
-            transport.loseConnection()
-
     def _unawait(self, value: IProtocol | Failure) -> None:
         self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
@@ -348,12 +314,6 @@ class _ClientServiceStateCore:
         for w in waiting:
             w.callback(None)
 
-    def forgetConnection(self) -> None:
-        self.currentConnection = None
-
-    def resetFailedAttempts(self) -> None:
-        self.failedAttempts = 0
-
 
 machine = TypicalBuilder(_ClientMachineProto, _ClientServiceStateCore)
 
@@ -378,7 +338,7 @@ class _Init:
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
-        self.s.connect(self.p)
+        ...
 
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Stopped)
     def stop(self) -> Deferred[None]:
@@ -391,11 +351,31 @@ class _Init:
         return awaitingConnection(self, failAfterFailures)
 
 
-@machine.state()
+@machine.state(persist=False)
 @dataclass
 class _Connecting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
+
+    def __automat_post_enter__(self) -> None:
+        proto = self.p
+        factoryProxy = _DisconnectFactory(
+            self.s.factory, lambda _: proto._clientDisconnected()
+        )
+
+        connecting: Deferred[IProtocol] = self.s.endpoint.connect(factoryProxy)
+        # endpoint.connect() is actually generic on the type of the protocol,
+        # but this is not expressible via zope.interface, so we have to cast
+        # https://github.com/Shoobx/mypy-zope/issues/95
+        connectingProxy: Deferred[
+            _ReconnectingProtocolProxy
+        ] = connecting  # type:ignore[assignment]
+
+        self.connectionInProgress = (
+            connectingProxy.addCallback(self.s._runPrepareConnection)
+            .addCallback(proto._connectionMade)
+            .addErrback(proto._connectionFailed)
+        )
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
@@ -404,14 +384,12 @@ class _Connecting:
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
-        self.s.stopConnecting()
+        self.connectionInProgress.cancel()
         return waited
 
     @machine.handle(_ClientMachineProto._connectionMade, enter=lambda: _Connected)
-    def _connectionMade(self, protocol: _ReconnectingProtocolProxy) -> None:
-        self.s.resetFailedAttempts()
-        self.s.currentConnection = protocol._protocol
-        self.s._unawait(self.s.currentConnection)
+    def _connectionMade(self, protocol: _ReconnectingProtocolProxy, /) -> None:
+        self.s.failedAttempts = 0
 
     @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Waiting)
     def _connectionFailed(self, failure: Failure) -> None:
@@ -445,7 +423,7 @@ class _Waiting:
 
     @machine.handle(_ClientMachineProto._reconnect, enter=lambda: _Connecting)
     def _reconnect(self) -> None:
-        self.s.connect(self.p)
+        ...
 
     @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Waiting)
     def whenConnected(
@@ -454,34 +432,44 @@ class _Waiting:
         return awaitingConnection(self, failAfterFailures)
 
 
-@machine.state()
+@machine.state(persist=False)
 @dataclass
 class _Connected:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
-    @machine.handle(_ClientMachineProto.start, enter=lambda: _Connected)
+    protocol: _ReconnectingProtocolProxy
+
+    def __automat_post_enter__(self) -> None:
+        print("Connected APE?")
+        self.s._unawait(self.protocol._protocol)
+        print("Connected APE!")
+
+    @machine.handle(_ClientMachineProto.start)
     def start(self) -> None:
         ...
 
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
-        waited = self.s.waitForStop()
-        self.s.disconnect()
-        return waited
+        return self.s.waitForStop()
+
+    def disconnect(self) -> None:
+        transport = getattr(self.protocol, "transport", None)
+        assert transport is not None
+        # TODO: capture the transport in
+        # _ReconnectingProtocolProxy.makeConnection() instead of relying on
+        # implicit / incorrect 'transport' attribute here.
+        transport.loseConnection()
 
     @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Waiting)
     def _clientDisconnected(self) -> None:
-        self.s.forgetConnection()
         self.s.wait(self.p)
 
-    @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Connected)
+    @machine.handle(_ClientMachineProto.whenConnected)
     def whenConnected(
         self, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
-        cc = self.s.currentConnection
-        assert cc is not None
-        return succeed(cc)
+        return succeed(self.protocol._protocol)
 
 
 @machine.state()
@@ -492,7 +480,7 @@ class _Disconnecting:
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Restarting)
     def start(self) -> None:
-        self.s.resetFailedAttempts()
+        pass
 
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Disconnecting)
     def stop(self) -> Deferred[None]:
@@ -502,7 +490,6 @@ class _Disconnecting:
     def _clientDisconnected(self) -> None:
         self.s.cancelConnectWaiters()
         self.s.finishStopping()
-        self.s.forgetConnection()
 
     @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Stopped)
     def _connectionFailed(self, failure: Failure) -> None:
@@ -533,7 +520,6 @@ class _Restarting:
     @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Connecting)
     def _clientDisconnected(self) -> None:
         self.s.finishStopping()
-        self.s.connect(self.p)
 
     @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Restarting)
     def whenConnected(
@@ -550,7 +536,7 @@ class _Stopped:
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
     def start(self) -> None:
-        self.s.connect(self.p)
+        ...
 
     @machine.handle(_ClientMachineProto.stop, enter=lambda: _Stopped)
     def stop(self) -> Deferred[None]:
