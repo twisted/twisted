@@ -197,11 +197,7 @@ def _deinterface(o: object) -> None:
     can proxy through those attributes with C{__getattr__} and thereby forward
     optionally-provided interfaces by the delegated class.
     """
-    for zopeSpecial in [
-        "__providedBy__",
-        "__provides__",
-        "__implemented__",
-    ]:
+    for zopeSpecial in ["__providedBy__", "__provides__", "__implemented__"]:
         delattr(o, zopeSpecial)
 
 
@@ -343,7 +339,6 @@ class _Connecting:
         factoryProxy = _DisconnectFactory(
             self.s.factory, lambda _: proto._clientDisconnected()
         )
-
         connecting: Deferred[IProtocol] = self.s.endpoint.connect(factoryProxy)
         # endpoint.connect() is actually generic on the type of the protocol,
         # but this is not expressible via zope.interface, so we have to cast
@@ -351,7 +346,6 @@ class _Connecting:
         connectingProxy: Deferred[
             _ReconnectingProtocolProxy
         ] = connecting  # type:ignore[assignment]
-
         self.connectionInProgress = (
             connectingProxy.addCallback(self.s._runPrepareConnection)
             .addCallback(proto._connectionMade)
