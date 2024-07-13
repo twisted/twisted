@@ -303,12 +303,6 @@ class _ClientServiceStateCore:
     def cancelConnectWaiters(self) -> None:
         self._unawait(Failure(CancelledError()))
 
-    def stopRetrying(self) -> None:
-        rc = self.retryCall
-        assert rc is not None
-        rc.cancel()
-        self.retryCall = None
-
     def finishStopping(self) -> None:
         self.stopWaiters, waiting = [], self.stopWaiters
         for w in waiting:
@@ -417,7 +411,12 @@ class _Waiting:
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
         self.s.cancelConnectWaiters()
-        self.s.stopRetrying()
+
+        rc = self.s.retryCall
+        assert rc is not None
+        rc.cancel()
+        self.s.retryCall = None
+
         self.s.finishStopping()
         return waited
 
