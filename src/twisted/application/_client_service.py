@@ -232,26 +232,6 @@ class _ClientServiceStateCore:
         self.stopWaiters.append(Deferred())
         return self.stopWaiters[-1]
 
-    def _deliverConnectionFailure(self, f: Failure) -> None:
-        """
-        Deliver connection failures to any L{ClientService.whenConnected}
-        L{Deferred}s that have met their failAfterFailures threshold.
-
-        @param f: the Failure to fire the L{Deferred}s with.
-        """
-        ready = []
-        notReady: list[tuple[Deferred[IProtocol], int | None]] = []
-        for w, remaining in self.awaitingConnected:
-            if remaining is None:
-                notReady.append((w, remaining))
-            elif remaining <= 1:
-                ready.append(w)
-            else:
-                notReady.append((w, remaining - 1))
-        self.awaitingConnected = notReady
-        for w in ready:
-            w.callback(f)
-
     def _runPrepareConnection(
         self, protocol: _ReconnectingProtocolProxy, /
     ) -> Deferred[_ReconnectingProtocolProxy]:
@@ -368,7 +348,24 @@ class _Connecting:
 
     @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Waiting)
     def _connectionFailed(self, failure: Failure) -> None:
-        self.s._deliverConnectionFailure(failure)
+        """
+        Deliver connection failures to any L{ClientService.whenConnected}
+        L{Deferred}s that have met their failAfterFailures threshold.
+
+        @param failure: the Failure to fire the L{Deferred}s with.
+        """
+        ready = []
+        notReady: list[tuple[Deferred[IProtocol], int | None]] = []
+        for w, remaining in self.s.awaitingConnected:
+            if remaining is None:
+                notReady.append((w, remaining))
+            elif remaining <= 1:
+                ready.append(w)
+            else:
+                notReady.append((w, remaining - 1))
+        self.s.awaitingConnected = notReady
+        for w in ready:
+            w.callback(failure)
 
     @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Connecting)
     def whenConnected(
