@@ -20,7 +20,6 @@ from twisted.internet.defer import (
 )
 from twisted.internet.interfaces import (
     IAddress,
-    IDelayedCall,
     IProtocol,
     IProtocolFactory,
     IReactorTime,
@@ -229,7 +228,6 @@ class _ClientServiceStateCore:
         default_factory=list
     )
 
-    retryCall: IDelayedCall | None = None
     failedAttempts: int = 0
 
     log: Logger = Logger()
@@ -288,17 +286,6 @@ class _ClientServiceStateCore:
         self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
             w.callback(value)
-
-    def wait(self, proto: _ClientMachineProto) -> None:
-        self.failedAttempts += 1
-        delay = self.timeoutForAttempt(self.failedAttempts)
-        self.log.info(
-            "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
-            attempt=self.failedAttempts,
-            endpoint=self.endpoint,
-            delay=delay,
-        )
-        self.retryCall = self.clock.callLater(delay, proto._reconnect)
 
     def cancelConnectWaiters(self) -> None:
         self._unawait(Failure(CancelledError()))
@@ -387,7 +374,6 @@ class _Connecting:
 
     @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Waiting)
     def _connectionFailed(self, failure: Failure) -> None:
-        self.s.wait(self.p)
         self.s._deliverConnectionFailure(failure)
 
     @machine.handle(_ClientMachineProto.whenConnected, enter=lambda: _Connecting)
@@ -403,6 +389,18 @@ class _Waiting:
     s: _ClientServiceStateCore
     p: _ClientMachineProto
 
+    def __automat_post_enter__(self) -> None:
+        proto = self.p
+        self.s.failedAttempts += 1
+        delay = self.s.timeoutForAttempt(self.s.failedAttempts)
+        self.s.log.info(
+            "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
+            attempt=self.s.failedAttempts,
+            endpoint=self.s.endpoint,
+            delay=delay,
+        )
+        self.retryCall = self.s.clock.callLater(delay, proto._reconnect)
+
     @machine.handle(_ClientMachineProto.start)
     def start(self) -> None:
         ...
@@ -411,12 +409,7 @@ class _Waiting:
     def stop(self) -> Deferred[None]:
         waited = self.s.waitForStop()
         self.s.cancelConnectWaiters()
-
-        rc = self.s.retryCall
-        assert rc is not None
-        rc.cancel()
-        self.s.retryCall = None
-
+        self.retryCall.cancel()
         self.s.finishStopping()
         return waited
 
@@ -461,7 +454,7 @@ class _Connected:
 
     @machine.handle(_ClientMachineProto._clientDisconnected, enter=lambda: _Waiting)
     def _clientDisconnected(self) -> None:
-        self.s.wait(self.p)
+        ...
 
     @machine.handle(_ClientMachineProto.whenConnected)
     def whenConnected(
