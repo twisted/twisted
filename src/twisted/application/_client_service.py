@@ -206,7 +206,7 @@ _deinterface(_ReconnectingProtocolProxy)
 
 
 @dataclass
-class _ClientServiceStateCore:
+class _ClientServiceSharedCore:
     """
     shared for ClientService
     """
@@ -272,12 +272,12 @@ class _ClientServiceStateCore:
             w.callback(None)
 
 
-machine = TypicalBuilder(_ClientMachineProto, _ClientServiceStateCore)
+machine = TypicalBuilder(_ClientMachineProto, _ClientServiceSharedCore)
 
 
 @dataclass
 class _HasSP(TypingProtocol):
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
 
@@ -290,7 +290,7 @@ def awaitingConnection(self: _HasSP, faf: int | None) -> Deferred[IProtocol]:
 @machine.state()
 @dataclass
 class _Init:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
@@ -311,7 +311,7 @@ class _Init:
 @machine.state(persist=False)
 @dataclass
 class _Connecting:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     def __automat_post_enter__(self) -> None:
@@ -377,7 +377,7 @@ class _Connecting:
 @machine.state(persist=False)
 @dataclass
 class _Waiting:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     def __automat_post_enter__(self) -> None:
@@ -418,7 +418,7 @@ class _Waiting:
 @machine.state(persist=False)
 @dataclass
 class _Connected:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     protocol: _ReconnectingProtocolProxy
@@ -455,7 +455,7 @@ class _Connected:
 @machine.state()
 @dataclass
 class _Disconnecting:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Restarting)
@@ -486,7 +486,7 @@ class _Disconnecting:
 @machine.state()
 @dataclass
 class _Restarting:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Restarting)
@@ -511,7 +511,7 @@ class _Restarting:
 @machine.state()
 @dataclass
 class _Stopped:
-    s: _ClientServiceStateCore
+    s: _ClientServiceSharedCore
     p: _ClientMachineProto
 
     @machine.handle(_ClientMachineProto.start, enter=lambda: _Connecting)
