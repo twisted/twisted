@@ -216,20 +216,25 @@ class _ClientServiceStateCore:
     shared for ClientService
     """
 
+    # required parameters
     endpoint: IStreamClientEndpoint
     factory: IProtocolFactory
     timeoutForAttempt: Callable[[int], float]
     clock: IReactorTime
     prepareConnection: Callable[[IProtocol], object] | None
-    connectionInProgress: Deferred[None] | None = None
+
+    # internal state
     stopWaiters: list[Deferred[None]] = field(default_factory=list)
-    currentConnection: IProtocol | None = None
     awaitingConnected: list[tuple[Deferred[IProtocol], int | None]] = field(
         default_factory=list
     )
+
+    connectionInProgress: Deferred[None] | None = None
+    currentConnection: IProtocol | None = None
     retryCall: IDelayedCall | None = None
-    log: Logger = Logger()
     failedAttempts: int = 0
+
+    log: Logger = Logger()
 
     def waitForStop(self) -> Deferred[None]:
         self.stopWaiters.append(Deferred())
@@ -314,7 +319,7 @@ class _ClientServiceStateCore:
             transport.loseConnection()
 
     def _notifyWaiters(self, proxy: _ReconnectingProtocolProxy) -> None:
-        self.failedAttempts = 0
+        self.resetFailedAttempts()
         self.currentConnection = proxy._protocol
         self._unawait(self.currentConnection)
 
