@@ -34,7 +34,7 @@ dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
     "incremental >= 22.10.0",
-    "Automat @ git+https://github.com/glyph/automat.git@f94d928663787bbde712ffef10d7e734c0eb5465",
+    "Automat @ git+https://github.com/glyph/automat.git@f335da5c18a2d1c9477dcf6a91616be52dd269a5",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
     "typing_extensions >= 4.2.0",
