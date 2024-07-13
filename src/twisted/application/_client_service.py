@@ -318,11 +318,6 @@ class _ClientServiceStateCore:
             # implicit / incorrect 'transport' attribute here.
             transport.loseConnection()
 
-    def _notifyWaiters(self, proxy: _ReconnectingProtocolProxy) -> None:
-        self.resetFailedAttempts()
-        self.currentConnection = proxy._protocol
-        self._unawait(self.currentConnection)
-
     def _unawait(self, value: IProtocol | Failure) -> None:
         self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
@@ -414,7 +409,9 @@ class _Connecting:
 
     @machine.handle(_ClientMachineProto._connectionMade, enter=lambda: _Connected)
     def _connectionMade(self, protocol: _ReconnectingProtocolProxy) -> None:
-        self.s._notifyWaiters(protocol)
+        self.s.resetFailedAttempts()
+        self.s.currentConnection = protocol._protocol
+        self.s._unawait(self.s.currentConnection)
 
     @machine.handle(_ClientMachineProto._connectionFailed, enter=lambda: _Waiting)
     def _connectionFailed(self, failure: Failure) -> None:
