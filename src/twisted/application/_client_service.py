@@ -318,20 +318,49 @@ class CurrentConnection:
 
 
 Init = machine.state("Init")
-Connecting = machine.data_state("Connecting", ConnectionAttempt)
+
+
+def doAttemptConnection(
+    c: _ClientMachineProto, s: _ClientServiceSharedCore
+) -> ConnectionAttempt:
+    return s.attemptConnection(c)
+
+
+Connecting = machine.data_state("Connecting", doAttemptConnection)
 Stopped = machine.state("Stopped")
-Waiting = machine.data_state("Waiting", WaitInProgress)
-Connected = machine.data_state("Connected", CurrentConnection)
+
+
+def startWaiting(
+    c: _ClientMachineProto,
+    s: _ClientServiceSharedCore,
+    failure: Failure,
+) -> WaitInProgress:
+    return buildWaitInProgress(c, s)
+
+
+Waiting = machine.data_state("Waiting", startWaiting)
+
+
+def saveCurrentConnection(
+    c: _ClientMachineProto,
+    s: _ClientServiceSharedCore,
+    ca: ConnectionAttempt,
+    protocol: _ReconnectingProtocolProxy,
+) -> CurrentConnection:
+    s.failedAttempts = 0
+    s._unawait(protocol._protocol)
+    return CurrentConnection(protocol)
+
+
+Connected = machine.data_state("Connected", saveCurrentConnection)
 Disconnecting = machine.state("Disconnecting")
 Restarting = machine.state("Restarting")
 Stopped = machine.state("Stopped")
 
 
 @Init.data_transition(_ClientMachineProto.start, Connecting)
-def InitStart(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore
-) -> tuple[None, ConnectionAttempt]:
-    return (None, s.attemptConnection(c))
+def InitStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
+    ...
 
 
 @Init.transition(_ClientMachineProto.stop, Stopped)
@@ -351,8 +380,8 @@ def initWhenConnected(
 @Connecting.data_transition(_ClientMachineProto.start, Connecting)
 def connectingStart(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, a: ConnectionAttempt
-) -> tuple[None, ConnectionAttempt]:
-    return None, a
+) -> None:
+    return None
 
 
 @Connecting.transition(_ClientMachineProto.stop, Disconnecting)
@@ -370,19 +399,22 @@ def _connectionMade(
     s: _ClientServiceSharedCore,
     ca: ConnectionAttempt,
     protocol: _ReconnectingProtocolProxy,
-) -> tuple[None, CurrentConnection]:
+) -> None:
     s.failedAttempts = 0
     s._unawait(protocol._protocol)
-    return (None, CurrentConnection(protocol))
+    return None
 
 
-@Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
+cdt = Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
+
+
+@cdt
 def _connectionFailed(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
     ca: ConnectionAttempt,
     failure: Failure,
-) -> tuple[None, WaitInProgress]:
+) -> None:
     """
     Deliver connection failures to any L{ClientService.whenConnected}
     L{Deferred}s that have met their failAfterFailures threshold.
@@ -401,17 +433,16 @@ def _connectionFailed(
     s.awaitingConnected = notReady
     for w in ready:
         w.callback(failure)
-    return None, buildWaitInProgress(c, s)
 
 
-@Connecting.data_transition(_ClientMachineProto.whenConnected, Connecting)
+@Connecting.self_transition(_ClientMachineProto.whenConnected)
 def whenConnectedWhileConnecting(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
     a: ConnectionAttempt,
     failAfterFailures: int | None = None,
-) -> tuple[Deferred[IProtocol], ConnectionAttempt]:
-    return (awaitingConnection(s, failAfterFailures), a)
+) -> Deferred[IProtocol]:
+    return awaitingConnection(s, failAfterFailures)
 
 
 def buildWaitInProgress(
@@ -428,11 +459,11 @@ def buildWaitInProgress(
     return WaitInProgress(s.clock.callLater(delay, c._reconnect))
 
 
-@Waiting.data_transition(_ClientMachineProto.start, Waiting)
+@Waiting.self_transition(_ClientMachineProto.start)
 def start(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
-) -> tuple[None, WaitInProgress]:
-    return (None, w)
+) -> None:
+    ...
 
 
 @Waiting.transition(_ClientMachineProto.stop, Stopped)
@@ -449,25 +480,25 @@ def stop(
 @Waiting.data_transition(_ClientMachineProto._reconnect, Connecting)
 def _reconnect(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
-) -> tuple[None, ConnectionAttempt]:
-    return (None, s.attemptConnection(c))
+) -> None:
+    ...
 
 
-@Waiting.data_transition(_ClientMachineProto.whenConnected, Waiting)
+@Waiting.self_transition(_ClientMachineProto.whenConnected)
 def whenConnected(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
     w: WaitInProgress,
     failAfterFailures: int | None = None,
-) -> tuple[Deferred[IProtocol], WaitInProgress]:
-    return (awaitingConnection(s, failAfterFailures), w)
+) -> Deferred[IProtocol]:
+    return awaitingConnection(s, failAfterFailures)
 
 
-@Connected.data_transition(_ClientMachineProto.start, Connected)
+@Connected.self_transition(_ClientMachineProto.start)
 def startWhenConnected(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
-) -> tuple[None, CurrentConnection]:
-    return (None, cc)
+) -> None:
+    return None
 
 
 @Connected.transition(_ClientMachineProto.stop, Disconnecting)
@@ -486,21 +517,24 @@ def stopWhileConnected(
     return waited
 
 
-@Connected.data_transition(_ClientMachineProto._clientDisconnected, Waiting)
+cdtw = Connected.data_transition(_ClientMachineProto._clientDisconnected, Waiting)
+
+
+@cdtw
 def _clientDisconnected(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
-) -> tuple[None, WaitInProgress]:
-    return (None, buildWaitInProgress(c, s))
+) -> None:
+    return None
 
 
-@Connected.data_transition(_ClientMachineProto.whenConnected, Connected)
+@Connected.self_transition(_ClientMachineProto.whenConnected)
 def whenConnectedWhenConnected(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
     cc: CurrentConnection,
     failAfterFailures: int | None = None,
-) -> tuple[Deferred[IProtocol], CurrentConnection]:
-    return (succeed(cc.protocol._protocol), cc)
+) -> Deferred[IProtocol]:
+    return succeed(cc.protocol._protocol)
 
 
 @Disconnecting.transition(_ClientMachineProto.start, Restarting)
@@ -547,11 +581,8 @@ def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred
 
 
 @Restarting.data_transition(_ClientMachineProto._clientDisconnected, Connecting)
-def restartDisco(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore
-) -> tuple[None, ConnectionAttempt]:
-    s.finishStopping()
-    return (None, s.attemptConnection(c))
+def restartDisco(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
+    ...
 
 
 @Restarting.transition(_ClientMachineProto.whenConnected, Restarting)
@@ -564,10 +595,8 @@ def rwc(
 
 
 @Stopped.data_transition(_ClientMachineProto.start, Connecting)
-def stoppedStart(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore
-) -> tuple[None, ConnectionAttempt]:
-    return (None, s.attemptConnection(c))
+def stoppedStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
+    ...
 
 
 @Stopped.transition(_ClientMachineProto.stop, Stopped)
