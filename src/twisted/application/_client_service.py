@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from random import random as _goodEnoughRandom
-from typing import Callable, Protocol as TypingProtocol, TypeVar
+from typing import TYPE_CHECKING, Callable, Protocol as TypingProtocol, TypeVar
 
 from zope.interface import implementer
 
@@ -324,7 +324,22 @@ def doAttemptConnection(
     return s.attemptConnection(c)
 
 
-Connecting = machine.data_state("Connecting", doAttemptConnection)
+noFailure: Callable[
+    [_ClientMachineProto, _ClientServiceSharedCore], ConnectionAttempt
+] = doAttemptConnection
+Connecting = machine.data_state("Connecting", noFailure)
+withFailure: Callable[
+    [_ClientMachineProto, _ClientServiceSharedCore, Failure], ConnectionAttempt
+] = doAttemptConnection
+if TYPE_CHECKING:
+    # I think what i need here is a different variance on the FactoryParams
+    # ParamSpec that allows for this sort of looser checking to take place, but
+    # ParamSpec doesn't have variance right now.
+    Connecting_FactoryWithFailure = machine.data_state(
+        "Connecting_FactoryWithFailure", withFailure
+    )
+else:
+    Connecting_FactoryWithFailure = Connecting
 Stopped = machine.state("Stopped")
 
 
@@ -587,7 +602,9 @@ def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred
     return s.waitForStop()
 
 
-@Restarting.data_transition(_ClientMachineProto._clientDisconnected, Connecting)
+@Restarting.data_transition(
+    _ClientMachineProto._clientDisconnected, Connecting_FactoryWithFailure
+)
 def restartDisco(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
 ) -> None:
