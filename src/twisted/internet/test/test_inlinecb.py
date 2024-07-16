@@ -25,9 +25,9 @@ from twisted.python.compat import _PYPY
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-def getThing():
+def getValueViaDeferred(value):
     d = Deferred()
-    reactor.callLater(0, d.callback, "hi")
+    reactor.callLater(0, d.callback, value)
     return d
 
 
@@ -71,7 +71,7 @@ class BasicTests(TestCase):
 
         @inlineCallbacks
         def _genBasics():
-            x = yield getThing()
+            x = yield getValueViaDeferred("hi")
 
             self.assertEqual(x, "hi")
 
@@ -92,7 +92,7 @@ class BasicTests(TestCase):
 
         @inlineCallbacks
         def _genProduceException():
-            yield getThing()
+            yield getValueViaDeferred("hi")
             1 / 0
 
         return self.assertFailure(_genProduceException(), ZeroDivisionError)
