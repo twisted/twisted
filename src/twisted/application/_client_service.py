@@ -315,15 +315,30 @@ class CurrentConnection:
     protocol: _ReconnectingProtocolProxy
 
 
-Init = machine.state("Init")
-
-
 def doAttemptConnection(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
 ) -> ConnectionAttempt:
     return s.attemptConnection(c)
 
 
+def startWaiting(
+    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
+) -> WaitInProgress:
+    print("startWaiting")
+    return buildWaitInProgress(c, s)
+
+
+def saveCurrentConnection(
+    c: _ClientMachineProto,
+    s: _ClientServiceSharedCore,
+    protocol: _ReconnectingProtocolProxy,
+) -> CurrentConnection:
+    s.failedAttempts = 0
+    s._unawait(protocol._protocol)
+    return CurrentConnection(protocol)
+
+
+Init = machine.state("Init")
 noFailure: Callable[
     [_ClientMachineProto, _ClientServiceSharedCore], ConnectionAttempt
 ] = doAttemptConnection
@@ -341,30 +356,7 @@ if TYPE_CHECKING:
 else:
     Connecting_FactoryWithFailure = Connecting
 Stopped = machine.state("Stopped")
-
-
-def startWaiting(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    failure: Failure,
-) -> WaitInProgress:
-    print("startWaiting")
-    return buildWaitInProgress(c, s)
-
-
 Waiting = machine.data_state("Waiting", startWaiting)
-
-
-def saveCurrentConnection(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    protocol: _ReconnectingProtocolProxy,
-) -> CurrentConnection:
-    s.failedAttempts = 0
-    s._unawait(protocol._protocol)
-    return CurrentConnection(protocol)
-
-
 Connected = machine.data_state("Connected", saveCurrentConnection)
 Disconnecting = machine.state("Disconnecting")
 Restarting = machine.state("Restarting")
