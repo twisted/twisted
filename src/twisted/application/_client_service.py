@@ -58,14 +58,14 @@ class _ClientMachineProto(TypingProtocol):
             closed and all in-progress connection attempts halted.
         """
 
-    def _connectionMade(self, protocol: _ReconnectingProtocolProxy, /) -> None:
+    def _connectionMade(self, protocol: _ReconnectingProtocolProxy) -> None:
         """
         A connection has been made.
 
         @param protocol: The protocol of the connection.
         """
 
-    def _connectionFailed(self, f: Failure, /) -> None:
+    def _connectionFailed(self, failure: Failure) -> None:
         """
         The current connection attempt failed.
         """
@@ -75,7 +75,7 @@ class _ClientMachineProto(TypingProtocol):
         The wait between connection attempts is done.
         """
 
-    def _clientDisconnected(self) -> None:
+    def _clientDisconnected(self, failure: Failure) -> None:
         """
         The current connection has been disconnected.
         """
@@ -234,9 +234,7 @@ class _ClientServiceSharedCore:
         return self.stopWaiters[-1]
 
     def attemptConnection(self, c: _ClientMachineProto) -> ConnectionAttempt:
-        factoryProxy = _DisconnectFactory(
-            self.factory, lambda _: c._clientDisconnected()
-        )
+        factoryProxy = _DisconnectFactory(self.factory, c._clientDisconnected)
         connecting: Deferred[IProtocol] = self.endpoint.connect(factoryProxy)
         # endpoint.connect() is actually generic on the type of the protocol,
         # but this is not expressible via zope.interface, so we have to cast
@@ -321,7 +319,7 @@ Init = machine.state("Init")
 
 
 def doAttemptConnection(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore
+    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
 ) -> ConnectionAttempt:
     return s.attemptConnection(c)
 
@@ -335,6 +333,7 @@ def startWaiting(
     s: _ClientServiceSharedCore,
     failure: Failure,
 ) -> WaitInProgress:
+    print("startWaiting")
     return buildWaitInProgress(c, s)
 
 
@@ -344,7 +343,6 @@ Waiting = machine.data_state("Waiting", startWaiting)
 def saveCurrentConnection(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
-    ca: ConnectionAttempt,
     protocol: _ReconnectingProtocolProxy,
 ) -> CurrentConnection:
     s.failedAttempts = 0
@@ -405,11 +403,18 @@ def _connectionMade(
     return None
 
 
-cdt = Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
-
-
-@cdt
+@Connected.data_transition(_ClientMachineProto._connectionFailed, Waiting)
 def _connectionFailed(
+    c: _ClientMachineProto,
+    s: _ClientServiceSharedCore,
+    ca: CurrentConnection,
+    failure: Failure,
+) -> None:
+    print("...failed?")
+
+
+@Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
+def _connectionFailed2(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
     ca: ConnectionAttempt,
@@ -517,12 +522,12 @@ def stopWhileConnected(
     return waited
 
 
-cdtw = Connected.data_transition(_ClientMachineProto._clientDisconnected, Waiting)
-
-
-@cdtw
-def _clientDisconnected(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
+@Connected.data_transition(_ClientMachineProto._clientDisconnected, Waiting)
+def _clientDisconnectedImpl(
+    c: _ClientMachineProto,
+    s: _ClientServiceSharedCore,
+    cc: CurrentConnection,
+    failure: Failure,
 ) -> None:
     return None
 
@@ -548,7 +553,9 @@ def discoStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred[N
 
 
 @Disconnecting.transition(_ClientMachineProto._clientDisconnected, Stopped)
-def discoDisco(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
+def discoDisco(
+    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
+) -> None:
     s.cancelConnectWaiters()
     s.finishStopping()
 
@@ -581,8 +588,11 @@ def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred
 
 
 @Restarting.data_transition(_ClientMachineProto._clientDisconnected, Connecting)
-def restartDisco(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
-    ...
+def restartDisco(
+    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
+) -> None:
+    print("disconnected while restarting")
+    s.finishStopping()
 
 
 @Restarting.transition(_ClientMachineProto.whenConnected, Restarting)

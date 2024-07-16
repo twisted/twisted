@@ -627,7 +627,7 @@ class ClientServiceTests(SynchronousTestCase):
         service.startService()
         self.assertNoResult(d)
         self.assertEqual(len(cq.constructedProtocols), 1)
-        protocol.connectionLost(Failure(Exception()))
+        protocol.connectionLost(Failure(Exception("synthetic connectionLost")))
         self.assertEqual(len(cq.constructedProtocols), 2)
 
     def test_startServiceWhileStopping(self):
@@ -648,7 +648,7 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
         self.assertEqual(first.transport.disconnecting, True)
-        first.connectionLost(Failure(Exception()))
+        first.connectionLost(Failure(Exception("synthetic connection lost")))
         self.successResultOf(stopped)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
