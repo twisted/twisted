@@ -2223,17 +2223,15 @@ def inlineCallbacks(
 
     Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
     will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of L{None}.
+    failure object if your generator raises an unhandled exception). Inside
+    the generator simply use C{return result} to return a value.
 
-    Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
+    Be aware that generator must not return a L{Deferred}.
     If you believe the thing you'd like to return could be a L{Deferred}, do
     this::
 
         result = yield result
-        returnValue(result)
+        return result
 
     The L{Deferred} returned from your deferred generator may errback if your
     generator raised an exception::
@@ -2243,17 +2241,10 @@ def inlineCallbacks(
             thing = yield makeSomeRequestResultingInDeferred()
             if thing == 'I love Twisted':
                 # will become the result of the Deferred
-                returnValue('TWISTED IS GREAT!')
+                return 'TWISTED IS GREAT!'
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
-
-    It is possible to use the C{return} statement instead of L{returnValue}::
-
-        @inlineCallbacks
-        def loadData(url):
-            response = yield makeRequest(url)
-            return json.loads(response)
 
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
