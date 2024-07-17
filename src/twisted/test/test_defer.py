@@ -29,6 +29,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    Literal,
     Mapping,
     NoReturn,
     Optional,
@@ -3759,7 +3760,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
-        def testFunction() -> Generator[Deferred[Any], Any, None]:
+        def testFunction() -> Generator[Deferred[Any], Any, Literal[True]]:
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
@@ -3793,9 +3794,9 @@ class CoroutineContextVarsTests(unittest.TestCase):
             yield yieldingDeferred()
             self.assertEqual(var.get(), 2)
 
-            defer.returnValue(True)
+            return True
 
-        assert_type(testFunction, Callable[[], Deferred[None]])
+        assert_type(testFunction, Callable[[], Deferred[Literal[True]]])
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
         d = testFunction()
