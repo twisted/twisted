@@ -2097,6 +2097,9 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
+        if iscoroutine(result) or inspect.isgenerator(result):
+            result = _cancellableInlineCallbacks(result)
+
         if isinstance(result, Deferred):
             # a deferred was yielded, get the result.
             result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)
@@ -2248,6 +2251,17 @@ def inlineCallbacks(
     reaching its end, a C{return} statement, or by calling L{returnValue}).
     A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
+
+    C{inlineCallbacks} behaves very similarly to coroutines. Since Twisted NEXT
+    it is possible to rewrite functions using C{inlineCallbacks} to C{async def}
+    in piecewise manner and be mostly compatible to existing code.
+
+    The rewrite process is simply replacing C{inlineCallbacks} decorator with
+    C{async def} and all C{yield} occurrences in the function body with C{await}.
+    The function will no longer return a C{Deferred} but a awaitable coroutine.
+    This return value will obviously not have C{Deferred} methods such as
+    C{addCallback}, but it will be possible to C{yield} it in other code based
+    on C{inlineCallbacks}.
     """
 
     @wraps(f)
