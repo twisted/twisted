@@ -79,7 +79,7 @@ class BasicTests(TestCase):
                 yield getDivisionFailure("OMG")
             except ZeroDivisionError as e:
                 self.assertEqual(str(e), "OMG")
-            returnValue("WOOSH")
+            return "WOOSH"
 
         return _genBasics().addCallback(self.assertEqual, "WOOSH")
 
@@ -152,7 +152,7 @@ class BasicTests(TestCase):
             for x in range(5000):
                 # Test with yielding a deferred
                 yield succeed(1)
-            returnValue(0)
+            return 0
 
         return _genStackUsage().addCallback(self.assertEqual, 0)
 
@@ -167,7 +167,7 @@ class BasicTests(TestCase):
             for x in range(5000):
                 # Test with yielding a random value
                 yield 1
-            returnValue(0)
+            return 0
 
         return _genStackUsage2().addCallback(self.assertEqual, 0)
 
@@ -182,7 +182,7 @@ class BasicTests(TestCase):
 
         def _test():
             yield 5
-            returnValue(5)
+            return 5
 
         _test = inlineCallbacks(_test)
 
@@ -199,16 +199,25 @@ class BasicTests(TestCase):
 
         return _noReturn().addCallback(self.assertEqual, None)
 
-    def testReturnValue(self):
-        """Ensure that returnValue works."""
+    def testReturnValueDeprecated(self):
+        """C{returnValue} is now deprecated but continues to be available."""
 
+        @inlineCallbacks
         def _return():
             yield 5
             returnValue(6)
 
-        _return = inlineCallbacks(_return)
+        d = _return()
 
-        return _return().addCallback(self.assertEqual, 6)
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]["category"])
+        self.assertIn(
+            "twisted.internet.defer.returnValue was deprecated in Twisted",
+            warnings[0]["message"],
+        )
+
+        return d.addCallback(self.assertEqual, 6)
 
     def test_nonGeneratorReturn(self):
         """
@@ -263,6 +272,14 @@ class BasicTests(TestCase):
         d = _raises()
         clock.advance(0)
         tb = self.successResultOf(d)
+
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]["category"])
+        self.assertIn(
+            "twisted.internet.defer.returnValue was deprecated in Twisted",
+            warnings[0]["message"],
+        )
 
         # The internal exception is not in the traceback.
         self.assertNotIn("_DefGen_Return", tb)
@@ -417,7 +434,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         @inlineCallbacks
         def f2(x):
@@ -427,7 +444,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 2
 
             expectations.append(("f2 exit", x))
-            returnValue(x)
+            return x
 
         @inlineCallbacks
         def f3(x):
@@ -437,7 +454,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -476,7 +493,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         @inlineCallbacks
         def f2(x):
@@ -488,7 +505,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 2
 
             expectations.append(("f2 exit", x))
-            returnValue(x)
+            return x
 
         @inlineCallbacks
         def f3(x):
@@ -500,7 +517,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         for d, x in deferredList:
@@ -556,7 +573,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         def f2(x):
             expectations.append(("f2 enter", x))
@@ -574,7 +591,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         self.assertEqual(self.successResultOf(f3(1)), 8)
         self.assertEqual(
@@ -611,7 +628,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         def f2(x):
             expectations.append(("f2 enter", x))
@@ -629,7 +646,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -671,7 +688,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         def f2(x):
             expectations.append(("f2 enter", x))
@@ -690,7 +707,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -735,7 +752,7 @@ class StackedInlineCallbacksTests(TestCase):
             # be executed, but in case it is (error), it should still work so
             # that assertions at the end of the test work.
             expectations.append(("f2 exit", x))  # pragma: no cover
-            returnValue(x)  # pragma: no cover
+            return x  # pragma: no cover
 
         @inlineCallbacks
         def f3(x):
@@ -746,7 +763,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -785,7 +802,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         @inlineCallbacks
         def f2(x):
@@ -799,7 +816,7 @@ class StackedInlineCallbacksTests(TestCase):
             # be executed, but in case it is (error), it should still work so
             # that assertions at the end of the test work.
             expectations.append(("f2 exit", x))  # pragma: no cover
-            returnValue(x)  # pragma: no cover
+            return x  # pragma: no cover
 
         @inlineCallbacks
         def f3(x):
@@ -811,7 +828,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -856,10 +873,15 @@ class NonLocalExitTests(TestCase):
         """
         self.assertEqual(resultList, [1])
         warnings = self.flushWarnings(offendingFunctions=[self.mistakenMethod])
-        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(warnings), 2)
         self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
+        self.assertEqual(warnings[1]["category"], DeprecationWarning)
+        self.assertIn(
+            "twisted.internet.defer.returnValue was deprecated in Twisted",
             warnings[0]["message"],
+        )
+        self.assertEqual(
+            warnings[1]["message"],
             "returnValue() in 'mistakenMethod' causing 'inline' to exit: "
             "returnValue should only be invoked by functions decorated with "
             "inlineCallbacks",
@@ -1060,7 +1082,7 @@ class CancellationTests(SynchronousTestCase):
     @inlineCallbacks
     def stackedInlineCB(self, getChildDeferred):
         x = yield getChildDeferred()
-        returnValue(x)
+        return x
 
     @inlineCallbacks
     def sampleInlineCB(self, getChildDeferred=None, stacked=False, firstDeferred=None):
@@ -1083,7 +1105,7 @@ class CancellationTests(SynchronousTestCase):
             raise TranslatedError()
         except DontFail as df:
             x = df.actualValue - 2
-        returnValue(x + 1)
+        return x + 1
 
     def getDeferred(self):
         """

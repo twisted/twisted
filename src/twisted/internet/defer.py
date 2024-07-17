@@ -1898,6 +1898,7 @@ class _DefGen_Return(BaseException):
         self.value = value
 
 
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="standard return statement")
 def returnValue(val: object) -> NoReturn:
     """
     Return val from a L{inlineCallbacks} generator.
@@ -2051,17 +2052,28 @@ def _inlineCallbacks(
             # directly.  returnValue itself consumes a stack frame, so the
             # application code will have a tb_next, but it will *not* have a
             # second tb_next.
+            #
+            # Note that there's one additional level due to returnValue being
+            # deprecated
             assert appCodeTrace.tb_next is not None
-            if appCodeTrace.tb_next.tb_next:
+            assert appCodeTrace.tb_next.tb_next is not None
+            if appCodeTrace.tb_next.tb_next.tb_next:
                 # If returnValue was invoked non-local to the frame which it is
                 # exiting, identify the frame that ultimately invoked
                 # returnValue so that we can warn the user, as this behavior is
                 # confusing.
+                #
+                # Note that there's one additional level due to returnValue being
+                # deprecated
                 ultimateTrace = appCodeTrace
 
                 assert ultimateTrace is not None
                 assert ultimateTrace.tb_next is not None
-                while ultimateTrace.tb_next.tb_next:
+
+                # Note that there's one additional level due to returnValue being
+                # deprecated
+                assert ultimateTrace.tb_next.tb_next is not None
+                while ultimateTrace.tb_next.tb_next.tb_next:
                     ultimateTrace = ultimateTrace.tb_next
                     assert ultimateTrace is not None
 
