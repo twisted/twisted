@@ -31,7 +31,6 @@ from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.reflect import prefixedMethodNames
-from twisted.web import pages
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
 
@@ -189,7 +188,10 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return pages.notFound()
+        # Local import due to circularity.
+        from twisted.web.pages import notFound
+
+        return notFound()
 
     def getChildWithDefault(self, path, request):
         """
