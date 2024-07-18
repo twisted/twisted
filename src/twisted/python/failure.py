@@ -365,7 +365,6 @@ class Failure(BaseException):
         #   with bareword "except:"s.  This premature exception
         #   catching means tracebacks generated here don't tend to show
         #   what called upon the PB object.
-
         while f:
             if captureVars:
                 localz = f.f_locals.copy()
@@ -634,24 +633,8 @@ class Failure(BaseException):
         # Backwards compatibility with old code, e.g. for Perspective Broker:
         c["parents"] = c.pop("_parents")
 
-        c["frames"] = [
-            [
-                v[0],
-                v[1],
-                v[2],
-                _safeReprVars(v[3]),
-                _safeReprVars(v[4]),
-            ]
-            for v in self.frames
-        ]
-
-        # Added 2003-06-23. See comment above in __init__
-        c["tb"] = None
-
-        if self.stack is not None:
-            # XXX: This is a band-aid.  I can't figure out where these
-            # (failure.stack is None) instances are coming from.
-            c["stack"] = [
+        if self.captureVars:
+            c["frames"] = [
                 [
                     v[0],
                     v[1],
@@ -659,8 +642,26 @@ class Failure(BaseException):
                     _safeReprVars(v[3]),
                     _safeReprVars(v[4]),
                 ]
-                for v in self.stack
+                for v in self.frames
             ]
+
+        # Added 2003-06-23. See comment above in __init__
+        c["tb"] = None
+
+        if self.stack is not None:
+            # XXX: This is a band-aid.  I can't figure out where these
+            # (failure.stack is None) instances are coming from.
+            if self.captureVars:
+                c["stack"] = [
+                    [
+                        v[0],
+                        v[1],
+                        v[2],
+                        _safeReprVars(v[3]),
+                        _safeReprVars(v[4]),
+                    ]
+                    for v in self.stack
+                ]
 
         c["pickled"] = 1
         return c
