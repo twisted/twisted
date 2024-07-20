@@ -321,8 +321,7 @@ class _WSGIResponse:
             raise excInfo[1].with_traceback(excInfo[2])
 
         # PEP-3333 mandates that status should be a native string. In practice
-        # this is mandated by Twisted's HTTP implementation too, so we enforce
-        # on both Python 2 and Python 3.
+        # this is mandated by Twisted's HTTP implementation too.
         if not isinstance(status, str):
             raise TypeError(
                 "status must be str, not {!r} ({})".format(
