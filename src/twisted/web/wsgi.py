@@ -8,6 +8,7 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 from collections.abc import Sequence
 from sys import exc_info
+from typing import Union
 from warnings import warn
 
 from zope.interface import implementer
@@ -19,79 +20,49 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
-# PEP-3333 -- which has superseded PEP-333 -- states that, in both Python 2
-# and Python 3, text strings MUST be represented using the platform's native
-# string type, limited to characters defined in ISO-8859-1. Byte strings are
-# used only for values read from wsgi.input, passed to write() or yielded by
-# the application.
+
+# PEP-3333 -- which has superseded PEP-333 -- states that text strings MUST
+# be represented using the platform's native string type, limited to
+# characters defined in ISO-8859-1. Byte strings are used only for values
+# read from wsgi.input, passed to write() or yielded by the application.
 #
 # Put another way:
 #
-# - In Python 2, all text strings and binary data are of type str/bytes and
-#   NEVER of type unicode. Whether the strings contain binary data or
-#   ISO-8859-1 text depends on context.
-#
-# - In Python 3, all text strings are of type str, and all binary data are of
+# - All text strings are of type str, and all binary data are of
 #   type bytes. Text MUST always be limited to that which can be encoded as
 #   ISO-8859-1, U+0000 to U+00FF inclusive.
 #
 # The following pair of functions -- _wsgiString() and _wsgiStringToBytes() --
 # are used to make Twisted's WSGI support compliant with the standard.
-if str is bytes:
+def _wsgiString(string: Union[str, bytes]) -> str:
+    """
+    Convert C{string} to a WSGI "bytes-as-unicode" string.
 
-    def _wsgiString(string):  # Python 2.
-        """
-        Convert C{string} to an ISO-8859-1 byte string, if it is not already.
+    If it's a byte string, decode as ISO-8859-1. If it's a Unicode string,
+    round-trip it to bytes and back using ISO-8859-1 as the encoding.
 
-        @type string: C{str}/C{bytes} or C{unicode}
-        @rtype: C{str}/C{bytes}
+    @type string: C{str} or C{bytes}
+    @rtype: C{str}
 
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        if isinstance(string, str):
-            return string
-        else:
-            return string.encode("iso-8859-1")
+    @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
+    """
+    if isinstance(string, str):
+        return string.encode("iso-8859-1").decode("iso-8859-1")
+    else:
+        return string.decode("iso-8859-1")
 
-    def _wsgiStringToBytes(string):  # Python 2.
-        """
-        Return C{string} as is; a WSGI string is a byte string in Python 2.
 
-        @type string: C{str}/C{bytes}
-        @rtype: C{str}/C{bytes}
-        """
-        return string
+def _wsgiStringToBytes(string: str) -> bytes:
+    """
+    Convert C{string} from a WSGI "bytes-as-unicode" string to an
+    ISO-8859-1 byte string.
 
-else:
+    @type string: C{str}
+    @rtype: C{bytes}
 
-    def _wsgiString(string):  # Python 3.
-        """
-        Convert C{string} to a WSGI "bytes-as-unicode" string.
-
-        If it's a byte string, decode as ISO-8859-1. If it's a Unicode string,
-        round-trip it to bytes and back using ISO-8859-1 as the encoding.
-
-        @type string: C{str} or C{bytes}
-        @rtype: C{str}
-
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        if isinstance(string, str):
-            return string.encode("iso-8859-1").decode("iso-8859-1")
-        else:
-            return string.decode("iso-8859-1")
-
-    def _wsgiStringToBytes(string):  # Python 3.
-        """
-        Convert C{string} from a WSGI "bytes-as-unicode" string to an
-        ISO-8859-1 byte string.
-
-        @type string: C{str}
-        @rtype: C{bytes}
-
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        return string.encode("iso-8859-1")
+    @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
+    """
+    return string.encode("iso-8859-1")
 
 
 class _ErrorStream:
