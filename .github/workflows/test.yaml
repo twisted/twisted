@@ -312,12 +312,9 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
-    # For code coverate only need to wait for test jobs.
-    # We want to alwasy run the coverage, even on
-    # previous test failures.
-    if: always()
+    if: always()  # Always run the coverage report, even when the tests fail.
     needs:
-      - testing
+      - testing  # Code coverage only needs to wait for test jobs.
     steps:
     - uses: actions/checkout@v4
       with:
