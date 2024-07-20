@@ -8,7 +8,7 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 from collections.abc import Sequence
 from sys import exc_info
-from typing import Union
+from typing import List, Union
 from warnings import warn
 
 from zope.interface import implementer
@@ -79,7 +79,7 @@ class _ErrorStream:
 
     _log = Logger()
 
-    def write(self, data):
+    def write(self, data: str) -> None:
         """
         Generate an event for the logging system with the given bytes as the
         message.
@@ -88,27 +88,19 @@ class _ErrorStream:
 
         @type data: str
 
-        @raise TypeError: On Python 3, if C{data} is not a native string. On
-            Python 2 a warning will be issued.
+        @raise TypeError: if C{data} is not a native string.
         """
         if not isinstance(data, str):
-            if str is bytes:
-                warn(
-                    "write() argument should be str, not %r (%s)"
-                    % (data, type(data).__name__),
-                    category=UnicodeWarning,
-                )
-            else:
-                raise TypeError(
-                    "write() argument must be str, not %r (%s)"
-                    % (data, type(data).__name__)
-                )
+            raise TypeError(
+                "write() argument must be str, not %r (%s)"
+                % (data, type(data).__name__)
+            )
 
         # Note that in old style, message was a tuple.  logger._legacy
         # will overwrite this value if it is not properly formatted here.
         self._log.error(data, system="wsgi", isError=True, message=(data,))
 
-    def writelines(self, iovec):
+    def writelines(self, iovec: List[str]) -> None:
         """
         Join the given lines and pass them to C{write} to be handled in the
         usual way.
@@ -118,8 +110,7 @@ class _ErrorStream:
         @param iovec: A C{list} of C{'\\n'}-terminated C{str} which will be
             logged.
 
-        @raise TypeError: On Python 3, if C{iovec} contains any non-native
-            strings. On Python 2 a warning will be issued.
+        @raise TypeError: if C{iovec} contains any non-native strings.
         """
         self.write("".join(iovec))
 
