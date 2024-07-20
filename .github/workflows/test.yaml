@@ -291,13 +291,13 @@ jobs:
         # We still do a initial combine for each job as otherwise
         # we wil end up with many files and it will take a long time
         # to upload/download/combine them.
-        mv .coverage .coverage-job-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
+        mv .coverage .coverage-job-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
 
     - name: Store coverage file
       if: ${{ !cancelled() && !matrix.skip-coverage }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: coverage
+        name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         path: .coverage-job-*
 
     - name: Publish to codecov.io
@@ -305,7 +305,7 @@ jobs:
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
 
 
@@ -319,7 +319,7 @@ jobs:
     needs:
       - testing
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -329,9 +329,10 @@ jobs:
         python -m pip install --upgrade coverage[toml] diff_cover
 
     - name: Download coverage reports
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: coverage
+        pattern: coverage-*
+        merge-multiple: true
         path: .
 
     - name: Prepare coverage
@@ -357,7 +358,7 @@ jobs:
 
     - name: Upload HTML report on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: html-report
         path: htmlcov
@@ -382,6 +383,10 @@ jobs:
         # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
         python -m pip install . pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
