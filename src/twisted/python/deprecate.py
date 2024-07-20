@@ -47,7 +47,8 @@ To deprecate properties you can use::
             '''
 
 
-To mark module-level attributes as being deprecated you can use::
+While it's best to avoid this as it adds performance overhead to *any* usage of
+the module, to mark module-level attributes as being deprecated you can use::
 
     badAttribute = "someValue"
 
@@ -258,8 +259,13 @@ def _appendToDocstring(thingWithDoc, textToAppend):
     elif len(docstringLines) == 1:
         docstringLines.extend(["", textToAppend, ""])
     else:
-        spaces = docstringLines.pop()
+        trailer = docstringLines[-1]
+        spaces = ""
+        if not trailer.strip():
+            # Deal with differences between Python 3.13 and older versions.
+            spaces = docstringLines.pop()
         docstringLines.extend(["", spaces + textToAppend, spaces])
+        docstringLines = [l.lstrip(" ") for l in docstringLines]
     thingWithDoc.__doc__ = "\n".join(docstringLines)
 
 
@@ -601,12 +607,19 @@ def warnAboutFunction(offender, warningString):
     """
     # inspect.getmodule() is attractive, but somewhat
     # broken in Python < 2.6.  See Python bug 4845.
+    # In Python 3.13 line numbers returned by findlinestarts
+    # can be None for bytecode that does not map to source
+    # lines.
     offenderModule = sys.modules[offender.__module__]
     warn_explicit(
         warningString,
         category=DeprecationWarning,
         filename=inspect.getabsfile(offenderModule),
-        lineno=max(lineNumber for _, lineNumber in findlinestarts(offender.__code__)),
+        lineno=max(
+            lineNumber
+            for _, lineNumber in findlinestarts(offender.__code__)
+            if lineNumber is not None
+        ),
         module=offenderModule.__name__,
         registry=offender.__globals__.setdefault("__warningregistry__", {}),
         module_globals=None,

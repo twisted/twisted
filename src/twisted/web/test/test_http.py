@@ -5,11 +5,10 @@
 Test HTTP support.
 """
 
-
 import base64
 import calendar
 import random
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
@@ -20,6 +19,7 @@ from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
 
 import hamcrest
+from incremental import Version
 
 from twisted.internet import address
 from twisted.internet.error import ConnectionDone, ConnectionLost
@@ -34,6 +34,7 @@ from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -1224,6 +1225,7 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             p.dataReceived(s)
         self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
         self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [])
 
     def test_long(self):
         """
@@ -1381,20 +1383,6 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc!!!!"
         )
 
-    def test_malformedChunkEndFinal(self):
-        r"""
-        L{_ChunkedTransferDecoder.dataReceived} raises
-        L{_MalformedChunkedDataError} when the terminal zero-length chunk is
-        followed by characters other than C{\r\n}.
-        """
-        p = http._ChunkedTransferDecoder(
-            lambda b: None,
-            lambda b: None,  # pragma: nocov
-        )
-        self.assertRaises(
-            http._MalformedChunkedDataError, p.dataReceived, b"3\r\nabc\r\n0\r\n!!"
-        )
-
     def test_finish(self):
         """
         L{_ChunkedTransferDecoder.dataReceived} interprets a zero-length
@@ -1468,6 +1456,79 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
         parser.dataReceived(b"0\r\n\r\n")
         self.assertEqual(errors, [])
         self.assertEqual(successes, [True])
+
+    def test_trailerHeaders(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunked-encoded data
+        and ignores trailer headers which come after the terminating zero-length
+        chunk.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        p.dataReceived(b"3\r\nabc\r\n5\r\n12345\r\n")
+        p.dataReceived(
+            b"a\r\n0123456789\r\n0\r\nServer-Timing: total;dur=123.4\r\nExpires: Wed, 21 Oct 2015 07:28:00 GMT\r\n\r\n"
+        )
+        self.assertEqual(L, [b"abc", b"12345", b"0123456789"])
+        self.assertEqual(finished, [b""])
+        self.assertEqual(
+            p._trailerHeaders,
+            [
+                b"Server-Timing: total;dur=123.4",
+                b"Expires: Wed, 21 Oct 2015 07:28:00 GMT",
+            ],
+        )
+
+    def test_shortTrailerHeader(self):
+        """
+        L{_ChunkedTransferDecoder.dataReceived} decodes chunks of input with
+        tailer header broken up and delivered in multiple calls.
+        """
+        L = []
+        finished = []
+        p = http._ChunkedTransferDecoder(L.append, finished.append)
+        for s in iterbytes(
+            b"3\r\nabc\r\n5\r\n12345\r\n0\r\nServer-Timing: total;dur=123.4\r\n\r\n"
+        ):
+            p.dataReceived(s)
+        self.assertEqual(L, [b"a", b"b", b"c", b"1", b"2", b"3", b"4", b"5"])
+        self.assertEqual(finished, [b""])
+        self.assertEqual(p._trailerHeaders, [b"Server-Timing: total;dur=123.4"])
+
+    def test_tooLongTrailerHeader(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the trailing headers data is too long.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        p._maxTrailerHeadersSize = 10
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"3\r\nabc\r\n0\r\nTotal-Trailer: header;greater-then=10\r\n\r\n",
+        )
+
+    def test_unfinishedTrailerHeader(self):
+        r"""
+        L{_ChunkedTransferDecoder.dataReceived} raises
+        L{_MalformedChunkedDataError} when the trailing headers data is too long
+        and doesn't have final CRLF characters.
+        """
+        p = http._ChunkedTransferDecoder(
+            lambda b: None,
+            lambda b: None,  # pragma: nocov
+        )
+        p._maxTrailerHeadersSize = 10
+        p.dataReceived(b"3\r\nabc\r\n0\r\n0123456789")
+        self.assertRaises(
+            http._MalformedChunkedDataError,
+            p.dataReceived,
+            b"A",
+        )
 
 
 class ChunkingTests(unittest.TestCase, ResponseTestMixin):
@@ -2804,15 +2865,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"(no clientproto yet) 202 happily accepted",
         )
 
-    def test_setResponseCodeAndMessageNotBytes(self):
-        """
-        L{http.Request.setResponseCode} accepts C{bytes} for the message
-        parameter and raises L{TypeError} if passed anything else.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        self.assertRaises(TypeError, req.setResponseCode, 202, "not happily accepted")
-
     def test_setResponseCodeAcceptsIntegers(self):
         """
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
@@ -2820,15 +2872,22 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
-        self.assertRaises(TypeError, req.setResponseCode, "1")
 
-    def test_setResponseCodeAcceptsLongIntegers(self):
+    def test_setResponseCode418(self):
         """
-        L{http.Request.setResponseCode} accepts L{int} for the code
-        parameter.
+        L{http.Request.setResponseCode} supports RFC 2324 section 2.3.2
+        418 response code and will automatically set the associated message.
         """
-        req = http.Request(DummyChannel(), False)
-        req.setResponseCode(1)
+        channel = DummyChannel()
+        req = http.Request(channel, False)
+
+        req.setResponseCode(http.IM_A_TEAPOT)
+        req.write(b"")
+
+        self.assertEqual(
+            channel.transport.written.getvalue().splitlines()[0],
+            b"(no clientproto yet) 418 I'm a teapot",
+        )
 
     def test_setLastModifiedNeverSet(self):
         """
@@ -3525,7 +3584,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
-    def test_finishProducesLog(self):
+    def test_stopFactoryInvalidState(self) -> None:
+        """
+        L{http.HTTPFactory.stopFactory} is a no-op (that does not raise an
+        exception) when the factory hasn't been started yet.
+        """
+        http.HTTPFactory().stopFactory()
+
+    def test_finishProducesLog(self) -> None:
         """
         L{http.Request.finish} will call the channel's factory to produce a log
         message.
@@ -3533,23 +3599,50 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         factory.timeOut = None
         factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True
+        factory._logDateTimeCall = True  # type:ignore
+
+        # Here we are asserting a few legacy / compatibility features of the
+        # writable logFile attribute, which used to be effectively an
+        # IO[AnyStr] but was always trying to encode and write text to it.
+        # Clients should really not be accessing this attribute anyway, but we
+        # need a new way to configure the CLF log file before deprecating and
+        # removing it.
+
+        # Before the factory is started, it has no logFile attribute.
+        with self.assertRaises(AttributeError):
+            factory.logFile
         factory.startFactory()
-        factory.logFile = BytesIO()
-        proto = factory.buildProtocol(None)
+        # It starts off as the legacy global LoggingFile instance.
+        self.assertIs(factory.logFile, legacyGlobalLogFile)
+
+        # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
+        # get back a TextIOWrapper, wrapping our BytesIO.
+        logFile = factory.logFile = BytesIO()
+        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+
+        # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
+        # now, even though the property's signature is such that it isn't.
+        assert isinstance(getBackLogFile, TextIOWrapper)
+        self.assertIs(getBackLogFile.buffer, logFile)
+        factory.logFile = getBackLogFile
+        # If we set it to a text-based I/O (i.e.: anything other than an
+        # io.BufferedBase) it stays exactly the same, no modification.
+        self.assertIs(getBackLogFile, factory.logFile)
+        proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
         trans = StringTransport()
+        assert proto is not None
         proto.makeConnection(trans)
 
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()
+        proto._channel.requests[0].finish()  # type:ignore
 
         # A log message should be written out
-        self.assertIn(b'sometime "GET /path HTTP/1.1"', factory.logFile.getvalue())
+        self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
 
     def test_requestBodyTimeoutFromFactory(self):
         """
@@ -4347,6 +4440,22 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
                     ]
                 ),
             )
+
+
+class HTTPClientDeprecationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{http.HTTPClient} is deprecated.
+    """
+
+    def test_deprecated(self):
+        """
+        Accessing L{http.HTTPClient} produces a deprecation warning.
+        """
+        self.getDeprecatedModuleAttribute(
+            "twisted.web.http",
+            "HTTPClient",
+            Version("Twisted", "NEXT", 0, 0),
+        )
 
 
 class HTTPClientSanitizationTests(unittest.SynchronousTestCase):

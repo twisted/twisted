@@ -8,19 +8,22 @@ Tests for implementations of L{IReactorFDSet}.
 import os
 import socket
 import traceback
+from typing import TYPE_CHECKING
 from unittest import skipIf
 
 from zope.interface import implementer
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
-
-# twisted.internet.tcp nicely defines some names with proper values on
-# several different platforms.
 from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.python.runtime import platform
-from twisted.trial.unittest import SkipTest
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+
+if TYPE_CHECKING:
+    PretendTestCase = SynchronousTestCase
+else:
+    PretendTestCase = object
 
 
 def socketpair():
@@ -46,7 +49,7 @@ def socketpair():
     return client, server
 
 
-class ReactorFDSetTestsBuilder(ReactorBuilder):
+class ReactorFDSetTestsBuilder(ReactorBuilder, PretendTestCase):
     """
     Builder defining tests relating to L{IReactorFDSet}.
     """

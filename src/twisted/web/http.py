@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -69,6 +70,7 @@ __all__ = [
     "UNSUPPORTED_MEDIA_TYPE",
     "REQUESTED_RANGE_NOT_SATISFIABLE",
     "EXPECTATION_FAILED",
+    "IM_A_TEAPOT",
     "INTERNAL_SERVER_ERROR",
     "NOT_IMPLEMENTED",
     "BAD_GATEWAY",
@@ -108,9 +110,17 @@ import tempfile
 import time
 import warnings
 from email import message_from_bytes
-from email.message import EmailMessage
-from io import BytesIO
-from typing import AnyStr, Callable, Dict, List, Optional, Tuple
+from email.message import EmailMessage, Message
+from io import BufferedIOBase, BytesIO, TextIOWrapper
+from typing import (
+    AnyStr,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol as TypingProtocol,
+    Tuple,
+)
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -124,13 +134,14 @@ from incremental import Version
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IProtocol
+from twisted.internet.interfaces import IAddress, IDelayedCall, IProtocol, IReactorTime
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.failure import Failure
 from twisted.web._responses import (
     ACCEPTED,
@@ -144,6 +155,7 @@ from twisted.web._responses import (
     GATEWAY_TIMEOUT,
     GONE,
     HTTP_VERSION_NOT_SUPPORTED,
+    IM_A_TEAPOT,
     INSUFFICIENT_STORAGE_SPACE,
     INTERNAL_SERVER_ERROR,
     LENGTH_REQUIRED,
@@ -251,11 +263,16 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     if not msg.is_multipart():
         raise _MultiPartParseException("Not a multipart.")
 
-    for part in msg.get_payload():
-        name = part.get_param("name", header="content-disposition")
+    part: Message
+    # "per Python docs, a list of Message objects when is_multipart() is True,
+    # or a string when is_multipart() is False"
+    for part in msg.get_payload():  # type:ignore[assignment]
+        name: str | None = part.get_param(
+            "name", header="content-disposition"
+        )  # type:ignore[assignment]
         if not name:
             continue
-        payload = part.get_payload(decode=True)
+        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
         result[name.encode("utf8")] = [payload]
     return result
 
@@ -378,7 +395,7 @@ def stringToDatetime(dateString):
 
     @type dateString: C{bytes}
     """
-    parts = nativeString(dateString).split()
+    parts = dateString.decode("ascii").split()
 
     if not parts[0][0:3].lower() in weekdayname_lower:
         # Weekday is stupid. Might have been omitted.
@@ -762,6 +779,14 @@ class HTTPClient(basic.LineReceiver):
         if self.length == 0:
             self.handleResponseEnd()
             self.setLineMode(rest)
+
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "Use twisted.web.client.Agent instead.",
+    __name__,
+    HTTPClient.__name__,
+)
 
 
 # response codes that must have empty bodies
@@ -1193,7 +1218,6 @@ class Request:
             version = self.clientproto
             code = b"%d" % (self.code,)
             reason = self.code_message
-            headers = []
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
@@ -1204,7 +1228,7 @@ class Request:
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
-                headers.append((b"Transfer-Encoding", b"chunked"))
+                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
                 self.chunked = 1
 
             if self.lastModified is not None:
@@ -1221,14 +1245,10 @@ class Request:
             if self.etag is not None:
                 self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
-            for name, values in self.responseHeaders.getAllRawHeaders():
-                for value in values:
-                    headers.append((name, value))
+            if self.cookies:
+                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
-            for cookie in self.cookies:
-                headers.append((b"Set-Cookie", cookie))
-
-            self.channel.writeHeaders(version, code, reason, headers)
+            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
@@ -1356,19 +1376,15 @@ class Request:
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code, message=None):
+    def setResponseCode(self, code: int, message: Optional[bytes] = None) -> None:
         """
         Set the HTTP response code.
 
         @type code: L{int}
         @type message: L{bytes}
         """
-        if not isinstance(code, int):
-            raise TypeError("HTTP response code must be int or long")
         self.code = code
-        if message:
-            if not isinstance(message, bytes):
-                raise TypeError("HTTP response status message must be bytes")
+        if message is not None:
             self.code_message = message
         else:
             self.code_message = RESPONSES.get(code, b"Unknown Status")
@@ -1805,7 +1821,6 @@ class _IdentityTransferDecoder:
 
 maxChunkSizeLineLength = 1024
 
-
 _chunkExtChars = (
     b"\t !\"#$%&'()*+,-./0123456789:;<=>?@"
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`"
@@ -1889,12 +1904,20 @@ class _ChunkedTransferDecoder:
         state transition this is truncated at the front so that index 0 is
         where the next state shall begin.
 
-    @ivar _start: While in the C{'CHUNK_LENGTH'} state, tracks the index into
-        the buffer at which search for CRLF should resume. Resuming the search
-        at this position avoids doing quadratic work if the chunk length line
-        arrives over many calls to C{dataReceived}.
+    @ivar _start: While in the C{'CHUNK_LENGTH'} and C{'TRAILER'} states,
+        tracks the index into the buffer at which search for CRLF should resume.
+        Resuming the search at this position avoids doing quadratic work if the
+        chunk length line arrives over many calls to C{dataReceived}.
 
-        Not used in any other state.
+    @ivar _trailerHeaders: Accumulates raw/unparsed trailer headers.
+        See https://github.com/twisted/twisted/issues/12014
+
+    @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
+        response.
+    @type _maxTrailerHeadersSize: C{int}
+
+    @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
+    @type _receivedTrailerHeadersSize: C{int}
     """
 
     state = "CHUNK_LENGTH"
@@ -1908,6 +1931,9 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
+        self._trailerHeaders: List[bytearray] = []
+        self._maxTrailerHeadersSize = 2**16
+        self._receivedTrailerHeadersSize = 0
 
     def _dataReceived_CHUNK_LENGTH(self) -> bool:
         """
@@ -1984,23 +2010,37 @@ class _ChunkedTransferDecoder:
 
     def _dataReceived_TRAILER(self) -> bool:
         """
-        Await the carriage return and line feed characters that follow the
-        terminal zero-length chunk. Then invoke C{finishCallback} and switch to
-        state C{'FINISHED'}.
+        Collect trailer headers if received and finish at the terminal zero-length
+        chunk. Then invoke C{finishCallback} and switch to state C{'FINISHED'}.
 
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
-
-        @raises _MalformedChunkedDataError: when anything other than CRLF is
-            received.
         """
-        if len(self._buffer) < 2:
+        if (
+            self._receivedTrailerHeadersSize + len(self._buffer)
+            > self._maxTrailerHeadersSize
+        ):
+            raise _MalformedChunkedDataError("Trailer headers data is too long.")
+
+        eolIndex = self._buffer.find(b"\r\n", self._start)
+
+        if eolIndex == -1:
+            # Still no end of network line marker found.
+            # Continue processing more data.
             return False
 
-        if not self._buffer.startswith(b"\r\n"):
-            raise _MalformedChunkedDataError("Chunk did not end with CRLF")
+        if eolIndex > 0:
+            # A trailer header was detected.
+            self._trailerHeaders.append(self._buffer[0:eolIndex])
+            del self._buffer[0 : eolIndex + 2]
+            self._start = 0
+            self._receivedTrailerHeadersSize += eolIndex + 2
+            return True
+
+        # eolIndex in this part of code is equal to 0
 
         data = memoryview(self._buffer)[2:].tobytes()
+
         del self._buffer[:]
         self.state = "FINISHED"
         self.finishCallback(data)
@@ -2244,13 +2284,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         )
         self._networkProducer.registerProducer(self, True)
 
+    def dataReceived(self, data):
+        self.resetTimeout()
+        basic.LineReceiver.dataReceived(self, data)
+
     def lineReceived(self, line):
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
         """
-        self.resetTimeout()
-
         self._receivedHeaderSize += len(line)
         if self._receivedHeaderSize > self.totalHeadersSize:
             self._respondToBadRequestAndDisconnect()
@@ -2396,12 +2438,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._maybeChooseTransferDecoder(header, data):
             return False
 
-        reqHeaders = self.requests[-1].requestHeaders
-        values = reqHeaders.getRawHeaders(header)
-        if values is not None:
-            values.append(data)
-        else:
-            reqHeaders.setRawHeaders(header, [data])
+        self.requests[-1].requestHeaders.addRawHeader(header, data)
 
         self._receivedHeaderCount += 1
         if self._receivedHeaderCount > self.maxHeaders:
@@ -2473,8 +2510,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 # ready.  See docstring for _optimisticEagerReadSize above.
                 self._networkProducer.pauseProducing()
             return
-
-        self.resetTimeout()
 
         try:
             self._transferDecoder.dataReceived(data)
@@ -2614,8 +2649,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         return False
 
     def writeHeaders(self, version, code, reason, headers):
-        """
-        Called by L{Request} objects to write a complete set of HTTP headers to
+        """Called by L{Request} objects to write a complete set of HTTP headers to
         a transport.
 
         @param version: The HTTP version in use.
@@ -2628,19 +2662,25 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         @type reason: L{bytes}
 
         @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}
-        """
-        sanitizedHeaders = Headers()
-        for name, value in headers:
-            sanitizedHeaders.addRawHeader(name, value)
+        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+            compatibility purposes only) any iterable of two-tuples of
+            L{bytes}, representing header names and header values. The latter
+            option is not actually used by Twisted.
 
-        responseLine = version + b" " + code + b" " + reason + b"\r\n"
-        headerSequence = [responseLine]
-        headerSequence.extend(
-            name + b": " + value + b"\r\n"
-            for name, values in sanitizedHeaders.getAllRawHeaders()
-            for value in values
-        )
+        """
+        if not isinstance(headers, Headers):
+            # Turn into Headers instance for security reasons, to make sure we
+            # quite and sanitize everything. This variant should be removed
+            # eventually, it's only here for backwards compatibility.
+            sanitizedHeaders = Headers()
+            for name, value in headers:
+                sanitizedHeaders.addRawHeader(name, value)
+            headers = sanitizedHeaders
+
+        headerSequence = [version, b" ", code, b" ", reason, b"\r\n"]
+        for name, values in headers.getAllRawHeaders():
+            for value in values:
+                headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
         self.transport.writeSequence(headerSequence)
 
@@ -3114,11 +3154,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         using.
         """
         if self._negotiatedProtocol is None:
-            try:
-                negotiatedProtocol = self._channel.transport.negotiatedProtocol
-            except AttributeError:
-                # Plaintext HTTP, always HTTP/1.1
-                negotiatedProtocol = b"http/1.1"
+            negotiatedProtocol = getattr(
+                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+            )
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b"http/1.1"
@@ -3167,6 +3205,21 @@ def _genericHTTPChannelProtocolFactory(self):
     return _GenericHTTPChannelProtocol(HTTPChannel())
 
 
+class _MinimalLogFile(TypingProtocol):
+    def write(self, data: str, /) -> object:
+        """
+        Write some data.
+        """
+
+    def close(self) -> None:
+        """
+        Close the file.
+        """
+
+
+value: type[_MinimalLogFile] = TextIOWrapper
+
+
 class HTTPFactory(protocol.ServerFactory):
     """
     Factory for HTTP server.
@@ -3197,11 +3250,16 @@ class HTTPFactory(protocol.ServerFactory):
     protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
 
     logPath = None
+    _logFile: _MinimalLogFile | None = None
 
-    timeOut = _REQUEST_TIMEOUT
+    timeOut: int | float | None = _REQUEST_TIMEOUT
 
     def __init__(
-        self, logPath=None, timeout=_REQUEST_TIMEOUT, logFormatter=None, reactor=None
+        self,
+        logPath: str | bytes | None = None,
+        timeout: int | float = _REQUEST_TIMEOUT,
+        logFormatter: IAccessLogFormatter | None = None,
+        reactor: IReactorTime | None = None,
     ):
         """
         @param logPath: File path to which access log messages will be written
@@ -3221,9 +3279,9 @@ class HTTPFactory(protocol.ServerFactory):
             timeouts and compute logging timestamps. Defaults to the global
             reactor.
         """
-        if not reactor:
-            from twisted.internet import reactor
-        self.reactor = reactor
+        if reactor is None:
+            from twisted.internet import reactor  # type:ignore[assignment]
+        self.reactor: IReactorTime = reactor  # type:ignore[assignment]
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3234,17 +3292,48 @@ class HTTPFactory(protocol.ServerFactory):
         self._logFormatter = logFormatter
 
         # For storing the cached log datetime and the callback to update it
-        self._logDateTime = None
-        self._logDateTimeCall = None
+        self._logDateTime: str | None = None
+        self._logDateTimeCall: IDelayedCall | None = None
 
-    def _updateLogDateTime(self):
+    logFile = property()
+    """
+    A file (object with C{write(data: str)} and C{close()} methods) that will
+    be used for logging HTTP requests and responses in the standard U{Combined
+    Log Format <https://en.wikipedia.org/wiki/Common_Log_Format>} .
+
+    @note: for backwards compatibility purposes, this may be I{set} to an
+        object with a C{write(data: bytes)} method, but these will be detected
+        (by checking if it's an instance of L{BufferedIOBase}) and replaced
+        with a L{TextIOWrapper} when retrieved by getting the attribute again.
+    """
+
+    @logFile.getter
+    def _get_logFile(self) -> _MinimalLogFile:
+        if self._logFile is None:
+            raise AttributeError("no log file present")
+        return self._logFile
+
+    @_get_logFile.setter
+    def _set_logFile(self, newLogFile: BufferedIOBase | _MinimalLogFile) -> None:
+        if isinstance(newLogFile, BufferedIOBase):
+            newLogFile = TextIOWrapper(
+                newLogFile,  # type:ignore[arg-type]
+                "utf-8",
+                write_through=True,
+                newline="\n",
+            )
+        self._logFile = newLogFile
+
+    logFile = _set_logFile
+
+    def _updateLogDateTime(self) -> None:
         """
         Update log datetime periodically, so we aren't always recalculating it.
         """
         self._logDateTime = datetimeToLogString(self.reactor.seconds())
         self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> Protocol | None:
         p = protocol.ServerFactory.buildProtocol(self, addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts
@@ -3252,53 +3341,45 @@ class HTTPFactory(protocol.ServerFactory):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self.reactor.callLater
+        p.callLater = self.reactor.callLater  # type:ignore[union-attr]
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
-        p.timeOut = self.timeOut
+        p.timeOut = self.timeOut  # type:ignore[union-attr]
         return p
 
-    def startFactory(self):
+    def startFactory(self) -> None:
         """
         Set up request logging if necessary.
         """
         if self._logDateTimeCall is None:
             self._updateLogDateTime()
 
-        if self.logPath:
-            self.logFile = self._openLogFile(self.logPath)
-        else:
-            self.logFile = log.logfile
+        self._logFile = self._openLogFile(self.logPath) if self.logPath else log.logfile
 
-    def stopFactory(self):
-        if hasattr(self, "logFile"):
-            if self.logFile != log.logfile:
-                self.logFile.close()
-            del self.logFile
+    def stopFactory(self) -> None:
+        if self._logFile is not None:
+            if self._logFile != log.logfile:
+                self._logFile.close()
+            self._logFile = None
 
         if self._logDateTimeCall is not None and self._logDateTimeCall.active():
             self._logDateTimeCall.cancel()
             self._logDateTimeCall = None
 
-    def _openLogFile(self, path):
+    def _openLogFile(self, path: str | bytes) -> _MinimalLogFile:
         """
         Override in subclasses, e.g. to use L{twisted.python.logfile}.
         """
-        f = open(path, "ab", 1)
-        return f
+        return open(path, "a", 1, newline="\n")
 
-    def log(self, request):
+    def log(self, request: Request) -> None:
         """
         Write a line representing C{request} to the access log file.
 
         @param request: The request object about which to log.
-        @type request: L{Request}
         """
-        try:
-            logFile = self.logFile
-        except AttributeError:
-            pass
-        else:
+        logFile = self._logFile
+        if logFile is not None:
             line = self._logFormatter(self._logDateTime, request) + "\n"
-            logFile.write(line.encode("utf8"))
+            logFile.write(line)

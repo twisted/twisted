@@ -27,20 +27,13 @@ class ErrorPageTests(TestCase):
     L{_UnsafeForbiddenResource}.
     """
 
-    errorPage = ErrorPage
-    noResource = NoResource
-    forbiddenResource = ForbiddenResource
-
     def test_deprecatedErrorPage(self) -> None:
         """
         The public C{twisted.web.resource.ErrorPage} alias for the
         corresponding C{_Unsafe} class produces a deprecation warning when
-        imported.
+        called.
         """
-        from twisted.web.resource import ErrorPage
-
-        self.assertIs(ErrorPage, self.errorPage)
-
+        _ = ErrorPage(123, "ono", "ono!")
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
         self.assertIn("twisted.web.pages.errorPage", warning["message"])
@@ -49,12 +42,9 @@ class ErrorPageTests(TestCase):
         """
         The public C{twisted.web.resource.NoResource} alias for the
         corresponding C{_Unsafe} class produces a deprecation warning when
-        imported.
+        called.
         """
-        from twisted.web.resource import NoResource
-
-        self.assertIs(NoResource, self.noResource)
-
+        _ = NoResource()
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
         self.assertIn("twisted.web.pages.notFound", warning["message"])
@@ -63,12 +53,9 @@ class ErrorPageTests(TestCase):
         """
         The public C{twisted.web.resource.ForbiddenResource} alias for the
         corresponding C{_Unsafe} class produce a deprecation warning when
-        imported.
+        called.
         """
-        from twisted.web.resource import ForbiddenResource
-
-        self.assertIs(ForbiddenResource, self.forbiddenResource)
-
+        _ = ForbiddenResource()
         [warning] = self.flushWarnings()
         self.assertEqual(warning["category"], DeprecationWarning)
         self.assertIn("twisted.web.pages.forbidden", warning["message"])
@@ -78,7 +65,7 @@ class ErrorPageTests(TestCase):
         The C{getChild} method of L{ErrorPage} returns the L{ErrorPage} it is
         called on.
         """
-        page = self.errorPage(321, "foo", "bar")
+        page = ErrorPage(321, "foo", "bar")
         self.assertIdentical(page.getChild(b"name", object()), page)
 
     def _pageRenderingTest(
@@ -113,7 +100,7 @@ class ErrorPageTests(TestCase):
         code = 321
         brief = "brief description text"
         detail = "much longer text might go here"
-        page = self.errorPage(code, brief, detail)
+        page = ErrorPage(code, brief, detail)
         self._pageRenderingTest(page, code, brief, detail)
 
     def test_noResourceRendering(self) -> None:
@@ -121,7 +108,7 @@ class ErrorPageTests(TestCase):
         L{NoResource} sets the HTTP I{NOT FOUND} code.
         """
         detail = "long message"
-        page = self.noResource(detail)
+        page = NoResource(detail)
         self._pageRenderingTest(page, NOT_FOUND, "No Such Resource", detail)
 
     def test_forbiddenResourceRendering(self) -> None:
@@ -129,7 +116,7 @@ class ErrorPageTests(TestCase):
         L{ForbiddenResource} sets the HTTP I{FORBIDDEN} code.
         """
         detail = "longer message"
-        page = self.forbiddenResource(detail)
+        page = ForbiddenResource(detail)
         self._pageRenderingTest(page, FORBIDDEN, "Forbidden Resource", detail)
 
 

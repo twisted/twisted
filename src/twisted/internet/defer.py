@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info
+from sys import exc_info, implementation
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -57,6 +57,9 @@ log = Logger()
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+
+# See use in _inlineCallbacks for explanation and removal timeline.
+_oldPypyStack = _PYPY and implementation.version < (7, 3, 14)
 
 
 class AlreadyCalledError(Exception):
@@ -519,9 +522,6 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
-        assert callable(callback)
-        assert callable(errback)
-
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -870,7 +870,6 @@ class Deferred(Awaitable[_SelfResultT]):
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
         """
-        assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
     def errback(self, fail: Optional[Union[Failure, BaseException]] = None) -> None:
@@ -1091,30 +1090,33 @@ class Deferred(Awaitable[_SelfResultT]):
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
                 else:
-                    if isinstance(current.result, Deferred):
+                    # isinstance() with Awaitable subclass is expensive:
+                    if type(current.result) in _DEFERRED_SUBCLASSES:
+                        # Can't use cast() cause it's in the performance hot path:
+                        currentResult: Deferred[_SelfResultT] = current.result  # type: ignore[assignment]
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(current.result, "result", _NO_RESULT)
+                        resultResult = getattr(currentResult, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
-                            or isinstance(resultResult, Deferred)
-                            or current.result.paused
+                            or type(resultResult) in _DEFERRED_SUBCLASSES
+                            or currentResult.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            current._chainedTo = current.result
+                            current._chainedTo = currentResult
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
                             # append to the callbacks list directly instead of
                             # using addCallbacks.
-                            current.result.callbacks.append(current._continuation())
+                            currentResult.callbacks.append(current._continuation())
                             break
                         else:
                             # Yep, it did.  Steal it.
-                            current.result.result = None
+                            currentResult.result = None
                             # Make sure _debugInfo's failure state is updated.
-                            if current.result._debugInfo is not None:
-                                current.result._debugInfo.failResult = None
+                            if currentResult._debugInfo is not None:
+                                currentResult._debugInfo.failResult = None
                             current.result = resultResult
 
             if finished:
@@ -1322,6 +1324,14 @@ class Deferred(Awaitable[_SelfResultT]):
         if iscoroutine(coro) or inspect.isgenerator(coro):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
+
+    def __init_subclass__(cls: Type[Deferred[Any]], **kwargs: Any):
+        # Whenever a subclass is created, record it in L{_DEFERRED_SUBCLASSES}
+        # so we can emulate C{isinstance()} more efficiently.
+        _DEFERRED_SUBCLASSES.append(cls)
+
+
+_DEFERRED_SUBCLASSES = [Deferred]
 
 
 def ensureDeferred(
@@ -2022,8 +2032,10 @@ def _inlineCallbacks(
             appCodeTrace = traceback.tb_next
             assert appCodeTrace is not None
 
-            if _PYPY:
-                # PyPy as of 3.7 adds an extra frame.
+            if _oldPypyStack:
+                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
+                # this discrepancy with CPython.  This code can be removed once
+                # we no longer need to support PyPy 7.3.13 or older.
                 appCodeTrace = appCodeTrace.tb_next
                 assert appCodeTrace is not None
 

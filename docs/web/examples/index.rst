@@ -48,4 +48,3 @@ Miscellaneous
 
 - :download:`webguard.py` - pairing ``twisted.web`` with ``twisted.cred`` to guard resources against unauthenticated users
 - :download:`silly-web.py` - bare-bones distributed web setup with a master and slave using ``twisted.web.distrib`` and ``twisted.spread.pb``
-- :download:`soap.py` - use ``twisted.web.soap`` to publish SOAP methods
