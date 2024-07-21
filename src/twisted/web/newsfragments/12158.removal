@@ -1,0 +1,1 @@
+twisted.web.http.HTTPClient is now deprecated in favor of twisted.web.client.Agent

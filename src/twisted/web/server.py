@@ -38,7 +38,7 @@ from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
     HTTPFactory,
-    Request as BaseRequest,
+    Request as _HTTPRequest,
     datetimeToString,
     unquote,
 )
@@ -73,7 +73,7 @@ def _addressToTuple(addr):
 
 
 @implementer(iweb.IRequest)
-class Request(Copyable, BaseRequest, components.Componentized):
+class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
@@ -99,7 +99,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
     _log = Logger()
 
     def __init__(self, *args, **kw):
-        BaseRequest.__init__(self, *args, **kw)
+        _HTTPRequest.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -174,7 +174,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            BaseRequest.gotLength(self, length)
+            _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -250,17 +250,17 @@ class Request(Copyable, BaseRequest, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            BaseRequest.write(self, data)
+            _HTTPRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{BaseRequest.finish} for possible encoding.
+        Override L{twisted.web.http.Request.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                BaseRequest.write(self, data)
-        return BaseRequest.finish(self)
+                _HTTPRequest.write(self, data)
+        return _HTTPRequest.finish(self)
 
     def render(self, resrc):
         """
