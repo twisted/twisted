@@ -347,10 +347,7 @@ jobs:
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
           diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
-          {
-            echo '# diff-cover report'
-            cat coverage-report.md
-          } >> $GITHUB_STEP_SUMMARY
+          cat coverage-report.md >> $GITHUB_STEP_SUMMARY
 
     - name: Enforce diff coverage
       run: |
