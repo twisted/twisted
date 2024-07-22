@@ -2489,7 +2489,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
-        if not header or header[-1:].isspace():
+        # Header names must be tokens, per RFC 9110 section 5.1.
+        if not _istoken(header):
             self._respondToBadRequestAndDisconnect()
             return False
 

@@ -2035,8 +2035,8 @@ class ParsingTests(unittest.TestCase):
     def test_invalidHeaderOnlyColon(self):
         """
         C{HTTPChannel} rejects a request with an empty header name (i.e.
-        nothing before the colon).  It produces a 400 (Bad Request) response is
-        generated and closes the connection.
+        nothing before the colon).  It produces a 400 (Bad Request) response
+        and closes the connection.
         """
         self.assertRequestRejected(
             [
@@ -2062,6 +2062,21 @@ class ParsingTests(unittest.TestCase):
                 b"",
             ]
         )
+
+    def test_invalidHeaderChars(self):
+        """
+        A request with a header that contains invalid characters
+        is rejected with a 400 status code.
+        """
+        for header in [
+            b"foo\x00bar: baz",  # NUL byte
+            b"foo\x1bbar: baz",  # ESC byte
+            b"Foo\vBar: baz",  # exotic whitespace
+            b"foo\xe2\x80\xbdbar: baz",  # non-ASCII bytes
+        ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+            )
 
     def test_headerLimitPerRequest(self):
         """
