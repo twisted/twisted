@@ -1727,7 +1727,7 @@ class ParsingTests(unittest.TestCase):
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
 
-    def test_invalidNonAsciiMethod(self):
+    def test_invalidMethodNonAscii(self):
         """
         When client sends invalid HTTP method containing
         non-ascii characters HTTP 400 'Bad Request' status will be returned.
@@ -1744,6 +1744,96 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
+
+    def test_invalidMethodEmpty(self):
+        """
+        A request with an empty method field is rejected with a
+        400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b" /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidMethodNUL(self):
+        """
+        A request with a method that contains a NUL character
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET\0 /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidVersion(self):
+        """
+        A request with an invalid HTTP version number is rejected
+        with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"HEAD /foo HTTP/1.2",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetEmpty(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST  HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetNUL(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\0 HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetWhitespace(self):
+        """
+        A request with a request-target (URI) that contains whitespace
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\t/bar HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
 
     def test_basicAuth(self):
         """
