@@ -236,6 +236,58 @@ weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
+def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
+    """
+    Parse an HTTP request line, which looks like:
+
+        GET /foo/bar HTTP/1.1
+
+    This function attempts to validate the well-formedness of
+    the line. RFC 9112 section 3 provides this ABNF:
+
+        request-line   = method SP request-target SP HTTP-version
+
+    We allow any method that is a valid token:
+
+        method         = token
+        token          = 1*tchar
+        tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                        / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                        / DIGIT / ALPHA
+
+    We allow any non-empty request-target that contains only printable
+    ASCII characters (no whitespace).
+
+    The RFC defines HTTP-version like this:
+
+        HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
+        HTTP-name     = %s"HTTP"
+
+    However, this function is more strict than the RFC: we only allow
+    HTTP versions of 1.0 and 1.1, as later versions of HTTP don't use
+    a request line.
+
+    @returns: C{(method, request, version)} three-tuple
+
+    @raises: L{ValueError} when malformed
+    """
+    method, request, version = line.split(b" ")
+
+    if not _istoken(method):
+        raise ValueError("Invalid method")
+
+    for c in request:
+        if c <= 32 or c > 176:
+            raise ValueError("Invalid request-target")
+    if request == b"":
+        raise ValueError("Empty request-target")
+
+    if version != b"HTTP/1.1" and version != b"HTTP/1.0":
+        raise ValueError("Invalid version")
+
+    return method, request, version
+
+
 def _parseContentType(line: bytes) -> bytes:
     """
     Parse the Content-Type header.
@@ -453,6 +505,20 @@ def toChunk(data):
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
+
+
+def _istoken(b: bytes) -> bool:
+    """
+    Is the string a token per RFC 9110 section 5.6.2?
+    """
+    for c in b:
+        if c not in (
+            b"!#$%^'*+-.^_`|~"
+            b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"  # ALPHA
+            b"0123456789"  # DIGIT
+        ):
+            return False
+    return b != b""
 
 
 def _ishexdigits(b: bytes) -> bool:
@@ -2320,14 +2386,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             self.__first_line = 0
 
-            parts = line.split()
-            if len(parts) != 3:
-                self._respondToBadRequestAndDisconnect()
-                return
-            command, request, version = parts
             try:
-                command.decode("ascii")
-            except UnicodeDecodeError:
+                command, request, version = _parseRequestLine(line)
+            except ValueError:
                 self._respondToBadRequestAndDisconnect()
                 return
 
