@@ -315,14 +315,16 @@ Otherwise, ``g`` will be passed the asynchronous equivalent of the return value 
 Coroutines with async/await
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
-
-    .. versionadded:: 16.4
-
 Python 3.5 introduced :pep:`492` ("Coroutines with async and await syntax") and native coroutines.
 :py:meth:`Deferred.fromCoroutine <twisted.internet.defer.Deferred.fromCoroutine>` allows you to write coroutines with the ``async def`` syntax and ``await`` on Deferreds, similar to ``inlineCallbacks``.
 Rather than decorating every function that may ``await`` a Deferred (as you would with functions that ``yield`` Deferreds with ``inlineCallbacks``), you only need to call ``fromCoroutine`` with the outer-most coroutine object to schedule it for execution.
 Coroutines can ``await`` other coroutines once running without needing to use this function themselves.
+
+.. note::
+
+    .. versionadded:: Twisted NEXT
+
+    Coroutines can be passed to ``yield`` in code based on :py:func:`inlineCallbacks <twisted.internet.defer.inlineCallbacks>`.
 
 .. note::
 
@@ -381,6 +383,13 @@ Inline callbacks - using 'yield'
 
     Unless your code supports Python 2 (and therefore needs compatibility with older versions of Twisted), writing coroutines with the functionality described in "Coroutines with async/await" is preferred over ``inlineCallbacks``.
     Coroutines are supported by dedicated Python syntax, are compatible with ``asyncio``, and provide higher performance.
+
+.. versionadded:: Twisted NEXT
+
+    Existing ``inlineCallbacks``-based code can be converted to coroutines function-by-function.
+    Simply replace ``inlineCallbacks`` by ``async def`` and ``yield`` with ``await``.
+    Existing ``inlineCallbacks`` functions can ``yield`` coroutines, therefore the only place requiring attention is where the returned value is used as ``Deferred`` by calling its member functions such as ``addCallback``.
+    Use :py:meth:`Deferred.fromCoroutine <twisted.internet.defer.Deferred.fromCoroutine>` in such places for compatibility.
 
 Twisted features a decorator named ``inlineCallbacks`` which allows you to work with Deferreds without writing callback functions.
 

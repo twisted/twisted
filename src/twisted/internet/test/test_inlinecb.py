@@ -9,6 +9,7 @@ Tests for L{twisted.internet.inlineCallbacks}.
 import traceback
 import unittest as pyunit
 import weakref
+from enum import Enum
 from typing import Any, Generator, List, Set, Union
 
 from twisted.internet import reactor, task
@@ -25,10 +26,14 @@ from twisted.python.compat import _PYPY
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-def getThing():
+def getValueViaDeferred(value):
     d = Deferred()
-    reactor.callLater(0, d.callback, "hi")
+    reactor.callLater(0, d.callback, value)
     return d
+
+
+async def getValueViaCoro(value):
+    return await getValueViaDeferred(value)
 
 
 def getDivisionFailure(msg: Union[str, None] = None) -> Failure:
@@ -40,6 +45,14 @@ def getDivisionFailure(msg: Union[str, None] = None) -> Failure:
     except BaseException:
         f = Failure()
     return f
+
+
+async def getDivisionFailureCoro(msg: Union[str, None] = None) -> None:
+    """
+    Make a coroutine that throws a divide-by-zero error.
+    """
+    await getValueViaDeferred("value")
+    raise ZeroDivisionError(msg)
 
 
 class TerminalException(Exception):
@@ -71,7 +84,7 @@ class BasicTests(TestCase):
 
         @inlineCallbacks
         def _genBasics():
-            x = yield getThing()
+            x = yield getValueViaDeferred("hi")
 
             self.assertEqual(x, "hi")
 
@@ -80,6 +93,25 @@ class BasicTests(TestCase):
             except ZeroDivisionError as e:
                 self.assertEqual(str(e), "OMG")
             return "WOOSH"
+
+        return _genBasics().addCallback(self.assertEqual, "WOOSH")
+
+    def testBasicsAsync(self):
+        """
+        C{inlineCallbacks} can yield a coroutine and catch its exception.
+        """
+
+        @inlineCallbacks
+        def _genBasics():
+            x = yield getValueViaCoro("hi")
+
+            self.assertEqual(x, "hi")
+
+            try:
+                yield getDivisionFailureCoro("OMG")
+            except ZeroDivisionError as e:
+                self.assertEqual(str(e), "OMG")
+                returnValue("WOOSH")
 
         return _genBasics().addCallback(self.assertEqual, "WOOSH")
 
@@ -92,7 +124,7 @@ class BasicTests(TestCase):
 
         @inlineCallbacks
         def _genProduceException():
-            yield getThing()
+            yield getValueViaDeferred("hi")
             1 / 0
 
         return self.assertFailure(_genProduceException(), ZeroDivisionError)
@@ -140,6 +172,29 @@ class BasicTests(TestCase):
         deferredGeneratorResultDeferred = _genHandledTerminalAsyncFailure(d)
         d.errback(TerminalException("Handled Terminal Failure"))
         return deferredGeneratorResultDeferred.addCallback(self.assertEqual, None)
+
+    def testHandledCoroAsyncFailure(self):
+        """
+        Just like testHandledCoroAsyncFailure, only with a Deferred which fires
+        asynchronously with an error and is wrapped in coroutine.
+        """
+
+        d = Deferred()
+
+        async def coro():
+            return await d
+
+        @inlineCallbacks
+        def function():
+            try:
+                yield coro()
+            except TerminalException:
+                pass
+
+        d = Deferred()
+        inlineResultDeferred = function()
+        d.errback(TerminalException("Handled Terminal Failure"))
+        return inlineResultDeferred.addCallback(self.assertEqual, None)
 
     def testStackUsage(self):
         """
@@ -472,6 +527,63 @@ class StackedInlineCallbacksTests(TestCase):
             ],
         )
 
+    def test_nonCalledDeferredSingleYieldCoro(self):
+        """
+        Tests the case when a chain of L{inlineCallbacks} mixed with coroutine
+        calls end up yielding and blocking on a L{Deferred}.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        async def f2(x):
+            expectations.append(("f2 enter", x))
+
+            x = await f1(x)
+            x += 2
+
+            expectations.append(("f2 exit", x))
+            return x
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
+
+        res = f3(1)
+        self.runCallbacksOnDeferreds(deferredList)
+
+        self.assertEqual(self.successResultOf(res), 8)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f2 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f2 exit", 4),
+                ("f3 exit", 8),
+            ],
+        )
+
     def test_nonCalledDeferredMultipleYields(self):
         """
         Tests the case when a chain of L{inlineCallbacks} calls end up yielding
@@ -518,6 +630,89 @@ class StackedInlineCallbacksTests(TestCase):
 
             expectations.append(("f3 exit", x))
             return x
+
+        res = f3(1)
+        for d, x in deferredList:
+            d.callback(x)
+
+        self.assertEqual(self.successResultOf(res), 20)
+        self.assertEqual(
+            expectations,
+            [
+                ("f3 enter", 1),
+                ("f2 enter", 1),
+                ("f1 enter", 1),
+                ("f1 exit", 2),
+                ("f1 enter", 2),
+                ("f1 exit", 3),
+                ("f1 enter", 3),
+                ("f1 exit", 4),
+                ("f2 exit", 6),
+                ("f2 enter", 6),
+                ("f1 enter", 6),
+                ("f1 exit", 7),
+                ("f1 enter", 7),
+                ("f1 exit", 8),
+                ("f1 enter", 8),
+                ("f1 exit", 9),
+                ("f2 exit", 11),
+                ("f2 enter", 11),
+                ("f1 enter", 11),
+                ("f1 exit", 12),
+                ("f1 enter", 12),
+                ("f1 exit", 13),
+                ("f1 enter", 13),
+                ("f1 exit", 14),
+                ("f2 exit", 16),
+                ("f3 exit", 20),
+            ],
+        )
+
+    def test_nonCalledDeferredMultipleYieldsCoro(self):
+        """
+        Tests the case when a chain of L{inlineCallbacks} calls mixed with async
+        function calls end up yielding and blocking on a L{Deferred}. In this case
+        the same decorated function is yielded multiple times.
+        """
+        expectations = []
+
+        # list of deferred to invoke with what results
+        deferredList = []
+
+        @inlineCallbacks
+        def f1(x):
+            expectations.append(("f1 enter", x))
+
+            d = Deferred()
+            deferredList.append((d, x))
+            x = yield d
+            x += 1
+
+            expectations.append(("f1 exit", x))
+            returnValue(x)
+
+        async def f2(x):
+            expectations.append(("f2 enter", x))
+
+            x = await f1(x)
+            x = await f1(x)
+            x = await f1(x)
+            x += 2
+
+            expectations.append(("f2 exit", x))
+            return x
+
+        @inlineCallbacks
+        def f3(x):
+            expectations.append(("f3 enter", x))
+
+            x = yield f2(x)
+            x = yield f2(x)
+            x = yield f2(x)
+            x += 4
+
+            expectations.append(("f3 exit", x))
+            returnValue(x)
 
         res = f3(1)
         for d, x in deferredList:
@@ -951,6 +1146,31 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("Error Marker", tb)
 
+    def test_forwardTracebacksCoro(self):
+        """
+        Chained inlineCallback and coroutine are forwarding the traceback
+        information from coroutine to generator.
+        """
+
+        async def erroring():
+            await getValueViaDeferred("value")
+            raise Exception("Error Marker")
+
+        @inlineCallbacks
+        def calling():
+            yield erroring()
+
+        d = calling()
+
+        @d.addErrback
+        def check(f):
+            tb = f.getTraceback()
+            self.assertIn("in erroring", tb)
+            self.assertIn("in calling", tb)
+            self.assertIn("Error Marker", tb)
+
+        return d
+
     def test_forwardLotsOfTracebacks(self):
         """
         Several Chained inlineCallbacks gives information about all generators.
@@ -978,6 +1198,41 @@ class ForwardTraceBackTests(SynchronousTestCase):
         @inlineCallbacks
         def calling3():
             yield erroring()
+
+        @inlineCallbacks
+        def calling2():
+            yield calling3()
+
+        @inlineCallbacks
+        def calling():
+            yield calling2()
+
+        d = calling()
+        f = self.failureResultOf(d)
+        tb = f.getTraceback()
+        self.assertIn("in erroring", tb)
+        self.assertIn("in calling", tb)
+        self.assertIn("in calling2", tb)
+        self.assertIn("in calling3", tb)
+        self.assertNotIn("throwExceptionIntoGenerator", tb)
+        self.assertIn("Error Marker", tb)
+        self.assertIn("in erroring", f.getTraceback())
+
+    def test_forwardLotsOfTracebacksCoro(self):
+        """
+        Several chained inlineCallbacks mixed with coroutines gives information
+        about all generators.
+
+        A wider test with a 4 chained inline callbacks.
+        """
+
+        @inlineCallbacks
+        def erroring():
+            yield "forcing generator"
+            raise Exception("Error Marker")
+
+        async def calling3():
+            await erroring()
 
         @inlineCallbacks
         def calling2():
@@ -1057,6 +1312,12 @@ class DontFail(Exception):
         self.actualValue = actual
 
 
+class CancellationTestsStackedType(Enum):
+    NOT_STACKED = 0
+    STACKED_INLINECB = 1
+    STACKED_CORO = 2
+
+
 class CancellationTests(SynchronousTestCase):
     """
     Tests for cancellation of L{Deferred}s returned by L{inlineCallbacks}.
@@ -1084,8 +1345,11 @@ class CancellationTests(SynchronousTestCase):
         x = yield getChildDeferred()
         return x
 
+    async def stackedCoro(self, getChildDeferred):
+        return await getChildDeferred()
+
     @inlineCallbacks
-    def sampleInlineCB(self, getChildDeferred=None, stacked=False, firstDeferred=None):
+    def sampleInlineCB(self, stackType, getChildDeferred=None, firstDeferred=None):
         """
         Generator for testing cascade cancelling cases.
 
@@ -1095,12 +1359,15 @@ class CancellationTests(SynchronousTestCase):
         if getChildDeferred is None:
             getChildDeferred = self.getDeferred
         try:
-            if stacked:
+            if stackType == CancellationTestsStackedType.NOT_STACKED:
+                x = yield getChildDeferred()
+            else:
                 if firstDeferred:
                     yield firstDeferred
-                x = yield self.stackedInlineCB(getChildDeferred)
-            else:
-                x = yield getChildDeferred()
+                if stackType == CancellationTestsStackedType.STACKED_INLINECB:
+                    x = yield self.stackedCoro(getChildDeferred)
+                else:
+                    x = yield self.stackedInlineCB(getChildDeferred)
         except UntranslatedError:
             raise TranslatedError()
         except DontFail as df:
@@ -1126,11 +1393,11 @@ class CancellationTests(SynchronousTestCase):
         """
         self.deferredsOutstanding.pop(0).callback(result)
 
-    def doCascadeCancellingOnCancel(self, stacked=False, cancelOnSecondDeferred=False):
+    def doCascadeCancellingOnCancel(self, stackType, cancelOnSecondDeferred=False):
         """
         When C{D} cancelled, C{C} will be immediately cancelled too.
 
-        @param stacked: if True, tests stacked inline callbacks
+        @param stackType: defines test stacking scenario
 
         @param cancelOnSecondDeferred: if True, tests cancellation on the
             second yield in inlineCallbacks
@@ -1152,7 +1419,7 @@ class CancellationTests(SynchronousTestCase):
             firstDeferred = Deferred()
         d = self.sampleInlineCB(
             getChildDeferred=getChildDeferred,
-            stacked=stacked,
+            stackType=stackType,
             firstDeferred=firstDeferred,
         )
         d.addErrback(lambda result: None)
@@ -1165,23 +1432,31 @@ class CancellationTests(SynchronousTestCase):
             "no cascade cancelling occurs",
         )
 
-    def test_CascadeCancellingOnCancel(self):
-        self.doCascadeCancellingOnCancel()
+    def test_CascadeCancellingOnCancelNotStacked(self):
+        self.doCascadeCancellingOnCancel(CancellationTestsStackedType.NOT_STACKED)
 
-    def test_CascadeCancellingOnCancelStacked(self):
-        self.doCascadeCancellingOnCancel(stacked=True)
+    def test_CascadeCancellingOnCancelStackedInlineCb(self):
+        self.doCascadeCancellingOnCancel(CancellationTestsStackedType.STACKED_INLINECB)
 
-    def test_CascadeCancellingOnCancelStackedOnSecondDeferred(self):
-        self.doCascadeCancellingOnCancel(stacked=True, cancelOnSecondDeferred=True)
+    def test_CascadeCancellingOnCancelStackedInlineCbOnSecondDeferred(self):
+        self.doCascadeCancellingOnCancel(
+            CancellationTestsStackedType.STACKED_INLINECB, cancelOnSecondDeferred=True
+        )
 
-    def doErrbackCancelledErrorOnCancel(
-        self, stacked=False, cancelOnSecondDeferred=False
-    ):
+    def test_CascadeCancellingOnCancelStackedCoro(self):
+        self.doCascadeCancellingOnCancel(CancellationTestsStackedType.STACKED_CORO)
+
+    def test_CascadeCancellingOnCancelStackedCoroOnSecondDeferred(self):
+        self.doCascadeCancellingOnCancel(
+            CancellationTestsStackedType.STACKED_CORO, cancelOnSecondDeferred=True
+        )
+
+    def doErrbackCancelledErrorOnCancel(self, stackType, cancelOnSecondDeferred=False):
         """
         When C{D} cancelled, CancelledError from C{C} will be errbacked
         through C{D}.
 
-        @param stacked: if True, tests stacked inline callbacks
+        @param stackType: defines test stacking scenario
 
         @param cancelOnSecondDeferred: if True, tests cancellation on the
             second yield in inlineCallbacks
@@ -1190,22 +1465,34 @@ class CancellationTests(SynchronousTestCase):
         firstDeferred = None
         if cancelOnSecondDeferred:
             firstDeferred = Deferred()
-        d = self.sampleInlineCB(stacked=stacked, firstDeferred=firstDeferred)
+        d = self.sampleInlineCB(stackType=stackType, firstDeferred=firstDeferred)
         if firstDeferred:
             firstDeferred.callback(1)
         d.cancel()
         self.assertRaises(CancelledError, self.failureResultOf(d).raiseException)
 
     def test_ErrbackCancelledErrorOnCancel(self):
-        self.doErrbackCancelledErrorOnCancel()
+        self.doErrbackCancelledErrorOnCancel(CancellationTestsStackedType.NOT_STACKED)
 
-    def test_ErrbackCancelledErrorOnCancelStacked(self):
-        self.doErrbackCancelledErrorOnCancel(stacked=True)
+    def test_ErrbackCancelledErrorOnCancelStackedInlineCb(self):
+        self.doErrbackCancelledErrorOnCancel(
+            CancellationTestsStackedType.STACKED_INLINECB
+        )
 
-    def test_ErrbackCancelledErrorOnCancelStackedOnSecondDeferred(self):
-        self.doErrbackCancelledErrorOnCancel(stacked=True, cancelOnSecondDeferred=True)
+    def test_ErrbackCancelledErrorOnCancelStackedInlineCbOnSecondDeferred(self):
+        self.doErrbackCancelledErrorOnCancel(
+            CancellationTestsStackedType.STACKED_INLINECB, cancelOnSecondDeferred=True
+        )
 
-    def doErrorToErrorTranslation(self, stacked=False, cancelOnSecondDeferred=False):
+    def test_ErrbackCancelledErrorOnCancelStackedCoro(self):
+        self.doErrbackCancelledErrorOnCancel(CancellationTestsStackedType.STACKED_CORO)
+
+    def test_ErrbackCancelledErrorOnCancelStackedCoroOnSecondDeferred(self):
+        self.doErrbackCancelledErrorOnCancel(
+            CancellationTestsStackedType.STACKED_CORO, cancelOnSecondDeferred=True
+        )
+
+    def doErrorToErrorTranslation(self, stackType, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, and C raises a particular type of error, C{G}
         may catch that error at the point of yielding and translate it into
@@ -1219,22 +1506,34 @@ class CancellationTests(SynchronousTestCase):
         if cancelOnSecondDeferred:
             firstDeferred = Deferred()
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda: a, stacked=stacked, firstDeferred=firstDeferred)
+        d = self.sampleInlineCB(
+            getChildDeferred=lambda: a, stackType=stackType, firstDeferred=firstDeferred
+        )
         if firstDeferred:
             firstDeferred.callback(1)
         d.cancel()
         self.assertRaises(TranslatedError, self.failureResultOf(d).raiseException)
 
     def test_ErrorToErrorTranslation(self):
-        self.doErrorToErrorTranslation()
+        self.doErrorToErrorTranslation(CancellationTestsStackedType.NOT_STACKED)
 
-    def test_ErrorToErrorTranslationStacked(self):
-        self.doErrorToErrorTranslation(stacked=True)
+    def test_ErrorToErrorTranslationStackedInlineCb(self):
+        self.doErrorToErrorTranslation(CancellationTestsStackedType.STACKED_INLINECB)
 
-    def test_ErrorToErrorTranslationStackedOnSecondDeferred(self):
-        self.doErrorToErrorTranslation(stacked=True, cancelOnSecondDeferred=True)
+    def test_ErrorToErrorTranslationStackedInlineCbOnSecondDeferred(self):
+        self.doErrorToErrorTranslation(
+            CancellationTestsStackedType.STACKED_INLINECB, cancelOnSecondDeferred=True
+        )
 
-    def doErrorToSuccessTranslation(self, stacked=False, cancelOnSecondDeferred=False):
+    def test_ErrorToErrorTranslationStackedCoro(self):
+        self.doErrorToErrorTranslation(CancellationTestsStackedType.STACKED_CORO)
+
+    def test_ErrorToErrorTranslationStackedCoroOnSecondDeferred(self):
+        self.doErrorToErrorTranslation(
+            CancellationTestsStackedType.STACKED_CORO, cancelOnSecondDeferred=True
+        )
+
+    def doErrorToSuccessTranslation(self, stackType, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, and C{C} raises a particular type of error,
         C{G} may catch that error at the point of yielding and translate it
@@ -1248,7 +1547,9 @@ class CancellationTests(SynchronousTestCase):
         if cancelOnSecondDeferred:
             firstDeferred = Deferred()
         a = Deferred(cancel)
-        d = self.sampleInlineCB(lambda: a, stacked=stacked, firstDeferred=firstDeferred)
+        d = self.sampleInlineCB(
+            getChildDeferred=lambda: a, stackType=stackType, firstDeferred=firstDeferred
+        )
         results = []
         d.addCallback(results.append)
         if firstDeferred:
@@ -1257,15 +1558,25 @@ class CancellationTests(SynchronousTestCase):
         self.assertEquals(results, [4320])
 
     def test_ErrorToSuccessTranslation(self):
-        self.doErrorToSuccessTranslation()
+        self.doErrorToSuccessTranslation(CancellationTestsStackedType.NOT_STACKED)
 
-    def test_ErrorToSuccessTranslationStacked(self):
-        self.doErrorToSuccessTranslation(stacked=True)
+    def test_ErrorToSuccessTranslationStackedInlineCb(self):
+        self.doErrorToSuccessTranslation(CancellationTestsStackedType.STACKED_INLINECB)
 
-    def test_ErrorToSuccessTranslationStackedOnSecondDeferred(self):
-        self.doErrorToSuccessTranslation(stacked=True, cancelOnSecondDeferred=True)
+    def test_ErrorToSuccessTranslationStackedInlineCbOnSecondDeferred(self):
+        self.doErrorToSuccessTranslation(
+            CancellationTestsStackedType.STACKED_INLINECB, cancelOnSecondDeferred=True
+        )
 
-    def doAsynchronousCancellation(self, stacked=False, cancelOnSecondDeferred=False):
+    def test_ErrorToSuccessTranslationStackedCoro(self):
+        self.doErrorToSuccessTranslation(CancellationTestsStackedType.STACKED_CORO)
+
+    def test_ErrorToSuccessTranslationStackedCoroOnSecondDeferred(self):
+        self.doErrorToSuccessTranslation(
+            CancellationTestsStackedType.STACKED_CORO, cancelOnSecondDeferred=True
+        )
+
+    def doAsynchronousCancellation(self, stackType, cancelOnSecondDeferred=False):
         """
         When C{D} is cancelled, it won't reach the callbacks added to it by
         application code until C{C} reaches the point in its callback chain
@@ -1287,7 +1598,7 @@ class CancellationTests(SynchronousTestCase):
         if cancelOnSecondDeferred:
             firstDeferred = Deferred()
         d = self.sampleInlineCB(
-            getChildDeferred=deferMe, stacked=stacked, firstDeferred=firstDeferred
+            getChildDeferred=deferMe, stackType=stackType, firstDeferred=firstDeferred
         )
         if firstDeferred:
             firstDeferred.callback(1)
@@ -1297,13 +1608,23 @@ class CancellationTests(SynchronousTestCase):
         self.assertEqual(self.successResultOf(d), 6544)
 
     def test_AsynchronousCancellation(self):
-        self.doAsynchronousCancellation()
+        self.doAsynchronousCancellation(CancellationTestsStackedType.NOT_STACKED)
 
-    def test_AsynchronousCancellationStacked(self):
-        self.doAsynchronousCancellation(stacked=True)
+    def test_AsynchronousCancellationStackedInlineCb(self):
+        self.doAsynchronousCancellation(CancellationTestsStackedType.STACKED_INLINECB)
 
-    def test_AsynchronousCancellationStackedOnSecondDeferred(self):
-        self.doAsynchronousCancellation(stacked=True, cancelOnSecondDeferred=True)
+    def test_AsynchronousCancellationStackedInlineCbOnSecondDeferred(self):
+        self.doAsynchronousCancellation(
+            CancellationTestsStackedType.STACKED_INLINECB, cancelOnSecondDeferred=True
+        )
+
+    def test_AsynchronousCancellationStackedCoro(self):
+        self.doAsynchronousCancellation(CancellationTestsStackedType.STACKED_CORO)
+
+    def test_AsynchronousCancellationStackedCoroOnSecondDeferred(self):
+        self.doAsynchronousCancellation(
+            CancellationTestsStackedType.STACKED_CORO, cancelOnSecondDeferred=True
+        )
 
     def test_inlineCallbacksCancelCaptured(self) -> None:
         """
