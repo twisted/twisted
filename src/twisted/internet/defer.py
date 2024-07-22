@@ -1898,6 +1898,7 @@ class _DefGen_Return(BaseException):
         self.value = value
 
 
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="standard return statement")
 def returnValue(val: object) -> NoReturn:
     """
     Return val from a L{inlineCallbacks} generator.
@@ -2051,17 +2052,28 @@ def _inlineCallbacks(
             # directly.  returnValue itself consumes a stack frame, so the
             # application code will have a tb_next, but it will *not* have a
             # second tb_next.
+            #
+            # Note that there's one additional level due to returnValue being
+            # deprecated
             assert appCodeTrace.tb_next is not None
-            if appCodeTrace.tb_next.tb_next:
+            assert appCodeTrace.tb_next.tb_next is not None
+            if appCodeTrace.tb_next.tb_next.tb_next:
                 # If returnValue was invoked non-local to the frame which it is
                 # exiting, identify the frame that ultimately invoked
                 # returnValue so that we can warn the user, as this behavior is
                 # confusing.
+                #
+                # Note that there's one additional level due to returnValue being
+                # deprecated
                 ultimateTrace = appCodeTrace
 
                 assert ultimateTrace is not None
                 assert ultimateTrace.tb_next is not None
-                while ultimateTrace.tb_next.tb_next:
+
+                # Note that there's one additional level due to returnValue being
+                # deprecated
+                assert ultimateTrace.tb_next.tb_next is not None
+                while ultimateTrace.tb_next.tb_next.tb_next:
                     ultimateTrace = ultimateTrace.tb_next
                     assert ultimateTrace is not None
 
@@ -2211,17 +2223,15 @@ def inlineCallbacks(
 
     Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
     will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of L{None}.
+    failure object if your generator raises an unhandled exception). Inside
+    the generator simply use C{return result} to return a value.
 
-    Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
+    Be aware that generator must not return a L{Deferred}.
     If you believe the thing you'd like to return could be a L{Deferred}, do
     this::
 
         result = yield result
-        returnValue(result)
+        return result
 
     The L{Deferred} returned from your deferred generator may errback if your
     generator raised an exception::
@@ -2231,17 +2241,10 @@ def inlineCallbacks(
             thing = yield makeSomeRequestResultingInDeferred()
             if thing == 'I love Twisted':
                 # will become the result of the Deferred
-                returnValue('TWISTED IS GREAT!')
+                return 'TWISTED IS GREAT!'
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
-
-    It is possible to use the C{return} statement instead of L{returnValue}::
-
-        @inlineCallbacks
-        def loadData(url):
-            response = yield makeRequest(url)
-            return json.loads(response)
 
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
