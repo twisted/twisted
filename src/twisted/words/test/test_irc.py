@@ -934,7 +934,7 @@ class CTCPTests(IRCTestCase):
             % {"X": irc.X_DELIM, "EOL": irc.CR + irc.LF}
         )
 
-        self.client.dataReceived(errQuery)
+        self.client.dataReceived(errQuery.encode("utf-8"))
         reply = self.file.getvalue()
 
         self.assertEqualBufferValue(reply, errReply)
@@ -1126,7 +1126,7 @@ class ClientImplementationTests(IRCTestCase):
             ":" + host + " " + code + " " + nick + " " + args + " :" + msg + "\r\n"
         )
 
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
         self.assertEqual(self.client.calls, [(func, kw)])
 
     def testYourHost(self):
@@ -1214,13 +1214,13 @@ class ClientImplementationTests(IRCTestCase):
         L{IRCClient.receivedMOTD} when I{RPL_ENDOFMOTD} is received.
         """
         lines = [
-            ":host.name 375 nickname :- host.name Message of the Day -",
-            ":host.name 372 nickname :- Welcome to host.name",
-            ":host.name 376 nickname :End of /MOTD command.",
+            b":host.name 375 nickname :- host.name Message of the Day -",
+            b":host.name 372 nickname :- Welcome to host.name",
+            b":host.name 376 nickname :End of /MOTD command.",
         ]
         for L in lines:
             self.assertEqual(self.client.calls, [])
-            self.client.dataReceived(L + "\r\n")
+            self.client.dataReceived(L + b"\r\n")
 
         self.assertEqual(
             self.client.calls,
@@ -1248,12 +1248,12 @@ class ClientImplementationTests(IRCTestCase):
         called with a list of MOTD lines.
         """
         lines = [
-            ":host.name 372 nickname :- Welcome to host.name",
-            ":host.name 376 nickname :End of /MOTD command.",
+            b":host.name 372 nickname :- Welcome to host.name",
+            b":host.name 376 nickname :End of /MOTD command.",
         ]
 
         for L in lines:
-            self.client.dataReceived(L + "\r\n")
+            self.client.dataReceived(L + b"\r\n")
 
         self.assertEqual(
             self.client.calls, [("receivedMOTD", {"motd": ["Welcome to host.name"]})]
@@ -1265,7 +1265,7 @@ class ClientImplementationTests(IRCTestCase):
 
         wholeUser = sender + "!" + ident + "@" + host
         message = ":" + wholeUser + " " + type + " " + group + " :" + msg + "\r\n"
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
         self.assertEqual(self.client.calls, [(func, kw)])
         self.client.calls = []
 
@@ -1350,7 +1350,7 @@ class ClientImplementationTests(IRCTestCase):
         if target is None:
             target = "#chan"
         message = f":Wolf!~wolf@yok.utu.fi MODE {target} {msg} {args}\r\n"
-        self.client.dataReceived(message)
+        self.client.dataReceived(message.encode("utf-8"))
 
     def _parseModeChange(self, results, target=None):
         """
@@ -1982,7 +1982,7 @@ class ClientMsgTests(IRCTestCase):
         self.patch(self.client, "privmsg", lambda *a: privmsg.append(a))
         # Deliver these to IRCClient via the normal mechanisms.
         for line in self.client.lines:
-            self.client.lineReceived(responsePrefix + line)
+            self.client.lineReceived((responsePrefix + line).encode())
 
         self.assertEqual(len(privmsg), expectedNumCommands)
         receivedMessage = "".join(message for user, target, message in privmsg)
@@ -2010,7 +2010,7 @@ class ClientMsgTests(IRCTestCase):
         self.patch(self.client, "noticed", lambda *a: notice.append(a))
         # Deliver these to IRCClient via the normal mechanisms.
         for line in self.client.lines:
-            self.client.lineReceived(responsePrefix + line)
+            self.client.lineReceived((responsePrefix + line).encode())
 
         self.assertEqual(len(notice), expectedNumCommands)
         receivedMessage = "".join(message for user, target, message in notice)
@@ -2570,6 +2570,72 @@ class DccTests(IRCTestCase):
             "foo.txt 127.0.0.1 sd@d",
         )
         self.assertEqual(str(result), "Indecipherable port 'sd@d'")
+
+
+UNICODE_REPLACEMENT_CHARACTER = "\ufffd"
+
+
+class ClientDecodingTests(IRCTestCase):
+    """
+    Tests for L{IRCClient} receiving data in different encodings.
+    """
+
+    def setUp(self):
+        methods = ["handleCommand", "badMessage"]
+        self.client = CollectorClient(methods)
+
+    def testDecodingUnspecifiedCodec(self):
+        """
+        Message decoding doesn't fail when no fitting codec was specified and
+        default decode error handling is used. Characters that can not be
+        decoded with UTF8 will be replaced by the unicode replacement
+        character 'U+FFFD'.
+        """
+        self.client.decodeCodecs = IRCClient.decodeCodecs
+        self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
+        prefix = ":foo!bar@baz"
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
+        self.client.lineReceived(lineBytes)
+        self.assertEqual(
+            self.client.methods,
+            [
+                (
+                    "handleCommand",
+                    ("PRIVMSG", prefix[1:], ["foo", UNICODE_REPLACEMENT_CHARACTER]),
+                )
+            ],
+        )
+
+    def testDecodingSpecifiedCodec(self):
+        """
+        Message decoding will try the specified codecs before using
+        the fallback errorhandling.
+        """
+        self.client.decodeCodecs = ["utf-8", "latin-1"]
+        self.client.decodeFallbackErrorhandling = IRCClient.decodeFallbackErrorhandling
+        prefix = ":foo!bar@baz"
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
+        self.client.lineReceived(lineBytes)
+        self.assertEqual(
+            self.client.methods,
+            [
+                (
+                    "handleCommand",
+                    ("PRIVMSG", prefix[1:], ["foo", b"\xe4".decode("latin-1")]),
+                )
+            ],
+        )
+
+    def testDecodingErrorhandling(self):
+        """
+        Fallback errorhandling for message decoding can be overridden
+        by the user.
+        """
+        self.client.decodeCodecs = ["utf-8"]
+        self.client.decodeFallbackErrorhandling = "strict"
+        prefix = ":foo!bar@baz"
+        lineBytes = prefix.encode() + b" PRIVMSG foo :\xe4"
+        self.assertRaises(UnicodeDecodeError, self.client.lineReceived, lineBytes)
 
 
 class ServerToClientTests(IRCTestCase):

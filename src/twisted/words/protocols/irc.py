@@ -50,7 +50,7 @@ import time
 import traceback
 from functools import reduce
 from os import path
-from typing import Optional
+from typing import List, Optional
 
 from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
@@ -1197,6 +1197,16 @@ class IRCClient(basic.LineReceiver):
     @ivar heartbeatInterval: Interval, in seconds, to send I{PING} messages to
         the server as a form of keepalive, defaults to 120 seconds. Use L{None}
         to disable the heartbeat.
+
+    @type decodeCodecs: C{list} of C{str}
+    @ivar decodeCodecs: Codecs that will be used for decoding incoming messages
+                        as the IRC protocol doesn't specify encoding.
+
+    @type decodeFallbackErrorhandling: C{str}
+    @ivar decodeFallbackErrorhandling: Error handling strategy used for decoding
+        incoming messages in case decoding with all specified codecs fails. The
+        first given codec is used. See
+        https://docs.python.org/3/library/codecs.html#error-handlers
     """
 
     hostname = None
@@ -1237,6 +1247,9 @@ class IRCClient(basic.LineReceiver):
 
     _heartbeat = None
     heartbeatInterval = 120
+
+    decodeCodecs: List[str] = ["utf-8"]
+    decodeFallbackErrorhandling: str = "replace"
 
     def _reallySendLine(self, line):
         quoteLine = lowQuote(line)
@@ -2609,7 +2622,7 @@ class IRCClient(basic.LineReceiver):
         When I get a message that's so broken I can't use it.
 
         @param line: The indecipherable message.
-        @type line: L{bytes}
+        @type line: L{str}
 
         @param excType: The exception type of the exception raised by the
             message.
@@ -2643,16 +2656,22 @@ class IRCClient(basic.LineReceiver):
         if self.performLogin:
             self.register(self.nickname)
 
-    def dataReceived(self, data):
-        if isinstance(data, str):
-            data = data.encode("utf-8")
+    def dataReceived(self, data: bytes) -> None:
         data = data.replace(b"\r", b"")
         basic.LineReceiver.dataReceived(self, data)
 
-    def lineReceived(self, line):
-        if bytes != str and isinstance(line, bytes):
-            # decode bytes from transport to unicode
-            line = line.decode("utf-8")
+    def lineReceived(self, line_bytes: bytes) -> None:
+        # decode bytes from transport to str
+        for codec in self.decodeCodecs:
+            try:
+                line = line_bytes.decode(codec)
+                break
+            except ValueError:
+                log.msg(f"Couldn't decode line {line_bytes!r} with codec {codec}")
+        else:
+            line = line_bytes.decode(
+                self.decodeCodecs[0], self.decodeFallbackErrorhandling
+            )
 
         line = lowDequote(line)
         try:

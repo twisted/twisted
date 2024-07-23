@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.IRCClient now allows specifying multiple codecs to try when decoding messages and will use a non-strict error handler as last resort.
