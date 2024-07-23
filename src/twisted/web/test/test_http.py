@@ -1617,8 +1617,11 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         p._maxTrailerHeadersSize = 10
+        # 9 bytes are received so far, in 2 packets.
+        # For now, all is ok.
         p.dataReceived(b"3\r\nabc\r\n0\r\n01234567")
         p.dataReceived(b"\r")
+        # Once the 10th byte is received, the processing fails.
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,
