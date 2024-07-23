@@ -2,6 +2,7 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+import argparse
 import getpass
 import os
 import struct
@@ -66,20 +67,28 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         return defer.succeed(answers)
 
     def getPublicKey(self):
+        args = parser.parse_args()
+        public_key_path = (
+            args.client_public_key_path if args.client_public_key_path else CLIENT_RSA_PUBLIC
+        )
         if (
-            not CLIENT_RSA_PUBLIC
-            or not os.path.exists(CLIENT_RSA_PUBLIC)
+            not public_key_path
+            or not os.path.exists(public_key_path)
             or self.lastPublicKey
         ):
             # the file doesn't exist, or we've tried a public key
             return
-        return keys.Key.fromFile(filename=CLIENT_RSA_PUBLIC)
+        return keys.Key.fromFile(filename=public_key_path)
 
     def getPrivateKey(self):
         """
         A deferred can also be returned.
         """
-        return defer.succeed(keys.Key.fromFile(CLIENT_RSA_PRIVATE))
+        args = parser.parse_args()
+        private_key_path = (
+            args.client_private_key_path if args.client_private_key_path else CLIENT_RSA_PRIVATE
+        )
+        return defer.succeed(keys.Key.fromFile(private_key_path))
 
 
 class SimpleConnection(connection.SSHConnection):
@@ -143,6 +152,20 @@ class CatChannel(channel.SSHChannel):
         reactor.stop()
 
 
-log.startLogging(sys.stdout)
-protocol.ClientCreator(reactor, SimpleTransport).connectTCP(HOST, PORT)
-reactor.run()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Simple SSH client.')
+
+    parser.add_argument(
+        '--client_public_key_path',
+        type=str,
+        help='Path to the client public key file (Default ssh-keys/client_rsa.pub)'
+    )
+    parser.add_argument(
+        '--client_private_key_path',
+        type=str,
+        help='Path to the client private key file (Default ssh-keys/client_rsa)'
+    )
+
+    log.startLogging(sys.stdout)
+    protocol.ClientCreator(reactor, SimpleTransport).connectTCP(HOST, PORT)
+    reactor.run()

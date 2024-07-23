@@ -2,7 +2,7 @@
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+import argparse
 import sys
 
 from zope.interface import implementer
@@ -48,14 +48,6 @@ $ ssh -p 5022  user@localhost
 # Connect with the SSH client key.
 $ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
 """
-
-# List to public SSH keys accepted by the server.
-# One public key per line
-# You should add here the content of ssh-keys/client_rsa.pub
-CLIENT_PUBLIC = """
-sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIKULA+QMG6KFFXeooTZ9dHXfV9wsUzvjBcCHvWJgEYKcAAAAE3NzaDplZDI1NTE5LXl1YmktNWM= user@test
-""".strip()
-
 
 # Pre-computed big prime numbers used in Diffie-Hellman Group Exchange as
 # described in RFC4419.
@@ -264,12 +256,16 @@ class ExampleFactory(factory.SSHFactory):
     }
 
     def __init__(self):
+        args = parser.parse_args()
+        authorized_keys = []
+        with open(args.authorized_keys_path, 'r') as f:
+            authorized_keys = [line.strip() for line in f if line.strip() and not line.startswith('#')]
         passwdDB = InMemoryUsernamePasswordDatabaseDontUse(user="password")
         sshDB = SSHPublicKeyChecker(
             InMemorySSHKeyDB(
                 {
                     b"user": [
-                        keys.Key.fromString(pub) for pub in CLIENT_PUBLIC.splitlines()
+                        keys.Key.fromString(pub) for pub in authorized_keys
                     ]
                 }
             )
@@ -300,5 +296,12 @@ class ExampleFactory(factory.SSHFactory):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Simple SSH server.')
+
+    parser.add_argument(
+        'authorized_keys_path',
+        type=str,
+        help='Path to the authorized keys file.'
+    )
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()
