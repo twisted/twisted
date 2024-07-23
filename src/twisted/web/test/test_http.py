@@ -572,7 +572,9 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         b"POST / HTTP/1.1\r\n"
         b"Content-Length: 10\r\n"
         b"\r\n"
-        b"0123456789POST / HTTP/1.1\r\n"
+        b"0123456789"
+        # Chunk encoded request.
+        b"POST / HTTP/1.1\r\n"
         b"Transfer-Encoding: chunked\r\n"
         b"\r\n"
         b"a\r\n"
