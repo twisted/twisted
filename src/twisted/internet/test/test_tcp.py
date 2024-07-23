@@ -2475,6 +2475,16 @@ class NoReadServer(ConnectableProtocol):
     def connectionMade(self):
         self.transport.stopReading()
 
+    def dataReceived(self, data: bytes) -> None:
+        print("received", len(data))
+        assert self.transport is not None
+        # self.transport.abortConnection()  # type:ignore
+
+    def connectionLost(self, reason: Failure | None = None) -> None:
+        print("CL notification!")
+        super().connectionLost(reason)
+        print("delivered")
+
 
 class EventualNoReadServer(ConnectableProtocol):
     """

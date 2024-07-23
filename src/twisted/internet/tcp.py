@@ -14,6 +14,7 @@ import os
 import socket
 import struct
 import sys
+from socket import SO_ERROR, SOL_SOCKET
 from typing import Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
@@ -239,17 +240,27 @@ class Connection(
         lost through an error in the physical recv(), this function will return
         the result of the dataReceived call.
         """
-        try:
-            data = self.socket.recv(self.bufferSize)
-        except OSError as se:
-            if se.args[0] == EWOULDBLOCK:
-                return
-            else:
-                return main.CONNECTION_LOST
+        for attempt in range(10):
+            try:
+                data = self.socket.recv(self.bufferSize)
+            except OSError as se:
+                print("doRead err", se)
+                if se.args[0] == EWOULDBLOCK:
+                    print("sktopt", self.socket.getsockopt(SOL_SOCKET, SO_ERROR))
+                    import time
 
-        return self._dataReceived(data)
+                    time.sleep(1.0)
+                    continue
+                else:
+                    return main.CONNECTION_LOST
+
+            drr = self._dataReceived(data)
+            print("DRR", drr)
+            if drr is not None:
+                return drr
 
     def _dataReceived(self, data):
+        print("DR", len(data))
         if not data:
             return main.CONNECTION_DONE
         rval = self.protocol.dataReceived(data)
