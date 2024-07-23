@@ -258,16 +258,14 @@ class ExampleFactory(factory.SSHFactory):
     def __init__(self):
         args = parser.parse_args()
         authorized_keys = []
-        with open(args.authorized_keys_path, 'r') as f:
-            authorized_keys = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        with open(args.authorized_keys_path, "r") as f:
+            authorized_keys = [
+                line.strip() for line in f if line.strip() and not line.startswith("#")
+            ]
         passwdDB = InMemoryUsernamePasswordDatabaseDontUse(user="password")
         sshDB = SSHPublicKeyChecker(
             InMemorySSHKeyDB(
-                {
-                    b"user": [
-                        keys.Key.fromString(pub) for pub in authorized_keys
-                    ]
-                }
+                {b"user": [keys.Key.fromString(pub) for pub in authorized_keys]}
             )
         )
         self.portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
@@ -296,12 +294,10 @@ class ExampleFactory(factory.SSHFactory):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Simple SSH server.')
+    parser = argparse.ArgumentParser(description="Simple SSH server.")
 
     parser.add_argument(
-        'authorized_keys_path',
-        type=str,
-        help='Path to the authorized keys file.'
+        "authorized_keys_path", type=str, help="Path to the authorized keys file."
     )
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()
