@@ -1,1 +1,1 @@
-The HTTP 1.0 and 1.1 server provided by twisted.web could process pipelined HTTP requests out-of-order, possibly resulting in information disclosure (GHSA-c8m8-j448-xjx7)
+The HTTP 1.0 and 1.1 server provided by twisted.web could process pipelined HTTP requests out-of-order, possibly resulting in information disclosure (CVE-2024-41671/GHSA-c8m8-j448-xjx7)
