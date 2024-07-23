@@ -1745,6 +1745,24 @@ class ParsingTests(unittest.TestCase):
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
 
+    def test_invalidRequestLineExtraSpaces(self):
+        """
+        The three components of the request line must not be
+        separated by anything other than a single SP character,
+        or a 400 status results.
+        """
+        for requestLine in [
+            b"GET  / HTTP/1.0",
+            b"GET /  HTTP/1.0",
+            b"GET\t/ HTTP/1.0",
+            b"GET /\vHTTP/1.1",
+            b"GET / HTTP/1.1 ",
+            b" GET / HTTP/1.1",
+        ]:
+            self.assertRequestRejected(
+                [requestLine, b"Content-Length: 0", b"Host: foo.example", b"", b""]
+            )
+
     def test_invalidMethodEmpty(self):
         """
         A request with an empty method field is rejected with a
