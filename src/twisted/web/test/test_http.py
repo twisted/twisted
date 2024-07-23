@@ -1615,7 +1615,8 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         p._maxTrailerHeadersSize = 10
-        p.dataReceived(b"3\r\nabc\r\n0\r\n0123456789")
+        p.dataReceived(b"3\r\nabc\r\n0\r\n01234567")
+        p.dataReceived(b"\r")
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,
