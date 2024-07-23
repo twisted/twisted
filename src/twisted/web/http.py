@@ -319,9 +319,7 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     # "per Python docs, a list of Message objects when is_multipart() is True,
     # or a string when is_multipart() is False"
     for part in msg.get_payload():  # type:ignore[assignment]
-        name: str | None = part.get_param(
-            "name", header="content-disposition"
-        )  # type:ignore[assignment]
+        name: str | None = part.get_param("name", header="content-disposition")  # type:ignore[assignment]
         if not name:
             continue
         payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
@@ -512,10 +510,13 @@ def _istoken(b: bytes) -> bool:
     Is the string a token per RFC 9110 section 5.6.2?
     """
     for c in b:
-        if c not in (
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
-            b"0123456789"  # DIGIT
-            b"!#$%^'*+-.^_`|~"
+        if (
+            c
+            not in (
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
+                b"0123456789"  # DIGIT
+                b"!#$%^'*+-.^_`|~"
+            )
         ):
             return False
     return b != b""
@@ -2421,8 +2422,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__header = line
 
     def _finishRequestBody(self, data):
-        self.allContentReceived()
         self._dataBuffer.append(data)
+        self.allContentReceived()
 
     def _maybeChooseTransferDecoder(self, header, data):
         """
