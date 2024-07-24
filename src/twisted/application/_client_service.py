@@ -324,7 +324,6 @@ def doAttemptConnection(
 def startWaiting(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
 ) -> WaitInProgress:
-    print("startWaiting")
     return buildWaitInProgress(c, s)
 
 
@@ -386,7 +385,7 @@ def initWhenConnected(
 def connectingStart(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, a: ConnectionAttempt
 ) -> None:
-    return None
+    ...
 
 
 @Connecting.transition(_ClientMachineProto.stop, Disconnecting)
@@ -407,7 +406,6 @@ def _connectionMade(
 ) -> None:
     s.failedAttempts = 0
     s._unawait(protocol._protocol)
-    return None
 
 
 @Connected.data_transition(_ClientMachineProto._connectionFailed, Waiting)
@@ -417,7 +415,7 @@ def _connectionFailed(
     ca: CurrentConnection,
     failure: Failure,
 ) -> None:
-    print("...failed?")
+    ...
 
 
 @Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
@@ -510,7 +508,7 @@ def whenConnected(
 def startWhenConnected(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
 ) -> None:
-    return None
+    ...
 
 
 @Connected.transition(_ClientMachineProto.stop, Disconnecting)
@@ -536,7 +534,7 @@ def _clientDisconnectedImpl(
     cc: CurrentConnection,
     failure: Failure,
 ) -> None:
-    return None
+    ...
 
 
 @Connected.self_transition(_ClientMachineProto.whenConnected)
@@ -600,7 +598,6 @@ def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred
 def restartDisco(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
 ) -> None:
-    print("disconnected while restarting")
     s.finishStopping()
 
 
