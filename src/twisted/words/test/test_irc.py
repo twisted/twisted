@@ -2158,8 +2158,7 @@ class ClientTests(IRCTestCase):
         Return the last IRC message in the transport buffer.
         """
         line = transport.value()
-        if isinstance(line, bytes):
-            line = line.decode("utf-8")
+        line = line.decode("utf-8")
         return line.split("\r\n")[-2]
 
     def test_away(self):
