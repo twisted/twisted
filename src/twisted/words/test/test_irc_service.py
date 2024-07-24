@@ -71,7 +71,7 @@ class IRCUserTests(IRCTestCase):
         """
         response = self.ircUser.transport.value()
         self.ircUser.transport.clear()
-        if bytes != str and isinstance(response, bytes):
+        if isinstance(response, bytes):
             response = response.decode("utf-8")
         response = response.splitlines()
         return [irc.parsemsg(r) for r in response]

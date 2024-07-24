@@ -2158,7 +2158,7 @@ class ClientTests(IRCTestCase):
         Return the last IRC message in the transport buffer.
         """
         line = transport.value()
-        if bytes != str and isinstance(line, bytes):
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
         return line.split("\r\n")[-2]
 
