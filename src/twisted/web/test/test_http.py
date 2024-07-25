@@ -2179,9 +2179,9 @@ class ParsingTests(unittest.TestCase):
             ]
         )
 
-    def test_invalidHeaderChars(self):
+    def test_invalidHeaderNameChars(self):
         """
-        A request with a header that contains invalid characters
+        A request with a header name that contains invalid characters
         is rejected with a 400 status code.
         """
         for header in [
@@ -2189,6 +2189,21 @@ class ParsingTests(unittest.TestCase):
             b"foo\x1bbar: baz",  # ESC byte
             b"Foo\vBar: baz",  # exotic whitespace
             b"foo\xe2\x80\xbdbar: baz",  # non-ASCII bytes
+        ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+            )
+
+    def test_invalidHeaderValueNUL(self):
+        """
+        A request with a header value that contains a NUL byte
+        is rejected with a 400 status code.
+        """
+        for header in [
+            b"x-foo: \x00",  # NUL byte
+            b"x-foo: a\x00",  # trailing NUL
+            b"x-foo: \x00baz",  # leading NUL
+            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
         ]:
             self.assertRequestRejected(
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
