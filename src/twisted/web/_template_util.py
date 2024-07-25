@@ -118,34 +118,6 @@ class Redirect(resource.Resource):
         return self
 
 
-# FIXME: This is totally broken, see https://twistedmatrix.com/trac/ticket/9838
-class ChildRedirector(Redirect):
-    isLeaf = False
-
-    def __init__(self, url):
-        # XXX is this enough?
-        if (
-            (url.find("://") == -1)
-            and (not url.startswith(".."))
-            and (not url.startswith("/"))
-        ):
-            raise ValueError(
-                (
-                    "It seems you've given me a redirect (%s) that is a child of"
-                    " myself! That's not good, it'll cause an infinite redirect."
-                )
-                % url
-            )
-        Redirect.__init__(self, url)
-
-    def getChild(self, name, request):
-        newUrl = self.url
-        if not newUrl.endswith("/"):
-            newUrl += "/"
-        newUrl += name
-        return ChildRedirector(newUrl)
-
-
 class ParentRedirect(resource.Resource):
     """
     Redirect to the nearest directory and strip any query string.
