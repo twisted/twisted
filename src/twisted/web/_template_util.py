@@ -92,7 +92,7 @@ def redirectTo(URL: bytes, request: IRequest) -> bytes:
     </body>
 </html>
 """ % {
-        b"url": URL
+        b"url": escape(URL.decode('utf-8')).encode('utf-8')
     }
     return content
 
