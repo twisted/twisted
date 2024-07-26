@@ -362,7 +362,7 @@ Restarting = machine.state("Restarting")
 Stopped = machine.state("Stopped")
 
 
-@Init.data_transition(_ClientMachineProto.start, Connecting)
+@Init.transition(_ClientMachineProto.start, Connecting)
 def InitStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
     ...
 
@@ -381,7 +381,7 @@ def initWhenConnected(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Connecting.data_transition(_ClientMachineProto.start, Connecting)
+@Connecting.transition(_ClientMachineProto.start, Connecting)
 def connectingStart(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, a: ConnectionAttempt
 ) -> None:
@@ -397,7 +397,7 @@ def connectingStop(
     return waited
 
 
-@Connecting.data_transition(_ClientMachineProto._connectionMade, Connected)
+@Connecting.transition(_ClientMachineProto._connectionMade, Connected)
 def _connectionMade(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -408,7 +408,7 @@ def _connectionMade(
     s._unawait(protocol._protocol)
 
 
-@Connected.data_transition(_ClientMachineProto._connectionFailed, Waiting)
+@Connected.transition(_ClientMachineProto._connectionFailed, Waiting)
 def _connectionFailed(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -418,7 +418,7 @@ def _connectionFailed(
     ...
 
 
-@Connecting.data_transition(_ClientMachineProto._connectionFailed, Waiting)
+@Connecting.transition(_ClientMachineProto._connectionFailed, Waiting)
 def _connectionFailed2(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -445,7 +445,7 @@ def _connectionFailed2(
         w.callback(failure)
 
 
-@Connecting.self_transition(_ClientMachineProto.whenConnected)
+@Connecting.transition(_ClientMachineProto.whenConnected)
 def whenConnectedWhileConnecting(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -469,7 +469,7 @@ def buildWaitInProgress(
     return WaitInProgress(s.clock.callLater(delay, c._reconnect))
 
 
-@Waiting.self_transition(_ClientMachineProto.start)
+@Waiting.transition(_ClientMachineProto.start)
 def start(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
 ) -> None:
@@ -487,14 +487,14 @@ def stop(
     return waited
 
 
-@Waiting.data_transition(_ClientMachineProto._reconnect, Connecting)
+@Waiting.transition(_ClientMachineProto._reconnect, Connecting)
 def _reconnect(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
 ) -> None:
     ...
 
 
-@Waiting.self_transition(_ClientMachineProto.whenConnected)
+@Waiting.transition(_ClientMachineProto.whenConnected)
 def whenConnected(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -504,7 +504,7 @@ def whenConnected(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Connected.self_transition(_ClientMachineProto.start)
+@Connected.transition(_ClientMachineProto.start)
 def startWhenConnected(
     c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
 ) -> None:
@@ -527,7 +527,7 @@ def stopWhileConnected(
     return waited
 
 
-@Connected.data_transition(_ClientMachineProto._clientDisconnected, Waiting)
+@Connected.transition(_ClientMachineProto._clientDisconnected, Waiting)
 def _clientDisconnectedImpl(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -537,7 +537,7 @@ def _clientDisconnectedImpl(
     ...
 
 
-@Connected.self_transition(_ClientMachineProto.whenConnected)
+@Connected.transition(_ClientMachineProto.whenConnected)
 def whenConnectedWhenConnected(
     c: _ClientMachineProto,
     s: _ClientServiceSharedCore,
@@ -592,7 +592,7 @@ def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred
     return s.waitForStop()
 
 
-@Restarting.data_transition(
+@Restarting.transition(
     _ClientMachineProto._clientDisconnected, Connecting_FactoryWithFailure
 )
 def restartDisco(
@@ -610,7 +610,7 @@ def rwc(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Stopped.data_transition(_ClientMachineProto.start, Connecting)
+@Stopped.transition(_ClientMachineProto.start, Connecting)
 def stoppedStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
     ...
 
