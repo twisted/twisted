@@ -341,13 +341,15 @@ jobs:
     - name: Report coverage
       run: |
           # Report for the job log.
-          {
-            echo '```'
-            coverage report --skip-covered --skip-empty
-            echo '```'
-          } >> $GITHUB_STEP_SUMMARY
           diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
           cat coverage-report.md >> $GITHUB_STEP_SUMMARY
+
+          {
+            echo '# Coverage Report'
+            echo '```'
+            coverage report --skip-covered --skip-empty --show-missing
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
 
     - name: Enforce diff coverage
       run: |
