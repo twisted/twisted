@@ -1031,7 +1031,7 @@ class Request:
 
         This method is not intended for users.
         """
-        cookieheaders = self.requestHeaders.getRawHeaders(b"cookie")
+        cookieheaders = self.requestHeaders.getRawHeaders(b"Cookie")
 
         if cookieheaders is None:
             return
@@ -1086,7 +1086,7 @@ class Request:
 
         # Argument processing
         args = self.args
-        ctype = self.requestHeaders.getRawHeaders(b"content-type")
+        ctype = self.requestHeaders.getRawHeaders(b"Content-Type")
         if ctype is not None:
             ctype = ctype[0]
 
@@ -1270,7 +1270,7 @@ class Request:
         """
         if self.finished:
             raise RuntimeError(
-                "Request.write called on a request after " "Request.finish was called."
+                "Request.write called on a request after Request.finish was called."
             )
 
         if self._disconnected:
@@ -1290,7 +1290,7 @@ class Request:
             # persistent connections.
             if (
                 (version == b"HTTP/1.1")
-                and (self.responseHeaders.getRawHeaders(b"content-length") is None)
+                and (self.responseHeaders.getRawHeaders(b"Content-Length") is None)
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
@@ -1298,14 +1298,14 @@ class Request:
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader(b"last-modified"):
+                if self.responseHeaders.hasHeader(b"Last-Modified"):
                     self._log.info(
                         "Warning: last-modified specified both in"
                         " header list and lastModified attribute."
                     )
                 else:
                     self.responseHeaders.setRawHeaders(
-                        b"last-modified", [datetimeToString(self.lastModified)]
+                        b"Last-Modified", [datetimeToString(self.lastModified)]
                     )
 
             if self.etag is not None:
@@ -1483,7 +1483,7 @@ class Request:
         @type url: L{bytes} or L{str}
         """
         self.setResponseCode(FOUND)
-        self.setHeader(b"location", url)
+        self.setHeader(b"Location", url)
 
     def setLastModified(self, when):
         """
@@ -1510,7 +1510,7 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modifiedSince = self.getHeader(b"if-modified-since")
+        modifiedSince = self.getHeader(b"If-Modified-Since")
         if modifiedSince:
             firstPart = modifiedSince.split(b";", 1)[0]
             try:
@@ -1544,7 +1544,7 @@ class Request:
         if etag:
             self.etag = etag
 
-        tags = self.getHeader(b"if-none-match")
+        tags = self.getHeader(b"If-None-Match")
         if tags:
             tags = tags.split()
             if (etag in tags) or (b"*" in tags):
@@ -1578,7 +1578,7 @@ class Request:
 
         @rtype: C{bytes}
         """
-        host = self.getHeader(b"host")
+        host = self.getHeader(b"Host")
         if host is not None:
             match = _hostHeaderExpression.match(host)
             if match is not None:
@@ -1626,7 +1626,7 @@ class Request:
             hostHeader = host
         else:
             hostHeader = b"%b:%d" % (host, port)
-        self.requestHeaders.setRawHeaders(b"host", [hostHeader])
+        self.requestHeaders.setRawHeaders(b"Host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
     @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
@@ -2595,7 +2595,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.gotLength(self.length)
         # Handle 'Expect: 100-continue' with automated 100 response code,
         # a simplistic implementation of RFC 2686 8.2.3:
-        expectContinue = req.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = req.requestHeaders.getRawHeaders(b"Expect")
         if (
             expectContinue
             and expectContinue[0].lower() == b"100-continue"
@@ -2620,7 +2620,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             must be closed in order to indicate the completion of the response
             to C{request}.
         """
-        connection = request.requestHeaders.getRawHeaders(b"connection")
+        connection = request.requestHeaders.getRawHeaders(b"Connection")
         if connection:
             tokens = [t.lower() for t in connection[0].split(b" ")]
         else:
@@ -2639,7 +2639,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         if version == b"HTTP/1.1":
             if b"close" in tokens:
-                request.responseHeaders.setRawHeaders(b"connection", [b"close"])
+                request.responseHeaders.setRawHeaders(b"Connection", [b"close"])
                 return False
             else:
                 return True
@@ -3037,7 +3037,7 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: i
             expected by L{combinedLogFormatter}.
         """
         host = (
-            self._request.requestHeaders.getRawHeaders(b"x-forwarded-for", [b"-"])[0]
+            self._request.requestHeaders.getRawHeaders(b"X-Forwarded-For", [b"-"])[0]
             .split(b",")[0]
             .strip()
         )

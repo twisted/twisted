@@ -478,7 +478,7 @@ class HTTPClientParser(HTTPParser):
             self.response._bodyDataFinished()
         else:
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
-                b"transfer-encoding"
+                b"Transfer-Encoding"
             )
             if transferEncodingHeaders:
                 # This could be a KeyError.  However, that would mean we do not
@@ -681,7 +681,7 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
 
     @see: U{https://datatracker.ietf.org/doc/html/rfc9110#section-8.6}
     """
-    headers = connHeaders.getRawHeaders(b"content-length")
+    headers = connHeaders.getRawHeaders(b"Content-Length")
     if headers is None:
         return None
 
@@ -781,7 +781,7 @@ class Request:
         return getattr(self._parsedURI, "toBytes", lambda: None)()
 
     def _writeHeaders(self, transport, TEorCL):
-        hosts = self.headers.getRawHeaders(b"host", ())
+        hosts = self.headers.getRawHeaders(b"Host", ())
         if len(hosts) != 1:
             raise BadHeaders("Exactly one Host header required")
 
@@ -1661,7 +1661,7 @@ class HTTP11ClientProtocol(Protocol):
             return
 
         reason = ConnectionDone("synthetic!")
-        connHeaders = self._parser.connHeaders.getRawHeaders(b"connection", ())
+        connHeaders = self._parser.connHeaders.getRawHeaders(b"Connection", ())
         if (
             (b"close" in connHeaders)
             or self._state != "QUIESCENT"

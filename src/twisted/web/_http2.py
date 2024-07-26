@@ -972,7 +972,7 @@ class H2Stream:
                 self._request.gotLength(None)
 
         self._request.parseCookies()
-        expectContinue = self._request.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = self._request.requestHeaders.getRawHeaders(b"Expect")
         if expectContinue and expectContinue[0].lower() == b"100-continue":
             self._send100Continue()
 
