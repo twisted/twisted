@@ -1,6 +1,3 @@
-default_language_version:
-  python: python3.8  # Set this to the earliest supported Python version
-
 repos:
 
   - repo: https://github.com/pycqa/isort
@@ -28,8 +25,6 @@ repos:
     rev: v4.6.0
     hooks:
       - id: check-case-conflict
-      # Disabled due to false positives. See https://github.com/pre-commit/pre-commit-hooks/issues/1076
-      # - id: check-docstring-first
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
