@@ -1727,7 +1727,7 @@ class ParsingTests(unittest.TestCase):
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
 
-    def test_invalidNonAsciiMethod(self):
+    def test_invalidMethodNonAscii(self):
         """
         When client sends invalid HTTP method containing
         non-ascii characters HTTP 400 'Bad Request' status will be returned.
@@ -1744,6 +1744,114 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
+
+    def test_invalidRequestLineExtraSpaces(self):
+        """
+        The three components of the request line must not be
+        separated by anything other than a single SP character,
+        or a 400 status results.
+        """
+        for requestLine in [
+            b"GET  / HTTP/1.0",
+            b"GET /  HTTP/1.0",
+            b"GET\t/ HTTP/1.0",
+            b"GET /\vHTTP/1.1",
+            b"GET / HTTP/1.1 ",
+            b" GET / HTTP/1.1",
+        ]:
+            self.assertRequestRejected(
+                [requestLine, b"Content-Length: 0", b"Host: foo.example", b"", b""]
+            )
+
+    def test_invalidMethodEmpty(self):
+        """
+        A request with an empty method field is rejected with a
+        400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b" /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidMethodNUL(self):
+        """
+        A request with a method that contains a NUL character
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET\0 /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidVersion(self):
+        """
+        A request with an invalid HTTP version number is rejected
+        with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"HEAD /foo HTTP/1.2",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetEmpty(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST  HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetNUL(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\0 HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetWhitespace(self):
+        """
+        A request with a request-target (URI) that contains whitespace
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\t/bar HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
 
     def test_basicAuth(self):
         """
@@ -1945,8 +2053,8 @@ class ParsingTests(unittest.TestCase):
     def test_invalidHeaderOnlyColon(self):
         """
         C{HTTPChannel} rejects a request with an empty header name (i.e.
-        nothing before the colon).  It produces a 400 (Bad Request) response is
-        generated and closes the connection.
+        nothing before the colon).  It produces a 400 (Bad Request) response
+        and closes the connection.
         """
         self.assertRequestRejected(
             [
@@ -1972,6 +2080,21 @@ class ParsingTests(unittest.TestCase):
                 b"",
             ]
         )
+
+    def test_invalidHeaderChars(self):
+        """
+        A request with a header that contains invalid characters
+        is rejected with a 400 status code.
+        """
+        for header in [
+            b"foo\x00bar: baz",  # NUL byte
+            b"foo\x1bbar: baz",  # ESC byte
+            b"Foo\vBar: baz",  # exotic whitespace
+            b"foo\xe2\x80\xbdbar: baz",  # non-ASCII bytes
+        ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+            )
 
     def test_headerLimitPerRequest(self):
         """
