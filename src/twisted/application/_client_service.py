@@ -362,9 +362,7 @@ Restarting = machine.state("Restarting")
 Stopped = machine.state("Stopped")
 
 
-@Init.transition(_ClientMachineProto.start, Connecting)
-def InitStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
-    ...
+Init.edge(_ClientMachineProto.start, Connecting)
 
 
 @Init.transition(_ClientMachineProto.stop, Stopped)
@@ -381,11 +379,7 @@ def initWhenConnected(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Connecting.transition(_ClientMachineProto.start, Connecting)
-def connectingStart(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, a: ConnectionAttempt
-) -> None:
-    ...
+Connecting.edge(_ClientMachineProto.start, Connecting)
 
 
 @Connecting.transition(_ClientMachineProto.stop, Disconnecting)
@@ -408,14 +402,7 @@ def _connectionMade(
     s._unawait(protocol._protocol)
 
 
-@Connected.transition(_ClientMachineProto._connectionFailed, Waiting)
-def _connectionFailed(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    ca: CurrentConnection,
-    failure: Failure,
-) -> None:
-    ...
+Connected.edge(_ClientMachineProto._connectionFailed, Waiting)
 
 
 @Connecting.transition(_ClientMachineProto._connectionFailed, Waiting)
@@ -469,11 +456,7 @@ def buildWaitInProgress(
     return WaitInProgress(s.clock.callLater(delay, c._reconnect))
 
 
-@Waiting.transition(_ClientMachineProto.start)
-def start(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
-) -> None:
-    ...
+Waiting.loop(_ClientMachineProto.start)
 
 
 @Waiting.transition(_ClientMachineProto.stop, Stopped)
@@ -487,11 +470,7 @@ def stop(
     return waited
 
 
-@Waiting.transition(_ClientMachineProto._reconnect, Connecting)
-def _reconnect(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
-) -> None:
-    ...
+Waiting.edge(_ClientMachineProto._reconnect, Connecting)
 
 
 @Waiting.transition(_ClientMachineProto.whenConnected)
@@ -504,11 +483,7 @@ def whenConnected(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Connected.transition(_ClientMachineProto.start)
-def startWhenConnected(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, cc: CurrentConnection
-) -> None:
-    ...
+Connected.loop(_ClientMachineProto.start)
 
 
 @Connected.transition(_ClientMachineProto.stop, Disconnecting)
@@ -527,14 +502,7 @@ def stopWhileConnected(
     return waited
 
 
-@Connected.transition(_ClientMachineProto._clientDisconnected, Waiting)
-def _clientDisconnectedImpl(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    cc: CurrentConnection,
-    failure: Failure,
-) -> None:
-    ...
+Connected.edge(_ClientMachineProto._clientDisconnected, Waiting)
 
 
 @Connected.transition(_ClientMachineProto.whenConnected)
@@ -547,9 +515,7 @@ def whenConnectedWhenConnected(
     return succeed(cc.protocol._protocol)
 
 
-@Disconnecting.transition(_ClientMachineProto.start, Restarting)
-def disconnectedRestart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
-    ...
+Disconnecting.edge(_ClientMachineProto.start, Restarting)
 
 
 @Disconnecting.transition(_ClientMachineProto.stop, Disconnecting)
@@ -582,9 +548,7 @@ def discoWhenConn(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Restarting.transition(_ClientMachineProto.start, Restarting)
-def restartStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
-    ...
+Restarting.edge(_ClientMachineProto.start, Restarting)
 
 
 @Restarting.transition(_ClientMachineProto.stop, Disconnecting)
@@ -610,9 +574,7 @@ def rwc(
     return awaitingConnection(s, failAfterFailures)
 
 
-@Stopped.transition(_ClientMachineProto.start, Connecting)
-def stoppedStart(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> None:
-    ...
+Stopped.edge(_ClientMachineProto.start, Connecting)
 
 
 @Stopped.transition(_ClientMachineProto.stop, Stopped)
