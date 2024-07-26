@@ -400,7 +400,7 @@ class DeferredResourceTests(SynchronousTestCase):
         Legitimate URLs are fully interpolated in the `redirectTo` response body without transformation
         """
         request = DummyRequest([b""])
-        html = redirectTo(b'https://twisted.org/', request)
+        html = redirectTo(b"https://twisted.org/", request)
         expected = b"""
 <html>
     <head>
@@ -410,7 +410,7 @@ class DeferredResourceTests(SynchronousTestCase):
     <a href=\"https://twisted.org/\">click here</a>
     </body>
 </html>
-""" 
+"""
         self.assertEqual(html, expected)
 
     def test_maliciousRedirect(self) -> None:
@@ -418,7 +418,9 @@ class DeferredResourceTests(SynchronousTestCase):
         Malicious URLs are HTML-escaped before interpolating them in the `redirectTo` response body
         """
         request = DummyRequest([b""])
-        html = redirectTo(b'https://twisted.org/"><script>alert(document.location)</script>', request)
+        html = redirectTo(
+            b'https://twisted.org/"><script>alert(document.location)</script>', request
+        )
         expected = b"""
 <html>
     <head>
@@ -428,5 +430,5 @@ class DeferredResourceTests(SynchronousTestCase):
     <a href=\"https://twisted.org/&quot;&gt;&lt;script&gt;alert(document.location)&lt;/script&gt;\">click here</a>
     </body>
 </html>
-""" 
+"""
         self.assertEqual(html, expected)
