@@ -27,6 +27,9 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
+      - id: check-case-conflict
+      # Disabled due to false positives. See https://github.com/pre-commit/pre-commit-hooks/issues/1076
+      # - id: check-docstring-first
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
