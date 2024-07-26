@@ -38,14 +38,13 @@ class ComplexData(Data):
         request.setLastModified(123)
         request.setETag(b"xykjlk")
         _ = request.getRequestHostname()
-        request.setHost(b"example.com")
+        request.setHost(b"example.com", 80)
         return Data.render_GET(self, request)
 
 
 def http11_server_empty_request(resource, benchmark):
     """Benchmark of handling an bodyless HTTP/1.1 request."""
-    data = Data(b"This is a result hello hello" * 4, b"text/plain")
-    factory = server.Site(data)
+    factory = server.Site(resource)
 
     def go():
         transport = StringTransport()
