@@ -4,7 +4,7 @@ default_language_version:
 repos:
 
   - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
+    rev: 5.13.2
     hooks:
       - id: isort
 
