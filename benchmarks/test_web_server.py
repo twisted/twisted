@@ -59,7 +59,9 @@ User-Agent: XXX
 Time: XXXX
 Content-Length: 0
 
-""".replace(b"\n", b"\r\n")
+""".replace(
+                b"\n", b"\r\n"
+            )
         )
         assert b"200 OK" in transport.io.getvalue()
 
@@ -117,7 +119,9 @@ Host: example.com
 user-agent: XXX
 Transfer-encoding: chunked
 
-""".replace(b"\n", b"\r\n")
+""".replace(
+            b"\n", b"\r\n"
+        )
         + b"d\r\nHello, world!\r\n" * 100
         + b"0\r\n\r\n"
     )
@@ -177,7 +181,9 @@ GET / HTTP/1.1
 host: example.com
 accept: *
 
-""".replace(b"\n", b"\r\n")
+""".replace(
+                b"\n", b"\r\n"
+            )
         )
         response = transport.io.getvalue()
         assert response.startswith(b"HTTP/1.1 200 ")
