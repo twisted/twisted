@@ -320,9 +320,9 @@ class Versioned:
                     if slot in dct:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
-                dct[
-                    f"{reflect.qual(base)}.persistenceVersion"
-                ] = base.persistenceVersion
+                dct[f"{reflect.qual(base)}.persistenceVersion"] = (
+                    base.persistenceVersion
+                )
         return dct
 
     def versionUpgrade(self):
@@ -353,9 +353,9 @@ class Versioned:
                     highestBase = base
                     highestVersion = base.persistenceVersion
             if highestBase:
-                self.__dict__[
-                    "%s.persistenceVersion" % reflect.qual(highestBase)
-                ] = pver
+                self.__dict__["%s.persistenceVersion" % reflect.qual(highestBase)] = (
+                    pver
+                )
         for base in bases:
             # ugly hack, but it's what the user expects, really
             if (

@@ -212,12 +212,12 @@ class Headers:
         )
 
     @overload
-    def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]:
-        ...
+    def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]: ...
 
     @overload
-    def getRawHeaders(self, name: AnyStr, default: _T) -> Union[Sequence[AnyStr], _T]:
-        ...
+    def getRawHeaders(
+        self, name: AnyStr, default: _T
+    ) -> Union[Sequence[AnyStr], _T]: ...
 
     def getRawHeaders(
         self, name: AnyStr, default: Optional[_T] = None

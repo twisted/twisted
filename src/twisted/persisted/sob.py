@@ -21,7 +21,6 @@ from twisted.python import log, runtime
 
 
 class IPersistable(Interface):
-
     """An object which can be saved in several formats to a file"""
 
     def setStyle(style):

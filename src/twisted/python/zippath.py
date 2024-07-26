@@ -134,8 +134,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
 
         def parents(
             self,
-        ) -> Iterable[Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]]:
-            ...
+        ) -> Iterable[Union[ZipPath[_ZipStr, _ArchiveStr], ZipArchive[_ZipStr]]]: ...
 
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, _ArchiveStr]:
         """

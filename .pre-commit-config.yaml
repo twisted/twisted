@@ -1,3 +1,6 @@
+default_language_version:
+  python: python3.8  # Set this to the earliest supported Python version
+
 repos:
 
   - repo: https://github.com/pycqa/isort
@@ -7,7 +10,7 @@ repos:
 
   # See https://black.readthedocs.io/en/stable/integrations/source_version_control.html
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.9.1
+    rev: 24.4.2
     hooks:
       - id: black
 

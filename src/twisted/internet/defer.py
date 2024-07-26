@@ -158,8 +158,7 @@ def execute(
 @overload
 def maybeDeferred(
     f: Callable[_P, Deferred[_T]], *args: _P.args, **kwargs: _P.kwargs
-) -> "Deferred[_T]":
-    ...
+) -> "Deferred[_T]": ...
 
 
 @overload
@@ -167,15 +166,13 @@ def maybeDeferred(
     f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
     *args: _P.args,
     **kwargs: _P.kwargs,
-) -> "Deferred[_T]":
-    ...
+) -> "Deferred[_T]": ...
 
 
 @overload
 def maybeDeferred(
     f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
-) -> "Deferred[_T]":
-    ...
+) -> "Deferred[_T]": ...
 
 
 def maybeDeferred(
@@ -554,8 +551,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[_SelfResultT, _P], Failure],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addCallback(
@@ -566,8 +562,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addCallback(
@@ -575,8 +570,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[_SelfResultT, _P], Union[Failure, _NextResultT]],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addCallback(
@@ -584,8 +578,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[_SelfResultT, _P], Deferred[_NextResultT]],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addCallback(
@@ -596,8 +589,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addCallback(
@@ -605,8 +597,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[_SelfResultT, _P], _NextResultT],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     def addCallback(self, callback: Any, *args: Any, **kwargs: Any) -> "Deferred[Any]":
         """
@@ -625,8 +616,7 @@ class Deferred(Awaitable[_SelfResultT]):
         errback: Callable[Concatenate[Failure, _P], Deferred[_NextResultT]],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> "Deferred[Union[_SelfResultT, _NextResultT]]":
-        ...
+    ) -> "Deferred[Union[_SelfResultT, _NextResultT]]": ...
 
     @overload
     def addErrback(
@@ -634,8 +624,7 @@ class Deferred(Awaitable[_SelfResultT]):
         errback: Callable[Concatenate[Failure, _P], Failure],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> "Deferred[Union[_SelfResultT]]":
-        ...
+    ) -> "Deferred[Union[_SelfResultT]]": ...
 
     @overload
     def addErrback(
@@ -643,8 +632,7 @@ class Deferred(Awaitable[_SelfResultT]):
         errback: Callable[Concatenate[Failure, _P], _NextResultT],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> "Deferred[Union[_SelfResultT, _NextResultT]]":
-        ...
+    ) -> "Deferred[Union[_SelfResultT, _NextResultT]]": ...
 
     def addErrback(self, errback: Any, *args: Any, **kwargs: Any) -> "Deferred[Any]":
         """
@@ -663,8 +651,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[Union[_SelfResultT, Failure], _P], Failure],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -675,8 +662,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -686,8 +672,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -697,8 +682,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -709,8 +693,7 @@ class Deferred(Awaitable[_SelfResultT]):
         ],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -718,8 +701,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[Union[_SelfResultT, Failure], _P], _NextResultT],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_NextResultT]:
-        ...
+    ) -> Deferred[_NextResultT]: ...
 
     @overload
     def addBoth(
@@ -727,8 +709,7 @@ class Deferred(Awaitable[_SelfResultT]):
         callback: Callable[Concatenate[_T, _P], _T],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_SelfResultT]:
-        ...
+    ) -> Deferred[_SelfResultT]: ...
 
     def addBoth(self, callback: Any, *args: Any, **kwargs: Any) -> "Deferred[Any]":
         """
@@ -1422,8 +1403,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[True],
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[_DeferredListSingleResultT[_SelfResultT]]:
-        ...
+    ) -> Deferred[_DeferredListSingleResultT[_SelfResultT]]: ...
 
     @overload
     def _DeferredList(
@@ -1431,8 +1411,7 @@ if TYPE_CHECKING:
         fireOnOneCallback: Literal[False] = False,
         fireOnOneErrback: bool = False,
         consumeErrors: bool = False,
-    ) -> Deferred[_DeferredListResultListT[_SelfResultT]]:
-        ...
+    ) -> Deferred[_DeferredListResultListT[_SelfResultT]]: ...
 
     def _DeferredList(
         deferredList: Iterable[Deferred[_SelfResultT]],
@@ -1442,8 +1421,7 @@ if TYPE_CHECKING:
     ) -> Union[
         Deferred[_DeferredListSingleResultT[_SelfResultT]],
         Deferred[_DeferredListResultListT[_SelfResultT]],
-    ]:
-        ...
+    ]: ...
 
     DeferredList = _DeferredList
 
@@ -2304,8 +2282,7 @@ class _ConcurrencyPrimitive(ABC):
         f: Callable[_P, Deferred[_T]],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_T]:
-        ...
+    ) -> Deferred[_T]: ...
 
     @overload
     def run(
@@ -2314,14 +2291,12 @@ class _ConcurrencyPrimitive(ABC):
         f: Callable[_P, Coroutine[Deferred[Any], Any, _T]],
         *args: _P.args,
         **kwargs: _P.kwargs,
-    ) -> Deferred[_T]:
-        ...
+    ) -> Deferred[_T]: ...
 
     @overload
     def run(
         self: Self, /, f: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
-    ) -> Deferred[_T]:
-        ...
+    ) -> Deferred[_T]: ...
 
     def run(
         self: Self,

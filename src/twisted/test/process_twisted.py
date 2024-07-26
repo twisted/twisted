@@ -1,6 +1,5 @@
 """A process that reads from stdin and out using Twisted."""
 
-
 # Twisted Preamble
 # This makes sure that users don't have to set up their environment
 # specially in order to run these programs from bin/.
