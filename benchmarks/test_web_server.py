@@ -68,7 +68,7 @@ Content-Length: 0
     benchmark(go)
 
 
-def test_http1_server_empty_request(benchmark):
+def test_http11_server_empty_request(benchmark):
     """Benchmark just returning some data."""
     data = Data(b"This is a result hello hello" * 4, b"text/plain")
     http11_server_empty_request(data, benchmark)
