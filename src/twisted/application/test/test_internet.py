@@ -732,6 +732,13 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(
             self.successResultOf(awaitingProtocol), cq.applicationProtocols[0]
         )
+        self.assertIdentical(
+            cq.constructedProtocols[0]._protocol, cq.applicationProtocols[0]
+        )
+        self.assertIn(
+            str(cq.applicationProtocols[0]),
+            str(cq.constructedProtocols[0]),
+        )
 
     def test_clientConnectionFailed(self):
         """
