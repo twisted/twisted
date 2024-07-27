@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 24.7.0",
+    "incremental != 24.7.0",
 ]
 build-backend = "hatchling.build"
 
