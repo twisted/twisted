@@ -276,22 +276,96 @@ jobs:
       with:
         limit-access-to-actor: true
 
-    - name: Prepare coverage
+    - name: Prepare coverage results
       if: ${{ !cancelled() && !matrix.skip-coverage }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
-        # The XML is generate to be used with 3rd party tools like diff-cover.
         python -m coverage combine
         python -m coverage xml -o coverage.xml -i
-        python -m coverage report --skip-covered
 
-    - uses: codecov/codecov-action@v3
+        # It is important to keep the unique names for the coverage files
+        # so that when uploaded to the same artifact, they don't overlap.
+        # We don't combine the files yet.
+        # The files from all jobs will be combined later.
+        # We still do a initial combine for each job as otherwise
+        # we wil end up with many files and it will take a long time
+        # to upload/download/combine them.
+        mv .coverage .coverage-job-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+
+    - name: Store coverage file
+      if: ${{ !cancelled() && !matrix.skip-coverage }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+        path: .coverage-job-*
+
+    - name: Publish to codecov.io
+      uses: codecov/codecov-action@v3
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
+
+
+  coverage-report:
+    name: Coverage report
+    runs-on: ubuntu-latest
+    if: always()  # Always run the coverage report, even when the tests fail.
+    needs:
+      - testing  # Code coverage only needs to wait for test jobs.
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade coverage[toml] diff_cover
+
+    - name: Download coverage reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: coverage-*
+        merge-multiple: true
+        path: .
+
+    - name: Prepare coverage
+      run: |
+          coverage combine .coverage-job-*
+          # XML is needed for the diff-cover.
+          coverage xml
+
+    - name: Report coverage
+      run: |
+          # Report for the job log.
+          diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
+          cat coverage-report.md >> $GITHUB_STEP_SUMMARY
+
+          {
+            echo '# Coverage Report'
+            echo '```'
+            coverage report --skip-covered --skip-empty --show-missing
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+    - name: Enforce diff coverage
+      run: |
+          diff-cover --fail-under=100 --compare-branch origin/trunk coverage.xml
+
+    - name: Generate HTML report on failure
+      if: ${{ failure() }}
+      run: |
+          coverage html --skip-covered --skip-empty
+
+    - name: Upload HTML report on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-report
+        path: htmlcov
 
 
   benchmarks:
@@ -310,7 +384,7 @@ jobs:
         # This is why it's best not to configure the default
         # Python version here,
         # but rather have an explicit Python version.
-        # The PRs that are changing the Python version can
+        # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
 
@@ -478,6 +552,7 @@ jobs:
       - apidocs
       - static-checks
       - release-publish
+      - coverage-report
     steps:
       - name: Require all successes
         shell: python
