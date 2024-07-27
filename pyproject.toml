@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
 ]
 build-backend = "hatchling.build"
 
@@ -33,7 +33,7 @@ classifiers = [
 dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
     "Automat @ git+https://github.com/glyph/automat.git@1d5732b1117b143b73b51f0b2b932c6fa59f0f3b",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
@@ -160,9 +160,7 @@ allow-direct-references = true
 
 
 [tool.hatch.version]
-source = "code"
-path = "src/twisted/__init__.py"
-search-paths = ["src"]
+source = "incremental"
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/x-rst"
