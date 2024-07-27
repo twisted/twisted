@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from random import random as _goodEnoughRandom
-from typing import Callable, Protocol as TypingProtocol, TypeVar
+from typing import Callable, Optional, Protocol as TypingProtocol, TypeVar, Union
 
 from zope.interface import implementer
 
@@ -33,7 +33,7 @@ from twisted.python.failure import Failure
 T = TypeVar("T")
 
 
-def _maybeGlobalReactor(maybeReactor: T | None) -> T:
+def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
     """
     @return: the argument, or the global reactor if the argument is L{None}.
     """
@@ -71,7 +71,7 @@ class _Client(TypingProtocol):
         The current connection attempt failed.
         """
 
-    def _reconnect(self, failure: Failure | None = None) -> None:
+    def _reconnect(self, failure: Optional[Failure] = None) -> None:
         """
         The wait between connection attempts is done.
         """
@@ -82,7 +82,7 @@ class _Client(TypingProtocol):
         """
 
     def whenConnected(
-        self, /, failAfterFailures: int | None = None
+        self, /, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
         """
         Retrieve the currently-connected L{Protocol}, or the next one to
@@ -173,7 +173,7 @@ class _DisconnectFactory:
         self._protocolFactory = protocolFactory
         self._protocolDisconnected = protocolDisconnected
 
-    def buildProtocol(self, addr: IAddress) -> IProtocol | None:
+    def buildProtocol(self, addr: IAddress) -> Optional[IProtocol]:
         """
         Create a L{_ReconnectingProtocolProxy} with the disconnect-notification
         callback we were called with.
@@ -222,11 +222,11 @@ class _Core:
     factory: IProtocolFactory
     timeoutForAttempt: Callable[[int], float]
     clock: IReactorTime
-    prepareConnection: Callable[[IProtocol], object] | None
+    prepareConnection: Optional[Callable[[IProtocol], object]]
 
     # internal state
     stopWaiters: list[Deferred[None]] = field(default_factory=list)
-    awaitingConnected: list[tuple[Deferred[IProtocol], int | None]] = field(
+    awaitingConnected: list[tuple[Deferred[IProtocol], Optional[int]]] = field(
         default_factory=list
     )
 
@@ -237,7 +237,7 @@ class _Core:
         self.stopWaiters.append(Deferred())
         return self.stopWaiters[-1]
 
-    def unawait(self, value: IProtocol | Failure) -> None:
+    def unawait(self, value: Union[IProtocol, Failure]) -> None:
         self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
             w.callback(value)
@@ -280,7 +280,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         return protocol
 
     def attemptConnection(
-        c: _Client, s: _Core, failure: Failure | None = None
+        c: _Client, s: _Core, failure: Optional[Failure] = None
     ) -> Deferred[_ReconnectingProtocolProxy]:
         factoryProxy = _DisconnectFactory(s.factory, c._clientDisconnected)
         connecting: Deferred[IProtocol] = s.endpoint.connect(factoryProxy)
@@ -356,7 +356,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         @param failure: the Failure to fire the L{Deferred}s with.
         """
         ready = []
-        notReady: list[tuple[Deferred[IProtocol], int | None]] = []
+        notReady: list[tuple[Deferred[IProtocol], Optional[int]]] = []
         for w, remaining in s.awaitingConnected:
             if remaining is None:
                 notReady.append((w, remaining))
@@ -389,7 +389,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         c: _Client,
         s: _Core,
         protocol: _ReconnectingProtocolProxy,
-        failAfterFailures: int | None = None,
+        failAfterFailures: Optional[int] = None,
     ) -> Deferred[IProtocol]:
         return succeed(protocol._protocol)
 
@@ -410,19 +410,19 @@ def makeMachine() -> Callable[[_Core], _Client]:
     @pep614(Restarting.to(Restarting).upon(_Client.whenConnected))
     @pep614(Disconnecting.to(Disconnecting).upon(_Client.whenConnected))
     def awaitingConnection(
-        c: _Client, s: _Core, failAfterFailures: int | None = None
+        c: _Client, s: _Core, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
         result: Deferred[IProtocol] = Deferred()
         s.awaitingConnected.append((result, failAfterFailures))
         return result
 
     @pep614(Restarting.to(Connecting).upon(_Client._clientDisconnected))
-    def restartDisco(c: _Client, s: _Core, failure: Failure | None = None) -> None:
+    def restartDisco(c: _Client, s: _Core, failure: Optional[Failure] = None) -> None:
         s.finishStopping()
 
     @pep614(Stopped.to(Stopped).upon(_Client.whenConnected))
     def whenConnectedWhenStopped(
-        c: _Client, s: _Core, failAfterFailures: int | None = None
+        c: _Client, s: _Core, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
         return fail(CancelledError())
 
@@ -496,9 +496,9 @@ class ClientService(Service):
         self,
         endpoint: IStreamClientEndpoint,
         factory: IProtocolFactory,
-        retryPolicy: Callable[[int], float] | None = None,
-        clock: IReactorTime | None = None,
-        prepareConnection: Callable[[IProtocol], object] | None = None,
+        retryPolicy: Optional[Callable[[int], float]] = None,
+        clock: Optional[IReactorTime] = None,
+        prepareConnection: Optional[Callable[[IProtocol], object]] = None,
     ):
         """
         @param endpoint: A L{stream client endpoint
@@ -553,7 +553,7 @@ class ClientService(Service):
         )
 
     def whenConnected(
-        self, failAfterFailures: int | None = None
+        self, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
         """
         Retrieve the currently-connected L{Protocol}, or the next one to
