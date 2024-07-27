@@ -513,7 +513,12 @@ class ClientServiceTests(SynchronousTestCase):
     """
 
     def makeReconnector(
-        self, fireImmediately=True, startService=True, protocolType=Protocol, **kw
+        self,
+        fireImmediately=True,
+        startService=True,
+        protocolType=Protocol,
+        refuseConnections=False,
+        **kw,
     ):
         """
         Create a L{ClientService} along with a L{ConnectInformation} indicating
@@ -558,6 +563,8 @@ class ClientServiceTests(SynchronousTestCase):
             protocol = protocolType
 
             def buildProtocol(self, addr):
+                if refuseConnections:
+                    return None
                 result = super().buildProtocol(addr)
                 applicationProtocols.append(result)
                 return result
@@ -739,6 +746,10 @@ class ClientServiceTests(SynchronousTestCase):
             str(cq.applicationProtocols[0]),
             str(cq.constructedProtocols[0]),
         )
+        self.assertIn(
+            "RememberingFactory",
+            str(cq.passedFactories[0]),
+        )
 
     def test_clientConnectionFailed(self):
         """
@@ -777,6 +788,25 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(
             self.successResultOf(service.whenConnected()), cq.applicationProtocols[1]
         )
+
+    def test_clientConnectionRefused(self) -> None:
+        """
+        When the client factory refuses connections by returning None from
+        buildProtocol, the factory keeps attempting new connections.
+        """
+        clock = Clock()
+        cq, service = self.makeReconnector(
+            clock=clock, fireImmediately=False, refuseConnections=True
+        )
+        self.assertEqual(len(cq.connectQueue), 1)
+        cq.connectQueue[0].callback(None)
+        self.assertEqual(len(cq.connectQueue), 1)
+        whenConnected = service.whenConnected()
+        self.assertNoResult(whenConnected)
+        whenConnected.addErrback(lambda ignored: ignored.trap(CancelledError))
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        self.assertEqual(len(cq.connectQueue), 2)
+        cq.connectQueue[1].callback(None)
 
     def test_clientConnectionLostWhileStopping(self):
         """
