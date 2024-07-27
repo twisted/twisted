@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from random import random as _goodEnoughRandom
-from typing import TYPE_CHECKING, Callable, Protocol as TypingProtocol, TypeVar
+from typing import Callable, Protocol as TypingProtocol, TypeVar
 
 from zope.interface import implementer
 
@@ -25,6 +25,7 @@ from twisted.internet.interfaces import (
     IProtocolFactory,
     IReactorTime,
     IStreamClientEndpoint,
+    ITransport,
 )
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -44,7 +45,7 @@ def _maybeGlobalReactor(maybeReactor: T | None) -> T:
         return maybeReactor
 
 
-class _ClientMachineProto(TypingProtocol):
+class _Client(TypingProtocol):
     def start(self) -> None:
         """
         Start this L{ClientService}, initiating the connection retry loop.
@@ -70,7 +71,7 @@ class _ClientMachineProto(TypingProtocol):
         The current connection attempt failed.
         """
 
-    def _reconnect(self) -> None:
+    def _reconnect(self, failure: Failure | None = None) -> None:
         """
         The wait between connection attempts is done.
         """
@@ -81,7 +82,7 @@ class _ClientMachineProto(TypingProtocol):
         """
 
     def whenConnected(
-        self, failAfterFailures: int | None = None
+        self, /, failAfterFailures: int | None = None
     ) -> Deferred[IProtocol]:
         """
         Retrieve the currently-connected L{Protocol}, or the next one to
@@ -132,6 +133,10 @@ class _ReconnectingProtocolProxy:
         """
         self._protocol = protocol
         self._lostNotification = lostNotification
+
+    def makeConnection(self, transport: ITransport) -> None:
+        self._transport = transport
+        self._protocol.makeConnection(transport)
 
     def connectionLost(self, reason: Failure) -> None:
         """
@@ -207,9 +212,9 @@ _deinterface(_ReconnectingProtocolProxy)
 
 
 @dataclass
-class _ClientServiceSharedCore:
+class _Core:
     """
-    shared for ClientService
+    Shared core for ClientService state machine.
     """
 
     # required parameters
@@ -226,62 +231,19 @@ class _ClientServiceSharedCore:
     )
 
     failedAttempts: int = 0
-
     log: Logger = Logger()
 
     def waitForStop(self) -> Deferred[None]:
         self.stopWaiters.append(Deferred())
         return self.stopWaiters[-1]
 
-    def attemptConnection(self, c: _ClientMachineProto) -> ConnectionAttempt:
-        factoryProxy = _DisconnectFactory(self.factory, c._clientDisconnected)
-        connecting: Deferred[IProtocol] = self.endpoint.connect(factoryProxy)
-        # endpoint.connect() is actually generic on the type of the protocol,
-        # but this is not expressible via zope.interface, so we have to cast
-        # https://github.com/Shoobx/mypy-zope/issues/95
-        connectingProxy: Deferred[
-            _ReconnectingProtocolProxy
-        ] = connecting  # type:ignore[assignment]
-        (
-            connectingProxy.addCallback(self._runPrepareConnection)
-            .addCallback(c._connectionMade)
-            .addErrback(c._connectionFailed)
-        )
-        return ConnectionAttempt(connectingProxy)
-
-    def _runPrepareConnection(
-        self, protocol: _ReconnectingProtocolProxy, /
-    ) -> Deferred[_ReconnectingProtocolProxy]:
-        """
-        Run any C{prepareConnection} callback with the connected protocol,
-        ignoring its return value but propagating any failure.
-
-        @param protocol: The protocol of the connection.
-        @type protocol: L{IProtocol}
-
-        @return: Either:
-
-            - A L{Deferred} that succeeds with the protocol when the
-              C{prepareConnection} callback has executed successfully.
-
-            - A L{Deferred} that fails when the C{prepareConnection} callback
-              throws or returns a failed L{Deferred}.
-
-            - The protocol, when no C{prepareConnection} callback is defined.
-        """
-        if self.prepareConnection is not None:
-            return maybeDeferred(self.prepareConnection, protocol).addCallback(
-                lambda _: protocol
-            )
-        return succeed(protocol)
-
-    def _unawait(self, value: IProtocol | Failure) -> None:
+    def unawait(self, value: IProtocol | Failure) -> None:
         self.awaitingConnected, waiting = [], self.awaitingConnected
         for w, remaining in waiting:
             w.callback(value)
 
     def cancelConnectWaiters(self) -> None:
-        self._unawait(Failure(CancelledError()))
+        self.unawait(Failure(CancelledError()))
 
     def finishStopping(self) -> None:
         self.stopWaiters, waiting = [], self.stopWaiters
@@ -289,306 +251,178 @@ class _ClientServiceSharedCore:
             w.callback(None)
 
 
-machine = TypifiedBuilder(_ClientMachineProto, _ClientServiceSharedCore)
-
-
-def awaitingConnection(
-    s: _ClientServiceSharedCore, faf: int | None
-) -> Deferred[IProtocol]:
-    result: Deferred[IProtocol] = Deferred()
-    s.awaitingConnected.append((result, faf))
-    return result
-
-
-@dataclass
-class ConnectionAttempt:
-    connectionInProgress: Deferred[_ReconnectingProtocolProxy]
-
-
-@dataclass
-class WaitInProgress:
-    retryCall: IDelayedCall
-
-
-@dataclass
-class CurrentConnection:
-    protocol: _ReconnectingProtocolProxy
-
-
-def doAttemptConnection(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
-) -> ConnectionAttempt:
-    return s.attemptConnection(c)
-
-
-def startWaiting(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
-) -> WaitInProgress:
-    return buildWaitInProgress(c, s)
-
-
-def saveCurrentConnection(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    protocol: _ReconnectingProtocolProxy,
-) -> CurrentConnection:
-    s.failedAttempts = 0
-    s._unawait(protocol._protocol)
-    return CurrentConnection(protocol)
-
-
-Init = machine.state("Init")
-noFailure: Callable[
-    [_ClientMachineProto, _ClientServiceSharedCore], ConnectionAttempt
-] = doAttemptConnection
-Connecting = machine.data_state("Connecting", noFailure)
-withFailure: Callable[
-    [_ClientMachineProto, _ClientServiceSharedCore, Failure], ConnectionAttempt
-] = doAttemptConnection
-if TYPE_CHECKING:
-    # I think what i need here is a different variance on the FactoryParams
-    # ParamSpec that allows for this sort of looser checking to take place, but
-    # ParamSpec doesn't have variance right now.
-    Connecting_FactoryWithFailure = machine.data_state(
-        "Connecting_FactoryWithFailure", withFailure
-    )
-else:
-    Connecting_FactoryWithFailure = Connecting
-Stopped = machine.state("Stopped")
-Waiting = machine.data_state("Waiting", startWaiting)
-Connected = machine.data_state("Connected", saveCurrentConnection)
-Disconnecting = machine.state("Disconnecting")
-Restarting = machine.state("Restarting")
-Stopped = machine.state("Stopped")
-
-
-Init.edge(_ClientMachineProto.start, Connecting)
-
-
-@Init.transition(_ClientMachineProto.stop, Stopped)
-def InitStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred[None]:
-    return succeed(None)
-
-
-@Init.transition(_ClientMachineProto.whenConnected, Init)
-def initWhenConnected(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return awaitingConnection(s, failAfterFailures)
-
-
-Connecting.edge(_ClientMachineProto.start, Connecting)
-
-
-@Connecting.transition(_ClientMachineProto.stop, Disconnecting)
-def connectingStop(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, a: ConnectionAttempt
-) -> Deferred[None]:
-    waited = s.waitForStop()
-    a.connectionInProgress.cancel()
-    return waited
-
-
-@Connecting.transition(_ClientMachineProto._connectionMade, Connected)
-def _connectionMade(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    ca: ConnectionAttempt,
-    protocol: _ReconnectingProtocolProxy,
-) -> None:
-    s.failedAttempts = 0
-    s._unawait(protocol._protocol)
-
-
-Connected.edge(_ClientMachineProto._connectionFailed, Waiting)
-
-
-@Connecting.transition(_ClientMachineProto._connectionFailed, Waiting)
-def _connectionFailed2(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    ca: ConnectionAttempt,
-    failure: Failure,
-) -> None:
-    """
-    Deliver connection failures to any L{ClientService.whenConnected}
-    L{Deferred}s that have met their failAfterFailures threshold.
-
-    @param failure: the Failure to fire the L{Deferred}s with.
-    """
-    ready = []
-    notReady: list[tuple[Deferred[IProtocol], int | None]] = []
-    for w, remaining in s.awaitingConnected:
-        if remaining is None:
-            notReady.append((w, remaining))
-        elif remaining <= 1:
-            ready.append(w)
-        else:
-            notReady.append((w, remaining - 1))
-    s.awaitingConnected = notReady
-    for w in ready:
-        w.callback(failure)
-
-
-@Connecting.transition(_ClientMachineProto.whenConnected)
-def whenConnectedWhileConnecting(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    a: ConnectionAttempt,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return awaitingConnection(s, failAfterFailures)
-
-
-def buildWaitInProgress(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore
-) -> WaitInProgress:
-    s.failedAttempts += 1
-    delay = s.timeoutForAttempt(s.failedAttempts)
-    s.log.info(
-        "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
-        attempt=s.failedAttempts,
-        endpoint=s.endpoint,
-        delay=delay,
-    )
-    return WaitInProgress(s.clock.callLater(delay, c._reconnect))
-
-
-Waiting.loop(_ClientMachineProto.start)
-
-
-@Waiting.transition(_ClientMachineProto.stop, Stopped)
-def stop(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, w: WaitInProgress
-) -> Deferred[None]:
-    waited = s.waitForStop()
-    s.cancelConnectWaiters()
-    w.retryCall.cancel()
-    s.finishStopping()
-    return waited
-
-
-Waiting.edge(_ClientMachineProto._reconnect, Connecting)
-
-
-@Waiting.transition(_ClientMachineProto.whenConnected)
-def whenConnected(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    w: WaitInProgress,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return awaitingConnection(s, failAfterFailures)
-
-
-Connected.loop(_ClientMachineProto.start)
-
-
-@Connected.transition(_ClientMachineProto.stop, Disconnecting)
-def stopWhileConnected(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    cc: CurrentConnection,
-) -> Deferred[None]:
-    waited = s.waitForStop()
-    transport = getattr(cc.protocol, "transport", None)
-    assert transport is not None
-    # TODO: capture the transport in
-    # _ReconnectingProtocolProxy.makeConnection() instead of relying on
-    # implicit / incorrect 'transport' attribute here.
-    transport.loseConnection()
-    return waited
-
-
-Connected.edge(_ClientMachineProto._clientDisconnected, Waiting)
-
-
-@Connected.transition(_ClientMachineProto.whenConnected)
-def whenConnectedWhenConnected(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    cc: CurrentConnection,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return succeed(cc.protocol._protocol)
-
-
-Disconnecting.edge(_ClientMachineProto.start, Restarting)
-
-
-@Disconnecting.transition(_ClientMachineProto.stop, Disconnecting)
-def discoStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred[None]:
-    return s.waitForStop()
-
-
-@Disconnecting.transition(_ClientMachineProto._clientDisconnected, Stopped)
-def discoDisco(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
-) -> None:
-    s.cancelConnectWaiters()
-    s.finishStopping()
-
-
-@Disconnecting.transition(_ClientMachineProto._connectionFailed, Stopped)
-def discoFail(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure
-) -> None:
-    s.cancelConnectWaiters()
-    s.finishStopping()
-
-
-@Disconnecting.transition(_ClientMachineProto.whenConnected, Disconnecting)
-def discoWhenConn(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return awaitingConnection(s, failAfterFailures)
-
-
-Restarting.edge(_ClientMachineProto.start, Restarting)
-
-
-@Restarting.transition(_ClientMachineProto.stop, Disconnecting)
-def restartStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred[None]:
-    return s.waitForStop()
-
-
-@Restarting.transition(
-    _ClientMachineProto._clientDisconnected, Connecting_FactoryWithFailure
-)
-def restartDisco(
-    c: _ClientMachineProto, s: _ClientServiceSharedCore, failure: Failure | None = None
-) -> None:
-    s.finishStopping()
-
-
-@Restarting.transition(_ClientMachineProto.whenConnected, Restarting)
-def rwc(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return awaitingConnection(s, failAfterFailures)
-
-
-Stopped.edge(_ClientMachineProto.start, Connecting)
-
-
-@Stopped.transition(_ClientMachineProto.stop, Stopped)
-def stoppedStop(c: _ClientMachineProto, s: _ClientServiceSharedCore) -> Deferred[None]:
-    return succeed(None)
-
-
-@Stopped.transition(_ClientMachineProto.whenConnected, Stopped)
-def whenConnectedWhenStopped(
-    c: _ClientMachineProto,
-    s: _ClientServiceSharedCore,
-    failAfterFailures: int | None = None,
-) -> Deferred[IProtocol]:
-    return fail(CancelledError())
+def makeMachine() -> Callable[[_Core], _Client]:
+    machine = TypifiedBuilder(_Client, _Core)
+
+    def waitForRetry(c: _Client, s: _Core, failure: Failure) -> IDelayedCall:
+        s.failedAttempts += 1
+        delay = s.timeoutForAttempt(s.failedAttempts)
+        s.log.info(
+            "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
+            attempt=s.failedAttempts,
+            endpoint=s.endpoint,
+            delay=delay,
+        )
+        return s.clock.callLater(delay, c._reconnect)
+
+    def rememberConnection(
+        c: _Client, s: _Core, protocol: _ReconnectingProtocolProxy
+    ) -> _ReconnectingProtocolProxy:
+        s.failedAttempts = 0
+        s.unawait(protocol._protocol)
+        return protocol
+
+    def attemptConnection(
+        c: _Client, s: _Core, failure: Failure | None = None
+    ) -> Deferred[_ReconnectingProtocolProxy]:
+        factoryProxy = _DisconnectFactory(s.factory, c._clientDisconnected)
+        connecting: Deferred[IProtocol] = s.endpoint.connect(factoryProxy)
+
+        def prepare(
+            protocol: _ReconnectingProtocolProxy,
+        ) -> Deferred[_ReconnectingProtocolProxy]:
+            if s.prepareConnection is not None:
+                return maybeDeferred(s.prepareConnection, protocol).addCallback(
+                    lambda _: protocol
+                )
+            return succeed(protocol)
+
+        # endpoint.connect() is actually generic on the type of the protocol,
+        # but this is not expressible via zope.interface, so we have to cast
+        # https://github.com/Shoobx/mypy-zope/issues/95
+        connectingProxy: Deferred[_ReconnectingProtocolProxy]
+        connectingProxy = connecting  # type:ignore[assignment]
+        (
+            connectingProxy.addCallback(prepare)
+            .addCallback(c._connectionMade)
+            .addErrback(c._connectionFailed)
+        )
+        return connectingProxy
+
+    # States:
+    Init = machine.state("Init")
+    Connecting = machine.state("Connecting", attemptConnection)
+    Stopped = machine.state("Stopped")
+    Waiting = machine.state("Waiting", waitForRetry)
+    Connected = machine.state("Connected", rememberConnection)
+    Disconnecting = machine.state("Disconnecting")
+    Restarting = machine.state("Restarting")
+    Stopped = machine.state("Stopped")
+
+    # Behavior-less state transitions:
+    Init.to(Connecting).upon(_Client.start).returns(None)
+
+    Connecting.loop().upon(_Client.start).returns(None)
+    Connecting.to(Connected).upon(_Client._connectionMade).returns(None)
+
+    Waiting.loop().upon(_Client.start).returns(None)
+    Waiting.to(Connecting).upon(_Client._reconnect).returns(None)
+
+    Connected.to(Waiting).upon(_Client._connectionFailed).returns(None)
+    Connected.loop().upon(_Client.start).returns(None)
+    Connected.to(Waiting).upon(_Client._clientDisconnected).returns(None)
+
+    Disconnecting.to(Restarting).upon(_Client.start).returns(None)
+    Restarting.to(Restarting).upon(_Client.start).returns(None)
+    Stopped.to(Connecting).upon(_Client.start).returns(None)
+
+    # Behavior-full state transitions:
+    @Init.to(Stopped).upon(_Client.stop)
+    @Stopped.to(Stopped).upon(_Client.stop)
+    def immediateStop(c: _Client, s: _Core) -> Deferred[None]:
+        return succeed(None)
+
+    @Connecting.to(Disconnecting).upon(_Client.stop)
+    def connectingStop(
+        c: _Client, s: _Core, attempt: Deferred[_ReconnectingProtocolProxy]
+    ) -> Deferred[None]:
+        waited = s.waitForStop()
+        attempt.cancel()
+        return waited
+
+    @Connecting.to(Waiting).dataless().upon(_Client._connectionFailed)
+    def _connectionFailed2(c: _Client, s: _Core, failure: Failure) -> None:
+        """
+        Deliver connection failures to any L{ClientService.whenConnected}
+        L{Deferred}s that have met their failAfterFailures threshold.
+
+        @param failure: the Failure to fire the L{Deferred}s with.
+        """
+        ready = []
+        notReady: list[tuple[Deferred[IProtocol], int | None]] = []
+        for w, remaining in s.awaitingConnected:
+            if remaining is None:
+                notReady.append((w, remaining))
+            elif remaining <= 1:
+                ready.append(w)
+            else:
+                notReady.append((w, remaining - 1))
+        s.awaitingConnected = notReady
+        for w in ready:
+            w.callback(failure)
+
+    @Waiting.to(Stopped).upon(_Client.stop)
+    def stop(c: _Client, s: _Core, futureRetry: IDelayedCall) -> Deferred[None]:
+        waited = s.waitForStop()
+        s.cancelConnectWaiters()
+        futureRetry.cancel()
+        s.finishStopping()
+        return waited
+
+    @Connected.to(Disconnecting).upon(_Client.stop)
+    def stopWhileConnected(
+        c: _Client, s: _Core, protocol: _ReconnectingProtocolProxy
+    ) -> Deferred[None]:
+        waited = s.waitForStop()
+        protocol._transport.loseConnection()
+        return waited
+
+    @Connected.loop().upon(_Client.whenConnected)
+    def whenConnectedWhenConnected(
+        c: _Client,
+        s: _Core,
+        protocol: _ReconnectingProtocolProxy,
+        failAfterFailures: int | None = None,
+    ) -> Deferred[IProtocol]:
+        return succeed(protocol._protocol)
+
+    @Disconnecting.loop().upon(_Client.stop)
+    @Restarting.to(Disconnecting).upon(_Client.stop)
+    def discoStop(c: _Client, s: _Core) -> Deferred[None]:
+        return s.waitForStop()
+
+    @Disconnecting.to(Stopped).upon(_Client._clientDisconnected)
+    @Disconnecting.to(Stopped).upon(_Client._connectionFailed)
+    def discoDisco(c: _Client, s: _Core, failure: Failure) -> None:
+        s.cancelConnectWaiters()
+        s.finishStopping()
+
+    @Connecting.loop().dataless().upon(_Client.whenConnected)
+    @Waiting.loop().dataless().upon(_Client.whenConnected)
+    @Init.to(Init).upon(_Client.whenConnected)
+    @Restarting.to(Restarting).upon(_Client.whenConnected)
+    @Disconnecting.to(Disconnecting).upon(_Client.whenConnected)
+    def awaitingConnection(
+        c: _Client, s: _Core, failAfterFailures: int | None = None
+    ) -> Deferred[IProtocol]:
+        result: Deferred[IProtocol] = Deferred()
+        s.awaitingConnected.append((result, failAfterFailures))
+        return result
+
+    @Restarting.to(Connecting).upon(_Client._clientDisconnected)
+    def restartDisco(c: _Client, s: _Core, failure: Failure | None = None) -> None:
+        s.finishStopping()
+
+    @Stopped.to(Stopped).upon(_Client.whenConnected)
+    def whenConnectedWhenStopped(
+        c: _Client, s: _Core, failAfterFailures: int | None = None
+    ) -> Deferred[IProtocol]:
+        return fail(CancelledError())
+
+    return machine.build()
+
+
+ClientMachine = makeMachine()
 
 
 def backoffPolicy(
@@ -700,8 +534,8 @@ class ClientService(Service):
         clock = _maybeGlobalReactor(clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
-        self._machine: _ClientMachineProto = ClientMachine(
-            _ClientServiceSharedCore(
+        self._machine: _Client = ClientMachine(
+            _Core(
                 endpoint,
                 factory,
                 retryPolicy,
@@ -761,6 +595,3 @@ class ClientService(Service):
         """
         super().stopService()
         return self._machine.stop()
-
-
-ClientMachine = machine.build()
