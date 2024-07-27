@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 24.7.0",
+    "incremental >= 22.10.0",
 ]
 build-backend = "hatchling.build"
 
@@ -33,7 +33,7 @@ classifiers = [
 dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
-    "incremental >= 24.7.0",
+    "incremental >= 22.10.0",
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
     "attrs >= 21.3.0",
@@ -158,7 +158,9 @@ Twitter = "https://twitter.com/twistedmatrix"
 allow-ambiguous-features = true
 
 [tool.hatch.version]
-source = "incremental"
+source = "code"
+path = "src/twisted/__init__.py"
+search-paths = ["src"]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/x-rst"
