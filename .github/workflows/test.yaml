@@ -301,7 +301,7 @@ jobs:
         path: .coverage-job-*
 
     - name: Publish to codecov.io
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
@@ -394,7 +394,7 @@ jobs:
         python -m pip install . pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v2
+      uses: CodSpeedHQ/action@v3
       with:
         token: ${{ secrets.CODSPEED_TOKEN }}
         # codspeed runs this command under a CPU emulator, so it's super-slow,
@@ -415,7 +415,7 @@ jobs:
           benchmarks
 
     - name: Publish benchmarks coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
