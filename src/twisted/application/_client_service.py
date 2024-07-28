@@ -68,7 +68,10 @@ class _Client(TypingProtocol):
 
     def _connectionFailed(self, failure: Failure) -> None:
         """
-        The current connection attempt failed.
+        Deliver connection failures to any L{ClientService.whenConnected}
+        L{Deferred}s that have met their failAfterFailures threshold.
+
+        @param failure: the Failure to fire the L{Deferred}s with.
         """
 
     def _reconnect(self, failure: Optional[Failure] = None) -> None:
@@ -229,7 +232,6 @@ class _Core:
     awaitingConnected: list[tuple[Deferred[IProtocol], Optional[int]]] = field(
         default_factory=list
     )
-
     failedAttempts: int = 0
     log: Logger = Logger()
 
@@ -348,13 +350,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         return waited
 
     @pep614(Connecting.to(Waiting).dataless().upon(_Client._connectionFailed))
-    def _connectionFailed2(c: _Client, s: _Core, failure: Failure) -> None:
-        """
-        Deliver connection failures to any L{ClientService.whenConnected}
-        L{Deferred}s that have met their failAfterFailures threshold.
-
-        @param failure: the Failure to fire the L{Deferred}s with.
-        """
+    def failedWhenConnecting(c: _Client, s: _Core, failure: Failure) -> None:
         ready = []
         notReady: list[tuple[Deferred[IProtocol], Optional[int]]] = []
         for w, remaining in s.awaitingConnected:
@@ -400,7 +396,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
 
     @pep614(Disconnecting.to(Stopped).upon(_Client._clientDisconnected))
     @pep614(Disconnecting.to(Stopped).upon(_Client._connectionFailed))
-    def discoDisco(c: _Client, s: _Core, failure: Failure) -> None:
+    def disconnectingFinished(c: _Client, s: _Core, failure: Failure) -> None:
         s.cancelConnectWaiters()
         s.finishStopping()
 
@@ -417,11 +413,11 @@ def makeMachine() -> Callable[[_Core], _Client]:
         return result
 
     @pep614(Restarting.to(Connecting).upon(_Client._clientDisconnected))
-    def restartDisco(c: _Client, s: _Core, failure: Optional[Failure] = None) -> None:
+    def restartDone(c: _Client, s: _Core, failure: Optional[Failure] = None) -> None:
         s.finishStopping()
 
     @pep614(Stopped.to(Stopped).upon(_Client.whenConnected))
-    def whenConnectedWhenStopped(
+    def notGoingToConnect(
         c: _Client, s: _Core, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
         return fail(CancelledError())
