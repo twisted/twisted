@@ -8,7 +8,7 @@ from typing import Callable, Optional, Protocol as TypingProtocol, TypeVar, Unio
 
 from zope.interface import implementer
 
-from automat import TypifiedBuilder
+from automat import TypifiedBuilder, pep614
 
 from twisted.application.service import Service
 from twisted.internet.defer import (
@@ -251,13 +251,6 @@ class _Core:
         self.stopWaiters, waiting = [], self.stopWaiters
         for w in waiting:
             w.callback(None)
-
-
-def pep614(t: T) -> T:
-    """
-    This should probably move into automat itself.
-    """
-    return t
 
 
 def makeMachine() -> Callable[[_Core], _Client]:
