@@ -427,7 +427,7 @@ jobs:
         # This makes sure that the benchmark tests always have 100% coverage.
         # Make sure the include expression is escaped to prevent shell
         # expansion.
-        coverage report --fail-under=100 --include 'benchmarks/*'
+        coverage report --fail-under=100 --include 'benchmarks/*' --show-missing
 
 
   static-checks:
