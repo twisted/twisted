@@ -94,7 +94,7 @@ Bugfixes
   as default message for the status code 418,
   as defined in RFC 2324 section 2.3.2. (#12104)
 - The HTTP 1.0/1.1 server provided by twisted.web is now more picky about the first line of a request, improving compliance with RFC 9112. (#12233)
-- The HTTP 1.0/1.1 server provided by twisted.web now constains the characters set of HTTP header names, improving compliance with RFC 9110. (#12235)
+- The HTTP 1.0/1.1 server provided by twisted.web now contains the characters set of HTTP header names, improving compliance with RFC 9110. (#12235)
 - The HTTP 1.0 and 1.1 server provided by twisted.web could process pipelined HTTP requests out-of-order, possibly resulting in information disclosure (CVE-2024-41671/GHSA-c8m8-j448-xjx7) (#12248)
 - twisted.web.util.redirectTo now HTML-escapes the provided URL in the fallback response body it returns (GHSA-cf56-g6w6-pqq2). The issue is being tracked with CVE-2024-41810. (#12263)
 
