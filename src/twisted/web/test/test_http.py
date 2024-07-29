@@ -136,7 +136,7 @@ class DummyHTTPHandler(http.Request):
         data = self.content.read()
         length = self.getHeader(b"content-length")
         if length is None:
-            length = networkString(str(length))
+            length = str(length).encode()
         request = b"'''\n" + length + b"\n" + data + b"'''\n"
         self.setResponseCode(200)
         self.setHeader(b"Request", self.uri)
@@ -564,17 +564,23 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
 class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
     """
-    Tests that multiple pipelined requests with bodies are correctly buffered.
+    Pipelined requests get buffered and executed in the order received,
+    not processed in parallel.
     """
 
     requests = (
         b"POST / HTTP/1.1\r\n"
         b"Content-Length: 10\r\n"
         b"\r\n"
-        b"0123456789POST / HTTP/1.1\r\n"
-        b"Content-Length: 10\r\n"
-        b"\r\n"
         b"0123456789"
+        # Chunk encoded request.
+        b"POST / HTTP/1.1\r\n"
+        b"Transfer-Encoding: chunked\r\n"
+        b"\r\n"
+        b"a\r\n"
+        b"0123456789\r\n"
+        b"0\r\n"
+        b"\r\n"
     )
 
     expectedResponses = [
@@ -591,14 +597,16 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
             b"Request: /",
             b"Command: POST",
             b"Version: HTTP/1.1",
-            b"Content-Length: 21",
-            b"'''\n10\n0123456789'''\n",
+            b"Content-Length: 23",
+            b"'''\nNone\n0123456789'''\n",
         ),
     ]
 
-    def test_noPipelining(self):
+    def test_stepwiseTinyTube(self):
         """
-        Test that pipelined requests get buffered, not processed in parallel.
+        Imitate a slow connection that delivers one byte at a time.
+        The request handler (L{DelayedHTTPHandler}) is puppeted to
+        step through the handling of each request.
         """
         b = StringTransport()
         a = http.HTTPChannel()
@@ -607,10 +615,9 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
             a.dataReceived(byte)
-        value = b.value()
 
         # So far only one request should have been dispatched.
-        self.assertEqual(value, b"")
+        self.assertEqual(b.value(), b"")
         self.assertEqual(1, len(a.requests))
 
         # Now, process each request one at a time.
@@ -619,8 +626,95 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
             request = a.requests[0].original
             request.delayedProcess()
 
-        value = b.value()
-        self.assertResponseEquals(value, self.expectedResponses)
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_stepwiseDumpTruck(self):
+        """
+        Imitate a fast connection where several pipelined
+        requests arrive in a single read. The request handler
+        (L{DelayedHTTPHandler}) is puppeted to step through the
+        handling of each request.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+
+        a.dataReceived(self.requests)
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(b.value(), b"")
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            request = a.requests[0].original
+            request.delayedProcess()
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateTinyTube(self):
+        """
+        Imitate a slow connection that delivers one byte at a time.
+
+        (L{DummyHTTPHandler}) immediately responds, but no more
+        than one
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy  # "sync"
+        a.makeConnection(b)
+
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+            # There is never more than one request dispatched at a time:
+            self.assertLessEqual(len(a.requests), 1)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateDumpTruck(self):
+        """
+        Imitate a fast connection where several pipelined
+        requests arrive in a single read. The request handler
+        (L{DummyHTTPHandler}) immediately responds.
+
+        This doesn't check the at-most-one pending request
+        invariant but exercises otherwise uncovered code paths.
+        See GHSA-c8m8-j448-xjx7.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy
+        a.makeConnection(b)
+
+        # All bytes at once to ensure there's stuff to buffer.
+        a.dataReceived(self.requests)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateABiggerTruck(self):
+        """
+        Imitate a fast connection where a so many pipelined
+        requests arrive in a single read that backpressure is indicated.
+        The request handler (L{DummyHTTPHandler}) immediately responds.
+
+        This doesn't check the at-most-one pending request
+        invariant but exercises otherwise uncovered code paths.
+        See GHSA-c8m8-j448-xjx7.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy
+        a.makeConnection(b)
+
+        overLimitCount = a._optimisticEagerReadSize // len(self.requests) * 10
+        a.dataReceived(self.requests * overLimitCount)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses * overLimitCount)
 
     def test_pipeliningReadLimit(self):
         """
@@ -1523,7 +1617,11 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         p._maxTrailerHeadersSize = 10
-        p.dataReceived(b"3\r\nabc\r\n0\r\n0123456789")
+        # 9 bytes are received so far, in 2 packets.
+        # For now, all is ok.
+        p.dataReceived(b"3\r\nabc\r\n0\r\n01234567")
+        p.dataReceived(b"\r")
+        # Once the 10th byte is received, the processing fails.
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,

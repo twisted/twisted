@@ -2082,16 +2082,21 @@ class _ChunkedTransferDecoder:
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
         """
-        if (
-            self._receivedTrailerHeadersSize + len(self._buffer)
-            > self._maxTrailerHeadersSize
-        ):
-            raise _MalformedChunkedDataError("Trailer headers data is too long.")
-
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
             # Still no end of network line marker found.
+            #
+            # Check if we've run up against the trailer size limit: if the next
+            # read contains the terminating CRLF then we'll have this many bytes
+            # of trailers (including the CRLFs).
+            minTrailerSize = (
+                self._receivedTrailerHeadersSize
+                + len(self._buffer)
+                + (1 if self._buffer.endswith(b"\r") else 2)
+            )
+            if minTrailerSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             # Continue processing more data.
             return False
 
@@ -2101,6 +2106,8 @@ class _ChunkedTransferDecoder:
             del self._buffer[0 : eolIndex + 2]
             self._start = 0
             self._receivedTrailerHeadersSize += eolIndex + 2
+            if self._receivedTrailerHeadersSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             return True
 
         # eolIndex in this part of code is equal to 0
@@ -2421,8 +2428,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__header = line
 
     def _finishRequestBody(self, data):
-        self.allContentReceived()
         self._dataBuffer.append(data)
+        self.allContentReceived()
 
     def _maybeChooseTransferDecoder(self, header, data):
         """
