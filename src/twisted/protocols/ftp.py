@@ -835,8 +835,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     def lineReceived(self, line):
         self.resetTimeout()
         self.pauseProducing()
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
 
         def processFailed(err):
             if err.check(FTPCmdError):
@@ -2804,8 +2803,7 @@ class FTPClientBasic(basic.LineReceiver):
         (Private) Parses the response messages from the FTP server.
         """
         # Add this line to the current response
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
 
         if self.debug:
             log.msg("--> %s" % line)
@@ -3370,8 +3368,7 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files = []
 
     def lineReceived(self, line):
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
         d = self.parseDirectoryLine(line)
         if d is None:
             self.unknownLine(line)
