@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferred error handling is now faster, taking 40% less time to run.

@@ -1,1 +1,0 @@
-twisted.web.util.ChildRedirector, which has never worked on Python 3, has been removed.
