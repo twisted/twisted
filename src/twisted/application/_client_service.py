@@ -8,7 +8,7 @@ from typing import Callable, Optional, Protocol as TypingProtocol, TypeVar, Unio
 
 from zope.interface import implementer
 
-from automat import TypifiedBuilder, pep614
+from automat import TypeMachineBuilder, pep614
 
 from twisted.application.service import Service
 from twisted.internet.defer import (
@@ -254,7 +254,7 @@ class _Core:
 
 
 def makeMachine() -> Callable[[_Core], _Client]:
-    machine = TypifiedBuilder(_Client, _Core)
+    machine = TypeMachineBuilder(_Client, _Core)
 
     def waitForRetry(c: _Client, s: _Core, failure: Failure) -> IDelayedCall:
         s.failedAttempts += 1
