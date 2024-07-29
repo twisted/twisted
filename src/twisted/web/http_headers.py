@@ -53,9 +53,9 @@ class Headers:
     ensure no decoding or encoding is done, and L{Headers} will treat the keys
     and values as opaque byte strings.
 
-    @cvar _caseMappings: A L{dict} that maps lowercase header names
-        to their canonicalized representation, for headers with unconventional
-        capitalization.
+    @cvar _caseMappings: A L{dict} that maps conventionally-capitalized
+        header names to their canonicalized representation, for headers with
+        unconventional capitalization.
 
     @cvar _canonicalHeaderCache: A L{dict} that maps header names to their
         canonicalized representation.
@@ -65,13 +65,13 @@ class Headers:
     """
 
     _caseMappings: ClassVar[Dict[bytes, bytes]] = {
-        b"content-md5": b"Content-MD5",
-        b"dnt": b"DNT",
-        b"etag": b"ETag",
-        b"p3p": b"P3P",
-        b"te": b"TE",
-        b"www-authenticate": b"WWW-Authenticate",
-        b"x-xss-protection": b"X-XSS-Protection",
+        b"Content-Md5": b"Content-MD5",
+        b"Dnt": b"DNT",
+        b"Etag": b"ETag",
+        b"P3p": b"P3P",
+        b"Te": b"TE",
+        b"Www-Authenticate": b"WWW-Authenticate",
+        b"X-Xss-Protection": b"X-XSS-Protection",
     }
 
     _canonicalHeaderCache: ClassVar[Dict[Union[bytes, str], bytes]] = {}
@@ -124,13 +124,13 @@ class Headers:
 
         bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
 
-        if bytes_name.lower() in self._caseMappings:
-            # Some headers have special capitalization:
-            result = self._caseMappings[bytes_name.lower()]
-        else:
-            result = _sanitizeLinearWhitespace(
-                b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
-            )
+        result = _sanitizeLinearWhitespace(
+            b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
+        )
+
+        # Some headers have special capitalization:
+        if result in self._caseMappings:
+            result = self._caseMappings[result]
 
         # In general, we should only see a very small number of header
         # variations in the real world, so caching them is fine. However, an
