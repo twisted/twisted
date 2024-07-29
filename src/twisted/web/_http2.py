@@ -14,7 +14,6 @@ This API is currently considered private because it's in early draft form. When
 it has stabilised, it'll be made public.
 """
 
-
 import io
 from collections import deque
 from typing import List

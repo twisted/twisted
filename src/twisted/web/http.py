@@ -190,7 +190,7 @@ from twisted.web._responses import (
     UNSUPPORTED_MEDIA_TYPE,
     USE_PROXY,
 )
-from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.http_headers import Headers, _nameEncoder, _sanitizeLinearWhitespace
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
@@ -2445,7 +2445,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         # Can this header determine the length?
-        if header == b"content-length":
+        if header == b"Content-Length":
             if not data.isdigit():
                 return fail()
             try:
@@ -2455,7 +2455,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             newTransferDecoder = _IdentityTransferDecoder(
                 length, self.requests[-1].handleContentChunk, self._finishRequestBody
             )
-        elif header == b"transfer-encoding":
+        elif header == b"Transfer-Encoding":
             # XXX Rather poorly tested code block, apparently only exercised by
             # test_chunkedEncoding
             if data.lower() == b"chunked":
@@ -2501,7 +2501,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
-        header = header.lower()
+        # Canonicalize the header name.
+        header = _nameEncoder.encode(header)
+
         data = data.strip(b" \t")
         if b"\x00" in data:
             self._respondToBadRequestAndDisconnect()
