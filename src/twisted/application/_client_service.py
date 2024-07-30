@@ -46,7 +46,7 @@ def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
 
 
 class _Client(TypingProtocol):
-    def start(self) -> None:
+    def start(self, failure: Optional[Failure] = None) -> None:
         """
         Start this L{ClientService}, initiating the connection retry loop.
         """
@@ -79,7 +79,7 @@ class _Client(TypingProtocol):
         The wait between connection attempts is done.
         """
 
-    def _clientDisconnected(self, failure: Failure) -> None:
+    def _clientDisconnected(self, failure: Optional[Failure] = None) -> None:
         """
         The current connection has been disconnected.
         """
@@ -387,9 +387,11 @@ def makeMachine() -> Callable[[_Core], _Client]:
     def discoStop(c: _Client, s: _Core) -> Deferred[None]:
         return s.waitForStop()
 
-    @pep614(Disconnecting.to(Stopped).upon(_Client._clientDisconnected))
     @pep614(Disconnecting.to(Stopped).upon(_Client._connectionFailed))
-    def disconnectingFinished(c: _Client, s: _Core, failure: Failure) -> None:
+    @pep614(Disconnecting.to(Stopped).upon(_Client._clientDisconnected))
+    def disconnectingFinished(
+        c: _Client, s: _Core, failure: Optional[Failure] = None
+    ) -> None:
         s.cancelConnectWaiters()
         s.finishStopping()
 
