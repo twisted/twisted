@@ -62,7 +62,7 @@ else:
 hasDsa = False
 try:
     output = subprocess.check_output(
-        [which("ssh")[0], "-Q", "key"], stderr=subprocess.STDOUT
+        [which("ssh")[0], "-Q", "key"], stderr=subprocess.STDOUT, text=True
     )
     if not isinstance(output, str):
         output = output.decode("utf-8")
