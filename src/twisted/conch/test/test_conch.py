@@ -307,9 +307,6 @@ class ConchServerSetupMixin:
     if not cryptography:
         skip = "can't run without cryptography"
 
-    if not hasDsa:
-        skip = "needs ssh supporting dsa"
-
     @staticmethod
     def realmFactory():
         return ConchTestRealm(b"testuser")
@@ -546,6 +543,9 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 class OpenSSHClientMixin:
     if not which("ssh"):
         skip = "no ssh command-line client available"
+
+    if not hasDsa:
+        skip = "needs ssh supporting dsa"
 
     def execute(self, remoteCommand, process, sshArgs=""):
         """
