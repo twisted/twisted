@@ -25,7 +25,7 @@ from twisted.cred import portal
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.task import Clock
 from twisted.internet.testing import StringTransport
-from twisted.internet.utils import getProcessOutputAndValue, getProcessValue
+from twisted.internet.utils import getProcessOutputAndValue
 from twisted.python import log
 from twisted.python.fakepwd import UserDatabase
 from twisted.python.filepath import FilePath
@@ -893,11 +893,11 @@ class SFTPTestProcess(protocol.ProcessProtocol):
 
 class CFTPClientTestBase(SFTPTestBase):
     def setUp(self):
-        with open("dsa_test.pub", "wb") as f:
-            f.write(test_ssh.publicDSA_openssh)
-        with open("dsa_test", "wb") as f:
-            f.write(test_ssh.privateDSA_openssh)
-        os.chmod("dsa_test", 33152)
+        with open("rsa_test.pub", "wb") as f:
+            f.write(test_ssh.publicRSA_openssh)
+        with open("rsa_test", "wb") as f:
+            f.write(test_ssh.privateRSA_openssh)
+        os.chmod("rsa_test", 33152)
         with open("kh_test", "wb") as f:
             f.write(b"127.0.0.1 " + test_ssh.publicRSA_openssh)
         return SFTPTestBase.setUp(self)
@@ -922,7 +922,7 @@ class CFTPClientTestBase(SFTPTestBase):
         return defer.maybeDeferred(self.server.stopListening)
 
     def tearDown(self):
-        for f in ["dsa_test.pub", "dsa_test", "kh_test"]:
+        for f in ["rsa_test.pub", "rsa_test", "kh_test"]:
             try:
                 os.remove(f)
             except BaseException:
@@ -949,7 +949,7 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             "--known-hosts kh_test "
             "--user-authentications publickey "
             "--host-key-algorithms ssh-rsa "
-            "-i dsa_test "
+            "-i rsa_test "
             "-a "
             "-v "
             "127.0.0.1"
@@ -1354,7 +1354,7 @@ class OurServerBatchFileTests(CFTPClientTestBase):
             "--known-hosts kh_test "
             "--user-authentications publickey "
             "--host-key-algorithms ssh-rsa "
-            "-i dsa_test "
+            "-i rsa_test "
             "-a "
             "-v -b %s 127.0.0.1"
         ) % (port, fn)
@@ -1475,36 +1475,24 @@ class OurServerSftpClientTests(CFTPClientTestBase):
         self.patch(FileTransferForTestAvatar, "_getAttrs", _getAttrs)
         self.server.factory.expectedLoseConnection = True
 
-        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
-        # first need to check if we can set it. If we can, -V will just print
-        # the version without doing anything else; if we can't, we will get a
-        # configuration error.
-        d = getProcessValue("ssh", ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V"), env)
-
-        def hasPAKT(status):
-            if status == 0:
-                args = ("-o", "PubkeyAcceptedKeyTypes=ssh-dss")
-            else:
-                args = ()
-            # Pass -F /dev/null to avoid the user's configuration file from
-            # being loaded, as it may contain settings that cause our tests to
-            # fail or hang.
-            args += (
-                "-F",
-                "/dev/null",
-                "-o",
-                "IdentityFile=dsa_test",
-                "-o",
-                "UserKnownHostsFile=kh_test",
-                "-o",
-                "HostKeyAlgorithms=ssh-rsa",
-                "-o",
-                "Port=%i" % (port,),
-                "-b",
-                fn,
-                "testuser@127.0.0.1",
-            )
-            return args
+        # Pass -F /dev/null to avoid the user's configuration file from
+        # being loaded, as it may contain settings that cause our tests to
+        # fail or hang.
+        args = (
+            "-F",
+            "/dev/null",
+            "-o",
+            "IdentityFile=rsa_test",
+            "-o",
+            "UserKnownHostsFile=kh_test",
+            "-o",
+            "HostKeyAlgorithms=ssh-rsa",
+            "-o",
+            "Port=%i" % (port,),
+            "-b",
+            fn,
+            "testuser@127.0.0.1",
+        )
 
         def check(result):
             self.assertEqual(result[2], 0, result[1].decode("ascii"))
@@ -1516,6 +1504,5 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             ]:
                 self.assertIn(i, result[0])
 
-        d.addCallback(hasPAKT)
-        d.addCallback(lambda args: getProcessOutputAndValue("sftp", args, env))
+        d = getProcessOutputAndValue("sftp", args, env)
         return d.addCallback(check)
