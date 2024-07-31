@@ -1,4 +1,4 @@
 Tests in twisted.conch.test.test_cftp and twisted.conch.test.test_conch that
-require DSA are now skipped if the installed SSH does not support DSS. The
+require DSA are now skipped if the installed SSH does not support DSA. The
 availability of DSA is checked by querying `ssh -Q key`, which includes
-`ssh-dss` if DSS is available.
+`ssh-dss` if DSA is available.
