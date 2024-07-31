@@ -59,6 +59,7 @@ except ImportError as e:
 else:
     StdioInteractingSession = _StdioInteractingSession
 
+
 def _has_dsa():
     has_dsa = False
     try:
@@ -71,6 +72,7 @@ def _has_dsa():
     except BaseException:
         pass
     return has_dsa
+
 
 HAS_DSA = _has_dsa()
 
