@@ -20,6 +20,7 @@ from zope.interface import implementer
 
 from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
+from twisted.conch.test.test_conch import hasDsa
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
 from twisted.cred import portal
 from twisted.internet import defer, error, interfaces, protocol, reactor
@@ -1436,6 +1437,7 @@ exit
 @skipIf(skipTests, "don't run w/o spawnProcess or cryptography")
 @skipIf(not which("ssh"), "no ssh command-line client available")
 @skipIf(not which("sftp"), "no sftp command-line client available")
+@skipIf(not hasDsa, "needs ssh supporting dsa")
 class OurServerSftpClientTests(CFTPClientTestBase):
     """
     Test the sftp server against sftp command line client.

@@ -59,6 +59,19 @@ except ImportError as e:
 else:
     StdioInteractingSession = _StdioInteractingSession
 
+hasDsa = False
+try:
+    output = subprocess.check_output(
+        [which("ssh")[0], "-Q", "key"], stderr=subprocess.STDOUT
+    )
+    if not isinstance(output, str):
+        output = output.decode("utf-8")
+    keys = output.split()
+    if "ssh-dss" in keys:
+        hasDsa = True
+except BaseException:
+    pass
+
 
 class FakeStdio:
     """
@@ -293,6 +306,9 @@ run()"""
 class ConchServerSetupMixin:
     if not cryptography:
         skip = "can't run without cryptography"
+
+    if not hasDsa:
+        skip = "needs ssh supporting dsa"
 
     @staticmethod
     def realmFactory():
