@@ -59,16 +59,20 @@ except ImportError as e:
 else:
     StdioInteractingSession = _StdioInteractingSession
 
-hasDsa = False
-try:
-    output = subprocess.check_output(
-        [which("ssh")[0], "-Q", "key"], stderr=subprocess.STDOUT, text=True
-    )
-    keys = output.split()
-    if "ssh-dss" in keys:
-        hasDsa = True
-except BaseException:
-    pass
+def _has_dsa():
+    has_dsa = False
+    try:
+        output = subprocess.check_output(
+            [which("ssh")[0], "-Q", "key"], stderr=subprocess.STDOUT, text=True
+        )
+        keys = output.split()
+        if "ssh-dss" in keys:
+            has_dsa = True
+    except BaseException:
+        pass
+    return has_dsa
+
+hasDsa = _has_dsa()
 
 
 class FakeStdio:
