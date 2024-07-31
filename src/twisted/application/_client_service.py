@@ -46,7 +46,7 @@ def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
 
 
 class _Client(TypingProtocol):
-    def start(self, failure: Optional[Failure] = None) -> None:
+    def start(self) -> None:
         """
         Start this L{ClientService}, initiating the connection retry loop.
         """
@@ -256,7 +256,9 @@ class _Core:
 def makeMachine() -> Callable[[_Core], _Client]:
     machine = TypeMachineBuilder(_Client, _Core)
 
-    def waitForRetry(c: _Client, s: _Core, failure: Failure) -> IDelayedCall:
+    def waitForRetry(
+        c: _Client, s: _Core, failure: Optional[Failure] = None
+    ) -> IDelayedCall:
         s.failedAttempts += 1
         delay = s.timeoutForAttempt(s.failedAttempts)
         s.log.info(
@@ -312,29 +314,29 @@ def makeMachine() -> Callable[[_Core], _Client]:
     Stopped = machine.state("Stopped")
 
     # Behavior-less state transitions:
-    Init.to(Connecting).upon(_Client.start).returns(None)
+    Init.upon(_Client.start).to(Connecting).returns(None)
 
-    Connecting.loop().upon(_Client.start).returns(None)
-    Connecting.to(Connected).upon(_Client._connectionMade).returns(None)
+    Connecting.upon(_Client.start).loop().returns(None)
+    Connecting.upon(_Client._connectionMade).to(Connected).returns(None)
 
-    Waiting.loop().upon(_Client.start).returns(None)
-    Waiting.to(Connecting).upon(_Client._reconnect).returns(None)
+    Waiting.upon(_Client.start).loop().returns(None)
+    Waiting.upon(_Client._reconnect).to(Connecting).returns(None)
 
-    Connected.to(Waiting).upon(_Client._connectionFailed).returns(None)
-    Connected.loop().upon(_Client.start).returns(None)
-    Connected.to(Waiting).upon(_Client._clientDisconnected).returns(None)
+    Connected.upon(_Client._connectionFailed).to(Waiting).returns(None)
+    Connected.upon(_Client.start).loop().returns(None)
+    Connected.upon(_Client._clientDisconnected).to(Waiting).returns(None)
 
-    Disconnecting.to(Restarting).upon(_Client.start).returns(None)
-    Restarting.to(Restarting).upon(_Client.start).returns(None)
-    Stopped.to(Connecting).upon(_Client.start).returns(None)
+    Disconnecting.upon(_Client.start).to(Restarting).returns(None)
+    Restarting.upon(_Client.start).to(Restarting).returns(None)
+    Stopped.upon(_Client.start).to(Connecting).returns(None)
 
     # Behavior-full state transitions:
-    @pep614(Init.to(Stopped).upon(_Client.stop))
-    @pep614(Stopped.to(Stopped).upon(_Client.stop))
+    @pep614(Init.upon(_Client.stop).to(Stopped))
+    @pep614(Stopped.upon(_Client.stop).to(Stopped))
     def immediateStop(c: _Client, s: _Core) -> Deferred[None]:
         return succeed(None)
 
-    @pep614(Connecting.to(Disconnecting).upon(_Client.stop))
+    @pep614(Connecting.upon(_Client.stop).to(Disconnecting))
     def connectingStop(
         c: _Client, s: _Core, attempt: Deferred[_ReconnectingProtocolProxy]
     ) -> Deferred[None]:
@@ -342,7 +344,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         attempt.cancel()
         return waited
 
-    @pep614(Connecting.to(Waiting).dataless().upon(_Client._connectionFailed))
+    @pep614(Connecting.upon(_Client._connectionFailed, nodata=True).to(Waiting))
     def failedWhenConnecting(c: _Client, s: _Core, failure: Failure) -> None:
         ready = []
         notReady: list[tuple[Deferred[IProtocol], Optional[int]]] = []
@@ -357,7 +359,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         for w in ready:
             w.callback(failure)
 
-    @pep614(Waiting.to(Stopped).upon(_Client.stop))
+    @pep614(Waiting.upon(_Client.stop).to(Stopped))
     def stop(c: _Client, s: _Core, futureRetry: IDelayedCall) -> Deferred[None]:
         waited = s.waitForStop()
         s.cancelConnectWaiters()
@@ -365,7 +367,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         s.finishStopping()
         return waited
 
-    @pep614(Connected.to(Disconnecting).upon(_Client.stop))
+    @pep614(Connected.upon(_Client.stop).to(Disconnecting))
     def stopWhileConnected(
         c: _Client, s: _Core, protocol: _ReconnectingProtocolProxy
     ) -> Deferred[None]:
@@ -373,7 +375,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         protocol._transport.loseConnection()
         return waited
 
-    @pep614(Connected.loop().upon(_Client.whenConnected))
+    @pep614(Connected.upon(_Client.whenConnected).loop())
     def whenConnectedWhenConnected(
         c: _Client,
         s: _Core,
@@ -382,24 +384,24 @@ def makeMachine() -> Callable[[_Core], _Client]:
     ) -> Deferred[IProtocol]:
         return succeed(protocol._protocol)
 
-    @pep614(Disconnecting.loop().upon(_Client.stop))
-    @pep614(Restarting.to(Disconnecting).upon(_Client.stop))
+    @pep614(Disconnecting.upon(_Client.stop).loop())
+    @pep614(Restarting.upon(_Client.stop).to(Disconnecting))
     def discoStop(c: _Client, s: _Core) -> Deferred[None]:
         return s.waitForStop()
 
-    @pep614(Disconnecting.to(Stopped).upon(_Client._connectionFailed))
-    @pep614(Disconnecting.to(Stopped).upon(_Client._clientDisconnected))
+    @pep614(Disconnecting.upon(_Client._connectionFailed).to(Stopped))
+    @pep614(Disconnecting.upon(_Client._clientDisconnected).to(Stopped))
     def disconnectingFinished(
         c: _Client, s: _Core, failure: Optional[Failure] = None
     ) -> None:
         s.cancelConnectWaiters()
         s.finishStopping()
 
-    @pep614(Connecting.loop().dataless().upon(_Client.whenConnected))
-    @pep614(Waiting.loop().dataless().upon(_Client.whenConnected))
-    @pep614(Init.to(Init).upon(_Client.whenConnected))
-    @pep614(Restarting.to(Restarting).upon(_Client.whenConnected))
-    @pep614(Disconnecting.to(Disconnecting).upon(_Client.whenConnected))
+    @pep614(Connecting.upon(_Client.whenConnected, nodata=True).loop())
+    @pep614(Waiting.upon(_Client.whenConnected, nodata=True).loop())
+    @pep614(Init.upon(_Client.whenConnected).to(Init))
+    @pep614(Restarting.upon(_Client.whenConnected).to(Restarting))
+    @pep614(Disconnecting.upon(_Client.whenConnected).to(Disconnecting))
     def awaitingConnection(
         c: _Client, s: _Core, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
@@ -407,11 +409,11 @@ def makeMachine() -> Callable[[_Core], _Client]:
         s.awaitingConnected.append((result, failAfterFailures))
         return result
 
-    @pep614(Restarting.to(Connecting).upon(_Client._clientDisconnected))
+    @pep614(Restarting.upon(_Client._clientDisconnected).to(Connecting))
     def restartDone(c: _Client, s: _Core, failure: Optional[Failure] = None) -> None:
         s.finishStopping()
 
-    @pep614(Stopped.to(Stopped).upon(_Client.whenConnected))
+    @pep614(Stopped.upon(_Client.whenConnected).to(Stopped))
     def notGoingToConnect(
         c: _Client, s: _Core, failAfterFailures: Optional[int] = None
     ) -> Deferred[IProtocol]:
