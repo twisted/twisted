@@ -72,7 +72,7 @@ def _has_dsa():
         pass
     return has_dsa
 
-hasDsa = _has_dsa()
+HAS_DSA = _has_dsa()
 
 
 class FakeStdio:
@@ -546,7 +546,7 @@ class OpenSSHClientMixin:
     if not which("ssh"):
         skip = "no ssh command-line client available"
 
-    if not hasDsa:
+    if not HAS_DSA:
         skip = "needs ssh supporting dsa"
 
     def execute(self, remoteCommand, process, sshArgs=""):
