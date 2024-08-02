@@ -544,6 +544,7 @@ class OpenSSHClientMixin:
             (
                 "ssh -2 -l testuser -p %i "
                 "-F /dev/null "
+                "-oIdentitiesOnly=yes "
                 "-oUserKnownHostsFile=kh_test "
                 "-oPasswordAuthentication=no "
                 # Always use the RSA key, since that's the one in kh_test.

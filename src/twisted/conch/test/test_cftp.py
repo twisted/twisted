@@ -1482,6 +1482,8 @@ class OurServerSftpClientTests(CFTPClientTestBase):
             "-F",
             "/dev/null",
             "-o",
+            "IdentitiesOnly=yes",
+            "-o",
             "IdentityFile=rsa_test",
             "-o",
             "UserKnownHostsFile=kh_test",
