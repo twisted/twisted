@@ -560,9 +560,7 @@ class OpenSSHClientMixin:
         cmds = (cmdline % port).split()
         encodedCmds = []
         for cmd in cmds:
-            if isinstance(cmd, str):
-                cmd = cmd.encode("utf-8")
-            encodedCmds.append(cmd)
+            encodedCmds.append(cmd.encode("utf-8"))
         reactor.spawnProcess(process, which("ssh")[0], encodedCmds)
         return process.deferred
 
