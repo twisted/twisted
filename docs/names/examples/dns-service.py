@@ -57,6 +57,10 @@ def printError(failure, domainname):
 
 
 def main(reactor, *argv):
+    """
+    Run a query supplied on the command line.
+    DNS resolved initialized to /etc/resolv.conf
+    """
     options = Options()
     try:
         options.parseOptions(argv)
