@@ -568,6 +568,17 @@ class FailureTests(SynchronousTestCase):
         f = failure.Failure(ComparableException("hello"))
         self.assertEqual(f.__getstate__()["parents"], f.parents)
 
+    def test_settableParents(self) -> None:
+        """
+        C{Failure.parents} can be set, both before and after pickling.
+
+        This is used by Perspective Broker.
+        """
+        original_failure = failure.Failure(ComparableException("hello"))
+        original_failure.parents = original_failure.parents[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.parents = failure2.parents[:]
+
 
 class BrokenStr(Exception):
     """
