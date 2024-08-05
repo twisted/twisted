@@ -511,7 +511,7 @@ class FailureTests(SynchronousTestCase):
         f.stack = f.stack  # type: ignore[method-assign]
         warnings = self.flushWarnings()
         self.assertTrue(len(warnings) >= 1)
-        for w in warnings[:-2]:
+        for w in warnings[-2:]:
             self.assertEqual(
                 "twisted.python.failure.Failure.stack was deprecated in Twisted 24.8.0",
                 w["message"],
