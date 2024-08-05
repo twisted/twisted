@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from twisted.web.template import Flattenable
 
 
-@attr.s(eq=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, auto_attribs=True)
 class slot:
     """
     Marker for markup insertion in a template.
@@ -82,7 +82,7 @@ class slot:
     """
 
 
-@attr.s(eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
@@ -314,7 +314,7 @@ voidElements = (
 )
 
 
-@attr.s(eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
@@ -329,7 +329,7 @@ class CDATA:
         return f"CDATA({self.data!r})"
 
 
-@attr.s(eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
@@ -344,7 +344,7 @@ class Comment:
         return f"Comment({self.data!r})"
 
 
-@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM
