@@ -572,7 +572,7 @@ class FailureTests(SynchronousTestCase):
         """
         C{Failure.parents} can be set, both before and after pickling.
 
-        This is used by Perspective Broker.
+        This is used by Foolscap.
         """
         original_failure = failure.Failure(ComparableException("hello"))
         original_failure.parents = original_failure.parents[:]
