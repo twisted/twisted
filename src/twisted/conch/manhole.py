@@ -306,10 +306,6 @@ class VT102Writer:
         s = b"".join(self.written)
         return s.strip(b"\n").splitlines()[-1]
 
-    if bytes == str:
-        # Compat with Python 2.7
-        __str__ = __bytes__
-
 
 def lastColorizedLine(source):
     """

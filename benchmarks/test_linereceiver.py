@@ -5,8 +5,8 @@ Benchmarks for line parsing protocols.
 import pytest
 
 from twisted.internet.protocol import Protocol
+from twisted.internet.testing import StringTransport
 from twisted.protocols.basic import LineOnlyReceiver, LineReceiver
-from twisted.test.proto_helpers import StringTransport
 
 
 def deliverData(protocol: Protocol, data: bytes, chunkSize: int) -> None:
