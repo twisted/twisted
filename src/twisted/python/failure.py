@@ -25,7 +25,6 @@ from io import StringIO
 from typing import Callable, NoReturn, TypeVar
 
 import opcode
-
 from incremental import Version
 
 from twisted.python import reflect
@@ -252,7 +251,6 @@ class Failure(BaseException):
     """
 
     pickled = 0
-    stack = None
     _parents = None
 
     # The opcode of "yield" in Python bytecode. We need this in
@@ -389,7 +387,7 @@ class Failure(BaseException):
     def stack(self):
         return []
 
-    @stack.setter
+    @stack.setter  # type: ignore[no-redef]
     def stack(self, stack):
         del stack
 

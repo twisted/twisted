@@ -508,7 +508,7 @@ class FailureTests(SynchronousTestCase):
         C{Failure.stack} is gettable and settable, but depreacted.
         """
         f = getDivisionFailure()
-        f.stack = f.stack
+        f.stack = f.stack  # type: ignore[method-assign]
         warnings = self.flushWarnings()
         self.assertTrue(len(warnings) >= 1)
         for w in warnings[:-2]:
