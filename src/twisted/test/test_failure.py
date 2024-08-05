@@ -160,7 +160,6 @@ class FailureTests(SynchronousTestCase):
 
         The body contains the stacktrace::
 
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39: getDivisionFailure(...)
 
         If C{captureVars} is enabled the body also includes a list of
@@ -233,14 +232,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback: <type 'exceptions.ZeroDivisionError'>: float division
 
-        The body with the stacktrace::
-
-          /twisted/trial/_synctest.py:1180:_run
-          /twisted/python/util.py:1076:runWithWarningsSuppressed
-
         And the footer::
 
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39:getDivisionFailure
 
         @param captureVars: Enables L{Failure.captureVars}.
@@ -264,7 +257,7 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             f"Traceback: {zde}: ",
-            f"{failure.EXCEPTION_CAUGHT_HERE}\n{stack}",
+            f"{stack}",
         )
 
         if captureVars:
@@ -278,14 +271,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback (most recent call last):
 
-        The body with traceback::
-
-          File "/twisted/trial/_synctest.py", line 1180, in _run
-             runWithWarningsSuppressed(suppress, method)
-
         And the footer::
 
-          --- <exception caught here> ---
             File "twisted/test/test_failure.py", line 39, in getDivisionFailure
               1 / 0
             exceptions.ZeroDivisionError: float division
@@ -311,9 +298,8 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             "Traceback (most recent call last):",
-            "%s\n%s%s: %s\n"
+            "%s%s: %s\n"
             % (
-                failure.EXCEPTION_CAUGHT_HERE,
                 stack,
                 reflect.qual(f.type),
                 reflect.safe_str(f.value),
@@ -767,7 +753,7 @@ class FormattableTracebackTests(SynchronousTestCase):
         to be passed to L{traceback.extract_tb}, and we should get a singleton
         list containing a (filename, lineno, methodname, line) tuple.
         """
-        tb = failure._Traceback([], [["method", "filename.py", 123, {}, {}]])
+        tb = failure._Traceback([["method", "filename.py", 123, {}, {}]])
         # Note that we don't need to test that extract_tb correctly extracts
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
@@ -782,10 +768,6 @@ class FormattableTracebackTests(SynchronousTestCase):
         containing a tuple for each frame.
         """
         tb = failure._Traceback(
-            [
-                ["caller1", "filename.py", 7, {}, {}],
-                ["caller2", "filename.py", 8, {}, {}],
-            ],
             [
                 ["method1", "filename.py", 123, {}, {}],
                 ["method2", "filename.py", 235, {}, {}],
@@ -803,8 +785,6 @@ class FormattableTracebackTests(SynchronousTestCase):
         self.assertEqual(
             traceback.extract_stack(tb.tb_frame),
             [
-                _tb("filename.py", 7, "caller1", None),
-                _tb("filename.py", 8, "caller2", None),
                 _tb("filename.py", 123, "method1", None),
             ],
         )

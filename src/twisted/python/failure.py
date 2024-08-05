@@ -84,8 +84,7 @@ def format_frames(frames, write, detail="default"):
                 w(f"  {name} : {repr(val)}\n")
 
 
-# slyphon: i have a need to check for this value in trial
-#          so I made it a module-level constant
+# Unused, here for backwards compatibility.
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
 
 
@@ -96,28 +95,20 @@ class NoCurrentExceptionError(Exception):
     """
 
 
-def _Traceback(stackFrames, tbFrames):
+def _Traceback(tbFrames):
     """
     Construct a fake traceback object using a list of frames.
 
     It should have the same API as stdlib to allow interaction with
     other tools.
 
-    @param stackFrames: [(methodname, filename, lineno, locals, globals), ...]
     @param tbFrames: [(methodname, filename, lineno, locals, globals), ...]
     """
     assert len(tbFrames) > 0, "Must pass some frames"
     # We deliberately avoid using recursion here, as the frames list may be
     # long.
 
-    # 'stackFrames' is a list of frames above (ie, older than) the point the
-    # exception was caught, with oldest at the start. Start by building these
-    # into a linked list of _Frame objects (with the f_back links pointing back
-    # towards the oldest frame).
     stack = None
-    for sf in stackFrames:
-        stack = _Frame(sf, stack)
-
     # 'tbFrames' is a list of frames from the point the exception was caught,
     # down to where it was thrown, with the oldest at the start. Add these to
     # the linked list of _Frames, but also wrap each one with a _Traceback
@@ -250,7 +241,9 @@ class Failure(BaseException):
 
     @ivar type: The exception's class.
 
-    @ivar stack: list of frames, innermost last, excluding C{Failure.__init__}.
+    @ivar stack: Deprecated, always an empty list.  Equivalent information can
+        be extracted from C{import traceback;
+        traceback.extract_stack(your_failure.tb)}
 
     @ivar frames: list of frames, innermost first.
     """
@@ -343,9 +336,6 @@ class Failure(BaseException):
                 tb = self.value.__traceback__
 
         frames = self.frames = []
-
-        # Backwards compatibility, not used anymore:
-        self.stack = []
 
         # Added 2003-06-23 by Chris Armstrong. Yes, I actually have a
         # use case where I need this traceback object, and I've made
@@ -447,7 +437,6 @@ class Failure(BaseException):
         result.captureVars = False
         result.count = count
         result.frames = []
-        result.stack = []  # type: ignore
         result.value = value
         result.type = value.__class__
         result.tb = None
@@ -623,21 +612,6 @@ class Failure(BaseException):
         # Added 2003-06-23. See comment above in __init__
         c["tb"] = None
 
-        if self.stack is not None:
-            # XXX: This is a band-aid.  I can't figure out where these
-            # (failure.stack is None) instances are coming from.
-            if self.captureVars:
-                c["stack"] = [
-                    [
-                        v[0],
-                        v[1],
-                        v[2],
-                        _safeReprVars(v[3]),
-                        _safeReprVars(v[4]),
-                    ]
-                    for v in self.stack
-                ]
-
         c["pickled"] = 1
         return c
 
@@ -671,7 +645,7 @@ class Failure(BaseException):
         if self.tb is not None:
             return self.tb
         elif len(self.frames) > 0:
-            return _Traceback(self.stack, self.frames)
+            return _Traceback(self.frames)
         else:
             return None
 
@@ -702,9 +676,7 @@ class Failure(BaseException):
         @param file: If specified, a file-like object to which to write the
             traceback.
 
-        @param elideFrameworkCode: A flag indicating whether to attempt to
-            remove uninteresting frames from within Twisted itself from the
-            output.
+        @param elideFrameworkCode: Deprecated, ignored.
 
         @param detail: A string indicating how much information to include
             in the traceback.  Must be one of C{'brief'}, C{'default'}, or
@@ -744,9 +716,6 @@ class Failure(BaseException):
 
         # Frames, formatted in appropriate style
         if self.frames:
-            if not elideFrameworkCode:
-                format_frames(self.stack[-traceupLength:], w, formatDetail)
-                w(f"{EXCEPTION_CAUGHT_HERE}\n")
             format_frames(self.frames, w, formatDetail)
         elif not detail == "brief":
             # Yeah, it's not really a traceback, despite looking like one...
