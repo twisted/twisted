@@ -209,7 +209,7 @@ jobs:
 
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -223,7 +223,7 @@ jobs:
         echo "cache-dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
     - name: pip cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.pip-cache.outputs.cache-dir }}
         key:
@@ -276,31 +276,106 @@ jobs:
       with:
         limit-access-to-actor: true
 
-    - name: Prepare coverage
+    - name: Prepare coverage results
       if: ${{ !cancelled() && !matrix.skip-coverage }}
       run: |
         # sub-process coverage are generated in separate files so we combine them
         # to get an unified coverage for the local run.
-        # The XML is generate to be used with 3rd party tools like diff-cover.
         python -m coverage combine
         python -m coverage xml -o coverage.xml -i
-        python -m coverage report --skip-covered
 
-    - uses: codecov/codecov-action@v3
+        # It is important to keep the unique names for the coverage files
+        # so that when uploaded to the same artifact, they don't overlap.
+        # We don't combine the files yet.
+        # The files from all jobs will be combined later.
+        # We still do a initial combine for each job as otherwise
+        # we wil end up with many files and it will take a long time
+        # to upload/download/combine them.
+        mv .coverage .coverage-job-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+
+    - name: Store coverage file
+      if: ${{ !cancelled() && !matrix.skip-coverage }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+        path: .coverage-job-*
+
+    - name: Publish to codecov.io
+      uses: codecov/codecov-action@v4
       if: ${{ !cancelled() && !matrix['skip-coverage'] }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{matrix.job-name || 'default-tests' }}
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         fail_ci_if_error: true
+
+
+  coverage-report:
+    name: Coverage report
+    runs-on: ubuntu-latest
+    if: always()  # Always run the coverage report, even when the tests fail.
+    needs:
+      - testing  # Code coverage only needs to wait for test jobs.
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade coverage[toml] diff_cover
+
+    - name: Download coverage reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: coverage-*
+        merge-multiple: true
+        path: .
+
+    - name: Prepare coverage
+      run: |
+          coverage combine .coverage-job-*
+          # XML is needed for the diff-cover.
+          coverage xml
+
+    - name: Report coverage
+      run: |
+          # Report for the job log.
+          diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
+          cat coverage-report.md >> $GITHUB_STEP_SUMMARY
+
+          {
+            echo '# Coverage Report'
+            echo '```'
+            coverage report --skip-covered --skip-empty --show-missing
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+    - name: Enforce diff coverage
+      run: |
+          diff-cover --fail-under=100 --compare-branch origin/trunk coverage.xml
+
+    - name: Generate HTML report on failure
+      if: ${{ failure() }}
+      run: |
+          coverage html --skip-covered --skip-empty
+
+    - name: Upload HTML report on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-report
+        path: htmlcov
+
 
   benchmarks:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         # When you will need to change this to run the benchmarks
         # on a different Python version,
@@ -309,22 +384,51 @@ jobs:
         # This is why it's best not to configure the default
         # Python version here,
         # but rather have an explicit Python version.
-        # The PRs that are changing the Python version can
+        # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install . pytest pytest-codspeed
+        python -m pip install . pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v2
+      uses: CodSpeedHQ/action@v3
       with:
         token: ${{ secrets.CODSPEED_TOKEN }}
         # codspeed runs this command under a CPU emulator, so it's super-slow,
         # so we try to just do the benchmarks and nothing else.
         run: python -m pytest --codspeed benchmarks/
+
+    - name: Collect benchmarks coverage
+      run: |
+        # We try to run the benchmark tests only once.
+        # It should be enough to collect the coverage.
+        # The previous Codspeed run takes care of the actual benchmark
+        # measurements.
+        pytest \
+          --benchmark-min-rounds 1 --benchmark-max-time 0.00001 \
+          --benchmark-columns=rounds \
+          --cov benchmarks --cov twisted --cov-config=.coveragerc \
+          --cov-report=xml \
+          benchmarks
+
+    - name: Publish benchmarks coverage
+      uses: codecov/codecov-action@v4
+      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
+      with:
+        files: coverage.xml
+        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-benchmarks
+        fail_ci_if_error: true
+
+    - name: Fail on missing benchmarks coverage
+      run: |
+        # This makes sure that the benchmark tests always have 100% coverage.
+        # Make sure the include expression is escaped to prevent shell
+        # expansion.
+        coverage report --fail-under=100 --include 'benchmarks/*' --show-missing
+
 
   static-checks:
     runs-on: ubuntu-22.04
@@ -332,13 +436,13 @@ jobs:
       TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         # Need full history for various diff checks to work.
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
@@ -360,9 +464,9 @@ jobs:
     name: API docs build
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -377,9 +481,9 @@ jobs:
     name: Narrative docs build
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -400,10 +504,10 @@ jobs:
     name: Check release and publish on twisted-* tag
     runs-on: 'ubuntu-22.04'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
@@ -448,6 +552,7 @@ jobs:
       - apidocs
       - static-checks
       - release-publish
+      - coverage-report
     steps:
       - name: Require all successes
         shell: python

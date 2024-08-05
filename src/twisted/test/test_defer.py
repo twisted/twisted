@@ -29,6 +29,7 @@ from typing import (
     Dict,
     Generator,
     List,
+    Literal,
     Mapping,
     NoReturn,
     Optional,
@@ -1633,8 +1634,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         fail = l[0]
         self.assertEqual(fail.value, exc)
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errbackWithNoArgs(self) -> None:
         """
@@ -1674,8 +1675,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
-        self.assertEqual([], localz)
-        self.assertEqual([], globalz)
+        self.assertEqual((), localz)
+        self.assertEqual((), globalz)
 
     def test_errorInCallbackCapturesVarsWhenDebugging(self) -> None:
         """
@@ -3768,7 +3769,7 @@ class CoroutineContextVarsTests(unittest.TestCase):
 
         # context is 1 when the function is defined
         @defer.inlineCallbacks
-        def testFunction() -> Generator[Deferred[Any], Any, None]:
+        def testFunction() -> Generator[Deferred[Any], Any, Literal[True]]:
             # Expected to be 2
             self.assertEqual(var.get(), 2)
 
@@ -3802,9 +3803,9 @@ class CoroutineContextVarsTests(unittest.TestCase):
             yield yieldingDeferred()
             self.assertEqual(var.get(), 2)
 
-            defer.returnValue(True)
+            return True
 
-        assert_type(testFunction, Callable[[], Deferred[None]])
+        assert_type(testFunction, Callable[[], Deferred[Literal[True]]])
         # The inlineCallbacks context is 2 when it's called
         var.set(2)
         d = testFunction()
