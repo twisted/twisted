@@ -26,7 +26,10 @@ from typing import Callable, NoReturn, TypeVar
 
 import opcode
 
+from incremental import Version
+
 from twisted.python import reflect
+from twisted.python.deprecate import deprecatedProperty
 
 _T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
@@ -382,6 +385,14 @@ class Failure(BaseException):
             )
             tb = tb.tb_next
 
+    @deprecatedProperty(Version("Twisted", 24, 8, 0))
+    def stack(self):
+        return []
+
+    @stack.setter
+    def stack(self, stack):
+        del stack
+
     @property
     def parents(self):
         if self._parents is not None:
@@ -578,6 +589,8 @@ class Failure(BaseException):
         return "[Failure instance: %s]" % self.getBriefTraceback()
 
     def __setstate__(self, state):
+        if "stack" in state:
+            state.pop("stack")
         state["_parents"] = state.pop("parents")
         self.__dict__.update(state)
 
@@ -596,6 +609,7 @@ class Failure(BaseException):
 
         # Backwards compatibility with old code, e.g. for Perspective Broker:
         c["parents"] = c.pop("_parents")
+        c["stack"] = []
 
         if self.captureVars:
             c["frames"] = [

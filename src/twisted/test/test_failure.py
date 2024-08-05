@@ -503,6 +503,20 @@ class FailureTests(SynchronousTestCase):
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
 
+    def test_stackDeprecation(self) -> None:
+        """
+        C{Failure.stack} is gettable and settable, but depreacted.
+        """
+        f = getDivisionFailure()
+        f.stack = f.stack
+        warnings = self.flushWarnings()
+        self.assertTrue(len(warnings) >= 1)
+        for w in warnings[:-2]:
+            self.assertEqual(
+                "twisted.python.failure.Failure.stack was deprecated in Twisted 24.8.0",
+                w["message"],
+            )
+
     def test_failureWithoutTraceback(self) -> None:
         """
         C{Failure._withoutTraceback(exc)} gives the same result as
