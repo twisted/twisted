@@ -30,10 +30,10 @@ def test_deferred_await_unfired(benchmark):
             deferreds[i].callback(i)
         return result
 
-    result = benchmark(go)
-    l = []
-    result.addCallback(l.append)
-    assert l[0] == sum(range(20))
+    d = benchmark(go)
+    result = []
+    d.addCallback(result.append)
+    assert result[0] == sum(range(20))
 
 
 def f(x: int, a: int) -> int:
