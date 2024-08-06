@@ -217,7 +217,7 @@ def maybeDeferred(
     except BaseException:
         return fail(Failure(captureVars=Deferred.debug))
 
-    if isinstance(result, Deferred):
+    if type(result) in _DEFERRED_SUBCLASSES:
         return result
     elif isinstance(result, Failure):
         return fail(result)
@@ -1346,7 +1346,7 @@ def ensureDeferred(
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     """
-    if isinstance(coro, Deferred):
+    if type(coro) in _DEFERRED_SUBCLASSES:
         return coro
     else:
         try:
