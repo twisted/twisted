@@ -117,7 +117,11 @@ def succeed(result: _T) -> "Deferred[_T]":
            method.
     """
     d: Deferred[_T] = Deferred()
-    d.callback(result)
+    # This violate abstraction boundaries, so code that is not internal to
+    # Twisted shouldn't do it, but it's a significant performance optimization:
+    d.result = result
+    d.called = True
+    d._chainedTo = None
     return d
 
 
@@ -1158,38 +1162,29 @@ class Deferred(Awaitable[_SelfResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred[_SelfResultT]":
-        return self
+    def __iter__(self) -> Generator[Deferred[_SelfResultT], None, _SelfResultT]:
+        while True:
+            if self.paused:
+                # If we're paused, we have no result to give
+                yield self
+                continue
 
-    @_extraneous
-    def send(self, value: object = None) -> "Deferred[_SelfResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
+            result = getattr(self, "result", _NO_RESULT)
+            if result is _NO_RESULT:
+                yield self
+                continue
 
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            raise result.value
-        else:
-            raise StopIteration(result)
+            if isinstance(result, Failure):
+                # Clear the failure on debugInfo so it doesn't raise "unhandled
+                # exception"
+                assert self._debugInfo is not None
+                self._debugInfo.failResult = None
+                result.value.__failure__ = result
+                raise result.value
+            else:
+                return result  # type: ignore[return-value]
 
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _SelfResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _SelfResultT]:
-        return self.__iter__()  # type: ignore[return-value]
-
-    __next__ = send
+    __await__ = __iter__
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_SelfResultT]":
         """
