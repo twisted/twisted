@@ -2104,10 +2104,14 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        if iscoroutine(result) or inspect.isgenerator(result):
+        isDeferred = type(result) in _DEFERRED_SUBCLASSES
+        # iscoroutine() is pretty expensive in this context, so avoid caclling
+        # unnecessarily:
+        if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
             result = _cancellableInlineCallbacks(result)
+            isDeferred = True
 
-        if isinstance(result, Deferred):
+        if isDeferred:
             # a deferred was yielded, get the result.
             result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)
             if waiting[0]:
