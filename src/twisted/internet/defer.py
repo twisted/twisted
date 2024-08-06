@@ -618,10 +618,12 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # Implementation Note: Any annotations for brevity; the overloads above
-        # handle specifying the actual signature, and there's nothing worth
-        # type-checking in this implementation.
-        return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
+        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self  # type: ignore[return-value]
 
     @overload
     def addErrback(
@@ -656,10 +658,12 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            passthru, errback, errbackArgs=args, errbackKeywords=kwargs
-        )
+        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self  # type: ignore[return-value]
 
     @overload
     def addBoth(
@@ -741,15 +745,13 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            callback,
-            callback,
-            callbackArgs=args,
-            errbackArgs=args,
-            callbackKeywords=kwargs,
-            errbackKeywords=kwargs,
-        )
+        call = (callback, args, kwargs)
+        self.callbacks.append((call, call))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self  # type: ignore[return-value]
 
     # END way too many overloads
 
