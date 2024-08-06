@@ -703,7 +703,7 @@ class FlattenerErrorTests(SynchronousTestCase):
         failing.errback(exc)
         failure = self.failureResultOf(flattening, FlattenerError)
         if IS_PYTHON_313:
-            column_marker = "[ ^]*\nRuntimeError: example\n"
+            column_marker = ".*\n.*\n.*\nRuntimeError: example\n"
         else:
             column_marker = ""
         self.assertRegex(
