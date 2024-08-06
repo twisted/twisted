@@ -218,7 +218,7 @@ def maybeDeferred(
         return fail(Failure(captureVars=Deferred.debug))
 
     if type(result) in _DEFERRED_SUBCLASSES:
-        return result
+        return result  # type: ignore[return-value]
     elif isinstance(result, Failure):
         return fail(result)
     elif type(result) is CoroutineType:
@@ -623,7 +623,7 @@ class Deferred(Awaitable[_SelfResultT]):
         if self.called:
             self._runCallbacks()
 
-        return self  # type: ignore[return-value]
+        return self
 
     @overload
     def addErrback(
@@ -663,7 +663,7 @@ class Deferred(Awaitable[_SelfResultT]):
         if self.called:
             self._runCallbacks()
 
-        return self  # type: ignore[return-value]
+        return self
 
     @overload
     def addBoth(
@@ -751,7 +751,7 @@ class Deferred(Awaitable[_SelfResultT]):
         if self.called:
             self._runCallbacks()
 
-        return self  # type: ignore[return-value]
+        return self
 
     # END way too many overloads
 
@@ -1349,10 +1349,10 @@ def ensureDeferred(
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     """
     if type(coro) in _DEFERRED_SUBCLASSES:
-        return coro
+        return coro  # type: ignore[return-value]
     else:
         try:
-            return Deferred.fromCoroutine(coro)
+            return Deferred.fromCoroutine(coro)  # type: ignore[arg-type]
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
@@ -2114,13 +2114,15 @@ def _inlineCallbacks(
             isDeferred = True
 
         if isDeferred:
+            # We don't cast() to Deferred because that does more work in the hot path
+
             # a deferred was yielded, get the result.
-            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)
+            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)  # type: ignore[attr-defined]
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                status.waitingOn = result
+                status.waitingOn = result  # type: ignore[assignment]
                 return
 
             result = waiting[1]
