@@ -383,7 +383,7 @@ class Failure(BaseException):
             )
             tb = tb.tb_next
 
-    @deprecatedProperty(Version("Twisted", 24, 8, 0))
+    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
     def stack(self):
         return []
 
