@@ -403,6 +403,10 @@ class Failure(BaseException):
             self._parents = [self.type]
         return self._parents
 
+    @parents.setter
+    def parents(self, parents):
+        self._parents = parents
+
     def _extrapolate(self, otherFailure):
         """
         Extrapolate from one failure into another, copying its stack frames.
