@@ -157,6 +157,25 @@ class Chunker(resource.Resource):
         return server.NOT_DONE_YET
 
 
+class BitbucketTransport(StringTransport):
+    """
+    Throw away any data written, in Web Scale (TM) fashion.
+    """
+
+    def write(self, data):
+        """
+        Carefully ensure that nothing is done with the data.
+        """
+
+    def writeSequence(self, iovec):
+        """
+        Lovingly misplace the data.
+        """
+        # This override method is necessary because the superclass
+        # method is implemented as self.write(b"".join(iovec)),
+        # which does too much work!
+
+
 def test_http11_server_chunked_response(benchmark):
     """
     Benchmark generation of a largeish chunked response.
@@ -170,8 +189,8 @@ def test_http11_server_chunked_response(benchmark):
     )
     factory = server.Site(data)
 
-    def go():
-        transport = StringTransport()
+    def go(*, transportFactory=BitbucketTransport):
+        transport = transportFactory()
         protocol = factory.buildProtocol(None)
         protocol.makeConnection(transport)
         protocol.dataReceived(
@@ -184,8 +203,13 @@ accept: *
                 b"\n", b"\r\n"
             )
         )
-        response = transport.io.getvalue()
-        assert response.startswith(b"HTTP/1.1 200 ")
-        assert b"Transfer-Encoding: chunked" in response[:1024]
+        return transport
 
+    # Sanity-check that the benchmark logic produces a chunked response.
+    transport = go(transportFactory=StringTransport)
+    response = transport.io.getvalue()
+    assert response.startswith(b"HTTP/1.1 200 ")
+    assert b"Transfer-Encoding: chunked" in response[:1024]
+
+    # Now benchmark, discarding all the HTTP response bytes.
     benchmark(go)
