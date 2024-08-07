@@ -160,14 +160,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simple SSH client.")
 
     parser.add_argument(
-        '--client-public-key-path',
-        dest='client_public_key_path',
+        "--client-public-key-path",
+        dest="client_public_key_path",
         type=str,
         help="Path to the client public key file (Default ssh-keys/client_rsa.pub)",
     )
     parser.add_argument(
-        '--client-private-key-path',
-        dest='client_private_key_path',
+        "--client-private-key-path",
+        dest="client_private_key_path",
         type=str,
         help="Path to the client private key file (Default ssh-keys/client_rsa)",
     )

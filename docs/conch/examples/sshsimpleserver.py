@@ -301,10 +301,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simple SSH server.")
 
     parser.add_argument(
-        'authorized-keys-path',
-        dest='authorized_keys_path',
+        "authorized-keys-path",
+        dest="authorized_keys_path",
         type=str,
-        help='Path to the authorized keys file.'
+        help="Path to the authorized keys file.",
     )
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()
