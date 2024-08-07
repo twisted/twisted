@@ -69,7 +69,9 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
     def getPublicKey(self):
         args = parser.parse_args()
         public_key_path = (
-            args.client_public_key_path if args.client_public_key_path else CLIENT_RSA_PUBLIC
+            args.client_public_key_path
+            if args.client_public_key_path
+            else CLIENT_RSA_PUBLIC
         )
         if (
             not public_key_path
@@ -86,7 +88,9 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
         """
         args = parser.parse_args()
         private_key_path = (
-            args.client_private_key_path if args.client_private_key_path else CLIENT_RSA_PRIVATE
+            args.client_private_key_path
+            if args.client_private_key_path
+            else CLIENT_RSA_PRIVATE
         )
         return defer.succeed(keys.Key.fromFile(private_key_path))
 
@@ -153,19 +157,19 @@ class CatChannel(channel.SSHChannel):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Simple SSH client.')
+    parser = argparse.ArgumentParser(description="Simple SSH client.")
 
     parser.add_argument(
         '--client-public-key-path',
         dest='client_public_key_path',
         type=str,
-        help='Path to the client public key file (Default ssh-keys/client_rsa.pub)'
+        help="Path to the client public key file (Default ssh-keys/client_rsa.pub)",
     )
     parser.add_argument(
         '--client-private-key-path',
         dest='client_private_key_path',
         type=str,
-        help='Path to the client private key file (Default ssh-keys/client_rsa)'
+        help="Path to the client private key file (Default ssh-keys/client_rsa)",
     )
 
     log.startLogging(sys.stdout)
