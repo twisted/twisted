@@ -47,6 +47,10 @@ $ ssh -p 5022  user@localhost
 
 # Connect with the SSH client key.
 $ ssh -p 5022 -i ssh-keys/client_rsa user@localhost
+
+You should create an authorized_keys file with the content of 
+ssh-keys/client_rsa.pub that you want to authorize and pass it 
+as parameter to the server.
 """
 
 # Pre-computed big prime numbers used in Diffie-Hellman Group Exchange as
@@ -299,7 +303,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simple SSH server.')
 
     parser.add_argument(
-        'authorized_keys_path',
+        'authorized-keys-path',
+        dest='authorized_keys_path',
         type=str,
         help='Path to the authorized keys file.'
     )
