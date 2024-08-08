@@ -7,5 +7,5 @@ Provides Twisted version information.
 
 from incremental import Version
 
-__version__ = Version("Twisted", 24, 7, 0, release_candidate=2)
+__version__ = Version("Twisted", 24, 7, 0)
 __all__ = ["__version__"]

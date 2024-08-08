@@ -4675,7 +4675,7 @@ class HTTPClientDeprecationTests(unittest.SynchronousTestCase):
         self.getDeprecatedModuleAttribute(
             "twisted.web.http",
             "HTTPClient",
-            Version("Twisted", 24, 7, 0, release_candidate=2),
+            Version("Twisted", 24, 7, 0),
         )
 
 
