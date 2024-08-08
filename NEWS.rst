@@ -8,53 +8,11 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-Twisted 24.7.0rc2 (2024-08-06)
-==============================
+Twisted 24.7.0 (2024-08-08)
+===========================
 
-Bugfixes
---------
-
-- Fixed unreleased regression caused by PR 12109. (#12279)
-
-
-Conch
------
-
-No significant changes.
-
-
-Web
----
-
-No significant changes.
-
-
-Mail
-----
-
-No significant changes.
-
-
-Words
------
-
-No significant changes.
-
-
-Names
------
-
-No significant changes.
-
-
-Trial
------
-
-No significant changes.
-
-
-Twisted 24.7.0rc1 (2024-07-29)
-==============================
+24.7.0.rc2 fixed an unreleased regression caused by PR 12109. (#12279)
+No other changes since 24.7.0.rc2
 
 
 Security Advisories
