@@ -1893,7 +1893,10 @@ class _DefGen_Return(BaseException):
         self.value = value
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="standard return statement")
+@deprecated(
+    Version("Twisted", 24, 7, 0),
+    replacement="standard return statement",
+)
 def returnValue(val: object) -> NoReturn:
     """
     Return val from a L{inlineCallbacks} generator.
@@ -2250,7 +2253,7 @@ def inlineCallbacks(
     A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
 
-    C{inlineCallbacks} behaves very similarly to coroutines. Since Twisted NEXT
+    C{inlineCallbacks} behaves very similarly to coroutines. Since Twisted 24.7.0
     it is possible to rewrite functions using C{inlineCallbacks} to C{async def}
     in piecewise manner and be mostly compatible to existing code.
 
