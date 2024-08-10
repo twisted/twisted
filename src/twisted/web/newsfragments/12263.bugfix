@@ -1,1 +1,0 @@
-twisted.web.util.redirectTo now HTML-escapes the provided URL in the fallback response body it returns (GHSA-cf56-g6w6-pqq2). The issue is being tracked with CVE-2024-41810.

@@ -1,1 +1,0 @@
-The HTTP 1.0/1.1 server provided by twisted.web now constains the characters set of HTTP header names, improving compliance with RFC 9110.

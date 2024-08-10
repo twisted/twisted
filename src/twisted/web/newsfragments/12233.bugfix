@@ -1,1 +1,0 @@
-The HTTP 1.0/1.1 server provided by twisted.web is now more picky about the first line of a request, improving compliance with RFC 9112.

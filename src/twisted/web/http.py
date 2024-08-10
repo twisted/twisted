@@ -848,7 +848,7 @@ class HTTPClient(basic.LineReceiver):
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 24, 7, 0),
     "Use twisted.web.client.Agent instead.",
     __name__,
     HTTPClient.__name__,
