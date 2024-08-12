@@ -217,8 +217,8 @@ def maybeDeferred(
     except BaseException:
         return fail(Failure(captureVars=Deferred.debug))
 
-    if isinstance(result, Deferred):
-        return result
+    if type(result) in _DEFERRED_SUBCLASSES:
+        return result  # type: ignore[return-value]
     elif isinstance(result, Failure):
         return fail(result)
     elif type(result) is CoroutineType:
@@ -526,6 +526,8 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
+        # Note that this logic is duplicated in addCallbac/addErrback/addBoth
+        # for performance reasons.
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -618,10 +620,14 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # Implementation Note: Any annotations for brevity; the overloads above
-        # handle specifying the actual signature, and there's nothing worth
-        # type-checking in this implementation.
-        return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     @overload
     def addErrback(
@@ -656,10 +662,14 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            passthru, errback, errbackArgs=args, errbackKeywords=kwargs
-        )
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     @overload
     def addBoth(
@@ -741,15 +751,15 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            callback,
-            callback,
-            callbackArgs=args,
-            errbackArgs=args,
-            callbackKeywords=kwargs,
-            errbackKeywords=kwargs,
-        )
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        call = (callback, args, kwargs)
+        self.callbacks.append((call, call))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     # END way too many overloads
 
@@ -1346,11 +1356,11 @@ def ensureDeferred(
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     """
-    if isinstance(coro, Deferred):
-        return coro
+    if type(coro) in _DEFERRED_SUBCLASSES:
+        return coro  # type: ignore[return-value]
     else:
         try:
-            return Deferred.fromCoroutine(coro)
+            return Deferred.fromCoroutine(coro)  # type: ignore[arg-type]
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
@@ -2107,17 +2117,23 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        if iscoroutine(result) or inspect.isgenerator(result):
+        isDeferred = type(result) in _DEFERRED_SUBCLASSES
+        # iscoroutine() is pretty expensive in this context, so avoid calling
+        # it unnecessarily:
+        if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
             result = _cancellableInlineCallbacks(result)
+            isDeferred = True
 
-        if isinstance(result, Deferred):
+        if isDeferred:
+            # We don't cast() to Deferred because that does more work in the hot path
+
             # a deferred was yielded, get the result.
-            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)
+            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)  # type: ignore[attr-defined]
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                status.waitingOn = result
+                status.waitingOn = result  # type: ignore[assignment]
                 return
 
             result = waiting[1]
