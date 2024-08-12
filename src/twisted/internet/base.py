@@ -571,6 +571,8 @@ class PluggableResolverMixin:
 _SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHandle])
 _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
 
+_DEFAULT_DELAYED_CALL_LOGGING_HANDLER = _log.failureHandler("while handling timed call")
+
 
 @implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
 class ReactorBase(PluggableResolverMixin):
@@ -1076,18 +1078,23 @@ class ReactorBase(PluggableResolverMixin):
                 heappush(self._pendingTimedCalls, call)
                 continue
 
-            with _log.failuresHandled(
-                "while handling timed call {previous()}",
-                previous=lambda creator=call.creator: (
-                    ""
-                    if creator is None
-                    else "\n"
-                    + (" C: from a DelayedCall created here:\n")
-                    + " C:"
-                    + "".join(creator).rstrip().replace("\n", "\n C:")
-                    + "\n"
-                ),
-            ):
+            logHandler = (
+                _log.failuresHandled(
+                    "while handling timed call {previous()}",
+                    previous=lambda creator=call.creator: (
+                        "\n"
+                        + (" C: from a DelayedCall created here:\n")
+                        + " C:"
+                        + "".join(creator).rstrip().replace("\n", "\n C:")
+                        + "\n"
+                    ),
+                )
+                if call.creator
+                # A much faster logging handler for the common case where extra
+                # debug info is not being output:
+                else _DEFAULT_DELAYED_CALL_LOGGING_HANDLER
+            )
+            with logHandler:
                 call.called = 1
                 call.func(*call.args, **call.kw)
 
