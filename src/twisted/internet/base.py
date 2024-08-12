@@ -213,29 +213,23 @@ class DelayedCall:
         """
         return not (self.cancelled or self.called)
 
-    def __le__(self, other: object) -> bool:
+    def __le__(self, other: "DelayedCall") -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        if isinstance(other, DelayedCall):
-            return self.time <= other.time
-        else:
-            return NotImplemented
+        return self.time <= other.time
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: "DelayedCall") -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        if isinstance(other, DelayedCall):
-            return self.time < other.time
-        else:
-            return NotImplemented
+        return self.time < other.time
 
     def __repr__(self) -> str:
         """
@@ -964,7 +958,6 @@ class ReactorBase(PluggableResolverMixin):
         """
         See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert builtins.callable(callable), f"{callable} is not callable"
         assert delay >= 0, f"{delay} is not greater than or equal to 0 seconds"
         delayedCall = DelayedCall(
             self.seconds() + delay,
