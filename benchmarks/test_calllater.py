@@ -35,8 +35,8 @@ def test_spaced_out_events(benchmark, reversed_times):
         for time in timestamps:
             reactor.callLater(time, lambda: None)
         for _ in range(len(timestamps)):
+            reactor.advance(reactor.timeout() or 0)
             reactor.runUntilCurrent()
-            reactor.advance(1)
         return reactor
 
     reactor = benchmark(go)
