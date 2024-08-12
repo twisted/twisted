@@ -1063,7 +1063,7 @@ class Deferred(Awaitable[_SelfResultT]):
                     # forget about that result ourselves.
 
                     # We don't use cast() for performance reasons:
-                    chainee : Deferred[object] = args[0]  # type: ignore[assignment]
+                    chainee: Deferred[object] = args[0]  # type: ignore[assignment]
                     chainee.result = current.result
                     current.result = None
                     # Making sure to update _debugInfo
