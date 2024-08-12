@@ -9,6 +9,7 @@ class Reactor(ReactorBase):
     """
     Implement minimal methods a subclass needs.
     """
+
     _currentTime = 0.0
 
     def seconds(self) -> float:
