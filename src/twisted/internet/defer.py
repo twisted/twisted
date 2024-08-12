@@ -526,6 +526,8 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
+        # Note that this logic is duplicated in addCallbac/addErrback/addBoth
+        # for performance reasons.
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -618,6 +620,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
         self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
 
         if self.called:
@@ -658,6 +662,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
         self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
 
         if self.called:
@@ -745,6 +751,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
         call = (callback, args, kwargs)
         self.callbacks.append((call, call))
 
@@ -2110,8 +2118,8 @@ def _inlineCallbacks(
             return
 
         isDeferred = type(result) in _DEFERRED_SUBCLASSES
-        # iscoroutine() is pretty expensive in this context, so avoid caclling
-        # unnecessarily:
+        # iscoroutine() is pretty expensive in this context, so avoid calling
+        # it unnecessarily:
         if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
             result = _cancellableInlineCallbacks(result)
             isDeferred = True
