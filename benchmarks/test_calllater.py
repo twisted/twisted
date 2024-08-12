@@ -1,5 +1,7 @@
 """Tests for scheduled events."""
 
+import pytest
+
 from twisted.internet.base import ReactorBase
 
 
@@ -19,16 +21,20 @@ class Reactor(ReactorBase):
         pass
 
 
-def test_spaced_out_events(benchmark):
+@pytest.mark.parametrize("reversed_times", [False, True])
+def test_spaced_out_events(benchmark, reversed_times):
     """
     Add spaced out events, then run them all.
     """
+    timestamps = list(range(100))
+    if reversed_times:
+        timestamps.reverse()
 
     def go():
         reactor = Reactor()
-        for i in range(100):
-            reactor.callLater(i, lambda: None)
-        for _ in range(100):
+        for time in timestamps:
+            reactor.callLater(time, lambda: None)
+        for _ in range(len(timestamps)):
             reactor.runUntilCurrent()
             reactor.advance(1)
         return reactor
