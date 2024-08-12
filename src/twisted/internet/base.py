@@ -1007,6 +1007,12 @@ class ReactorBase(PluggableResolverMixin):
         ]
 
     def _insertNewDelayedCalls(self) -> None:
+        # This function is called twice per reactor iteration, once in
+        # timeout() and once in runUntilCurrent(), and in most cases there
+        # won't be any new timeouts. So have a fast path for the empty case.
+        if not self._newTimedCalls:
+            return
+
         for call in self._newTimedCalls:
             if call.cancelled:
                 self._cancellations -= 1
