@@ -26,9 +26,9 @@ def test_spaced_out_events(benchmark):
 
     def go():
         reactor = Reactor()
-        for i in range(10):
+        for i in range(100):
             reactor.callLater(i, lambda: None)
-        for _ in range(10):
+        for _ in range(100):
             reactor.runUntilCurrent()
             reactor.advance(1)
         return reactor
