@@ -1063,7 +1063,9 @@ class Deferred(Awaitable[_SelfResultT]):
                 if callback is _CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
-                    chainee = cast(Deferred[object], args[0])
+
+                    # We don't use cast() for performance reasons:
+                    chainee : Deferred[object] = args[0]  # type: ignore[assignment]
                     chainee.result = current.result
                     current.result = None
                     # Making sure to update _debugInfo
