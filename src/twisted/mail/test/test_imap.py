@@ -2665,7 +2665,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
                     ("\\SEEN", "\\DELETED"),
                     "Tue, 17 Jun 2003 11:22:16 -0600 (MDT)",
                 )
-                defer.returnValue(result)
+                return result
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)
@@ -2713,7 +2713,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
                         message,
                     )
                 )
-                defer.returnValue(result)
+                return result
 
         d1 = self.connected.addCallback(strip(login))
         d1.addCallbacks(strip(append), self._ebGeneral)

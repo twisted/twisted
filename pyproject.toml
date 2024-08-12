@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
 ]
 build-backend = "hatchling.build"
 
@@ -33,12 +33,11 @@ classifiers = [
 dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
     "Automat >= 0.8.0",
     "hyperlink >= 17.1.1",
-    "attrs >= 21.3.0",
+    "attrs >= 22.2.0",
     "typing_extensions >= 4.2.0",
-    "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
@@ -68,11 +67,12 @@ dev-release = [
 
 # All the extra tools used to help with the development process.
 dev = [
+    "twisted[test]",
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
-    "coverage >= 6b1, <7",
+    "coverage ~= 7.5",
 ]
 
 tls = [
@@ -113,6 +113,7 @@ macos-platform = [
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
+    "twisted-iocpsupport >= 1.0.2",
 ]
 
 osx-platform = [
@@ -157,9 +158,7 @@ Twitter = "https://twitter.com/twistedmatrix"
 allow-ambiguous-features = true
 
 [tool.hatch.version]
-source = "code"
-path = "src/twisted/__init__.py"
-search-paths = ["src"]
+source = "incremental"
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/x-rst"
@@ -383,8 +382,6 @@ module = [
   "psycopg",
   "MySQLdb",
   "kinterbasdb",
-
-  "SOAPpy",
 ]
 
 [[tool.mypy.overrides]]
@@ -733,7 +730,6 @@ module = [
     'twisted.web.proxy',
     'twisted.web.resource',
     'twisted.web.server',
-    'twisted.web.soap',
     'twisted.web.static',
     'twisted.web.sux',
     'twisted.web.tap',
@@ -748,7 +744,6 @@ module = [
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
     'twisted.web.test.test_proxy',
-    'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
