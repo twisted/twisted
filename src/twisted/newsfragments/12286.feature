@@ -1,1 +1,1 @@
-The reactor now will use a little CPU when events have been scheduled with callLater().
+The reactor now will use a little less CPU when events have been scheduled with callLater().
