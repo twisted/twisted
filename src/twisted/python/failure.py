@@ -30,6 +30,10 @@ from incremental import Version
 from twisted.python import reflect
 from twisted.python.deprecate import deprecatedProperty
 
+_IS_PY_313 = sys.version_info[:2] == (3, 13)
+# Bytecode pattern for yield in 3.13:
+_PY_313_YIELD = bytes([opcode.opmap["YIELD_VALUE"], opcode.opmap["CACHE"], opcode.opmap["RESUME"]])
+
 _T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 count = 0
@@ -561,7 +565,12 @@ class Failure(BaseException):
         if (not lastFrame.f_code.co_code) or lastFrame.f_code.co_code[
             lastTb.tb_lasti
         ] != cls._yieldOpcode:
-            return
+            if _IS_PY_313:
+                # Python 3.13 has a different pattern for yields:
+                if lastFrame.f_code.co_code[lastTb.tb_lasti - 2:lastTb.tb_lasti + 1] != _PY_313_YIELD:
+                    return
+            else:
+                return
 
         # If the exception was caught above the generator.throw
         # (outside the generator), it will appear in the tb (as the
