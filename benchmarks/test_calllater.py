@@ -5,20 +5,29 @@ import pytest
 from twisted.internet.base import ReactorBase
 
 
-class Reactor(ReactorBase):
+class ReactorWithRiggedTime(ReactorBase):
     """
-    Implement minimal methods a subclass needs.
+    Allows controlling the passed time while benchmarking C{ReactorBase}.
     """
 
     _currentTime = 0.0
 
     def seconds(self) -> float:
+        """
+        Override the regular time function in C{ReactorBase}.
+        """
         return self._currentTime
 
-    def advance(self, seconds: float):
+    def advance(self, seconds: float) -> None:
+        """
+        Advance time by the given numbe of seconds.
+        """
         self._currentTime += seconds
 
-    def installWaker(self):
+    def installWaker(self) -> None:
+        """
+        Subclasses of C{ReactorBase} are required to implement this.
+        """
         pass
 
 
@@ -32,7 +41,7 @@ def test_spaced_out_events(benchmark, reversed_times):
         timestamps.reverse()
 
     def go():
-        reactor = Reactor()
+        reactor = ReactorWithRiggedTime()
         for time in timestamps:
             reactor.callLater(time, lambda: None)
         for _ in range(len(timestamps)):
