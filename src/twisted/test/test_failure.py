@@ -552,7 +552,7 @@ class FailureTests(SynchronousTestCase):
         # Here we test a Failure with a traceback:
         try:
             raise ComparableException("boo")
-        except:
+        except BaseException:
             failure3 = failure.Failure()
         self.assertPicklingRoundtrips(failure3)
 
