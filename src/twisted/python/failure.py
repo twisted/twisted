@@ -291,13 +291,10 @@ class Failure(BaseException):
         self.type = self.value = tb = None
         self.captureVars = captureVars
 
-        stackOffset = 0
-
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
             if self.type is None:
                 raise NoCurrentExceptionError()
-            stackOffset = 1
         elif exc_type is None:
             if isinstance(exc_value, Exception):
                 self.type = exc_value.__class__
@@ -328,21 +325,6 @@ class Failure(BaseException):
 
         frames = []
         tb = self.tb
-        stackOffset = 0
-
-        if tb:
-            f = tb.tb_frame
-        elif not isinstance(self.value, Failure):
-            # We don't do frame introspection since it's expensive,
-            # and if we were passed a plain exception with no
-            # traceback, it's not useful anyway
-            f = stackOffset = None
-
-        while stackOffset and f:
-            # This excludes this Failure.__init__ frame from the
-            # stack, leaving it to start with our caller instead.
-            f = f.f_back
-            stackOffset -= 1
 
         while tb is not None:
             f = tb.tb_frame
