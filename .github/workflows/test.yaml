@@ -147,7 +147,7 @@ jobs:
             # Add full twisted.internet
             # FIXME:https://github.com/twisted/twisted/issues/12062
             # Add full twisted.test
-            trial-target: 'twisted.conch twisted.cred twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.web twisted.words'
+            trial-target: 'twisted.conch twisted.cred twisted.internet.test.test_process twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.runner twisted.spread twisted.test.test_defer twisted.trial twisted.web twisted.words'
             # Disable concurrency for now, since we get occasional segfaults and
             # this helps debug them:
             trial-args: '--reactor=default'
