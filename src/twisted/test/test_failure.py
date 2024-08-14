@@ -566,7 +566,6 @@ class FailureTests(SynchronousTestCase):
         expected["pickled"] = 1
         expected["tb"] = None
         result = failure2.__dict__.copy()
-        result.pop("_frames")
         self.assertEqual(expected, result)
         self.assertEqual(failure2.frames, original_failure.frames)
 

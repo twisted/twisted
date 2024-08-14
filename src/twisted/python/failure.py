@@ -323,7 +323,7 @@ class Failure(BaseException):
         if hasattr(self, "_frames"):
             return self._frames
 
-        frames = []
+        frames = self._frames = []
         tb = self.tb
 
         while tb is not None:
