@@ -14,6 +14,28 @@ def test_deferred_await(benchmark):
     benchmark(go)
 
 
+def test_deferred_await_unfired(benchmark):
+    """Measure the speed of awaiting unfired Deferreds."""
+
+    async def _run(deferreds):
+        results = []
+        for d in deferreds:
+            results.append(await d)
+        return sum(results)
+
+    def go():
+        deferreds = [Deferred() for _ in range(20)]
+        result = ensureDeferred(_run(deferreds))
+        for i in range(20):
+            deferreds[i].callback(i)
+        return result
+
+    d = benchmark(go)
+    result = []
+    d.addCallback(result.append)
+    assert result[0] == sum(range(20))
+
+
 def f(x: int, a: int) -> int:
     return x + a
 

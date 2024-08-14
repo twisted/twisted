@@ -213,29 +213,23 @@ class DelayedCall:
         """
         return not (self.cancelled or self.called)
 
-    def __le__(self, other: object) -> bool:
+    def __le__(self, other: "DelayedCall") -> bool:
         """
         Implement C{<=} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        if isinstance(other, DelayedCall):
-            return self.time <= other.time
-        else:
-            return NotImplemented
+        return self.time <= other.time
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: "DelayedCall") -> bool:
         """
         Implement C{<} operator between two L{DelayedCall} instances.
 
         Comparison is based on the C{time} attribute (unadjusted by the
         delayed time).
         """
-        if isinstance(other, DelayedCall):
-            return self.time < other.time
-        else:
-            return NotImplemented
+        return self.time < other.time
 
     def __repr__(self) -> str:
         """
@@ -576,6 +570,8 @@ class PluggableResolverMixin:
 
 _SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHandle])
 _ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
+
+_DEFAULT_DELAYED_CALL_LOGGING_HANDLER = _log.failureHandler("while handling timed call")
 
 
 @implementer(IReactorCore, IReactorTime, _ISupportsExitSignalCapturing)
@@ -964,7 +960,6 @@ class ReactorBase(PluggableResolverMixin):
         """
         See twisted.internet.interfaces.IReactorTime.callLater.
         """
-        assert builtins.callable(callable), f"{callable} is not callable"
         assert delay >= 0, f"{delay} is not greater than or equal to 0 seconds"
         delayedCall = DelayedCall(
             self.seconds() + delay,
@@ -1012,6 +1007,12 @@ class ReactorBase(PluggableResolverMixin):
         ]
 
     def _insertNewDelayedCalls(self) -> None:
+        # This function is called twice per reactor iteration, once in
+        # timeout() and once in runUntilCurrent(), and in most cases there
+        # won't be any new timeouts. So have a fast path for the empty case.
+        if not self._newTimedCalls:
+            return
+
         for call in self._newTimedCalls:
             if call.cancelled:
                 self._cancellations -= 1
@@ -1083,18 +1084,23 @@ class ReactorBase(PluggableResolverMixin):
                 heappush(self._pendingTimedCalls, call)
                 continue
 
-            with _log.failuresHandled(
-                "while handling timed call {previous()}",
-                previous=lambda creator=call.creator: (
-                    ""
-                    if creator is None
-                    else "\n"
-                    + (" C: from a DelayedCall created here:\n")
-                    + " C:"
-                    + "".join(creator).rstrip().replace("\n", "\n C:")
-                    + "\n"
-                ),
-            ):
+            logHandler = (
+                _log.failuresHandled(
+                    "while handling timed call {previous()}",
+                    previous=lambda creator=call.creator: (
+                        "\n"
+                        + (" C: from a DelayedCall created here:\n")
+                        + " C:"
+                        + "".join(creator).rstrip().replace("\n", "\n C:")
+                        + "\n"
+                    ),
+                )
+                if call.creator
+                # A much faster logging handler for the common case where extra
+                # debug info is not being output:
+                else _DEFAULT_DELAYED_CALL_LOGGING_HANDLER
+            )
+            with logHandler:
                 call.called = 1
                 call.func(*call.args, **call.kw)
 
