@@ -392,24 +392,6 @@ class Failure(BaseException):
         """
         # Copy all infos from that failure (including self.frames).
         self.__dict__ = copy.copy(otherFailure.__dict__)
-        return
-
-        # If we are re-throwing a Failure, we merge the stack-trace stored in
-        # the failure with the current exception's stack.  This integrated with
-        # throwExceptionIntoGenerator and allows to provide full stack trace,
-        # even if we go through several layers of inlineCallbacks.
-        _, _, tb = sys.exc_info()
-        frames = []
-        while tb is not None:
-            f = tb.tb_frame
-            if f.f_code not in _inlineCallbacksExtraneous:
-                frames.append(
-                    (f.f_code.co_name, f.f_code.co_filename, tb.tb_lineno, (), ())
-                )
-            tb = tb.tb_next
-        # Merging current stack with stack stored in the Failure.
-        frames.extend(self.frames)
-        self.frames = frames
 
     @staticmethod
     def _withoutTraceback(value: BaseException) -> Failure:
