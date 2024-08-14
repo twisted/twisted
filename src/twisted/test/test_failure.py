@@ -549,7 +549,12 @@ class FailureTests(SynchronousTestCase):
         failure2 = failure.Failure._withoutTraceback(exc)
         self.assertPicklingRoundtrips(failure2)
 
-        # TODO a Failure with frames
+        # Here we test a Failure with a traceback:
+        try:
+            raise ComparableException("boo")
+        except:
+            failure3 = failure.Failure()
+        self.assertPicklingRoundtrips(failure3)
 
     def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
         """
@@ -559,6 +564,7 @@ class FailureTests(SynchronousTestCase):
         failure2 = pickle.loads(pickle.dumps(original_failure))
         expected = original_failure.__dict__.copy()
         expected["pickled"] = 1
+        expected["tb"] = None
         result = failure2.__dict__.copy()
         result.pop("_frames")
         self.assertEqual(expected, result)
