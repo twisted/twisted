@@ -577,6 +577,16 @@ class FailureTests(SynchronousTestCase):
         f = failure.Failure(ComparableException("hello"))
         self.assertEqual(f.__getstate__()["parents"], f.parents)
 
+    def test_settableFrames(self) -> None:
+        """
+        C{Failure.frames} can be set, both before and after pickling.
+        """
+        original_failure = failure.Failure(getDivisionFailure())
+        original_failure.frames = original_failure.frames[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.frames = failure2.frames[:-1]
+        self.assertEqual(failure2.frames, original_failure.frames[:-1])
+
     def test_settableParents(self) -> None:
         """
         C{Failure.parents} can be set, both before and after pickling.
