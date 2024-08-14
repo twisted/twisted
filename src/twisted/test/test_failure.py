@@ -549,6 +549,8 @@ class FailureTests(SynchronousTestCase):
         failure2 = failure.Failure._withoutTraceback(exc)
         self.assertPicklingRoundtrips(failure2)
 
+        # TODO a Failure with frames
+
     def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
         """
         The failure can be pickled and unpickled, and the C{parents} attribute
@@ -557,7 +559,10 @@ class FailureTests(SynchronousTestCase):
         failure2 = pickle.loads(pickle.dumps(original_failure))
         expected = original_failure.__dict__.copy()
         expected["pickled"] = 1
-        self.assertEqual(expected, failure2.__dict__)
+        result = failure2.__dict__.copy()
+        result.pop("_frames")
+        self.assertEqual(expected, result)
+        self.assertEqual(failure2.frames, original_failure.frames)
 
     def test_failurePicklingIncludesParents(self) -> None:
         """
@@ -681,63 +686,6 @@ class FindFailureTests(SynchronousTestCase):
     """
     Tests for functionality related to L{Failure._findFailure}.
     """
-
-    def test_findNoFailureInExceptionHandler(self) -> None:
-        """
-        Within an exception handler, _findFailure should return
-        L{None} in case no Failure is associated with the current
-        exception.
-        """
-        try:
-            1 / 0
-        except BaseException:
-            self.assertIsNone(failure.Failure._findFailure())
-        else:
-            self.fail("No exception raised from 1/0!?")
-
-    def test_findNoFailure(self) -> None:
-        """
-        Outside of an exception handler, _findFailure should return None.
-        """
-        self.assertIsNone(sys.exc_info()[-1])  # environment sanity check
-        self.assertIsNone(failure.Failure._findFailure())
-
-    def test_findFailure(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by raiseException).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            self.assertEqual(failure.Failure._findFailure(), f)
-        else:
-            self.fail("No exception raised from raiseException!?")
-
-    def test_failureConstructionFindsOriginalFailure(self) -> None:
-        """
-        When a Failure is constructed in the context of an exception
-        handler that is handling an exception raised by
-        raiseException, the new Failure should be chained to that
-        original Failure.
-        Means the new failure should still show the same origin frame,
-        but with different complete stack trace (as not thrown at same place).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            newF = failure.Failure()
-            tb = f.getTraceback().splitlines()
-            new_tb = newF.getTraceback().splitlines()
-            self.assertNotEqual(tb, new_tb)
-            self.assertEqual(tb[-3:], new_tb[-3:])
-        else:
-            self.fail("No exception raised from raiseException!?")
 
     @skipIf(raiser is None, "raiser extension not available")
     def test_failureConstructionWithMungedStackSucceeds(self) -> None:
@@ -992,30 +940,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self.assertIsInstance(stuff[0][1], ZeroDivisionError)
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1 / 0")
-
-    def test_findFailureInGenerator(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by throwExceptionIntoGenerator).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        foundFailures = []
-
-        def generator() -> Generator[None, None, None]:
-            try:
-                yield
-            except BaseException:
-                foundFailures.append(failure.Failure._findFailure())
-            else:
-                self.fail("No exception sent to generator")
-
-        g = generator()
-        next(g)
-        self._throwIntoGenerator(f, g)
-
-        self.assertEqual(foundFailures, [f])
 
     def test_failureConstructionFindsOriginalFailure(self) -> None:
         """
