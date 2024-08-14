@@ -371,7 +371,9 @@ class Failure(BaseException):
             tb = tb.tb_next
         return frames
 
-    # TODO backwards compat @frames.setter
+    @frames.setter
+    def frames(self, frames):
+        self._frames = frames
 
     @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
     def stack(self):
@@ -560,7 +562,7 @@ class Failure(BaseException):
                 for v in self.frames
             ]
         else:
-           c["frames"] = self.frames
+            c["frames"] = self.frames
 
         # Added 2003-06-23. See comment above in __init__
         c["tb"] = None
@@ -637,12 +639,11 @@ class Failure(BaseException):
             in the traceback.  Must be one of C{'brief'}, C{'default'}, or
             C{'verbose'}.
         """
-        # TODO use Python's traceback printer when possible so we get column
-        # indicators, not just lines of code
         if file is None:
             from twisted.python import log
 
             file = log.logerr
+
         w = file.write
 
         if detail == "verbose" and not self.captureVars:
