@@ -253,14 +253,6 @@ class Failure(BaseException):
     pickled = 0
     _parents = None
 
-    # The opcode of "yield" in Python bytecode. We need this in
-    # _findFailure in order to identify whether an exception was
-    # thrown by a throwExceptionIntoGenerator.
-    # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes
-    # are stored in bytes so we need to properly account for this
-    # difference.
-    _yieldOpcode = opcode.opmap["YIELD_VALUE"]
-
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None, captureVars=False):
         """
         Initialize me with an explanation of the error.
@@ -473,8 +465,6 @@ class Failure(BaseException):
         @raise StopIteration: If there are no more values in the generator.
         @raise anything else: Anything that the generator raises.
         """
-        # Note that the actual magic to find the traceback information
-        # is done in _findFailure.
         return g.throw(self.value.with_traceback(self.tb))
 
     def __repr__(self) -> str:

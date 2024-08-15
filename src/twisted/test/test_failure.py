@@ -699,7 +699,7 @@ class GetTracebackTests(SynchronousTestCase):
 
 class FindFailureTests(SynchronousTestCase):
     """
-    Tests for functionality related to L{Failure._findFailure}.
+    Tests for functionality related to identifying the C{Failure}.
     """
 
     @skipIf(raiser is None, "raiser extension not available")
@@ -994,9 +994,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureInGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} inside the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        inside the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:
@@ -1015,9 +1015,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureFromGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} above the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        above the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:
