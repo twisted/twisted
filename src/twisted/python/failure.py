@@ -24,7 +24,6 @@ from inspect import getmro
 from io import StringIO
 from typing import Callable, NoReturn, TypeVar
 
-import opcode
 from incremental import Version
 
 from twisted.python import reflect
@@ -253,14 +252,6 @@ class Failure(BaseException):
     pickled = 0
     _parents = None
 
-    # The opcode of "yield" in Python bytecode. We need this in
-    # _findFailure in order to identify whether an exception was
-    # thrown by a throwExceptionIntoGenerator.
-    # on PY3, b'a'[0] == 97 while in py2 b'a'[0] == b'a' opcodes
-    # are stored in bytes so we need to properly account for this
-    # difference.
-    _yieldOpcode = opcode.opmap["YIELD_VALUE"]
-
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None, captureVars=False):
         """
         Initialize me with an explanation of the error.
@@ -291,16 +282,10 @@ class Failure(BaseException):
         self.type = self.value = tb = None
         self.captureVars = captureVars
 
-        stackOffset = 0
-
-        if exc_value is None:
-            exc_value = self._findFailure()
-
         if exc_value is None:
             self.type, self.value, tb = sys.exc_info()
             if self.type is None:
                 raise NoCurrentExceptionError()
-            stackOffset = 1
         elif exc_type is None:
             if isinstance(exc_value, Exception):
                 self.type = exc_value.__class__
@@ -316,50 +301,25 @@ class Failure(BaseException):
             self._extrapolate(self.value)
             return
 
-        if hasattr(self.value, "__failure__"):
-            # For exceptions propagated through coroutine-awaiting (see
-            # Deferred.send, AKA Deferred.__next__), which can't be raised as
-            # Failure because that would mess up the ability to except: them:
-            self._extrapolate(self.value.__failure__)
-
-            # Clean up the inherently circular reference established by storing
-            # the failure there.  This should make the common case of a Twisted
-            # / Deferred-returning coroutine somewhat less hard on the garbage
-            # collector.
-            del self.value.__failure__
-            return
-
         if tb is None:
             if exc_tb:
                 tb = exc_tb
             elif getattr(self.value, "__traceback__", None):
                 # Python 3
                 tb = self.value.__traceback__
-
-        frames = self.frames = []
-
-        # Added 2003-06-23 by Chris Armstrong. Yes, I actually have a
-        # use case where I need this traceback object, and I've made
-        # sure that it'll be cleaned up.
         self.tb = tb
 
-        if tb:
-            f = tb.tb_frame
-        elif not isinstance(self.value, Failure):
-            # We don't do frame introspection since it's expensive,
-            # and if we were passed a plain exception with no
-            # traceback, it's not useful anyway
-            f = stackOffset = None
+    @property
+    def frames(self):
+        if hasattr(self, "_frames"):
+            return self._frames
 
-        while stackOffset and f:
-            # This excludes this Failure.__init__ frame from the
-            # stack, leaving it to start with our caller instead.
-            f = f.f_back
-            stackOffset -= 1
+        frames = self._frames = []
+        tb = self.tb
 
         while tb is not None:
             f = tb.tb_frame
-            if captureVars:
+            if self.captureVars:
                 localz = f.f_locals.copy()
                 if f.f_locals is f.f_globals:
                     globalz = {}
@@ -382,6 +342,11 @@ class Failure(BaseException):
                 )
             )
             tb = tb.tb_next
+        return frames
+
+    @frames.setter
+    def frames(self, frames):
+        self._frames = frames
 
     @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
     def stack(self):
@@ -416,25 +381,8 @@ class Failure(BaseException):
             one.
         @type otherFailure: L{Failure}
         """
-        # Copy all infos from that failure (including self.frames).
+        # Copy all infos from that failure (including self._frames).
         self.__dict__ = copy.copy(otherFailure.__dict__)
-
-        # If we are re-throwing a Failure, we merge the stack-trace stored in
-        # the failure with the current exception's stack.  This integrated with
-        # throwExceptionIntoGenerator and allows to provide full stack trace,
-        # even if we go through several layers of inlineCallbacks.
-        _, _, tb = sys.exc_info()
-        frames = []
-        while tb is not None:
-            f = tb.tb_frame
-            if f.f_code not in _inlineCallbacksExtraneous:
-                frames.append(
-                    (f.f_code.co_name, f.f_code.co_filename, tb.tb_lineno, (), ())
-                )
-            tb = tb.tb_next
-        # Merging current stack with stack stored in the Failure.
-        frames.extend(self.frames)
-        self.frames = frames
 
     @staticmethod
     def _withoutTraceback(value: BaseException) -> Failure:
@@ -449,7 +397,6 @@ class Failure(BaseException):
         count += 1
         result.captureVars = False
         result.count = count
-        result.frames = []
         result.value = value
         result.type = value.__class__
         result.tb = None
@@ -517,68 +464,7 @@ class Failure(BaseException):
         @raise StopIteration: If there are no more values in the generator.
         @raise anything else: Anything that the generator raises.
         """
-        # Note that the actual magic to find the traceback information
-        # is done in _findFailure.
         return g.throw(self.value.with_traceback(self.tb))
-
-    @classmethod
-    def _findFailure(cls):
-        """
-        Find the failure that represents the exception currently in context.
-        """
-        tb = sys.exc_info()[-1]
-        if not tb:
-            return
-
-        secondLastTb = None
-        lastTb = tb
-        while lastTb.tb_next:
-            secondLastTb = lastTb
-            lastTb = lastTb.tb_next
-
-        lastFrame = lastTb.tb_frame
-
-        # NOTE: f_locals.get('self') is used rather than
-        # f_locals['self'] because psyco frames do not contain
-        # anything in their locals() dicts.  psyco makes debugging
-        # difficult anyhow, so losing the Failure objects (and thus
-        # the tracebacks) here when it is used is not that big a deal.
-
-        # Handle raiseException-originated exceptions
-        if lastFrame.f_code is cls.raiseException.__code__:
-            return lastFrame.f_locals.get("self")
-
-        # Handle throwExceptionIntoGenerator-originated exceptions
-        # this is tricky, and differs if the exception was caught
-        # inside the generator, or above it:
-
-        # It is only really originating from
-        # throwExceptionIntoGenerator if the bottom of the traceback
-        # is a yield.
-        # Pyrex and Cython extensions create traceback frames
-        # with no co_code, but they can't yield so we know it's okay to
-        # just return here.
-        if (not lastFrame.f_code.co_code) or lastFrame.f_code.co_code[
-            lastTb.tb_lasti
-        ] != cls._yieldOpcode:
-            return
-
-        # If the exception was caught above the generator.throw
-        # (outside the generator), it will appear in the tb (as the
-        # second last item):
-        if secondLastTb:
-            frame = secondLastTb.tb_frame
-            if frame.f_code is cls.throwExceptionIntoGenerator.__code__:
-                return frame.f_locals.get("self")
-
-        # If the exception was caught below the generator.throw
-        # (inside the generator), it will appear in the frames' linked
-        # list, above the top-level traceback item (which must be the
-        # generator frame itself, thus its caller is
-        # throwExceptionIntoGenerator).
-        frame = tb.tb_frame.f_back
-        if frame and frame.f_code is cls.throwExceptionIntoGenerator.__code__:
-            return frame.f_locals.get("self")
 
     def __repr__(self) -> str:
         return "<{} {}: {}>".format(
@@ -594,6 +480,7 @@ class Failure(BaseException):
         if "stack" in state:
             state.pop("stack")
         state["_parents"] = state.pop("parents")
+        state["_frames"] = state.pop("frames")
         self.__dict__.update(state)
 
     def __getstate__(self):
@@ -613,6 +500,9 @@ class Failure(BaseException):
         c["parents"] = c.pop("_parents")
         c["stack"] = []
 
+        if "_frames" in c:
+            c.pop("_frames")
+
         if self.captureVars:
             c["frames"] = [
                 [
@@ -624,6 +514,8 @@ class Failure(BaseException):
                 ]
                 for v in self.frames
             ]
+        else:
+            c["frames"] = self.frames
 
         # Added 2003-06-23. See comment above in __init__
         c["tb"] = None
@@ -643,7 +535,9 @@ class Failure(BaseException):
         On Python 3, this will also set the C{__traceback__} attribute of the
         exception instance to L{None}.
         """
-        self.__dict__ = self.__getstate__()
+        state = self.__getstate__()
+        state["_frames"] = state.pop("frames")
+        self.__dict__ = state
         if getattr(self.value, "__traceback__", None):
             # Python 3
             self.value.__traceback__ = None
@@ -702,6 +596,7 @@ class Failure(BaseException):
             from twisted.python import log
 
             file = log.logerr
+
         w = file.write
 
         if detail == "verbose" and not self.captureVars:
