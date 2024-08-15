@@ -147,25 +147,26 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
             job-name: 'macos-alldeps-3.13'
 
-          # Prerelease Python 3.13 on Windows with select reactor.
-          - python-version: '3.13'
-            runs-on: 'windows-2022'
-            tox-env: 'alldeps-withcov-windows'
-            job-name: 'win-3.13-tests-select'
-            # Distributed trial is not yet suported on Windows so we overwrite
-            # the default trial-args to remove concurrent runs and to
-            # select a reactor.
-            trial-args: '--reactor=select'
+          # pywin32 doesn't have wheels for Python 3.13 yet.
+          # # Prerelease Python 3.13 on Windows with select reactor.
+          # - python-version: '3.13'
+          #   runs-on: 'windows-2022'
+          #   tox-env: 'alldeps-withcov-windows'
+          #   job-name: 'win-3.13-tests-select'
+          #   # Distributed trial is not yet suported on Windows so we overwrite
+          #   # the default trial-args to remove concurrent runs and to
+          #   # select a reactor.
+          #   trial-args: '--reactor=select'
 
-          # Prerelease Python 3.13 on Windows with select reactor.
-          - python-version: '3.13'
-            runs-on: 'windows-2022'
-            tox-env: 'alldeps-withcov-windows'
-            job-name: 'win-3.13-tests-iocp'
-            # Distributed trial is not yet suported on Windows so we overwrite
-            # the default trial-args to remove concurrent runs and to
-            # select a reactor.
-            trial-args: '--reactor=iocp'
+          # # Prerelease Python 3.13 on Windows with select reactor.
+          # - python-version: '3.13'
+          #   runs-on: 'windows-2022'
+          #   tox-env: 'alldeps-withcov-windows'
+          #   job-name: 'win-3.13-tests-iocp'
+          #   # Distributed trial is not yet suported on Windows so we overwrite
+          #   # the default trial-args to remove concurrent runs and to
+          #   # select a reactor.
+          #   trial-args: '--reactor=iocp'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
