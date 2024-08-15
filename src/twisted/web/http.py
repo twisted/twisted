@@ -2503,6 +2503,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         header = header.lower()
         data = data.strip(b" \t")
+        if b"\x00" in data:
+            self._respondToBadRequestAndDisconnect()
+            return False
 
         if not self._maybeChooseTransferDecoder(header, data):
             return False
