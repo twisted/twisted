@@ -5,11 +5,10 @@
 Test HTTP support.
 """
 
-
 import base64
 import calendar
 import random
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
 from unittest import skipIf
@@ -20,6 +19,7 @@ from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
 
 import hamcrest
+from incremental import Version
 
 from twisted.internet import address
 from twisted.internet.error import ConnectionDone, ConnectionLost
@@ -34,6 +34,7 @@ from twisted.protocols import loopback
 from twisted.python.compat import iterbytes, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
@@ -135,7 +136,7 @@ class DummyHTTPHandler(http.Request):
         data = self.content.read()
         length = self.getHeader(b"content-length")
         if length is None:
-            length = networkString(str(length))
+            length = str(length).encode()
         request = b"'''\n" + length + b"\n" + data + b"'''\n"
         self.setResponseCode(200)
         self.setHeader(b"Request", self.uri)
@@ -563,17 +564,23 @@ class HTTP0_9Tests(HTTP1_0Tests):
 
 class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
     """
-    Tests that multiple pipelined requests with bodies are correctly buffered.
+    Pipelined requests get buffered and executed in the order received,
+    not processed in parallel.
     """
 
     requests = (
         b"POST / HTTP/1.1\r\n"
         b"Content-Length: 10\r\n"
         b"\r\n"
-        b"0123456789POST / HTTP/1.1\r\n"
-        b"Content-Length: 10\r\n"
-        b"\r\n"
         b"0123456789"
+        # Chunk encoded request.
+        b"POST / HTTP/1.1\r\n"
+        b"Transfer-Encoding: chunked\r\n"
+        b"\r\n"
+        b"a\r\n"
+        b"0123456789\r\n"
+        b"0\r\n"
+        b"\r\n"
     )
 
     expectedResponses = [
@@ -590,14 +597,16 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
             b"Request: /",
             b"Command: POST",
             b"Version: HTTP/1.1",
-            b"Content-Length: 21",
-            b"'''\n10\n0123456789'''\n",
+            b"Content-Length: 23",
+            b"'''\nNone\n0123456789'''\n",
         ),
     ]
 
-    def test_noPipelining(self):
+    def test_stepwiseTinyTube(self):
         """
-        Test that pipelined requests get buffered, not processed in parallel.
+        Imitate a slow connection that delivers one byte at a time.
+        The request handler (L{DelayedHTTPHandler}) is puppeted to
+        step through the handling of each request.
         """
         b = StringTransport()
         a = http.HTTPChannel()
@@ -606,10 +615,9 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
             a.dataReceived(byte)
-        value = b.value()
 
         # So far only one request should have been dispatched.
-        self.assertEqual(value, b"")
+        self.assertEqual(b.value(), b"")
         self.assertEqual(1, len(a.requests))
 
         # Now, process each request one at a time.
@@ -618,8 +626,95 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
             request = a.requests[0].original
             request.delayedProcess()
 
-        value = b.value()
-        self.assertResponseEquals(value, self.expectedResponses)
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_stepwiseDumpTruck(self):
+        """
+        Imitate a fast connection where several pipelined
+        requests arrive in a single read. The request handler
+        (L{DelayedHTTPHandler}) is puppeted to step through the
+        handling of each request.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DelayedHTTPHandlerProxy
+        a.makeConnection(b)
+
+        a.dataReceived(self.requests)
+
+        # So far only one request should have been dispatched.
+        self.assertEqual(b.value(), b"")
+        self.assertEqual(1, len(a.requests))
+
+        # Now, process each request one at a time.
+        while a.requests:
+            self.assertEqual(1, len(a.requests))
+            request = a.requests[0].original
+            request.delayedProcess()
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateTinyTube(self):
+        """
+        Imitate a slow connection that delivers one byte at a time.
+
+        (L{DummyHTTPHandler}) immediately responds, but no more
+        than one
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy  # "sync"
+        a.makeConnection(b)
+
+        # one byte at a time, to stress it.
+        for byte in iterbytes(self.requests):
+            a.dataReceived(byte)
+            # There is never more than one request dispatched at a time:
+            self.assertLessEqual(len(a.requests), 1)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateDumpTruck(self):
+        """
+        Imitate a fast connection where several pipelined
+        requests arrive in a single read. The request handler
+        (L{DummyHTTPHandler}) immediately responds.
+
+        This doesn't check the at-most-one pending request
+        invariant but exercises otherwise uncovered code paths.
+        See GHSA-c8m8-j448-xjx7.
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy
+        a.makeConnection(b)
+
+        # All bytes at once to ensure there's stuff to buffer.
+        a.dataReceived(self.requests)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses)
+
+    def test_immediateABiggerTruck(self):
+        """
+        Imitate a fast connection where a so many pipelined
+        requests arrive in a single read that backpressure is indicated.
+        The request handler (L{DummyHTTPHandler}) immediately responds.
+
+        This doesn't check the at-most-one pending request
+        invariant but exercises otherwise uncovered code paths.
+        See GHSA-c8m8-j448-xjx7.
+
+        @see: L{http.HTTPChannel._optimisticEagerReadSize}
+        """
+        b = StringTransport()
+        a = http.HTTPChannel()
+        a.requestFactory = DummyHTTPHandlerProxy
+        a.makeConnection(b)
+
+        overLimitCount = a._optimisticEagerReadSize // len(self.requests) * 10
+        a.dataReceived(self.requests * overLimitCount)
+
+        self.assertResponseEquals(b.value(), self.expectedResponses * overLimitCount)
 
     def test_pipeliningReadLimit(self):
         """
@@ -1522,7 +1617,11 @@ class ChunkedTransferEncodingTests(unittest.TestCase):
             lambda b: None,  # pragma: nocov
         )
         p._maxTrailerHeadersSize = 10
-        p.dataReceived(b"3\r\nabc\r\n0\r\n0123456789")
+        # 9 bytes are received so far, in 2 packets.
+        # For now, all is ok.
+        p.dataReceived(b"3\r\nabc\r\n0\r\n01234567")
+        p.dataReceived(b"\r")
+        # Once the 10th byte is received, the processing fails.
         self.assertRaises(
             http._MalformedChunkedDataError,
             p.dataReceived,
@@ -1726,7 +1825,7 @@ class ParsingTests(unittest.TestCase):
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
 
-    def test_invalidNonAsciiMethod(self):
+    def test_invalidMethodNonAscii(self):
         """
         When client sends invalid HTTP method containing
         non-ascii characters HTTP 400 'Bad Request' status will be returned.
@@ -1743,6 +1842,114 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.assertTrue(channel.transport.disconnecting)
         self.assertEqual(processed, [])
+
+    def test_invalidRequestLineExtraSpaces(self):
+        """
+        The three components of the request line must not be
+        separated by anything other than a single SP character,
+        or a 400 status results.
+        """
+        for requestLine in [
+            b"GET  / HTTP/1.0",
+            b"GET /  HTTP/1.0",
+            b"GET\t/ HTTP/1.0",
+            b"GET /\vHTTP/1.1",
+            b"GET / HTTP/1.1 ",
+            b" GET / HTTP/1.1",
+        ]:
+            self.assertRequestRejected(
+                [requestLine, b"Content-Length: 0", b"Host: foo.example", b"", b""]
+            )
+
+    def test_invalidMethodEmpty(self):
+        """
+        A request with an empty method field is rejected with a
+        400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b" /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidMethodNUL(self):
+        """
+        A request with a method that contains a NUL character
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"GET\0 /foo HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidVersion(self):
+        """
+        A request with an invalid HTTP version number is rejected
+        with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"HEAD /foo HTTP/1.2",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetEmpty(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST  HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetNUL(self):
+        """
+        A request with an empty request-target (URI) is rejected with
+        a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\0 HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
+
+    def test_invalidRequestTargetWhitespace(self):
+        """
+        A request with a request-target (URI) that contains whitespace
+        is rejected with a 400 status code.
+        """
+        self.assertRequestRejected(
+            [
+                b"POST /foo\t/bar HTTP/1.1",
+                b"Content-Length: 0",
+                b"Host: foo.example",
+                b"",
+                b"",
+            ]
+        )
 
     def test_basicAuth(self):
         """
@@ -1944,8 +2151,8 @@ class ParsingTests(unittest.TestCase):
     def test_invalidHeaderOnlyColon(self):
         """
         C{HTTPChannel} rejects a request with an empty header name (i.e.
-        nothing before the colon).  It produces a 400 (Bad Request) response is
-        generated and closes the connection.
+        nothing before the colon).  It produces a 400 (Bad Request) response
+        and closes the connection.
         """
         self.assertRequestRejected(
             [
@@ -1971,6 +2178,36 @@ class ParsingTests(unittest.TestCase):
                 b"",
             ]
         )
+
+    def test_invalidHeaderNameChars(self):
+        """
+        A request with a header name that contains invalid characters
+        is rejected with a 400 status code.
+        """
+        for header in [
+            b"foo\x00bar: baz",  # NUL byte
+            b"foo\x1bbar: baz",  # ESC byte
+            b"Foo\vBar: baz",  # exotic whitespace
+            b"foo\xe2\x80\xbdbar: baz",  # non-ASCII bytes
+        ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+            )
+
+    def test_invalidHeaderValueNUL(self):
+        """
+        A request with a header value that contains a NUL byte
+        is rejected with a 400 status code.
+        """
+        for header in [
+            b"x-foo: \x00",  # NUL byte
+            b"x-foo: a\x00",  # trailing NUL
+            b"x-foo: \x00baz",  # leading NUL
+            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
+        ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+            )
 
     def test_headerLimitPerRequest(self):
         """
@@ -2864,28 +3101,10 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"(no clientproto yet) 202 happily accepted",
         )
 
-    def test_setResponseCodeAndMessageNotBytes(self):
-        """
-        L{http.Request.setResponseCode} accepts C{bytes} for the message
-        parameter and raises L{TypeError} if passed anything else.
-        """
-        channel = DummyChannel()
-        req = http.Request(channel, False)
-        self.assertRaises(TypeError, req.setResponseCode, 202, "not happily accepted")
-
     def test_setResponseCodeAcceptsIntegers(self):
         """
         L{http.Request.setResponseCode} accepts C{int} for the code parameter
         and raises L{TypeError} if passed anything else.
-        """
-        req = http.Request(DummyChannel(), False)
-        req.setResponseCode(1)
-        self.assertRaises(TypeError, req.setResponseCode, "1")
-
-    def test_setResponseCodeAcceptsLongIntegers(self):
-        """
-        L{http.Request.setResponseCode} accepts L{int} for the code
-        parameter.
         """
         req = http.Request(DummyChannel(), False)
         req.setResponseCode(1)
@@ -3601,7 +3820,14 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
-    def test_finishProducesLog(self):
+    def test_stopFactoryInvalidState(self) -> None:
+        """
+        L{http.HTTPFactory.stopFactory} is a no-op (that does not raise an
+        exception) when the factory hasn't been started yet.
+        """
+        http.HTTPFactory().stopFactory()
+
+    def test_finishProducesLog(self) -> None:
         """
         L{http.Request.finish} will call the channel's factory to produce a log
         message.
@@ -3609,23 +3835,50 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         factory.timeOut = None
         factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True
+        factory._logDateTimeCall = True  # type:ignore
+
+        # Here we are asserting a few legacy / compatibility features of the
+        # writable logFile attribute, which used to be effectively an
+        # IO[AnyStr] but was always trying to encode and write text to it.
+        # Clients should really not be accessing this attribute anyway, but we
+        # need a new way to configure the CLF log file before deprecating and
+        # removing it.
+
+        # Before the factory is started, it has no logFile attribute.
+        with self.assertRaises(AttributeError):
+            factory.logFile
         factory.startFactory()
-        factory.logFile = BytesIO()
-        proto = factory.buildProtocol(None)
+        # It starts off as the legacy global LoggingFile instance.
+        self.assertIs(factory.logFile, legacyGlobalLogFile)
+
+        # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
+        # get back a TextIOWrapper, wrapping our BytesIO.
+        logFile = factory.logFile = BytesIO()
+        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+
+        # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
+        # now, even though the property's signature is such that it isn't.
+        assert isinstance(getBackLogFile, TextIOWrapper)
+        self.assertIs(getBackLogFile.buffer, logFile)
+        factory.logFile = getBackLogFile
+        # If we set it to a text-based I/O (i.e.: anything other than an
+        # io.BufferedBase) it stays exactly the same, no modification.
+        self.assertIs(getBackLogFile, factory.logFile)
+        proto = factory.buildProtocol(None)  # type:ignore
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
         trans = StringTransport()
+        assert proto is not None
         proto.makeConnection(trans)
 
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()
+        proto._channel.requests[0].finish()  # type:ignore
 
         # A log message should be written out
-        self.assertIn(b'sometime "GET /path HTTP/1.1"', factory.logFile.getvalue())
+        self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
 
     def test_requestBodyTimeoutFromFactory(self):
         """
@@ -4423,6 +4676,22 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
                     ]
                 ),
             )
+
+
+class HTTPClientDeprecationTests(unittest.SynchronousTestCase):
+    """
+    Test that L{http.HTTPClient} is deprecated.
+    """
+
+    def test_deprecated(self):
+        """
+        Accessing L{http.HTTPClient} produces a deprecation warning.
+        """
+        self.getDeprecatedModuleAttribute(
+            "twisted.web.http",
+            "HTTPClient",
+            Version("Twisted", 24, 7, 0),
+        )
 
 
 class HTTPClientSanitizationTests(unittest.SynchronousTestCase):

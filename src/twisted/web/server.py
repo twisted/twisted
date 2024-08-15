@@ -25,19 +25,23 @@ from urllib.parse import quote as _quote
 
 from zope.interface import implementer
 
-from incremental import Version
-
 from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.logger import Logger
 from twisted.python import components, failure, reflect
 from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
-from twisted.web.http import unquote
+from twisted.web.http import (
+    NO_CONTENT,
+    NOT_MODIFIED,
+    HTTPFactory,
+    Request as _HTTPRequest,
+    datetimeToString,
+    unquote,
+)
 
 NOT_DONE_YET = 1
 
@@ -50,23 +54,6 @@ __all__ = [
     "NOT_DONE_YET",
     "GzipEncoderFactory",
 ]
-
-
-# backwards compatibility
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.datetimeToString instead",
-    "twisted.web.server",
-    "date_time_string",
-)
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.stringToDatetime instead",
-    "twisted.web.server",
-    "string_date_time",
-)
-date_time_string = http.datetimeToString
-string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
@@ -112,7 +99,7 @@ class Request(Copyable, http.Request, components.Componentized):
     _log = Logger()
 
     def __init__(self, *args, **kw):
-        http.Request.__init__(self, *args, **kw)
+        _HTTPRequest.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -187,7 +174,7 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            http.Request.gotLength(self, length)
+            _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -206,7 +193,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         # set various default headers
         self.setHeader(b"server", version)
-        self.setHeader(b"date", http.datetimeToString())
+        self.setHeader(b"date", datetimeToString())
 
         # Resource Identification
         self.prepath = []
@@ -240,7 +227,7 @@ class Request(Copyable, http.Request, components.Componentized):
             # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
-            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
+            needsCT = self.code not in (NOT_MODIFIED, NO_CONTENT)
             contentType = self.responseHeaders.getRawHeaders(b"content-type")
             contentLength = self.responseHeaders.getRawHeaders(b"content-length")
             contentLengthZero = contentLength and (contentLength[0] == b"0")
@@ -263,17 +250,17 @@ class Request(Copyable, http.Request, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            http.Request.write(self, data)
+            _HTTPRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{http.Request.finish} for possible encoding.
+        Override L{twisted.web.http.Request.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                http.Request.write(self, data)
-        return http.Request.finish(self)
+                _HTTPRequest.write(self, data)
+        return _HTTPRequest.finish(self)
 
     def render(self, resrc):
         """
@@ -768,7 +755,7 @@ version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
-class Site(http.HTTPFactory):
+class Site(HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 

@@ -11,6 +11,7 @@ from zope.interface import implementer
 
 from constantly import NamedConstant
 
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from .._format import formatEvent
 from .._global import globalLogPublisher
@@ -274,3 +275,80 @@ class LoggerTests(unittest.TestCase):
 
         log = TestLogger(observer=publisher)
         log.info("Hello.", log_trace=[])
+
+    def test_failuresHandled(self) -> None:
+        """
+        The L{Logger.failuresHandled} context manager catches any
+        L{BaseException} and converts it into a logged L{Failure}.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = TestLogger(observer=logged)
+        reprd = 0
+
+        class Reprable:
+            def __repr__(self) -> str:
+                nonlocal reprd
+                reprd += 1
+                return f"<repr {reprd}>"
+
+        with log.failuresHandled(
+            "while testing failure handling for {value}", value=Reprable()
+        ) as operation:
+            1 / 0
+        self.assertEqual(operation.succeeded, False)
+        self.assertEqual(operation.failed, True)
+        self.assertEqual(len(events), 1)
+        [logged] = events
+        events[:] = []
+        f: Failure = logged["log_failure"]
+        self.assertEqual(reprd, 0)
+        self.assertEqual(
+            formatEvent(logged), "while testing failure handling for <repr 1>"
+        )
+        self.assertEqual(reprd, 1)
+        self.assertEqual(f.type, ZeroDivisionError)
+        with log.failuresHandled("succeeding for {value}", value=Reprable()) as op2:
+            self.assertEqual(op2.succeeded, False)
+            self.assertEqual(op2.failed, False)
+        self.assertEqual(reprd, 1)
+        self.assertEqual(op2.succeeded, True)
+        self.assertEqual(op2.failed, False)
+
+    def test_failureHandler(self) -> None:
+        """
+        The L{Logger.failureHandler} context manager can safely be shared
+        amongst multiple invocations and converts L{BaseException} into logged
+        L{Failure}s.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = TestLogger(observer=logged)
+
+        failureHandler = log.failureHandler("hello")
+        success = False
+        with failureHandler as fh:
+            success = True
+        self.assertIs(fh, None)
+        self.assertEqual(success, True)
+        self.assertEqual(events, [])
+        success = False
+
+        def raisebase() -> None:
+            raise KeyboardInterrupt()
+
+        with failureHandler as fh:
+            raisebase()
+
+        self.assertEqual(len(events), 1)
+        [logged] = events
+        f = logged["log_failure"]
+        self.assertEqual(f.type, KeyboardInterrupt)

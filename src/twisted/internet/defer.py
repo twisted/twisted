@@ -117,7 +117,11 @@ def succeed(result: _T) -> "Deferred[_T]":
            method.
     """
     d: Deferred[_T] = Deferred()
-    d.callback(result)
+    # This violate abstraction boundaries, so code that is not internal to
+    # Twisted shouldn't do it, but it's a significant performance optimization:
+    d.result = result
+    d.called = True
+    d._chainedTo = None
     return d
 
 
@@ -213,8 +217,8 @@ def maybeDeferred(
     except BaseException:
         return fail(Failure(captureVars=Deferred.debug))
 
-    if isinstance(result, Deferred):
-        return result
+    if type(result) in _DEFERRED_SUBCLASSES:
+        return result  # type: ignore[return-value]
     elif isinstance(result, Failure):
         return fail(result)
     elif type(result) is CoroutineType:
@@ -522,9 +526,8 @@ class Deferred(Awaitable[_SelfResultT]):
         if errbackKeywords is None:
             errbackKeywords = {}  # type: ignore[unreachable]
 
-        assert callable(callback)
-        assert callable(errback)
-
+        # Note that this logic is duplicated in addCallbac/addErrback/addBoth
+        # for performance reasons.
         self.callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
@@ -617,10 +620,14 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # Implementation Note: Any annotations for brevity; the overloads above
-        # handle specifying the actual signature, and there's nothing worth
-        # type-checking in this implementation.
-        return self.addCallbacks(callback, callbackArgs=args, callbackKeywords=kwargs)
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     @overload
     def addErrback(
@@ -655,10 +662,14 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            passthru, errback, errbackArgs=args, errbackKeywords=kwargs
-        )
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     @overload
     def addBoth(
@@ -740,15 +751,15 @@ class Deferred(Awaitable[_SelfResultT]):
 
         See L{addCallbacks}.
         """
-        # See implementation note in addCallbacks about Any arguments
-        return self.addCallbacks(
-            callback,
-            callback,
-            callbackArgs=args,
-            errbackArgs=args,
-            callbackKeywords=kwargs,
-            errbackKeywords=kwargs,
-        )
+        # This could be implemented as a call to addCallbacks, but doing it
+        # directly is faster.
+        call = (callback, args, kwargs)
+        self.callbacks.append((call, call))
+
+        if self.called:
+            self._runCallbacks()
+
+        return self
 
     # END way too many overloads
 
@@ -873,7 +884,6 @@ class Deferred(Awaitable[_SelfResultT]):
         @raise AlreadyCalledError: If L{callback} or L{errback} has already been
             called on this L{Deferred}.
         """
-        assert not isinstance(result, Deferred)
         self._startRunCallbacks(result)
 
     def errback(self, fail: Optional[Union[Failure, BaseException]] = None) -> None:
@@ -919,13 +929,13 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         Stop processing on a L{Deferred} until L{unpause}() is called.
         """
-        self.paused = self.paused + 1
+        self.paused += 1
 
     def unpause(self) -> None:
         """
         Process all callbacks made since L{pause}() was called.
         """
-        self.paused = self.paused - 1
+        self.paused -= 1
         if self.paused:
             return
         if self.called:
@@ -987,10 +997,8 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         Build a tuple of callback and errback with L{_Sentinel._CONTINUE}.
         """
-        return (
-            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
-            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
-        )
+        triple = (_CONTINUE, (self,), _NONE_KWARGS)
+        return (triple, triple)  # type: ignore[return-value]
 
     def _runCallbacks(self) -> None:
         """
@@ -1053,7 +1061,9 @@ class Deferred(Awaitable[_SelfResultT]):
                 if callback is _CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
-                    chainee = cast(Deferred[object], args[0])
+
+                    # We don't use cast() for performance reasons:
+                    chainee: Deferred[object] = args[0]  # type: ignore[assignment]
                     chainee.result = current.result
                     current.result = None
                     # Making sure to update _debugInfo
@@ -1094,30 +1104,33 @@ class Deferred(Awaitable[_SelfResultT]):
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
                 else:
-                    if isinstance(current.result, Deferred):
+                    # isinstance() with Awaitable subclass is expensive:
+                    if type(current.result) in _DEFERRED_SUBCLASSES:
+                        # Can't use cast() cause it's in the performance hot path:
+                        currentResult: Deferred[_SelfResultT] = current.result  # type: ignore[assignment]
                         # The result is another Deferred.  If it has a result,
                         # we can take it and keep going.
-                        resultResult = getattr(current.result, "result", _NO_RESULT)
+                        resultResult = getattr(currentResult, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
-                            or isinstance(resultResult, Deferred)
-                            or current.result.paused
+                            or type(resultResult) in _DEFERRED_SUBCLASSES
+                            or currentResult.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
                             current.pause()
-                            current._chainedTo = current.result
+                            current._chainedTo = currentResult
                             # Note: current.result has no result, so it's not
                             # running its callbacks right now.  Therefore we can
                             # append to the callbacks list directly instead of
                             # using addCallbacks.
-                            current.result.callbacks.append(current._continuation())
+                            currentResult.callbacks.append(current._continuation())
                             break
                         else:
                             # Yep, it did.  Steal it.
-                            current.result.result = None
+                            currentResult.result = None
                             # Make sure _debugInfo's failure state is updated.
-                            if current.result._debugInfo is not None:
-                                current.result._debugInfo.failResult = None
+                            if currentResult._debugInfo is not None:
+                                currentResult._debugInfo.failResult = None
                             current.result = resultResult
 
             if finished:
@@ -1159,38 +1172,29 @@ class Deferred(Awaitable[_SelfResultT]):
 
     __repr__ = __str__
 
-    def __iter__(self) -> "Deferred[_SelfResultT]":
-        return self
+    def __iter__(self) -> Generator[Deferred[_SelfResultT], None, _SelfResultT]:
+        while True:
+            if self.paused:
+                # If we're paused, we have no result to give
+                yield self
+                continue
 
-    @_extraneous
-    def send(self, value: object = None) -> "Deferred[_SelfResultT]":
-        if self.paused:
-            # If we're paused, we have no result to give
-            return self
+            result = getattr(self, "result", _NO_RESULT)
+            if result is _NO_RESULT:
+                yield self
+                continue
 
-        result = getattr(self, "result", _NO_RESULT)
-        if result is _NO_RESULT:
-            return self
-        if isinstance(result, Failure):
-            # Clear the failure on debugInfo so it doesn't raise "unhandled
-            # exception"
-            assert self._debugInfo is not None
-            self._debugInfo.failResult = None
-            result.value.__failure__ = result
-            raise result.value
-        else:
-            raise StopIteration(result)
+            if isinstance(result, Failure):
+                # Clear the failure on debugInfo so it doesn't raise "unhandled
+                # exception"
+                assert self._debugInfo is not None
+                self._debugInfo.failResult = None
+                result.value.__failure__ = result
+                raise result.value
+            else:
+                return result  # type: ignore[return-value]
 
-    # For PEP-492 support (async/await)
-    # type note: base class "Awaitable" defined the type as:
-    #     Callable[[], Generator[Any, None, _SelfResultT]]
-    #     See: https://github.com/python/typeshed/issues/5125
-    #     When the typeshed patch is included in a mypy release,
-    #     this method can be replaced by `__await__ = __iter__`.
-    def __await__(self) -> Generator[Any, None, _SelfResultT]:
-        return self.__iter__()  # type: ignore[return-value]
-
-    __next__ = send
+    __await__ = __iter__
 
     def asFuture(self, loop: AbstractEventLoop) -> "Future[_SelfResultT]":
         """
@@ -1326,6 +1330,14 @@ class Deferred(Awaitable[_SelfResultT]):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
+    def __init_subclass__(cls: Type[Deferred[Any]], **kwargs: Any):
+        # Whenever a subclass is created, record it in L{_DEFERRED_SUBCLASSES}
+        # so we can emulate C{isinstance()} more efficiently.
+        _DEFERRED_SUBCLASSES.append(cls)
+
+
+_DEFERRED_SUBCLASSES = [Deferred]
+
 
 def ensureDeferred(
     coro: Union[
@@ -1344,11 +1356,11 @@ def ensureDeferred(
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     """
-    if isinstance(coro, Deferred):
-        return coro
+    if type(coro) in _DEFERRED_SUBCLASSES:
+        return coro  # type: ignore[return-value]
     else:
         try:
-            return Deferred.fromCoroutine(coro)
+            return Deferred.fromCoroutine(coro)  # type: ignore[arg-type]
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
@@ -1891,6 +1903,10 @@ class _DefGen_Return(BaseException):
         self.value = value
 
 
+@deprecated(
+    Version("Twisted", 24, 7, 0),
+    replacement="standard return statement",
+)
 def returnValue(val: object) -> NoReturn:
     """
     Return val from a L{inlineCallbacks} generator.
@@ -2044,17 +2060,28 @@ def _inlineCallbacks(
             # directly.  returnValue itself consumes a stack frame, so the
             # application code will have a tb_next, but it will *not* have a
             # second tb_next.
+            #
+            # Note that there's one additional level due to returnValue being
+            # deprecated
             assert appCodeTrace.tb_next is not None
-            if appCodeTrace.tb_next.tb_next:
+            assert appCodeTrace.tb_next.tb_next is not None
+            if appCodeTrace.tb_next.tb_next.tb_next:
                 # If returnValue was invoked non-local to the frame which it is
                 # exiting, identify the frame that ultimately invoked
                 # returnValue so that we can warn the user, as this behavior is
                 # confusing.
+                #
+                # Note that there's one additional level due to returnValue being
+                # deprecated
                 ultimateTrace = appCodeTrace
 
                 assert ultimateTrace is not None
                 assert ultimateTrace.tb_next is not None
-                while ultimateTrace.tb_next.tb_next:
+
+                # Note that there's one additional level due to returnValue being
+                # deprecated
+                assert ultimateTrace.tb_next.tb_next is not None
+                while ultimateTrace.tb_next.tb_next.tb_next:
                     ultimateTrace = ultimateTrace.tb_next
                     assert ultimateTrace is not None
 
@@ -2090,14 +2117,23 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        if isinstance(result, Deferred):
+        isDeferred = type(result) in _DEFERRED_SUBCLASSES
+        # iscoroutine() is pretty expensive in this context, so avoid calling
+        # it unnecessarily:
+        if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
+            result = _cancellableInlineCallbacks(result)
+            isDeferred = True
+
+        if isDeferred:
+            # We don't cast() to Deferred because that does more work in the hot path
+
             # a deferred was yielded, get the result.
-            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)
+            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)  # type: ignore[attr-defined]
             if waiting[0]:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                status.waitingOn = result
+                status.waitingOn = result  # type: ignore[assignment]
                 return
 
             result = waiting[1]
@@ -2204,17 +2240,15 @@ def inlineCallbacks(
 
     Your inlineCallbacks-enabled generator will return a L{Deferred} object, which
     will result in the return value of the generator (or will fail with a
-    failure object if your generator raises an unhandled exception). Note that
-    you can't use C{return result} to return a value; use C{returnValue(result)}
-    instead. Falling off the end of the generator, or simply using C{return}
-    will cause the L{Deferred} to have a result of L{None}.
+    failure object if your generator raises an unhandled exception). Inside
+    the generator simply use C{return result} to return a value.
 
-    Be aware that L{returnValue} will not accept a L{Deferred} as a parameter.
+    Be aware that generator must not return a L{Deferred}.
     If you believe the thing you'd like to return could be a L{Deferred}, do
     this::
 
         result = yield result
-        returnValue(result)
+        return result
 
     The L{Deferred} returned from your deferred generator may errback if your
     generator raised an exception::
@@ -2224,23 +2258,27 @@ def inlineCallbacks(
             thing = yield makeSomeRequestResultingInDeferred()
             if thing == 'I love Twisted':
                 # will become the result of the Deferred
-                returnValue('TWISTED IS GREAT!')
+                return 'TWISTED IS GREAT!'
             else:
                 # will trigger an errback
                 raise Exception('DESTROY ALL LIFE')
-
-    It is possible to use the C{return} statement instead of L{returnValue}::
-
-        @inlineCallbacks
-        def loadData(url):
-            response = yield makeRequest(url)
-            return json.loads(response)
 
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
     reaching its end, a C{return} statement, or by calling L{returnValue}).
     A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
+
+    C{inlineCallbacks} behaves very similarly to coroutines. Since Twisted 24.7.0
+    it is possible to rewrite functions using C{inlineCallbacks} to C{async def}
+    in piecewise manner and be mostly compatible to existing code.
+
+    The rewrite process is simply replacing C{inlineCallbacks} decorator with
+    C{async def} and all C{yield} occurrences in the function body with C{await}.
+    The function will no longer return a C{Deferred} but a awaitable coroutine.
+    This return value will obviously not have C{Deferred} methods such as
+    C{addCallback}, but it will be possible to C{yield} it in other code based
+    on C{inlineCallbacks}.
     """
 
     @wraps(f)
