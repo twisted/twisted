@@ -1,1 +1,1 @@
-Create of twisted.python.failure.Failure is now faster.
+Creation of twisted.python.failure.Failure is now faster.

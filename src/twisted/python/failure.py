@@ -382,7 +382,7 @@ class Failure(BaseException):
             one.
         @type otherFailure: L{Failure}
         """
-        # Copy all infos from that failure (including self.frames).
+        # Copy all infos from that failure (including self._frames).
         self.__dict__ = copy.copy(otherFailure.__dict__)
 
     @staticmethod
