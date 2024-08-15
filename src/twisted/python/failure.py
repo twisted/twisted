@@ -24,7 +24,6 @@ from inspect import getmro
 from io import StringIO
 from typing import Callable, NoReturn, TypeVar
 
-import opcode
 from incremental import Version
 
 from twisted.python import reflect
