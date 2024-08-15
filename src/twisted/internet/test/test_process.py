@@ -1027,9 +1027,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 networkString(
                     "import os, sys, json; "
                     "env = dict(os.environ); "
-                    # LC_CTYPE is set by python, see https://peps.python.org/pep-0538/
-                    'env.pop("LC_CTYPE", None); '
-                    'env.pop("__CF_USER_TEXT_ENCODING", None); '
                     "sys.stderr.write(json.dumps(env))"
                 ),
             ],
@@ -1044,10 +1041,13 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         self.runReactor(reactor)
 
-        expectedEnv.pop("LC_CTYPE", None)
-        expectedEnv.pop("__CF_USER_TEXT_ENCODING", None)
-        # subprocess might get COLUMNS and LINES added for some reason in 3.13 or later...
-        expectedExcess = {"COLUMNS", "LINES"}
+        # Subprocess might get COLUMNS and LINES added for some reason in 3.13
+        # or later. LC_CTYPE is set by python, see
+        # https://peps.python.org/pep-0538/.
+        expectedExcess = {"COLUMNS", "LINES", "LC_CTYPE", "__CF_USER_TEXT_ENCODING"}
+        for var in expectedExcess:
+            expectedEnv.pop(var, None)
+
         resultEnv = json.loads(
             p.outF.getvalue() if self.usePTY else p.errF.getvalue()
         ).items()
