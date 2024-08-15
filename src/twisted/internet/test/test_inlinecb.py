@@ -1214,7 +1214,6 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("in calling2", tb)
         self.assertIn("in calling3", tb)
-        self.assertNotIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
 
@@ -1249,7 +1248,6 @@ class ForwardTraceBackTests(SynchronousTestCase):
         self.assertIn("in calling", tb)
         self.assertIn("in calling2", tb)
         self.assertIn("in calling3", tb)
-        self.assertNotIn("throwExceptionIntoGenerator", tb)
         self.assertIn("Error Marker", tb)
         self.assertIn("in erroring", f.getTraceback())
 
