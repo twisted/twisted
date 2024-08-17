@@ -262,7 +262,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         s.failedAttempts += 1
         delay = s.timeoutForAttempt(s.failedAttempts)
         s.log.info(
-            "Scheduling retry {attempt} to connect {endpoint} " "in {delay} seconds.",
+            "Scheduling retry {attempt} to connect {endpoint} in {delay} seconds.",
             attempt=s.failedAttempts,
             endpoint=s.endpoint,
             delay=delay,
@@ -418,9 +418,6 @@ def makeMachine() -> Callable[[_Core], _Client]:
     return machine.build()
 
 
-ClientMachine = makeMachine()
-
-
 def backoffPolicy(
     initialDelay: float = 1.0,
     maxDelay: float = 60.0,
@@ -468,6 +465,7 @@ def backoffPolicy(
 
 
 _defaultPolicy = backoffPolicy()
+ClientMachine = makeMachine()
 
 
 class ClientService(Service):
