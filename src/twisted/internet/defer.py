@@ -1141,7 +1141,6 @@ class Deferred(Awaitable[_SelfResultT]):
                 if isinstance(current.result, Failure):
                     # Stash the Failure in the _debugInfo for unhandled error
                     # reporting.
-                    current.result.cleanFailure()
                     if current._debugInfo is None:
                         current._debugInfo = DebugInfo()
                     current._debugInfo.failResult = current.result
@@ -1189,8 +1188,7 @@ class Deferred(Awaitable[_SelfResultT]):
                 # exception"
                 assert self._debugInfo is not None
                 self._debugInfo.failResult = None
-                result.value.__failure__ = result
-                raise result.value
+                result.raiseException()
             else:
                 return result  # type: ignore[return-value]
 

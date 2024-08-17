@@ -549,6 +549,13 @@ class FailureTests(SynchronousTestCase):
         failure2 = failure.Failure._withoutTraceback(exc)
         self.assertPicklingRoundtrips(failure2)
 
+        # Here we test a Failure with a traceback:
+        try:
+            raise ComparableException("boo")
+        except BaseException:
+            failure3 = failure.Failure()
+        self.assertPicklingRoundtrips(failure3)
+
     def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
         """
         The failure can be pickled and unpickled, and the C{parents} attribute
@@ -557,7 +564,10 @@ class FailureTests(SynchronousTestCase):
         failure2 = pickle.loads(pickle.dumps(original_failure))
         expected = original_failure.__dict__.copy()
         expected["pickled"] = 1
-        self.assertEqual(expected, failure2.__dict__)
+        expected["tb"] = None
+        result = failure2.__dict__.copy()
+        self.assertEqual(expected, result)
+        self.assertEqual(failure2.frames, original_failure.frames)
 
     def test_failurePicklingIncludesParents(self) -> None:
         """
@@ -565,6 +575,16 @@ class FailureTests(SynchronousTestCase):
         """
         f = failure.Failure(ComparableException("hello"))
         self.assertEqual(f.__getstate__()["parents"], f.parents)
+
+    def test_settableFrames(self) -> None:
+        """
+        C{Failure.frames} can be set, both before and after pickling.
+        """
+        original_failure = failure.Failure(getDivisionFailure())
+        original_failure.frames = original_failure.frames[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.frames = failure2.frames[:-1]
+        self.assertEqual(failure2.frames, original_failure.frames[:-1])
 
     def test_settableParents(self) -> None:
         """
@@ -679,65 +699,8 @@ class GetTracebackTests(SynchronousTestCase):
 
 class FindFailureTests(SynchronousTestCase):
     """
-    Tests for functionality related to L{Failure._findFailure}.
+    Tests for functionality related to identifying the C{Failure}.
     """
-
-    def test_findNoFailureInExceptionHandler(self) -> None:
-        """
-        Within an exception handler, _findFailure should return
-        L{None} in case no Failure is associated with the current
-        exception.
-        """
-        try:
-            1 / 0
-        except BaseException:
-            self.assertIsNone(failure.Failure._findFailure())
-        else:
-            self.fail("No exception raised from 1/0!?")
-
-    def test_findNoFailure(self) -> None:
-        """
-        Outside of an exception handler, _findFailure should return None.
-        """
-        self.assertIsNone(sys.exc_info()[-1])  # environment sanity check
-        self.assertIsNone(failure.Failure._findFailure())
-
-    def test_findFailure(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by raiseException).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            self.assertEqual(failure.Failure._findFailure(), f)
-        else:
-            self.fail("No exception raised from raiseException!?")
-
-    def test_failureConstructionFindsOriginalFailure(self) -> None:
-        """
-        When a Failure is constructed in the context of an exception
-        handler that is handling an exception raised by
-        raiseException, the new Failure should be chained to that
-        original Failure.
-        Means the new failure should still show the same origin frame,
-        but with different complete stack trace (as not thrown at same place).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            newF = failure.Failure()
-            tb = f.getTraceback().splitlines()
-            new_tb = newF.getTraceback().splitlines()
-            self.assertNotEqual(tb, new_tb)
-            self.assertEqual(tb[-3:], new_tb[-3:])
-        else:
-            self.fail("No exception raised from raiseException!?")
 
     @skipIf(raiser is None, "raiser extension not available")
     def test_failureConstructionWithMungedStackSucceeds(self) -> None:
@@ -993,30 +956,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1 / 0")
 
-    def test_findFailureInGenerator(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by throwExceptionIntoGenerator).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        foundFailures = []
-
-        def generator() -> Generator[None, None, None]:
-            try:
-                yield
-            except BaseException:
-                foundFailures.append(failure.Failure._findFailure())
-            else:
-                self.fail("No exception sent to generator")
-
-        g = generator()
-        next(g)
-        self._throwIntoGenerator(f, g)
-
-        self.assertEqual(foundFailures, [f])
-
     def test_failureConstructionFindsOriginalFailure(self) -> None:
         """
         When a Failure is constructed in the context of an exception
@@ -1055,9 +994,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureInGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} inside the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        inside the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:
@@ -1076,9 +1015,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureFromGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} above the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        above the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:
