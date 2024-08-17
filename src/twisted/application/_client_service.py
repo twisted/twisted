@@ -315,17 +315,13 @@ def makeMachine() -> Callable[[_Core], _Client]:
 
     # Behavior-less state transitions:
     Init.upon(_Client.start).to(Connecting).returns(None)
-
     Connecting.upon(_Client.start).loop().returns(None)
     Connecting.upon(_Client._connectionMade).to(Connected).returns(None)
-
     Waiting.upon(_Client.start).loop().returns(None)
     Waiting.upon(_Client._reconnect).to(Connecting).returns(None)
-
     Connected.upon(_Client._connectionFailed).to(Waiting).returns(None)
     Connected.upon(_Client.start).loop().returns(None)
     Connected.upon(_Client._clientDisconnected).to(Waiting).returns(None)
-
     Disconnecting.upon(_Client.start).to(Restarting).returns(None)
     Restarting.upon(_Client.start).to(Restarting).returns(None)
     Stopped.upon(_Client.start).to(Connecting).returns(None)
