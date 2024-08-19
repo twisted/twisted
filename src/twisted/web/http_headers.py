@@ -242,7 +242,7 @@ class _NameEncoder:
 
         @return: C{name}, encoded if required, in Header-Case
         """
-        if canonicalName := self._canonicalHeaderCache.get(name, None):
+        if canonicalName := self._canonicalHeaderCache.get(name):
             return canonicalName
 
         bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
