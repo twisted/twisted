@@ -143,6 +143,7 @@ from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.failure import Failure
+from twisted.web._abnf import _hexint, _istoken
 from twisted.web._responses import (
     ACCEPTED,
     BAD_GATEWAY,
@@ -193,7 +194,6 @@ from twisted.web._responses import (
 from twisted.web.http_headers import (
     Headers,
     InvalidHeaderName,
-    _istoken,
     _nameEncoder,
     _sanitizeLinearWhitespace,
 )
@@ -511,32 +511,6 @@ def toChunk(data):
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
-
-
-def _ishexdigits(b: bytes) -> bool:
-    """
-    Is the string case-insensitively hexidecimal?
-
-    It must be composed of one or more characters in the ranges a-f, A-F
-    and 0-9.
-    """
-    for c in b:
-        if c not in b"0123456789abcdefABCDEF":
-            return False
-    return b != b""
-
-
-def _hexint(b: bytes) -> int:
-    """
-    Decode a hexadecimal integer.
-
-    Unlike L{int(b, 16)}, this raises L{ValueError} when the integer has
-    a prefix like C{b'0x'}, C{b'+'}, or C{b'-'}, which is desirable when
-    parsing network protocols.
-    """
-    if not _ishexdigits(b):
-        raise ValueError(b)
-    return int(b, 16)
 
 
 def fromChunk(data: bytes) -> Tuple[bytes, bytes]:

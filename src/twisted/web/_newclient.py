@@ -42,6 +42,7 @@ from twisted.protocols.basic import LineReceiver
 from twisted.python.compat import networkString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
+from twisted.web._abnf import _decint, _istoken
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
@@ -556,35 +557,6 @@ class HTTPClientParser(HTTPParser):
             del self._responseDeferred
 
 
-_VALID_METHOD = re.compile(
-    rb"\A[%s]+\Z"
-    % (
-        bytes().join(
-            (
-                b"!",
-                b"#",
-                b"$",
-                b"%",
-                b"&",
-                b"'",
-                b"*",
-                b"+",
-                b"-",
-                b".",
-                b"^",
-                b"_",
-                b"`",
-                b"|",
-                b"~",
-                b"\x30-\x39",
-                b"\x41-\x5a",
-                b"\x61-\x7a",
-            ),
-        ),
-    ),
-)
-
-
 def _ensureValidMethod(method):
     """
     An HTTP method is an HTTP token, which consists of any visible
@@ -603,7 +575,7 @@ def _ensureValidMethod(method):
         U{https://tools.ietf.org/html/rfc7230#section-3.2.6},
         U{https://tools.ietf.org/html/rfc5234#appendix-B.1}
     """
-    if _VALID_METHOD.match(method):
+    if _istoken(method):
         return method
     raise ValueError(f"Invalid method {method!r}")
 
@@ -632,27 +604,6 @@ def _ensureValidURI(uri):
     if _VALID_URI.match(uri):
         return uri
     raise ValueError(f"Invalid URI {uri!r}")
-
-
-def _decint(data: bytes) -> int:
-    """
-    Parse a decimal integer of the form C{1*DIGIT}, i.e. consisting only of
-    decimal digits. The integer may be embedded in whitespace (space and
-    horizontal tab). This differs from the built-in L{int()} function by
-    disallowing a leading C{+} character and various forms of whitespace
-    (note that we sanitize linear whitespace in header values in
-    L{twisted.web.http_headers.Headers}).
-
-    @param data: Value to parse.
-
-    @returns: A non-negative integer.
-
-    @raises ValueError: When I{value} contains non-decimal characters.
-    """
-    data = data.strip(b" \t")
-    if not data.isdigit():
-        raise ValueError(f"Value contains non-decimal digits: {data!r}")
-    return int(data)
 
 
 def _contentLength(connHeaders: Headers) -> Optional[int]:

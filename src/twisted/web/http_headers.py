@@ -22,6 +22,7 @@ from typing import (
 )
 
 from twisted.python.compat import cmp, comparable
+from twisted.web._abnf import _istoken
 
 
 class InvalidHeaderName(ValueError):
@@ -33,28 +34,14 @@ class InvalidHeaderName(ValueError):
 _T = TypeVar("_T")
 
 
-def _istoken(b: bytes) -> bool:
-    """
-    Is the string a token per RFC 9110 section 5.6.2?
-    """
-    for c in b:
-        if c not in (
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
-            b"0123456789"  # DIGIT
-            b"!#$%^'*+-.^_`|~"
-        ):
-            return False
-    return b != b""
-
-
 def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
     r"""
-    Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header key
-    or value with a single space.
+    Replace linear whitespace (C{\n}, C{\r\n}, C{\r}) in a header
+    value with a single space.
 
-    @param headerComponent: The header key or value to sanitize.
+    @param headerComponent: The header value to sanitize.
 
-    @return: The sanitized header key or value.
+    @return: The sanitized header value.
     """
     return b" ".join(headerComponent.splitlines())
 
