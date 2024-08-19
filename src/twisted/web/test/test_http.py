@@ -4653,18 +4653,10 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
                 version=b"HTTP/1.1",
                 code=b"200",
                 reason=b"OK",
-                headers=[(component, component)],
+                headers=[(b"Foo", component)],
             )
 
-            sanitizedHeaderLine = (
-                b": ".join(
-                    [
-                        sanitizedBytes,
-                        sanitizedBytes,
-                    ]
-                )
-                + b"\r\n"
-            )
+            sanitizedHeaderLine = b"Foo: " + sanitizedBytes + b"\r\n"
 
             self.assertEqual(
                 transport.value(),

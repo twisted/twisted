@@ -190,7 +190,13 @@ from twisted.web._responses import (
     UNSUPPORTED_MEDIA_TYPE,
     USE_PROXY,
 )
-from twisted.web.http_headers import Headers, _nameEncoder, _sanitizeLinearWhitespace
+from twisted.web.http_headers import (
+    Headers,
+    InvalidHeaderName,
+    _istoken,
+    _nameEncoder,
+    _sanitizeLinearWhitespace,
+)
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
@@ -505,20 +511,6 @@ def toChunk(data):
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
-
-
-def _istoken(b: bytes) -> bool:
-    """
-    Is the string a token per RFC 9110 section 5.6.2?
-    """
-    for c in b:
-        if c not in (
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
-            b"0123456789"  # DIGIT
-            b"!#$%^'*+-.^_`|~"
-        ):
-            return False
-    return b != b""
 
 
 def _ishexdigits(b: bytes) -> bool:
@@ -2480,7 +2472,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def headerReceived(self, line):
         """
-        Do pre-processing (for content-length) and store this header away.
+        Do pre-processing (for Content-Length) and store this header away.
         Enforce the per-request header limit.
 
         @type line: C{bytes}
@@ -2496,13 +2488,12 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
-        # Header names must be tokens, per RFC 9110 section 5.1.
-        if not _istoken(header):
+        # Canonicalize the header name.
+        try:
+            header = _nameEncoder.encode(header)
+        except InvalidHeaderName:
             self._respondToBadRequestAndDisconnect()
             return False
-
-        # Canonicalize the header name.
-        header = _nameEncoder.encode(header)
 
         data = data.strip(b" \t")
         if b"\x00" in data:

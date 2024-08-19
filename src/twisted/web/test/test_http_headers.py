@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.web.http_headers import Headers, _nameEncoder
+from twisted.web.http_headers import Headers, InvalidHeaderName, _nameEncoder
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
@@ -74,8 +74,7 @@ def assertSanitized(
 ) -> None:
     """
     Assert that the components are sanitized to the expected value as
-    both a header name and value, across all of L{Header}'s setters
-    and getters.
+    both a header value, across all of L{Header}'s setters and getters.
 
     @param testCase: A test case.
 
@@ -84,13 +83,13 @@ def assertSanitized(
         C{textLinearWhitespaceComponents} and
         C{bytesLinearWhitespaceComponents}
 
-    @param expected: The expected sanitized form of the component for
-        both headers names and their values.
+    @param expected: The expected sanitized form of the component as
+        a header value.
     """
     name = b"Name"
     for component in components:
         headers = []
-        headers.append(Headers({name: [component]}))  # type: ignore[type-var]
+        headers.append(Headers({name: [component]}))  # type: ignore[misc]
 
         added = Headers()
         added.addRawHeader(name, component)
@@ -387,6 +386,22 @@ class UnicodeHeadersTests(TestCase):
         with self.assertRaises(UnicodeEncodeError):
             h.hasHeader("\u2603")
 
+    def test_nameNotToken(self) -> None:
+        """
+        HTTP header names must be tokens, so any names containing non-token
+        characters raises L{InvalidHeaderName}
+        """
+        h = Headers()
+
+        # A non-token character within ISO-8851-1
+        self.assertRaises(InvalidHeaderName, h.setRawHeaders, b"\xe1", [b"val"])
+        self.assertRaises(InvalidHeaderName, h.setRawHeaders, "\u00e1", [b"val"])
+
+        # Whitespace
+        self.assertRaises(InvalidHeaderName, h.setRawHeaders, b"a b", [b"val"])
+        self.assertRaises(InvalidHeaderName, h.setRawHeaders, "c\nd", [b"val"])
+        self.assertRaises(InvalidHeaderName, h.setRawHeaders, "c\td", [b"val"])
+
     def test_nameEncoding(self) -> None:
         """
         Passing L{str} to any function that takes a header name will encode
@@ -395,14 +410,14 @@ class UnicodeHeadersTests(TestCase):
         h = Headers()
 
         # We set it using a Unicode string.
-        h.setRawHeaders("\u00e1", [b"foo"])
+        h.setRawHeaders("bar", [b"foo"])
 
         # It's encoded to the ISO-8859-1 value, which we can use to access it
-        self.assertTrue(h.hasHeader(b"\xe1"))
-        self.assertEqual(h.getRawHeaders(b"\xe1"), [b"foo"])
+        self.assertTrue(h.hasHeader(b"bar"))
+        self.assertEqual(h.getRawHeaders(b"bar"), [b"foo"])
 
         # We can still access it using the Unicode string..
-        self.assertTrue(h.hasHeader("\u00e1"))
+        self.assertTrue(h.hasHeader("bar"))
 
     def test_rawHeadersValueEncoding(self) -> None:
         """
@@ -410,9 +425,9 @@ class UnicodeHeadersTests(TestCase):
         ISO-8859-1 and values as UTF-8.
         """
         h = Headers()
-        h.setRawHeaders("\u00e1", ["\u2603", b"foo"])
-        self.assertTrue(h.hasHeader(b"\xe1"))
-        self.assertEqual(h.getRawHeaders(b"\xe1"), [b"\xe2\x98\x83", b"foo"])
+        h.setRawHeaders("x", ["\u2603", b"foo"])
+        self.assertTrue(h.hasHeader(b"x"))
+        self.assertEqual(h.getRawHeaders(b"x"), [b"\xe2\x98\x83", b"foo"])
 
     def test_addRawHeader(self) -> None:
         """
@@ -465,11 +480,11 @@ class UnicodeHeadersTests(TestCase):
         given header.
         """
         h = Headers()
-        h.setRawHeaders("test\u00e1", ["lemur"])
-        self.assertEqual(h.getRawHeaders("test\u00e1"), ["lemur"])
-        self.assertEqual(h.getRawHeaders("Test\u00e1"), ["lemur"])
-        self.assertEqual(h.getRawHeaders(b"test\xe1"), [b"lemur"])
-        self.assertEqual(h.getRawHeaders(b"Test\xe1"), [b"lemur"])
+        h.setRawHeaders("test", ["lemur"])
+        self.assertEqual(h.getRawHeaders("test"), ["lemur"])
+        self.assertEqual(h.getRawHeaders("Test"), ["lemur"])
+        self.assertEqual(h.getRawHeaders(b"test"), [b"lemur"])
+        self.assertEqual(h.getRawHeaders(b"Test"), [b"lemur"])
 
     def test_hasHeaderTrue(self) -> None:
         """
@@ -477,18 +492,18 @@ class UnicodeHeadersTests(TestCase):
         is found.
         """
         h = Headers()
-        h.setRawHeaders("test\u00e1", ["lemur"])
-        self.assertTrue(h.hasHeader("test\u00e1"))
-        self.assertTrue(h.hasHeader("Test\u00e1"))
-        self.assertTrue(h.hasHeader(b"test\xe1"))
-        self.assertTrue(h.hasHeader(b"Test\xe1"))
+        h.setRawHeaders("test", ["lemur"])
+        self.assertTrue(h.hasHeader("test"))
+        self.assertTrue(h.hasHeader("Test"))
+        self.assertTrue(h.hasHeader(b"test"))
+        self.assertTrue(h.hasHeader(b"Test"))
 
     def test_hasHeaderFalse(self) -> None:
         """
         L{Headers.hasHeader} returns C{False} when the given header is not
         found.
         """
-        self.assertFalse(Headers().hasHeader("test\u00e1"))
+        self.assertFalse(Headers().hasHeader("test"))
 
     def test_removeHeader(self) -> None:
         """
@@ -524,7 +539,7 @@ class UnicodeHeadersTests(TestCase):
         is a sequence of values.
         """
         h = Headers()
-        h.setRawHeaders("test\u00e1", ["lemurs"])
+        h.setRawHeaders("test", ["lemurs"])
         h.setRawHeaders("www-authenticate", ["basic aksljdlk="])
         h.setRawHeaders("content-md5", ["kjdfdfgdfgnsd"])
 
@@ -535,7 +550,7 @@ class UnicodeHeadersTests(TestCase):
             {
                 (b"WWW-Authenticate", (b"basic aksljdlk=",)),
                 (b"Content-MD5", (b"kjdfdfgdfgnsd",)),
-                (b"Test\xe1", (b"lemurs",)),
+                (b"Test", (b"lemurs",)),
             },
         )
 
@@ -545,11 +560,11 @@ class UnicodeHeadersTests(TestCase):
         L{Headers} instance with the same values.
         """
         first = Headers()
-        first.setRawHeaders("foo\u00e1", ["panda"])
+        first.setRawHeaders("foo", ["panda"])
         second = Headers()
-        second.setRawHeaders("foo\u00e1", ["panda"])
+        second.setRawHeaders("foo", ["panda"])
         third = Headers()
-        third.setRawHeaders("foo\u00e1", ["lemur", "panda"])
+        third.setRawHeaders("foo", ["lemur", "panda"])
 
         self.assertEqual(first, first)
         self.assertEqual(first, second)
@@ -557,11 +572,11 @@ class UnicodeHeadersTests(TestCase):
 
         # Headers instantiated with bytes equivs are also the same
         firstBytes = Headers()
-        firstBytes.setRawHeaders(b"foo\xe1", [b"panda"])
+        firstBytes.setRawHeaders(b"foo", [b"panda"])
         secondBytes = Headers()
-        secondBytes.setRawHeaders(b"foo\xe1", [b"panda"])
+        secondBytes.setRawHeaders(b"foo", [b"panda"])
         thirdBytes = Headers()
-        thirdBytes.setRawHeaders(b"foo\xe1", [b"lemur", "panda"])
+        thirdBytes.setRawHeaders(b"foo", [b"lemur", "panda"])
 
         self.assertEqual(first, firstBytes)
         self.assertEqual(second, secondBytes)
@@ -583,10 +598,10 @@ class UnicodeHeadersTests(TestCase):
         the headers it contains. This shows only reprs of bytes values, as
         undecodable headers may cause an exception.
         """
-        foo = "foo\u00e1"
+        foo = "foo"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "'Foo\\xe1'"
+        fooEncoded = "'Foo'"
         barEncoded = "'bar\\xe2\\x98\\x83'"
         fooEncoded = "b" + fooEncoded
         barEncoded = "b" + barEncoded
@@ -602,10 +617,10 @@ class UnicodeHeadersTests(TestCase):
         The L{repr} of an instance of a subclass of L{Headers} uses the name
         of the subclass instead of the string C{"Headers"}.
         """
-        foo = "foo\u00e1"
+        foo = "foo"
         bar = "bar\u2603"
         baz = "baz"
-        fooEncoded = "b'Foo\\xe1'"
+        fooEncoded = "b'Foo'"
         barEncoded = "b'bar\\xe2\\x98\\x83'"
 
         class FunnyHeaders(Headers):
@@ -624,26 +639,26 @@ class UnicodeHeadersTests(TestCase):
         between the copies.
         """
         h = Headers()
-        h.setRawHeaders("test\u00e1", ["foo\u2603"])
+        h.setRawHeaders("test", ["foo\u2603"])
         i = h.copy()
 
         # The copy contains the same value as the original
-        self.assertEqual(i.getRawHeaders("test\u00e1"), ["foo\u2603"])
-        self.assertEqual(i.getRawHeaders(b"test\xe1"), [b"foo\xe2\x98\x83"])
+        self.assertEqual(i.getRawHeaders("test"), ["foo\u2603"])
+        self.assertEqual(i.getRawHeaders(b"test"), [b"foo\xe2\x98\x83"])
 
         # Add a header to the original
-        h.addRawHeader("test\u00e1", "bar")
+        h.addRawHeader("test", "bar")
 
         # Verify that the copy has not changed
-        self.assertEqual(i.getRawHeaders("test\u00e1"), ["foo\u2603"])
-        self.assertEqual(i.getRawHeaders(b"test\xe1"), [b"foo\xe2\x98\x83"])
+        self.assertEqual(i.getRawHeaders("test"), ["foo\u2603"])
+        self.assertEqual(i.getRawHeaders(b"test"), [b"foo\xe2\x98\x83"])
 
         # Add a header to the copy
-        i.addRawHeader("test\u00e1", b"baz")
+        i.addRawHeader("Test", b"baz")
 
         # Verify that the orignal does not have it
-        self.assertEqual(h.getRawHeaders("test\u00e1"), ["foo\u2603", "bar"])
-        self.assertEqual(h.getRawHeaders(b"test\xe1"), [b"foo\xe2\x98\x83", b"bar"])
+        self.assertEqual(h.getRawHeaders("test"), ["foo\u2603", "bar"])
+        self.assertEqual(h.getRawHeaders(b"test"), [b"foo\xe2\x98\x83", b"bar"])
 
 
 class MixedHeadersTests(TestCase):

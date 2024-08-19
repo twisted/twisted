@@ -23,7 +23,28 @@ from typing import (
 
 from twisted.python.compat import cmp, comparable
 
+
+class InvalidHeaderName(ValueError):
+    """
+    HTTP header names must be tokens, per RFC 9110 section 5.1.
+    """
+
+
 _T = TypeVar("_T")
+
+
+def _istoken(b: bytes) -> bool:
+    """
+    Is the string a token per RFC 9110 section 5.6.2?
+    """
+    for c in b:
+        if c not in (
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
+            b"0123456789"  # DIGIT
+            b"!#$%^'*+-.^_`|~"
+        ):
+            return False
+    return b != b""
 
 
 def _sanitizeLinearWhitespace(headerComponent: bytes) -> bytes:
@@ -234,11 +255,11 @@ class _NameEncoder:
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1
         bytestring if required. It will be canonicalized to Http-Header-Case.
 
-        @raises _InvalidHeaderName:
+        @raises InvalidHeaderName:
             If the header name contains invalid characters like whitespace
             or NUL.
 
-        @param name: A HTTP header name
+        @param name: An HTTP header name
 
         @return: C{name}, encoded if required, in Header-Case
         """
@@ -247,9 +268,10 @@ class _NameEncoder:
 
         bytes_name = name.encode("iso-8859-1") if isinstance(name, str) else name
 
-        result = _sanitizeLinearWhitespace(
-            b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
-        )
+        if not _istoken(bytes_name):
+            raise InvalidHeaderName(bytes_name)
+
+        result = b"-".join([word.capitalize() for word in bytes_name.split(b"-")])
 
         # Some headers have special capitalization:
         if result in self._caseMappings:
