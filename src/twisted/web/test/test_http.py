@@ -2188,6 +2188,7 @@ class ParsingTests(unittest.TestCase):
             b"foo\x00bar: baz",  # NUL byte
             b"foo\x1bbar: baz",  # ESC byte
             b"Foo\vBar: baz",  # exotic whitespace
+            b"Foo Bar: baz",  # banal whitespace
             b"foo\xe2\x80\xbdbar: baz",  # non-ASCII bytes
         ]:
             self.assertRequestRejected(
