@@ -6,42 +6,19 @@
 Tools for pedantically processing the HTTP protocol.
 """
 
-import re
-
-_TOKEN_RE = re.compile(
-    rb"\A[%s]+\Z"
-    % (
-        b"".join(
-            (
-                b"!",
-                b"#",
-                b"$",
-                b"%",
-                b"&",
-                b"'",
-                b"*",
-                b"+",
-                b"-",
-                b".",
-                b"^",
-                b"_",
-                b"`",
-                b"|",
-                b"~",
-                b"\x30-\x39",
-                b"\x41-\x5a",
-                b"\x61-\x7a",
-            ),
-        ),
-    ),
-)
-
 
 def _istoken(b: bytes) -> bool:
     """
     Is the string a token per RFC 9110 section 5.6.2?
     """
-    return _TOKEN_RE.match(b) is not None
+    for c in b:
+        if c not in (
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
+            b"0123456789"  # DIGIT
+            b"!#$%^'*+-.^_`|~"
+        ):
+            return False
+    return b != b""
 
 
 def _decint(data: bytes) -> int:
