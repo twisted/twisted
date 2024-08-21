@@ -1,5 +1,10 @@
 # -*- test-case-name: twisted.application.test.test_internet,twisted.test.test_application,twisted.test.test_cooperator -*-
 
+"""
+Implementation of L{twisted.application.internet.ClientService}, particularly
+its U{automat <https://automat.readthedocs.org/>} state machine.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
