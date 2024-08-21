@@ -382,7 +382,7 @@ jobs:
       if: ${{ !cancelled() }}
       with:
         files: coverage.xml
-        name: coverage-combined
+        name: tests-combined
         fail_ci_if_error: true
 
 
