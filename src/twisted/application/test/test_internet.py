@@ -795,18 +795,37 @@ class ClientServiceTests(SynchronousTestCase):
         buildProtocol, the factory keeps attempting new connections.
         """
         clock = Clock()
+        # This `whenConnected` request will be cancelled during stopService,
+        # since our local buildProtocol is going to return None again.  Since
+        # cleanups are LIFO, and we want this to run *after* stopService, we
+        # add it before.
+        self.addCleanup(lambda: self.failureResultOf(whenConnected, CancelledError))
         cq, service = self.makeReconnector(
-            clock=clock, fireImmediately=False, refuseConnections=True
+            clock=clock,
+            fireImmediately=False,
+            # tell buildProtocol to return None.
+            refuseConnections=True,
         )
+        # The service should begin by attempting a connection.
         self.assertEqual(len(cq.connectQueue), 1)
-        cq.connectQueue[0].callback(None)
-        self.assertEqual(len(cq.connectQueue), 1)
+        # That connection attempt succeeds.
+        cq.connectQueue.pop(0).callback(None)
+        # That connection success does *not* initiate a new connection.
+        self.assertEqual(len(cq.connectQueue), 0)
+        # We ask the service to tell us when a connection has completed.
         whenConnected = service.whenConnected()
+        # No connection has been completed so that Deferred does not fire.
         self.assertNoResult(whenConnected)
-        whenConnected.addErrback(lambda ignored: ignored.trap(CancelledError))
+        # Let enough time pass that a second connect attempt will be made; a
+        # None return from buildProtocol doesn't stop us, as it might return
+        # not-None in the future.
         clock.advance(AT_LEAST_ONE_ATTEMPT)
-        self.assertEqual(len(cq.connectQueue), 2)
-        cq.connectQueue[1].callback(None)
+        # It tries again.
+        self.assertEqual(len(cq.connectQueue), 1)
+        # It succeeds again.
+        cq.connectQueue.pop(0).callback(None)
+        # See comment at top of test.
+        self.assertNoResult(whenConnected)
 
     def test_clientConnectionLostWhileStopping(self):
         """
