@@ -434,10 +434,10 @@ jobs:
 
     - name: Publish benchmarks coverage
       uses: codecov/codecov-action@v4
-      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
+      if: ${{ !cancelled() }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-benchmarks
+        name: benchmarks
         fail_ci_if_error: true
 
     - name: Fail on missing benchmarks coverage
