@@ -318,14 +318,6 @@ jobs:
         name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         path: .coverage-job-*
 
-    - name: Publish to codecov.io
-      uses: codecov/codecov-action@v4
-      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
-      with:
-        files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
-        fail_ci_if_error: true
-
 
   coverage-report:
     name: Coverage report
@@ -384,6 +376,14 @@ jobs:
       with:
         name: html-report
         path: htmlcov
+
+    - name: Publish to codecov.io
+      uses: codecov/codecov-action@v4
+      if: ${{ !cancelled() }}
+      with:
+        files: coverage.xml
+        name: coverage-combined
+        fail_ci_if_error: true
 
 
   benchmarks:
