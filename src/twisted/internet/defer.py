@@ -929,13 +929,13 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         Stop processing on a L{Deferred} until L{unpause}() is called.
         """
-        self.paused = self.paused + 1
+        self.paused += 1
 
     def unpause(self) -> None:
         """
         Process all callbacks made since L{pause}() was called.
         """
-        self.paused = self.paused - 1
+        self.paused -= 1
         if self.paused:
             return
         if self.called:
@@ -997,10 +997,8 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         Build a tuple of callback and errback with L{_Sentinel._CONTINUE}.
         """
-        return (
-            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
-            (_Sentinel._CONTINUE, (self,), _NONE_KWARGS),
-        )
+        triple = (_CONTINUE, (self,), _NONE_KWARGS)
+        return (triple, triple)  # type: ignore[return-value]
 
     def _runCallbacks(self) -> None:
         """
@@ -1063,7 +1061,9 @@ class Deferred(Awaitable[_SelfResultT]):
                 if callback is _CONTINUE:
                     # Give the waiting Deferred our current result and then
                     # forget about that result ourselves.
-                    chainee = cast(Deferred[object], args[0])
+
+                    # We don't use cast() for performance reasons:
+                    chainee: Deferred[object] = args[0]  # type: ignore[assignment]
                     chainee.result = current.result
                     current.result = None
                     # Making sure to update _debugInfo
@@ -1141,7 +1141,6 @@ class Deferred(Awaitable[_SelfResultT]):
                 if isinstance(current.result, Failure):
                     # Stash the Failure in the _debugInfo for unhandled error
                     # reporting.
-                    current.result.cleanFailure()
                     if current._debugInfo is None:
                         current._debugInfo = DebugInfo()
                     current._debugInfo.failResult = current.result
@@ -1189,8 +1188,7 @@ class Deferred(Awaitable[_SelfResultT]):
                 # exception"
                 assert self._debugInfo is not None
                 self._debugInfo.failResult = None
-                result.value.__failure__ = result
-                raise result.value
+                result.raiseException()
             else:
                 return result  # type: ignore[return-value]
 

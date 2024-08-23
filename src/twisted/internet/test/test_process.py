@@ -10,6 +10,7 @@ Tests for implementations of L{IReactorProcess}.
 
 
 import io
+import json
 import os
 import signal
 import subprocess
@@ -1024,12 +1025,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
                 pyExe,
                 b"-c",
                 networkString(
-                    "import os, sys; "
+                    "import os, sys, json; "
                     "env = dict(os.environ); "
-                    # LC_CTYPE is set by python, see https://peps.python.org/pep-0538/
-                    'env.pop("LC_CTYPE", None); '
-                    'env.pop("__CF_USER_TEXT_ENCODING", None); '
-                    "sys.stderr.write(str(sorted(env.items())))"
+                    "sys.stderr.write(json.dumps(env))"
                 ),
             ],
             usePTY=self.usePTY,
@@ -1043,12 +1041,19 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
 
         self.runReactor(reactor)
 
-        expectedEnv.pop("LC_CTYPE", None)
-        expectedEnv.pop("__CF_USER_TEXT_ENCODING", None)
-        self.assertEqual(
-            bytes(str(sorted(expectedEnv.items())), "utf-8"),
-            p.outF.getvalue() if self.usePTY else p.errF.getvalue(),
-        )
+        # Subprocess might get COLUMNS and LINES added for some reason in 3.13
+        # or later. LC_CTYPE is set by python, see
+        # https://peps.python.org/pep-0538/.
+        expectedExcess = {"COLUMNS", "LINES", "LC_CTYPE", "__CF_USER_TEXT_ENCODING"}
+        for var in expectedExcess:
+            expectedEnv.pop(var, None)
+
+        resultEnv = json.loads(
+            p.outF.getvalue() if self.usePTY else p.errF.getvalue()
+        ).items()
+        self.assertGreaterEqual(resultEnv, expectedEnv.items())
+        resultExcess = {pair[0] for pair in resultEnv - expectedEnv.items()}
+        self.assertGreaterEqual(expectedExcess, resultExcess)
 
     def checkSpawnProcessEnvironmentWithPosixSpawnp(self, spawnKwargs, expectedEnv):
         return self.checkSpawnProcessEnvironment(
