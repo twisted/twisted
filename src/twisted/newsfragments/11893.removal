@@ -1,3 +1,0 @@
-The `twisted-iocpsupport` is no longer a hard dependency on Windows.
-The IOCP support is now installed together with the other Windows soft
-dependencies via `twisted[windows-platform]`.

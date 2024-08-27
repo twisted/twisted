@@ -1,0 +1,1 @@
+twisted.web's HTTP/1.1 server now rejects header values containing a NUL byte with a 400 error, in compliance with RFC 9110.

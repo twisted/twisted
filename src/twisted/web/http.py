@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -140,7 +141,7 @@ from twisted.protocols import basic, policies
 from twisted.python import log
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.failure import Failure
 from twisted.web._responses import (
     ACCEPTED,
@@ -233,6 +234,58 @@ monthname = [
 ]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
+    """
+    Parse an HTTP request line, which looks like:
+
+        GET /foo/bar HTTP/1.1
+
+    This function attempts to validate the well-formedness of
+    the line. RFC 9112 section 3 provides this ABNF:
+
+        request-line   = method SP request-target SP HTTP-version
+
+    We allow any method that is a valid token:
+
+        method         = token
+        token          = 1*tchar
+        tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                        / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                        / DIGIT / ALPHA
+
+    We allow any non-empty request-target that contains only printable
+    ASCII characters (no whitespace).
+
+    The RFC defines HTTP-version like this:
+
+        HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
+        HTTP-name     = %s"HTTP"
+
+    However, this function is more strict than the RFC: we only allow
+    HTTP versions of 1.0 and 1.1, as later versions of HTTP don't use
+    a request line.
+
+    @returns: C{(method, request, version)} three-tuple
+
+    @raises: L{ValueError} when malformed
+    """
+    method, request, version = line.split(b" ")
+
+    if not _istoken(method):
+        raise ValueError("Invalid method")
+
+    for c in request:
+        if c <= 32 or c > 176:
+            raise ValueError("Invalid request-target")
+    if request == b"":
+        raise ValueError("Empty request-target")
+
+    if version != b"HTTP/1.1" and version != b"HTTP/1.0":
+        raise ValueError("Invalid version")
+
+    return method, request, version
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -452,6 +505,20 @@ def toChunk(data):
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
+
+
+def _istoken(b: bytes) -> bool:
+    """
+    Is the string a token per RFC 9110 section 5.6.2?
+    """
+    for c in b:
+        if c not in (
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
+            b"0123456789"  # DIGIT
+            b"!#$%^'*+-.^_`|~"
+        ):
+            return False
+    return b != b""
 
 
 def _ishexdigits(b: bytes) -> bool:
@@ -778,6 +845,14 @@ class HTTPClient(basic.LineReceiver):
         if self.length == 0:
             self.handleResponseEnd()
             self.setLineMode(rest)
+
+
+deprecatedModuleAttribute(
+    Version("Twisted", 24, 7, 0),
+    "Use twisted.web.client.Agent instead.",
+    __name__,
+    HTTPClient.__name__,
+)
 
 
 # response codes that must have empty bodies
@@ -2007,16 +2082,21 @@ class _ChunkedTransferDecoder:
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
         """
-        if (
-            self._receivedTrailerHeadersSize + len(self._buffer)
-            > self._maxTrailerHeadersSize
-        ):
-            raise _MalformedChunkedDataError("Trailer headers data is too long.")
-
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
             # Still no end of network line marker found.
+            #
+            # Check if we've run up against the trailer size limit: if the next
+            # read contains the terminating CRLF then we'll have this many bytes
+            # of trailers (including the CRLFs).
+            minTrailerSize = (
+                self._receivedTrailerHeadersSize
+                + len(self._buffer)
+                + (1 if self._buffer.endswith(b"\r") else 2)
+            )
+            if minTrailerSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             # Continue processing more data.
             return False
 
@@ -2026,6 +2106,8 @@ class _ChunkedTransferDecoder:
             del self._buffer[0 : eolIndex + 2]
             self._start = 0
             self._receivedTrailerHeadersSize += eolIndex + 2
+            if self._receivedTrailerHeadersSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             return True
 
         # eolIndex in this part of code is equal to 0
@@ -2311,14 +2393,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             self.__first_line = 0
 
-            parts = line.split()
-            if len(parts) != 3:
-                self._respondToBadRequestAndDisconnect()
-                return
-            command, request, version = parts
             try:
-                command.decode("ascii")
-            except UnicodeDecodeError:
+                command, request, version = _parseRequestLine(line)
+            except ValueError:
                 self._respondToBadRequestAndDisconnect()
                 return
 
@@ -2351,8 +2428,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__header = line
 
     def _finishRequestBody(self, data):
-        self.allContentReceived()
         self._dataBuffer.append(data)
+        self.allContentReceived()
 
     def _maybeChooseTransferDecoder(self, header, data):
         """
@@ -2419,12 +2496,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
-        if not header or header[-1:].isspace():
+        # Header names must be tokens, per RFC 9110 section 5.1.
+        if not _istoken(header):
             self._respondToBadRequestAndDisconnect()
             return False
 
         header = header.lower()
         data = data.strip(b" \t")
+        if b"\x00" in data:
+            self._respondToBadRequestAndDisconnect()
+            return False
 
         if not self._maybeChooseTransferDecoder(header, data):
             return False

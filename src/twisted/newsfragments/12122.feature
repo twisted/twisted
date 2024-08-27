@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferred.callback() and twisted.internet.defer.Deferred.addCallbacks() no longer use `assert` to check the type of the arguments. You should now use type checking to validate your code. These changes were done to reduce the CPU usage.
