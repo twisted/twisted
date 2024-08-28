@@ -71,7 +71,7 @@ statusCodes = {
     414: "Request-URI Too Large",
     415: "Unsupported Media Type",
     416: "Unsupported URI Scheme",
-    417: "Unknown Resource-Priority", # Not in RFC3261, on RFC 4412
+    417: "Unknown Resource-Priority",  # Not in RFC3261, on RFC 4412
     420: "Bad Extension",
     421: "Extension Required",
     423: "Interval Too Brief",
