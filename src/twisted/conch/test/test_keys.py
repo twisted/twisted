@@ -902,7 +902,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fromBlobSKECDSA(self):
         """
-        Key.fromString generates SK-ECDSA keys from blobs.
+        A public SK-ECDSA key is correctly generated from a public key blob.
         """
         from cryptography import utils
 
