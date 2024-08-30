@@ -22,6 +22,7 @@ from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
 from twisted.python.monkey import MonkeyPatcher
+from twisted.python.runtime import platform
 from ._signals import _IWaker, _Waker
 
 
@@ -138,6 +139,11 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._writes: Set[IWriteDescriptor] = set()
         self._sources: Dict[FileDescriptor, int] = {}
         self._glib = glib_module
+        self._socket2channel = (
+            self._glib.IOChannel.win32_new_socket
+            if platform.isWindows()
+            else self._glib.IOChannel.unix_new
+        )
 
         self._POLL_DISCONNECTED = (
             glib_module.IOCondition.HUP
@@ -208,8 +214,9 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         else:
             fileno = source
             wrapper = callback
+        channel = self._socket2channel(fileno)
         return self._glib.io_add_watch(
-            fileno,
+            channel,
             self._glib.PRIORITY_DEFAULT_IDLE,
             condition,
             wrapper,
