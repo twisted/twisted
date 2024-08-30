@@ -804,7 +804,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             [b"ecdsa-sha2-nistp256"],
         )
         self.assertEqual(
-            keys.Key.fromString(keydata.publicSKECDSA_openssh).supportedSignatureAlgorithms(),
+            keys.Key.fromString(
+                keydata.publicSKECDSA_openssh
+            ).supportedSignatureAlgorithms(),
             [b"sk-ecdsa-sha2-nistp256@openssh.com"],
         )
         if ED25519_SUPPORTED:
@@ -813,7 +815,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                 [b"ssh-ed25519"],
             )
             self.assertEqual(
-                keys.Key.fromString(keydata.publicSKEd25519_openssh).supportedSignatureAlgorithms(),
+                keys.Key.fromString(
+                    keydata.publicSKEd25519_openssh
+                ).supportedSignatureAlgorithms(),
                 [b"sk-ssh-ed25519@openssh.com"],
             )
         self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
