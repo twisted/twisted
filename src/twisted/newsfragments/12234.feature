@@ -1,0 +1,1 @@
+twisted.internet.defer.Deferred no longer removes the traceback object from Failures. This may result in more objects staying in memory if you don't clean up failed Deferreds, but it speeds up error handling and enables improvements to traceback reporting.

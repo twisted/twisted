@@ -31,6 +31,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
     it, as in the HTTP 1.1 chunked I{Transfer-Encoding} (RFC 7230 section 4.1).
     This limits how much data may be buffered when decoding the line.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -140,8 +141,9 @@ from twisted.protocols import basic, policies
 from twisted.python import log
 from twisted.python.compat import nativeString, networkString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 from twisted.python.failure import Failure
+from twisted.web._abnf import _hexint, _istoken
 from twisted.web._responses import (
     ACCEPTED,
     BAD_GATEWAY,
@@ -189,7 +191,12 @@ from twisted.web._responses import (
     UNSUPPORTED_MEDIA_TYPE,
     USE_PROXY,
 )
-from twisted.web.http_headers import Headers, _sanitizeLinearWhitespace
+from twisted.web.http_headers import (
+    Headers,
+    InvalidHeaderName,
+    _nameEncoder,
+    _sanitizeLinearWhitespace,
+)
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
@@ -233,6 +240,58 @@ monthname = [
 ]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
+
+
+def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
+    """
+    Parse an HTTP request line, which looks like:
+
+        GET /foo/bar HTTP/1.1
+
+    This function attempts to validate the well-formedness of
+    the line. RFC 9112 section 3 provides this ABNF:
+
+        request-line   = method SP request-target SP HTTP-version
+
+    We allow any method that is a valid token:
+
+        method         = token
+        token          = 1*tchar
+        tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                        / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                        / DIGIT / ALPHA
+
+    We allow any non-empty request-target that contains only printable
+    ASCII characters (no whitespace).
+
+    The RFC defines HTTP-version like this:
+
+        HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
+        HTTP-name     = %s"HTTP"
+
+    However, this function is more strict than the RFC: we only allow
+    HTTP versions of 1.0 and 1.1, as later versions of HTTP don't use
+    a request line.
+
+    @returns: C{(method, request, version)} three-tuple
+
+    @raises: L{ValueError} when malformed
+    """
+    method, request, version = line.split(b" ")
+
+    if not _istoken(method):
+        raise ValueError("Invalid method")
+
+    for c in request:
+        if c <= 32 or c > 176:
+            raise ValueError("Invalid request-target")
+    if request == b"":
+        raise ValueError("Empty request-target")
+
+    if version != b"HTTP/1.1" and version != b"HTTP/1.0":
+        raise ValueError("Invalid version")
+
+    return method, request, version
 
 
 def _parseContentType(line: bytes) -> bytes:
@@ -452,32 +511,6 @@ def toChunk(data):
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
-
-
-def _ishexdigits(b: bytes) -> bool:
-    """
-    Is the string case-insensitively hexidecimal?
-
-    It must be composed of one or more characters in the ranges a-f, A-F
-    and 0-9.
-    """
-    for c in b:
-        if c not in b"0123456789abcdefABCDEF":
-            return False
-    return b != b""
-
-
-def _hexint(b: bytes) -> int:
-    """
-    Decode a hexadecimal integer.
-
-    Unlike L{int(b, 16)}, this raises L{ValueError} when the integer has
-    a prefix like C{b'0x'}, C{b'+'}, or C{b'-'}, which is desirable when
-    parsing network protocols.
-    """
-    if not _ishexdigits(b):
-        raise ValueError(b)
-    return int(b, 16)
 
 
 def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
@@ -780,6 +813,14 @@ class HTTPClient(basic.LineReceiver):
             self.setLineMode(rest)
 
 
+deprecatedModuleAttribute(
+    Version("Twisted", 24, 7, 0),
+    "Use twisted.web.client.Agent instead.",
+    __name__,
+    HTTPClient.__name__,
+)
+
+
 # response codes that must have empty bodies
 NO_BODY_CODES = (204, 304)
 
@@ -956,7 +997,7 @@ class Request:
 
         This method is not intended for users.
         """
-        cookieheaders = self.requestHeaders.getRawHeaders(b"cookie")
+        cookieheaders = self.requestHeaders.getRawHeaders(b"Cookie")
 
         if cookieheaders is None:
             return
@@ -1011,7 +1052,7 @@ class Request:
 
         # Argument processing
         args = self.args
-        ctype = self.requestHeaders.getRawHeaders(b"content-type")
+        ctype = self.requestHeaders.getRawHeaders(b"Content-Type")
         if ctype is not None:
             ctype = ctype[0]
 
@@ -1195,7 +1236,7 @@ class Request:
         """
         if self.finished:
             raise RuntimeError(
-                "Request.write called on a request after " "Request.finish was called."
+                "Request.write called on a request after Request.finish was called."
             )
 
         if self._disconnected:
@@ -1215,7 +1256,7 @@ class Request:
             # persistent connections.
             if (
                 (version == b"HTTP/1.1")
-                and (self.responseHeaders.getRawHeaders(b"content-length") is None)
+                and (self.responseHeaders.getRawHeaders(b"Content-Length") is None)
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
@@ -1223,14 +1264,14 @@ class Request:
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader(b"last-modified"):
+                if self.responseHeaders.hasHeader(b"Last-Modified"):
                     self._log.info(
                         "Warning: last-modified specified both in"
                         " header list and lastModified attribute."
                     )
                 else:
                     self.responseHeaders.setRawHeaders(
-                        b"last-modified", [datetimeToString(self.lastModified)]
+                        b"Last-Modified", [datetimeToString(self.lastModified)]
                     )
 
             if self.etag is not None:
@@ -1408,7 +1449,7 @@ class Request:
         @type url: L{bytes} or L{str}
         """
         self.setResponseCode(FOUND)
-        self.setHeader(b"location", url)
+        self.setHeader(b"Location", url)
 
     def setLastModified(self, when):
         """
@@ -1435,7 +1476,7 @@ class Request:
         if (not self.lastModified) or (self.lastModified < when):
             self.lastModified = when
 
-        modifiedSince = self.getHeader(b"if-modified-since")
+        modifiedSince = self.getHeader(b"If-Modified-Since")
         if modifiedSince:
             firstPart = modifiedSince.split(b";", 1)[0]
             try:
@@ -1469,7 +1510,7 @@ class Request:
         if etag:
             self.etag = etag
 
-        tags = self.getHeader(b"if-none-match")
+        tags = self.getHeader(b"If-None-Match")
         if tags:
             tags = tags.split()
             if (etag in tags) or (b"*" in tags):
@@ -1503,7 +1544,7 @@ class Request:
 
         @rtype: C{bytes}
         """
-        host = self.getHeader(b"host")
+        host = self.getHeader(b"Host")
         if host is not None:
             match = _hostHeaderExpression.match(host)
             if match is not None:
@@ -1551,7 +1592,7 @@ class Request:
             hostHeader = host
         else:
             hostHeader = b"%b:%d" % (host, port)
-        self.requestHeaders.setRawHeaders(b"host", [hostHeader])
+        self.requestHeaders.setRawHeaders(b"Host", [hostHeader])
         self.host = address.IPv4Address("TCP", host, port)
 
     @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
@@ -2007,16 +2048,21 @@ class _ChunkedTransferDecoder:
         @returns: C{False}, as there is either insufficient data to continue,
             or no data remains.
         """
-        if (
-            self._receivedTrailerHeadersSize + len(self._buffer)
-            > self._maxTrailerHeadersSize
-        ):
-            raise _MalformedChunkedDataError("Trailer headers data is too long.")
-
         eolIndex = self._buffer.find(b"\r\n", self._start)
 
         if eolIndex == -1:
             # Still no end of network line marker found.
+            #
+            # Check if we've run up against the trailer size limit: if the next
+            # read contains the terminating CRLF then we'll have this many bytes
+            # of trailers (including the CRLFs).
+            minTrailerSize = (
+                self._receivedTrailerHeadersSize
+                + len(self._buffer)
+                + (1 if self._buffer.endswith(b"\r") else 2)
+            )
+            if minTrailerSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             # Continue processing more data.
             return False
 
@@ -2026,6 +2072,8 @@ class _ChunkedTransferDecoder:
             del self._buffer[0 : eolIndex + 2]
             self._start = 0
             self._receivedTrailerHeadersSize += eolIndex + 2
+            if self._receivedTrailerHeadersSize > self._maxTrailerHeadersSize:
+                raise _MalformedChunkedDataError("Trailer headers data is too long.")
             return True
 
         # eolIndex in this part of code is equal to 0
@@ -2311,14 +2359,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
             self.__first_line = 0
 
-            parts = line.split()
-            if len(parts) != 3:
-                self._respondToBadRequestAndDisconnect()
-                return
-            command, request, version = parts
             try:
-                command.decode("ascii")
-            except UnicodeDecodeError:
+                command, request, version = _parseRequestLine(line)
+            except ValueError:
                 self._respondToBadRequestAndDisconnect()
                 return
 
@@ -2351,8 +2394,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self.__header = line
 
     def _finishRequestBody(self, data):
-        self.allContentReceived()
         self._dataBuffer.append(data)
+        self.allContentReceived()
 
     def _maybeChooseTransferDecoder(self, header, data):
         """
@@ -2368,7 +2411,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         # Can this header determine the length?
-        if header == b"content-length":
+        if header == b"Content-Length":
             if not data.isdigit():
                 return fail()
             try:
@@ -2378,7 +2421,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             newTransferDecoder = _IdentityTransferDecoder(
                 length, self.requests[-1].handleContentChunk, self._finishRequestBody
             )
-        elif header == b"transfer-encoding":
+        elif header == b"Transfer-Encoding":
             # XXX Rather poorly tested code block, apparently only exercised by
             # test_chunkedEncoding
             if data.lower() == b"chunked":
@@ -2403,7 +2446,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     def headerReceived(self, line):
         """
-        Do pre-processing (for content-length) and store this header away.
+        Do pre-processing (for Content-Length) and store this header away.
         Enforce the per-request header limit.
 
         @type line: C{bytes}
@@ -2419,12 +2462,17 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             self._respondToBadRequestAndDisconnect()
             return False
 
-        if not header or header[-1:].isspace():
+        # Canonicalize the header name.
+        try:
+            header = _nameEncoder.encode(header)
+        except InvalidHeaderName:
             self._respondToBadRequestAndDisconnect()
             return False
 
-        header = header.lower()
         data = data.strip(b" \t")
+        if b"\x00" in data:
+            self._respondToBadRequestAndDisconnect()
+            return False
 
         if not self._maybeChooseTransferDecoder(header, data):
             return False
@@ -2514,7 +2562,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req.gotLength(self.length)
         # Handle 'Expect: 100-continue' with automated 100 response code,
         # a simplistic implementation of RFC 2686 8.2.3:
-        expectContinue = req.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = req.requestHeaders.getRawHeaders(b"Expect")
         if (
             expectContinue
             and expectContinue[0].lower() == b"100-continue"
@@ -2539,7 +2587,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             must be closed in order to indicate the completion of the response
             to C{request}.
         """
-        connection = request.requestHeaders.getRawHeaders(b"connection")
+        connection = request.requestHeaders.getRawHeaders(b"Connection")
         if connection:
             tokens = [t.lower() for t in connection[0].split(b" ")]
         else:
@@ -2558,7 +2606,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         if version == b"HTTP/1.1":
             if b"close" in tokens:
-                request.responseHeaders.setRawHeaders(b"connection", [b"close"])
+                request.responseHeaders.setRawHeaders(b"Connection", [b"close"])
                 return False
             else:
                 return True
@@ -2956,7 +3004,7 @@ class _XForwardedForRequest(proxyForInterface(IRequest, "_request")):  # type: i
             expected by L{combinedLogFormatter}.
         """
         host = (
-            self._request.requestHeaders.getRawHeaders(b"x-forwarded-for", [b"-"])[0]
+            self._request.requestHeaders.getRawHeaders(b"X-Forwarded-For", [b"-"])[0]
             .split(b",")[0]
             .strip()
         )

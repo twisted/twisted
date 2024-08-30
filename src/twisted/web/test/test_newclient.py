@@ -2042,11 +2042,11 @@ class RequestTests(TestCase):
 
     def test_sanitizeLinearWhitespaceInRequestHeaders(self):
         """
-        Linear whitespace in request headers is replaced with a single
-        space.
+        Linear whitespace in request header values is replaced with a
+        single space.
         """
         for component in bytesLinearWhitespaceComponents:
-            headers = Headers({component: [component], b"host": [b"example.invalid"]})
+            headers = Headers({b"x-foo": [component], b"host": [b"example.invalid"]})
             transport = StringTransport()
             Request(b"GET", b"/foo", headers, None).writeTo(transport)
             lines = transport.value().split(b"\r\n")
@@ -2055,8 +2055,7 @@ class RequestTests(TestCase):
             del lines[0], lines[-2:]
             lines.remove(b"Connection: close")
             lines.remove(b"Host: example.invalid")
-            sanitizedHeaderLine = b": ".join([sanitizedBytes, sanitizedBytes])
-            self.assertEqual(lines, [sanitizedHeaderLine])
+            self.assertEqual(lines, [b"X-Foo: " + sanitizedBytes])
 
     def test_sendChunkedRequestBody(self):
         """

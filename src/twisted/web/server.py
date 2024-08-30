@@ -13,7 +13,6 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-
 import copy
 import os
 import re
@@ -38,7 +37,7 @@ from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
     HTTPFactory,
-    Request as BaseRequest,
+    Request as _HTTPRequest,
     datetimeToString,
     unquote,
 )
@@ -73,7 +72,7 @@ def _addressToTuple(addr):
 
 
 @implementer(iweb.IRequest)
-class Request(Copyable, BaseRequest, components.Componentized):
+class Request(Copyable, http.Request, components.Componentized):
     """
     An HTTP request.
 
@@ -99,7 +98,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
     _log = Logger()
 
     def __init__(self, *args, **kw):
-        BaseRequest.__init__(self, *args, **kw)
+        _HTTPRequest.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -174,7 +173,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            BaseRequest.gotLength(self, length)
+            _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -192,8 +191,8 @@ class Request(Copyable, BaseRequest, components.Componentized):
         self.site = self.channel.site
 
         # set various default headers
-        self.setHeader(b"server", version)
-        self.setHeader(b"date", datetimeToString())
+        self.setHeader(b"Server", version)
+        self.setHeader(b"Date", datetimeToString())
 
         # Resource Identification
         self.prepath = []
@@ -228,8 +227,8 @@ class Request(Copyable, BaseRequest, components.Componentized):
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
             needsCT = self.code not in (NOT_MODIFIED, NO_CONTENT)
-            contentType = self.responseHeaders.getRawHeaders(b"content-type")
-            contentLength = self.responseHeaders.getRawHeaders(b"content-length")
+            contentType = self.responseHeaders.getRawHeaders(b"Content-Type")
+            contentLength = self.responseHeaders.getRawHeaders(b"Content-Length")
             contentLengthZero = contentLength and (contentLength[0] == b"0")
 
             if (
@@ -239,7 +238,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
                 and not contentLengthZero
             ):
                 self.responseHeaders.setRawHeaders(
-                    b"content-type", [self.defaultContentType]
+                    b"Content-Type", [self.defaultContentType]
                 )
 
         # Only let the write happen if we're not generating a HEAD response by
@@ -250,17 +249,17 @@ class Request(Copyable, BaseRequest, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            BaseRequest.write(self, data)
+            _HTTPRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{BaseRequest.finish} for possible encoding.
+        Override L{twisted.web.http.Request.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                BaseRequest.write(self, data)
-        return BaseRequest.finish(self)
+                _HTTPRequest.write(self, data)
+        return _HTTPRequest.finish(self)
 
     def render(self, resrc):
         """
@@ -298,7 +297,7 @@ class Request(Copyable, BaseRequest, components.Componentized):
                     )
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b"content-length", b"%d" % (len(body),))
+                    self.setHeader(b"Content-Length", b"%d" % (len(body),))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -361,10 +360,10 @@ class Request(Copyable, BaseRequest, components.Componentized):
                     slf=self,
                     resrc=resrc,
                 )
-                self.setHeader(b"content-length", b"%d" % (len(body),))
+                self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(b"")
         else:
-            self.setHeader(b"content-length", b"%d" % (len(body),))
+            self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(body)
         self.finish()
 
@@ -397,8 +396,8 @@ class Request(Copyable, BaseRequest, components.Componentized):
             )
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
-        self.setHeader(b"content-type", b"text/html")
-        self.setHeader(b"content-length", b"%d" % (len(body),))
+        self.setHeader(b"Content-Type", b"text/html")
+        self.setHeader(b"Content-Length", b"%d" % (len(body),))
         self.write(body)
         self.finish()
         return reason
@@ -605,16 +604,16 @@ class GzipEncoderFactory:
         request if so.
         """
         acceptHeaders = b",".join(
-            request.requestHeaders.getRawHeaders(b"accept-encoding", [])
+            request.requestHeaders.getRawHeaders(b"Accept-Encoding", [])
         )
         if self._gzipCheckRegex.search(acceptHeaders):
-            encoding = request.responseHeaders.getRawHeaders(b"content-encoding")
+            encoding = request.responseHeaders.getRawHeaders(b"Content-Encoding")
             if encoding:
                 encoding = b",".join(encoding + [b"gzip"])
             else:
                 encoding = b"gzip"
 
-            request.responseHeaders.setRawHeaders(b"content-encoding", [encoding])
+            request.responseHeaders.setRawHeaders(b"Content-Encoding", [encoding])
             return _GzipEncoder(self.compressLevel, request)
 
 
@@ -646,7 +645,7 @@ class _GzipEncoder:
         if not self._request.startedWriting:
             # Remove the content-length header, we can't honor it
             # because we compress on the fly.
-            self._request.responseHeaders.removeHeader(b"content-length")
+            self._request.responseHeaders.removeHeader(b"Content-Length")
         return self._zlibCompressor.compress(data)
 
     def finish(self):

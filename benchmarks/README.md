@@ -13,6 +13,7 @@ Note that as of mid-2024, codspeed.io uses a simulated CPU (Cachegrind) to run t
 ## Running benchmarks locally
 
 You can run benchmarks locally by installing `pytest-benchmark` and then running `pytest benchmarks/`.
+`tox -e benchmark` does this automatically.
 Unlike `pytest-codspeed`, the results are specific to your computer, but they're helpful for local before/after comparisons.
 And `pytest-codspeed` outputs nothing when run locally, at least at the time of writing (May 2024).
 

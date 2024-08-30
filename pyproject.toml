@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
 ]
 build-backend = "hatchling.build"
 
@@ -33,10 +33,10 @@ classifiers = [
 dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
-    "incremental >= 22.10.0",
-    "Automat >= 0.8.0",
+    "incremental >= 24.7.0",
+    "Automat >= 24.8.0",
     "hyperlink >= 17.1.1",
-    "attrs >= 21.3.0",
+    "attrs >= 22.2.0",
     "typing_extensions >= 4.2.0",
 ]
 
@@ -156,11 +156,11 @@ Twitter = "https://twitter.com/twistedmatrix"
 # This is here to enable backward compatible extra dependencies
 # that are defined using underscores.
 allow-ambiguous-features = true
+allow-direct-references = true
+
 
 [tool.hatch.version]
-source = "code"
-path = "src/twisted/__init__.py"
-search-paths = ["src"]
+source = "incremental"
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/x-rst"
@@ -368,10 +368,6 @@ module = [
   # oh this is fun, not even totally sure what library this is, since it's not
   # documented as an extra.
   "utmp",
-
-  # automat is not typed, or typeable, at least until
-  # https://github.com/glyph/automat/pull/137 is landed
-  "automat",
 
   # I think only used by `twisted.web.script.ResourceTemplate`
   "quixote",

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
@@ -9,24 +9,16 @@ Simple IMAP4 client which displays the subjects of all messages in a
 particular mailbox.
 """
 
-
 import sys
+from os import linesep as delimiter
 
-from twisted.internet import defer, endpoints, protocol, ssl, stdio
+from twisted.internet import defer, endpoints, protocol, reactor, ssl, stdio
 from twisted.mail import imap4
 from twisted.protocols import basic
 from twisted.python import log, util
 
-try:
-    raw_input
-except NameError:
-    # Python 3
-    raw_input = input
-
 
 class TrivialPrompter(basic.LineReceiver):
-    from os import linesep as delimiter
-
     delimiter = delimiter.encode("utf-8")
 
     promptDeferred = None
@@ -211,17 +203,16 @@ def cbClose(result):
     """
     Close the connection when we finish everything.
     """
-    from twisted.internet import reactor
-
     reactor.stop()
 
 
 def main():
-    hostname = raw_input("IMAP4 Server Hostname: ")
-    port = raw_input("IMAP4 Server Port (the default is 143, 993 uses SSL): ")
+    hostname = input("IMAP4 Server Hostname: ")
+    port = input("IMAP4 Server Port (the default is 143, 993 uses SSL): ") or "143"
+    port = int(port)
 
     # Usernames are bytes.
-    username = raw_input("IMAP4 Username: ").encode("ascii")
+    username = input("IMAP4 Username: ").encode("ascii")
 
     # Passwords are bytes.
     password = util.getPassword("IMAP4 Password: ").encode("ascii")
@@ -235,20 +226,9 @@ def main():
 
     factory = SimpleIMAP4ClientFactory(username, onConn)
 
-    if not port:
-        port = 143
-    else:
-        port = int(port)
-
-    from twisted.internet import reactor
-
     endpoint = endpoints.HostnameEndpoint(reactor, hostname, port)
 
     if port == 993:
-        if isinstance(hostname, bytes):
-            # This is python 2
-            hostname = hostname.decode("utf-8")
-
         contextFactory = ssl.optionsForClientTLS(
             hostname=hostname,
         )
