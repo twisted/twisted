@@ -693,9 +693,9 @@ class Key:
 
         # Twisted doesn't support certificate based keys yet.
         # https://github.com/openssh/openssh-portable/blob/05f2b141cfcc60c7cdedf9450d2b9d390c19eaad/PROTOCOL.u2f#L96C1-L97C31
-        if data.startswith(
-            b"sk-ecdsa-sha2-nistp256-cert-v01"
-        ) or data.startswith(b"sk-ssh-ed25519-cert-v01"):
+        if data.startswith(b"sk-ecdsa-sha2-nistp256-cert-v01") or data.startswith(
+            b"sk-ssh-ed25519-cert-v01"
+        ):
             raise BadKeyError("certificate based keys are not supported")
 
         if data.startswith(b"sk-ecdsa-sha2-nistp256") or data.startswith(
