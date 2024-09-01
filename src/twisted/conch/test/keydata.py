@@ -250,6 +250,18 @@ publicSKEd25519_openssh = (
     b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
 )
 
+publicSKECDSA_cert_openssh = (
+    b"sk-ecdsa-sha2-nistp256-cert-v01@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3"
+    b"BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBDTthidmBSzlQiO8aZPfLmUDOS2TSRevW8IrHPK"
+    b"IhYj9/E0RnTyvPIB1eWQx4rQl5iO1mihuBz+u4LkjwVEU3XwAAAAUc3NoOmVjZHNhLWZpZG8y"
+    b"LXRlc3Q= comment"
+)
+
+publicSKEd25519_cert_openssh = (
+    b"sk-ssh-ed25519-cert-v01@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
+    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+)
+
 privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIEyU1YOT2JxxofwbJXIjGftdNcJK55aQdNrhIt2xYQz0oAoGCCqGSM49
 AwEHoUQDQgAEqKZfUNnv5CPRKl948xujWlvrIaQBvmXt24LWXznnIPu0R9B+qTtt

@@ -138,6 +138,11 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicSKECDSA_openssh), "public_openssh"
         )
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key._guessStringType,
+            keydata.publicSKECDSA_cert_openssh,
+        )
         if ED25519_SUPPORTED:
             self.assertEqual(
                 keys.Key._guessStringType(keydata.publicEd25519_openssh),
@@ -146,6 +151,11 @@ class KeyTests(unittest.TestCase):
             self.assertEqual(
                 keys.Key._guessStringType(keydata.publicSKEd25519_openssh),
                 "public_openssh",
+            )
+            self.assertRaises(
+                keys.BadKeyError,
+                keys.Key._guessStringType,
+                keydata.publicSKEd25519_cert_openssh,
             )
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh), "private_openssh"
