@@ -15,7 +15,7 @@ def _istoken(b: bytes) -> bool:
         if c not in (
             b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"  # ALPHA
             b"0123456789"  # DIGIT
-            b"!#$%^'*+-.^_`|~"
+            b"!#$%&'*+-.^_`|~"
         ):
             return False
     return b != b""
