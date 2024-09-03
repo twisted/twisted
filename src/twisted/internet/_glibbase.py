@@ -13,14 +13,14 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from typing import Any, Callable, Dict, Set
+from typing import Any, Callable, Dict, Set, TypeVar
 
 from zope.interface import implementer
 
 from twisted.internet import posixbase
-from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
 from twisted.python import log
+from twisted.python.log import Logger
 from twisted.python.monkey import MonkeyPatcher
 from twisted.python.runtime import platform
 from ._signals import _IWaker, _Waker
@@ -95,6 +95,12 @@ def _loopQuitter(
     return lambda: idleAdd(loopQuit)
 
 
+TheDescriptor = TypeVar("TheDescriptor", bound=IReadDescriptor | IWriteDescriptor)
+TheOtherDescriptor = TypeVar(
+    "TheOtherDescriptor", bound=IReadDescriptor | IWriteDescriptor
+)
+
+
 @implementer(IReactorFDSet)
 class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     """
@@ -134,10 +140,10 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         return GlibWaker(self)
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
-        self._simtag = None
+        self._simtag: int | None = None
         self._reads: Set[IReadDescriptor] = set()
         self._writes: Set[IWriteDescriptor] = set()
-        self._sources: Dict[FileDescriptor, int] = {}
+        self._sources: Dict[IReadDescriptor | IWriteDescriptor, int] = {}
         self._glib = glib_module
         self._socket2channel = (
             self._glib.IOChannel.win32_new_socket
@@ -204,32 +210,46 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     # g_io_add_watch() takes different condition bitfields than
     # gtk_input_add(). We use g_io_add_watch() here in case pygtk fixes this
     # bug.
-    def input_add(self, source, condition, callback):
+    def input_add(
+        self,
+        source: TheDescriptor,
+        condition: object,
+        callback: Callable[[TheDescriptor, object], bool],
+    ) -> int:
+        def wrapper(ignored: object, condition: object) -> bool:
+            return callback(source, condition)
+
         if hasattr(source, "fileno"):
             # handle python objects
-            def wrapper(ignored, condition):
-                return callback(source, condition)
-
             fileno = source.fileno()
-        else:
-            fileno = source
-            wrapper = callback
         channel = self._socket2channel(fileno)
-        return self._glib.io_add_watch(
+        eventSourceID: int = self._glib.io_add_watch(
             channel,
             self._glib.PRIORITY_DEFAULT_IDLE,
             condition,
             wrapper,
         )
+        return eventSourceID
 
-    def _ioEventCallback(self, source, condition):
+    def _ioEventCallback(
+        self, source: IReadDescriptor | IWriteDescriptor, condition: object
+    ) -> bool:
         """
         Called by event loop when an I/O event occurs.
         """
-        log.callWithLogger(source, self._doReadOrWrite, source, source, condition)
+        # The I/O source must also inherit from Logger, in order to provide a log prefix.
+        alsoLogger: Logger = source  # type:ignore[assignment]
+        log.callWithLogger(alsoLogger, self._doReadOrWrite, source, source, condition)
         return True  # True = don't auto-remove the source
 
-    def _add(self, source, primary, other, primaryFlag, otherFlag):
+    def _add(
+        self,
+        source: TheDescriptor,
+        primary: set[TheDescriptor],
+        other: set[TheOtherDescriptor],
+        primaryFlag: int,
+        otherFlag: int,
+    ) -> None:
         """
         Add the given L{FileDescriptor} for monitoring either for reading or
         writing. If the file is already monitored for the other operation, we
@@ -245,37 +265,43 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._sources[source] = self.input_add(source, flags, self._ioEventCallback)
         primary.add(source)
 
-    def addReader(self, reader):
+    def addReader(self, reader: IReadDescriptor) -> None:
         """
         Add a L{FileDescriptor} for monitoring of data available to read.
         """
         self._add(reader, self._reads, self._writes, self.INFLAGS, self.OUTFLAGS)
 
-    def addWriter(self, writer):
+    def addWriter(self, writer: IWriteDescriptor) -> None:
         """
         Add a L{FileDescriptor} for monitoring ability to write data.
         """
         self._add(writer, self._writes, self._reads, self.OUTFLAGS, self.INFLAGS)
 
-    def getReaders(self):
+    def getReaders(self) -> list[IReadDescriptor]:
         """
         Retrieve the list of current L{FileDescriptor} monitored for reading.
         """
         return list(self._reads)
 
-    def getWriters(self):
+    def getWriters(self) -> list[IWriteDescriptor]:
         """
         Retrieve the list of current L{FileDescriptor} monitored for writing.
         """
         return list(self._writes)
 
-    def removeAll(self):
+    def removeAll(self) -> list[IReadDescriptor | IWriteDescriptor]:
         """
         Remove monitoring for all registered L{FileDescriptor}s.
         """
         return self._removeAll(self._reads, self._writes)
 
-    def _remove(self, source, primary, other, flags):
+    def _remove(
+        self,
+        source: TheDescriptor,
+        primary: set[TheDescriptor],
+        other: set[TheOtherDescriptor],
+        flags: int,
+    ) -> None:
         """
         Remove monitoring the given L{FileDescriptor} for either reading or
         writing. If it's still monitored for the other operation, we
@@ -290,19 +316,19 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         else:
             self._sources.pop(source)
 
-    def removeReader(self, reader):
+    def removeReader(self, reader: IReadDescriptor) -> None:
         """
         Stop monitoring the given L{FileDescriptor} for reading.
         """
         self._remove(reader, self._reads, self._writes, self.OUTFLAGS)
 
-    def removeWriter(self, writer):
+    def removeWriter(self, writer: IWriteDescriptor) -> None:
         """
         Stop monitoring the given L{FileDescriptor} for writing.
         """
         self._remove(writer, self._writes, self._reads, self.INFLAGS)
 
-    def iterate(self, delay=0):
+    def iterate(self, delay: float = 0) -> None:
         """
         One iteration of the event loop, for trial's use.
 
@@ -312,14 +338,14 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         while self._pending():
             self._iteration(0)
 
-    def crash(self):
+    def crash(self) -> None:
         """
         Crash the reactor.
         """
         posixbase.PosixReactorBase.crash(self)
         self._crash()
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the reactor.
         """
@@ -333,7 +359,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         # crash() which will do the actual gobject event loop shutdown.
         self.wakeUp()
 
-    def run(self, installSignalHandlers=True):
+    def run(self, installSignalHandlers: bool = True) -> None:
         """
         Run the reactor.
         """
@@ -353,7 +379,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._reschedule()
         return result
 
-    def _reschedule(self):
+    def _reschedule(self) -> None:
         """
         Schedule a glib timeout for C{_simulate}.
         """
@@ -368,7 +394,7 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 priority=self._glib.PRIORITY_DEFAULT_IDLE,
             )
 
-    def _simulate(self):
+    def _simulate(self) -> None:
         """
         Run timers, and then reschedule glib timeout for next scheduled event.
         """

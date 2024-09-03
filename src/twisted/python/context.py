@@ -14,7 +14,10 @@ This is thread-safe.
 
 
 from threading import local
-from typing import Dict, Type
+from typing import Any, Callable, Dict, ParamSpec, Type, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 defaultContextDict: Dict[Type[object], Dict[str, str]] = {}
 
@@ -59,7 +62,13 @@ class ContextTracker:
     def __init__(self):
         self.contexts = [defaultContextDict]
 
-    def callWithContext(self, newContext, func, *args, **kw):
+    def callWithContext(
+        self,
+        newContext: dict[Any, Any],
+        func: Callable[P, R],
+        *args: P.args,
+        **kw: P.kwargs,
+    ) -> R:
         """
         Call C{func(*args, **kw)} such that the contents of C{newContext} will
         be available for it to retrieve using L{getContext}.
@@ -106,14 +115,21 @@ class ThreadedContextTracker:
     def __init__(self):
         self.storage = local()
 
-    def currentContext(self):
+    def currentContext(self) -> ContextTracker:
         try:
-            return self.storage.ct
+            ct: ContextTracker = self.storage.ct
+            return ct
         except AttributeError:
             ct = self.storage.ct = ContextTracker()
             return ct
 
-    def callWithContext(self, ctx, func, *args, **kw):
+    def callWithContext(
+        self,
+        ctx: dict[Any, Any],
+        func: Callable[P, R],
+        *args: P.args,
+        **kw: P.kwargs,
+    ) -> R:
         return self.currentContext().callWithContext(ctx, func, *args, **kw)
 
     def getContext(self, key, default=None):
