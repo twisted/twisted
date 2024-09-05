@@ -316,6 +316,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+        include-hidden-files: true
+        if-no-files-found: error  # 'warn' or 'ignore', defaults to `warn`
         path: .coverage-job-*
 
 
