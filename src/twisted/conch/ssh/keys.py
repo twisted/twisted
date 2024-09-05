@@ -1070,7 +1070,7 @@ class Key:
                 return b"sk-ecdsa-sha2-nistp256@openssh.com"
             # FIXME: https://github.com/twisted/twisted/issues/12304
             # We only support 2 key types,
-            # So if the key was loaded with success and it's
+            # so if the key was loaded with success and it's
             # not ECDSA, it must be an ED25519 key.
             return b"sk-ssh-ed25519@openssh.com"
 
