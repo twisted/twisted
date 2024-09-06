@@ -912,7 +912,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_fromBlobSKECDSA(self):
         """
-        A public SK-ECDSA key is correctly generated from a public key blob.
+        It can load public SK-ECDSA key from blob format.
         """
         from cryptography import utils
 
