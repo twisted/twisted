@@ -956,7 +956,6 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(ed25519Key.isPublic())
         self.assertEqual(ed25519PublicData, ed25519Key.data())
 
-    @skipWithoutEd25519
     def test_fromBlobSKEd25519(self):
         """
         A public SK-Ed25519 key is correctly generated from a public key blob.
