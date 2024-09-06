@@ -1,0 +1,1 @@
+twisted.conch.ssh.keys.Key can now load public blob keys of type sk-ssh-ed25519@openssh.com and sk-ecdsa-sha2-nistp256@openssh.com.
