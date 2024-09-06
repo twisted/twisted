@@ -199,12 +199,12 @@ class KeyTests(unittest.TestCase):
         """
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key._guessStringType,
+            keys.Key.fromString,
             keydata.publicSKEd25519_cert_openssh,
         )
         self.assertRaises(
             keys.BadKeyError,
-            keys.Key._guessStringType,
+            keys.Key.fromString,
             keydata.publicSKECDSA_cert_openssh,
         )
 
