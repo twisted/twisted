@@ -138,15 +138,14 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicSKECDSA_openssh), "public_openssh"
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.publicEd25519_openssh),
-                "public_openssh",
-            )
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.publicSKEd25519_openssh),
-                "public_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicEd25519_openssh),
+            "public_openssh",
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicSKEd25519_openssh),
+            "public_openssh",
+        )
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh), "private_openssh"
         )
@@ -166,11 +165,10 @@ class KeyTests(unittest.TestCase):
             keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
             "private_openssh",
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
-                "private_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
+            "private_openssh",
+        )
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh), "public_lsh")
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh), "public_lsh")
         self.assertEqual(
@@ -202,14 +200,13 @@ class KeyTests(unittest.TestCase):
         self.assertRaises(
             keys.BadKeyError,
             keys.Key._guessStringType,
+            keydata.publicSKEd25519_cert_openssh,
+        )
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key._guessStringType,
             keydata.publicSKECDSA_cert_openssh,
         )
-        if ED25519_SUPPORTED:
-            self.assertRaises(
-                keys.BadKeyError,
-                keys.Key._guessStringType,
-                keydata.publicSKEd25519_cert_openssh,
-            )
 
     def test_public(self):
         """
