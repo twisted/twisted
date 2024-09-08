@@ -1,0 +1,1 @@
+Blowfish and CAST5 encryoption were deprecated and are now removed from Twisted to remove runtime warning CryptographyDeprecationWarning
