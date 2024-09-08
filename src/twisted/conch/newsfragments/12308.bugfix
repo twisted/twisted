@@ -1,0 +1,1 @@
+twisted/conch/ssh/transport.py - remove Blowfish and CAST5 from ciphers list in two locations to fix CryptographyDeprecationWarning warning
