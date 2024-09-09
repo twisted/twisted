@@ -1,1 +1,2 @@
-Blowfish and CAST5 encryoption were deprecated and are now removed from Twisted to remove runtime warning CryptographyDeprecationWarning
+twisted.conch.ssh.SSHCiphers no longer supports the cast128-ctr, cast128-cbc, blowfish-ctr, and blowfish-cbc ciphers.
+The Blowfish and CAST5 ciphers were removed as they were deprecated by the Python cryptography library.```
