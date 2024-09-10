@@ -124,7 +124,11 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         """
         Format exception tracebacks and write them to the output handler.
         """
-        lines = format_exception(excType, excValue, excTraceback.tb_next)
+        if sys.version_info[:2] < (3, 13):
+            traceback = excTraceback.tb_next
+        else:
+            traceback = excTraceback
+        lines = format_exception(excType, excValue, traceback)
         self.write("".join(lines))
 
     def displayhook(self, obj):
