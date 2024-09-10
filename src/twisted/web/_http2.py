@@ -35,6 +35,7 @@ from twisted.internet.interfaces import (
     IProtocol,
     IPushProducer,
     ISSLTransport,
+    ITCPTransport,
     ITransport,
 )
 from twisted.internet.protocol import Protocol
@@ -143,6 +144,8 @@ class H2Connection(Protocol, TimeoutMixin):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())

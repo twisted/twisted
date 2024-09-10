@@ -35,7 +35,7 @@ from zope.interface import implementer
 
 from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.interfaces import IConsumer, IPushProducer, ITCPTransport
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.basic import LineReceiver
@@ -1497,6 +1497,10 @@ class HTTP11ClientProtocol(Protocol):
     def __init__(self, quiescentCallback=lambda c: None):
         self._quiescentCallback = quiescentCallback
         self._abortDeferreds = []
+
+    def connectionMade(self) -> None:
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
 
     @property
     def state(self):
