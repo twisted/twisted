@@ -124,9 +124,12 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         """
         Format exception tracebacks and write them to the output handler.
         """
-        if sys.version_info[:2] < (3, 13):
+        code_obj = excTraceback.tb_frame.f_code
+        if code_obj.co_filename == code.__file__ and code_obj.co_name == "runcode":
             traceback = excTraceback.tb_next
         else:
+            # Workaround for https://github.com/python/cpython/issues/122478,
+            # present e.g. in Python 3.12.6:
             traceback = excTraceback
         lines = format_exception(excType, excValue, traceback)
         self.write("".join(lines))
