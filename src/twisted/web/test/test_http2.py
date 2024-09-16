@@ -2934,14 +2934,14 @@ class EndToEndTests(unittest.TestCase):
     if skipH2 or not requireModule("OpenSSL"):
         skip = skipH2
 
-    async def test_realRequest(self):
+    async def test_realRequest(self) -> None:
         """
         Twisted's HTTP/2 server can talk to a third-party HTTP/2 client.
         """
         _, serverCert = certificatesForAuthorityAndServer("test.local")
         resource = Data(b"hello world", "application/octet-stream")
         resource.isLeaf = True
-        port = reactor.listenSSL(0, Site(resource), serverCert.options())
+        port = reactor.listenSSL(0, Site(resource), serverCert.options())  # type: ignore[attr-defined]
         portNum = port.getHost().port
         self.addCleanup(port.stopListening)
 
