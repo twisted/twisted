@@ -54,6 +54,7 @@ test = [
     "cython-test-exception-raiser >= 1.0.2, <2",
     "PyHamcrest >= 2",
     "hypothesis >= 6.56",
+    "httpx[http2] >= 0.27",
 ]
 
 # List of dependencies required to build the documentation and test the
