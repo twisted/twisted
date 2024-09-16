@@ -134,7 +134,13 @@ from incremental import Version
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IAddress, IDelayedCall, IProtocol, IReactorTime
+from twisted.internet.interfaces import (
+    IAddress,
+    IDelayedCall,
+    IProtocol,
+    IReactorTime,
+    ITCPTransport,
+)
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
@@ -2317,6 +2323,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._transferDecoder = None
 
     def connectionMade(self):
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self._networkProducer = interfaces.IPushProducer(
             self.transport, _NoPushProducer()
