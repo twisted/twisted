@@ -17,6 +17,7 @@ from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.internet.threads import deferToThread
 from twisted.python import failure
 from twisted.python.compat import iterbytes
+from twisted.python.reflect import requireModule
 from twisted.test.test_internet import DummyProducer
 from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial import unittest
@@ -2930,7 +2931,7 @@ class EndToEndTests(unittest.TestCase):
     Tests that run real TCP-based communication with a HTTP/2 server.
     """
 
-    if skipH2:
+    if skipH2 or not requireModule("OpenSSL"):
         skip = skipH2
 
     async def test_realRequest(self):
