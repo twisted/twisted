@@ -1800,6 +1800,8 @@ class _IdentityTransferDecoder:
         chunk.
     """
 
+    __slots__ = ["contentLength", "dataCallback", "finishCallback"]
+
     def __init__(self, contentLength, dataCallback, finishCallback):
         self.contentLength = contentLength
         self.dataCallback = dataCallback
@@ -2405,6 +2407,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._dataBuffer.append(data)
         self.allContentReceived()
 
+    def _failChooseTransferDecoder(self) -> bool:
+        """
+        Utility to indicate failure to choose a decoder.
+        """
+        self._respondToBadRequestAndDisconnect()
+        self.length = None
+        return False
+
     def _maybeChooseTransferDecoder(self, header, data):
         """
         If the provided header is C{content-length} or
@@ -2412,20 +2422,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         Returns L{True} if the request can proceed and L{False} if not.
         """
-
-        def fail():
-            self._respondToBadRequestAndDisconnect()
-            self.length = None
-            return False
-
         # Can this header determine the length?
         if header == b"Content-Length":
             if not data.isdigit():
-                return fail()
+                return self._failChooseTransferDecoder()
             try:
                 length = int(data)
             except ValueError:
-                return fail()
+                return self._failChooseTransferDecoder()
             newTransferDecoder = _IdentityTransferDecoder(
                 length, self.requests[-1].handleContentChunk, self._finishRequestBody
             )
@@ -2440,13 +2444,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             elif data.lower() == b"identity":
                 return True
             else:
-                return fail()
+                return self._failChooseTransferDecoder()
         else:
             # It's not a length related header, so exit
             return True
 
         if self._transferDecoder is not None:
-            return fail()
+            return self._failChooseTransferDecoder()
         else:
             self.length = length
             self._transferDecoder = newTransferDecoder
