@@ -107,11 +107,11 @@ import math
 import os
 import re
 import tempfile
-import time
 import warnings
 from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
+from time import gmtime, time
 from typing import (
     AnyStr,
     Callable,
@@ -229,8 +229,7 @@ responses = RESPONSES
 
 # datetime parsing and formatting
 weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-monthname = [
-    None,
+_months = [
     "Jan",
     "Feb",
     "Mar",
@@ -244,6 +243,9 @@ monthname = [
     "Nov",
     "Dec",
 ]
+monthname = [None] + _months
+_weekdaynameBytes = [s.encode("ascii") for s in weekdayname]
+_monthnameBytes = [None] + [s.encode("ascii") for s in _months]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
@@ -403,14 +405,18 @@ def datetimeToString(msSinceEpoch=None):
 
     @rtype: C{bytes}
     """
-    if msSinceEpoch == None:
-        msSinceEpoch = time.time()
-    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = networkString(
-        "%s, %02d %3s %4d %02d:%02d:%02d GMT"
-        % (weekdayname[wd], day, monthname[month], year, hh, mm, ss)
+    year, month, day, hh, mm, ss, wd, _, _ = (
+        gmtime() if msSinceEpoch is None else gmtime(msSinceEpoch)
     )
-    return s
+    return b"%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+        _weekdaynameBytes[wd],
+        day,
+        _monthnameBytes[month],
+        year,
+        hh,
+        mm,
+        ss,
+    )
 
 
 def datetimeToLogString(msSinceEpoch=None):
@@ -420,8 +426,8 @@ def datetimeToLogString(msSinceEpoch=None):
     @rtype: C{str}
     """
     if msSinceEpoch == None:
-        msSinceEpoch = time.time()
-    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
+        msSinceEpoch = time()
+    year, month, day, hh, mm, ss, wd, y, z = gmtime(msSinceEpoch)
     s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
         day,
         monthname[month],
