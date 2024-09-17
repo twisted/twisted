@@ -368,13 +368,42 @@ class SSHUserAuthServerTests(unittest.TestCase):
         """
         Test that verifying a valid private key works.
         """
-        blob = keys.Key.fromString(keydata.publicRSA_openssh).blob()
+        blob = keys.Key.fromString(keydata.publicSKECDSA_openssh).blob()
+        obj = keys.Key.fromString(keydata.privateRSA_openssh)
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(b"sk-ecdsa-sha2-nistp256@openssh.com")
+            + NS(blob)
+        )
+        self.authServer.transport.sessionID = b"test"
+        signature = obj.sign(
+            NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
+        )
+        packet += NS(signature)
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        def check(ignored):
+            self.assertEqual(
+                self.authServer.transport.packets,
+                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
+            )
+
+        return d.addCallback(check)
+
+    def test_verifyValidPrivateKeySK(self):
+        """
+        Test that verifying a valid private key works.
+        """
+        blob = keys.Key.fromString(keydata.publicSKECDSA_openssh).blob()
         packet = (
             NS(b"foo")
             + NS(b"none")
             + NS(b"publickey")
             + b"\x00"
-            + NS(b"ssh-rsa")
+            + NS(b"sk-ecdsa-sha2-nistp256@openssh.com")
             + NS(blob)
         )
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
@@ -382,7 +411,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         def check(ignored):
             self.assertEqual(
                 self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_PK_OK, NS(b"ssh-rsa") + NS(blob))],
+                [(userauth.MSG_USERAUTH_PK_OK, NS(b"sk-ecdsa-sha2-nistp256@openssh.com") + NS(blob))],
             )
 
         return d.addCallback(check)
