@@ -2298,7 +2298,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     totalHeadersSize = 16384
     abortTimeout = 15
 
-    length = 0
+    length: Optional[int] = 0
     persistent = 1
     __header = b""
     __first_line = 1
