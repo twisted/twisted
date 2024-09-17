@@ -411,7 +411,12 @@ class SSHUserAuthServerTests(unittest.TestCase):
         def check(ignored):
             self.assertEqual(
                 self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_PK_OK, NS(b"sk-ecdsa-sha2-nistp256@openssh.com") + NS(blob))],
+                [
+                    (
+                        userauth.MSG_USERAUTH_PK_OK,
+                        NS(b"sk-ecdsa-sha2-nistp256@openssh.com") + NS(blob),
+                    )
+                ],
             )
 
         return d.addCallback(check)
