@@ -2432,10 +2432,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if header == b"Content-Length":
             if not data.isdigit():
                 return self._failChooseTransferDecoder()
-            try:
-                length = int(data)
-            except ValueError:
-                return self._failChooseTransferDecoder()
+            length = int(data)
             newTransferDecoder = _IdentityTransferDecoder(
                 length, self.requests[-1].handleContentChunk, self._finishRequestBody
             )
