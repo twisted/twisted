@@ -427,7 +427,7 @@ def datetimeToLogString(msSinceEpoch=None):
     """
     if msSinceEpoch == None:
         # This code path is apparently never used in practice inside Twisted.
-        msSinceEpoch = time()  # pragma: no-cover
+        msSinceEpoch = time()  # pragma: no cover
     year, month, day, hh, mm, ss, wd, y, z = gmtime(msSinceEpoch)
     s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
         day,
