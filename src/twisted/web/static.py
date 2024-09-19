@@ -920,7 +920,8 @@ class DirectoryLister(resource.Resource):
     @type path: C{str}
     """
 
-    template = """<html>
+    template = """<!DOCTYPE html>
+<html lang="en">
 <head>
 <title>%(header)s</title>
 <style>
