@@ -3259,6 +3259,44 @@ class ServerStringTests(unittest.TestCase):
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
 
+    @skipIf(skipSSL, skipSSLReason)
+    def test_sslWithCustomCipher(self):
+        """
+        A cipher list is supported, using the OpenSSL format.
+        The colon (:) from the OpenSSL format is replaced with a comma (,).
+
+        This test does not provides much functionality coverage as there is no API to retrieve the current configured ciper list.
+        Testing this functionality requires doing a TLS handshake.
+        """
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "ssl:1234:privateKey=%s:"
+            "certKey=%s:cipher=ALL,!ADH,@STRENGTH,+RSA,-DSA,SHA1+DES"
+            % (escapedPEMPathName, escapedPEMPathName),
+        )
+
+        self.assertIsInstance(server, endpoints.SSL4ServerEndpoint)
+        ctx = server._sslContextFactory.getContext()
+        self.assertIsInstance(ctx, ContextType)
+
+    @skipIf(skipSSL, skipSSLReason)
+    def test_sslInvalidCustomCipher(self):
+        """
+        A cipher list is supported, using the OpenSSL format.
+        The colon (:) from the OpenSSL format is replaced with a comma (,).
+        """
+        reactor = object()
+
+        self.assertRaises(
+            endpoints.serverFromString(
+                reactor,
+                "ssl:1234:privateKey=%s:"
+                "certKey=%s:cipher=bla, blah"
+                % (escapedPEMPathName, escapedPEMPathName),
+            )
+        )
+
     def test_unix(self):
         """
         When passed a UNIX strports description, L{endpoint.serverFromString}

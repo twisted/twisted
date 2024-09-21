@@ -1382,6 +1382,7 @@ def _parseSSL(
     privateKey="server.pem",
     certKey=None,
     sslmethod=None,
+    cipher=None,
     interface="",
     backlog=50,
     extraCertChain=None,
@@ -1413,6 +1414,12 @@ def _parseSSL(
     @param sslmethod: The string name of an SSL method, based on the name of a
         constant in C{OpenSSL.SSL}.
     @type sslmethod: C{str}
+
+    @param cipher: A string containing a list of cipher values, formatted as comma-separated values,
+                    These values can be obtained from the OpenSSL documentation at
+                    https://www.openssl.org/docs/man1.0.2/man1/ciphers.html.
+                    This parameter is optional and can be used to restrict the ciphers supported by your server.
+    @type cipher: C{str}
 
     @param extraCertChain: The path of a file containing one or more
         certificates in PEM format that establish the chain from a root CA to
@@ -1466,6 +1473,13 @@ def _parseSSL(
         dhParameters=dhParameters,
         **kw,
     )
+    if cipher:
+        cipherBytes = cipher.replace(",", ":").encode("ascii")
+        try:
+            cf.getContext().set_cipher_list(cipherBytes)
+        except SSLError:
+            pass
+
     return ((int(port), factory, cf), {"interface": interface, "backlog": int(backlog)})
 
 
@@ -1767,6 +1781,13 @@ def serverFromString(reactor, description):
     file is assumed to exist which contains the private key. If the certificate
     file name (C{certKey}) isn't provided, the private key file is assumed to
     contain the certificate as well.
+
+    For custom cipher list, you can make use of the 'cipher' keyword and a comma seperated
+    string as below::
+
+        serverFromString(
+            reactor, "ssl:443:privateKey=key.pem:certKey=crt.pem:cipher=ALL,!ADH,@STRENGTH,+RSA,-DSA,SHA1+DES"
+        )
 
     You may escape colons in arguments with a backslash, which you will need to
     use if you want to specify a full pathname argument on Windows::
