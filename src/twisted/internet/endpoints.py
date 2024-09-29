@@ -589,6 +589,7 @@ class TCP4ClientEndpoint:
         self._host = host
         self._port = port
         self._timeout = timeout
+        assert isinstance(bindAddress, (tuple, type(None)))
         self._bindAddress = bindAddress
 
     def connect(self, protocolFactory):
@@ -641,6 +642,7 @@ class TCP6ClientEndpoint:
         self._host = host
         self._port = port
         self._timeout = timeout
+        assert isinstance(bindAddress, (tuple, type(None)))
         self._bindAddress = bindAddress
 
     def connect(self, protocolFactory):
@@ -808,9 +810,11 @@ class HostnameEndpoint:
             seconds to wait before assuming the connection has failed.
         @type timeout: L{float} or L{int}
 
-        @param bindAddress: the local address of the network interface to make
-            the connections from.
-        @type bindAddress: L{bytes}
+        @param bindAddress: The local address of the network interface to make
+            the connections from, or a (host, port) tuple of local address to
+            bind to, or None.
+
+        @type bindAddress: L{bytes}, L{tuple}, or None
 
         @param attemptDelay: The number of seconds to delay between connection
             attempts.
@@ -827,6 +831,10 @@ class HostnameEndpoint:
         self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
         self._timeout = timeout
+        assert isinstance(bindAddress, (bytes, str, tuple, type(None)))
+        if isinstance(bindAddress, (bytes, str)):
+            bindAddress = (bindAddress, 0)
+        assert isinstance(bindAddress, (tuple, type(None)))
         self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
@@ -2299,7 +2307,9 @@ def _parseClientTLS(
         ),
         clientFromString(reactor, endpoint)
         if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
+        else HostnameEndpoint(
+            reactor, _idnaBytes(host), port, timeout, (bindAddress, 0)
+        ),
     )
 
 

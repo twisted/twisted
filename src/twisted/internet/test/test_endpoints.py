@@ -2699,6 +2699,31 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual([], self.mreactor.getDelayedCalls())
 
 
+class HostnameEndpointBindAddressTypes(unittest.TestCase):
+    """
+    Tests that HostnameEndpoint accepts all specified types for the
+    'bindAddress=' argument.
+    """
+
+    def setUp(self):
+        self.drr = deterministicResolvingReactor(MemoryReactor(), ["127.0.0.1"])
+
+    def test_bytes(self):
+        ba = b"1.2.3.4"
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, (b"1.2.3.4", 0))
+
+    def test_str(self):
+        ba = "1.2.3.4"
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
+
+    def test_tuple(self):
+        ba = ("1.2.3.4", 1234)
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+
+
 @skipIf(skipSSL, skipSSLReason)
 class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
@@ -4196,7 +4221,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
-        self.assertEqual(hostnameEndpoint._bindAddress, nativeString("127.0.0.1"))
+        self.assertEqual(hostnameEndpoint._bindAddress, (nativeString("127.0.0.1"), 0))
 
     def test_utf8Encoding(self):
         """
@@ -4239,14 +4264,18 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
             deterministicResolvingReactor(reactor, ["127.0.0.1"]),
-            "tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}".format(
+            "tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}:bindAddress=127.0.0.1".format(
                 escapedPEMPathName,
                 escapedPEMPathName,
                 endpoints.quoteStringArgument(pemPath.parent().path),
-            ).encode("ascii"),
+            ).encode(
+                "ascii"
+            ),
         )
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
+        self.assertIs(type(bindAddress), tuple)
+        self.assertEqual(bindAddress, ("127.0.0.1", 0))
         clientProtocol = factory.buildProtocol(None)
         self.assertNoResult(d)
         assert clientProtocol is not None
