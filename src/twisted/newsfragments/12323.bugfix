@@ -1,1 +1,1 @@
-Fixed "Unable to format event" error while formatting types in logs.
+Formatting types in logs no more results in "Unable to format event" message (was broken since 24.3.0).
