@@ -95,6 +95,19 @@ class FormattingTests(unittest.TestCase):
             "hello world", self.format("hello {what.where()}", what=World())
         )
 
+    def test_formatClass(self) -> None:
+        """
+        Types formatting.
+        """
+
+        formattedInt = self.format("{c}", c=int)
+        self.assertNotIn("Unable to format event", formattedInt)
+        self.assertIn("int", formattedInt)
+
+        formattedRuntimeError = self.format("{c}", c=RuntimeError)
+        self.assertNotIn("Unable to format event", formattedRuntimeError)
+        self.assertIn("RuntimeError", formattedRuntimeError)
+
     def test_formatAttributeSubscript(self) -> None:
         """
         L{formatEvent} will format subscripts of attributes per PEP 3101.
