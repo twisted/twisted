@@ -1,0 +1,1 @@
+TLS endpoint strings with "bindAddress=" should no longer crash during connect. The HostnameEndpoint() "bindAddress" argument now accepts either hostnames or (host,port) tuples.
