@@ -100,13 +100,8 @@ class FormattingTests(unittest.TestCase):
         Classes/types formatting.
         """
 
-        formattedInt = self.format("{c}", c=int)
-        self.assertNotIn("Unable to format event", formattedInt)
-        self.assertIn("int", formattedInt)
-
-        formattedRuntimeError = self.format("{c}", c=RuntimeError)
-        self.assertNotIn("Unable to format event", formattedRuntimeError)
-        self.assertIn("RuntimeError", formattedRuntimeError)
+        self.assertEqual(str(int), self.format("{c}", c=int))
+        self.assertEqual(str(RuntimeError), self.format("{c}", c=RuntimeError))
 
     def test_formatAttributeSubscript(self) -> None:
         """
