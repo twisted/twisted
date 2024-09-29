@@ -95,9 +95,9 @@ class FormattingTests(unittest.TestCase):
             "hello world", self.format("hello {what.where()}", what=World())
         )
 
-    def test_formatClass(self) -> None:
+    def test_formatTypes(self) -> None:
         """
-        Types formatting.
+        Classes/types formatting.
         """
 
         formattedInt = self.format("{c}", c=int)
