@@ -23,7 +23,7 @@ see in particular `Git and GitHub learning resources <https://help.github.com/ar
     $ git clone https://github.com/twisted/twisted twisted
     $ python3 -m venv ./venv
     $ . venv/bin/activate
-    $ pip install -e .[dev]
+    $ pip install -e .[dev,test]
     $ pip install pre-commit
 
 Please note that all subsequent commands in this document assume that your Twisted virtual environment is active.  (However, we will not assume you've put it in `./venv`; feel free to use whatever Python environment manager you are comfortable with.)
