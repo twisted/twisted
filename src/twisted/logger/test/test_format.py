@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from typing import AnyStr, Dict, Optional, cast
+from typing import Any, AnyStr, Dict, Optional, cast
 
 try:
     from time import tzset
@@ -94,14 +94,6 @@ class FormattingTests(unittest.TestCase):
         self.assertEqual(
             "hello world", self.format("hello {what.where()}", what=World())
         )
-
-    def test_formatTypes(self) -> None:
-        """
-        Classes/types formatting.
-        """
-
-        self.assertEqual(str(int), self.format("{c}", c=int))
-        self.assertEqual(str(RuntimeError), self.format("{c}", c=RuntimeError))
 
     def test_formatAttributeSubscript(self) -> None:
         """
@@ -721,3 +713,23 @@ class EventAsTextTests(unittest.TestCase):
             eventText,
             "[-\x23info] ABCD",
         )
+
+    def test_eventAsTextTypeAsInput(self) -> None:
+        """
+        C{eventAsText} can handle formats that have classes or types as input.
+        """
+
+        def getText(logFormat: str, **event: Any) -> str:
+            return eventAsText(
+                {
+                    "log_format": logFormat,
+                    **event
+                },
+                includeTimestamp=False,
+                includeTraceback=False,
+                includeSystem=False,
+            )
+
+        self.assertEqual(str(int), getText("{c}", c=int))
+        self.assertEqual(str(RuntimeError), getText("{c}", c=RuntimeError))
+        self.assertEqual("str", getText("{c.__name__}", c=str))
