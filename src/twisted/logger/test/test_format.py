@@ -721,10 +721,7 @@ class EventAsTextTests(unittest.TestCase):
 
         def getText(logFormat: str, **event: Any) -> str:
             return eventAsText(
-                {
-                    "log_format": logFormat,
-                    **event
-                },
+                {"log_format": logFormat, **event},
                 includeTimestamp=False,
                 includeTraceback=False,
                 includeSystem=False,
