@@ -2368,7 +2368,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 failures.append(result.value)
         if failures:
-            self.sendNegativeResponse(tag, "[ALERT] Some messages were not copied")
+            self.sendNegativeResponse(tag, b"[ALERT] Some messages were not copied")
         else:
             self.sendPositiveResponse(tag, b"COPY completed")
 
