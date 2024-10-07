@@ -254,13 +254,15 @@ class SimpleResolverComplexifier:
                 )
             )
             .addErrback(
-                lambda error: None
-                if error.check(DNSLookupError)
-                else self._log.failure(
-                    "while looking up {name} with {resolver}",
-                    error,
-                    name=hostName,
-                    resolver=self._simpleResolver,
+                lambda error: (
+                    None
+                    if error.check(DNSLookupError)
+                    else self._log.failure(
+                        "while looking up {name} with {resolver}",
+                        error,
+                        name=hostName,
+                        resolver=self._simpleResolver,
+                    )
                 )
             )
             .addCallback(lambda nothing: resolutionReceiver.resolutionComplete())

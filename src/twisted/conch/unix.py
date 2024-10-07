@@ -72,9 +72,9 @@ class UnixConchUser(ConchUser):
             if username in userlist:
                 l.append(gid)
         self.otherGroups = l
-        self.listeners: Dict[
-            str, IListeningPort
-        ] = {}  # Dict mapping (interface, port) -> listener
+        self.listeners: Dict[str, IListeningPort] = (
+            {}
+        )  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(
             {
                 b"session": session.SSHSession,

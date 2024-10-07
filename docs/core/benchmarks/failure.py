@@ -1,6 +1,5 @@
 """See how slow failure creation is"""
 
-
 import random
 
 from twisted.python import failure

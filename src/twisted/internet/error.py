@@ -194,7 +194,9 @@ class ConnectionClosed(Exception):
 
 
 class ConnectionLost(ConnectionClosed):
-    __doc__ = MESSAGE = """
+    __doc__ = (
+        MESSAGE
+    ) = """
     Connection to the other side was lost in a non-clean fashion
     """
 
@@ -309,7 +311,9 @@ class ProcessDone(ConnectionDone):
 
 
 class ProcessTerminated(ConnectionLost):
-    __doc__ = MESSAGE = """
+    __doc__ = (
+        MESSAGE
+    ) = """
     A process has ended with a probable error condition
 
     @ivar exitCode: See L{__init__}
@@ -352,9 +356,9 @@ class ProcessExitedAlready(Exception):
 
 
 class NotConnectingError(RuntimeError):
-    __doc__ = (
-        MESSAGE
-    ) = "The Connector was not connecting when it was asked to stop connecting"
+    __doc__ = MESSAGE = (
+        "The Connector was not connecting when it was asked to stop connecting"
+    )
 
     def __str__(self) -> str:
         s = self.MESSAGE

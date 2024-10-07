@@ -3051,9 +3051,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         for parts in lines:
             if len(parts) == 4 and parts[0] == b"NAMESPACE":
                 return [
-                    []
-                    if pairOrNone is None
-                    else [_prepareNamespaceOrDelimiter(value) for value in pairOrNone]
+                    (
+                        []
+                        if pairOrNone is None
+                        else [
+                            _prepareNamespaceOrDelimiter(value) for value in pairOrNone
+                        ]
+                    )
                     for pairOrNone in parts[1:]
                 ]
         log.err("No NAMESPACE response to NAMESPACE command")
