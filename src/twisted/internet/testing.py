@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from socket import AF_INET, AF_INET6
-from typing import Callable, Iterator, Sequence, overload
+from typing import Any, Callable, Coroutine, Iterator, Generator, Sequence, Union, TypeVar, overload
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
@@ -19,7 +19,7 @@ from typing_extensions import ParamSpec, Self
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.defer import Deferred, ensureDeferred, inlineCallbacks
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
     IConnector,
@@ -969,25 +969,30 @@ class EventLoggingObserver(Sequence[LogEvent]):
         return obs
 
 
-def benchmarkWithReactor(test_target):
+_T = TypeVar("_T")
+
+
+def benchmarkWithReactor(test_target: Callable[[], Union[
+        Coroutine[Deferred[Any], Any, _T],
+        Generator[Deferred[Any], Any, _T],
+        Deferred[_T],
+    ]]) -> Callable[[Any], None]:
     """
     Decorator for running a benchmark tests that loops the reactor.
 
     This is designed to decorate test method executed using pytest and
     pytest-benchmark.
     """
-
-    @inlineCallbacks
     def deferredWrapper():
-        return test_target()
+        return ensureDeferred(test_target())
 
-    def benchmark_test(benchmark):
+    def benchmark_test(benchmark: Any) -> None:
         benchmark(_runReactor, deferredWrapper)
 
     return benchmark_test
 
 
-def _runReactor(callback):
+def _runReactor(callback: Callable[[], Deferred]) -> None:
     """
     (re)Start a reactor that might have been previously started.
     """
@@ -997,10 +1002,7 @@ def _runReactor(callback):
     from twisted.internet import reactor
 
     deferred = callback()
-    deferred.addBoth(lambda _: _stopReactor(reactor))
-    reactor._startedBefore = False
-    reactor._started = False
-    reactor._justStopped = False
+    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))
     reactor.run(installSignalHandlers=False)
 
 
@@ -1009,8 +1011,14 @@ def _stopReactor(reactor):
     Stop the reactor and allow it to be re-started later.
     """
     reactor.stop()
-    # Let the shutdown hooks to execute.
+    # Allow for on shutdown hooks to execute.
     reactor.iterate()
+    # Since we're going to be poking the reactor's guts, let's make sure what
+    # we're doing is vaguely reasonable:
+    assert hasattr(reactor, "_startedBefore")
+    assert hasattr(reactor, "_started")
+    assert hasattr(reactor, "_justStopped")
+    assert hasattr(reactor, "running")
     reactor._startedBefore = False
     reactor._started = False
     reactor._justStopped = False

@@ -12,8 +12,8 @@ from twisted.internet import reactor
 from twisted.internet.defer import Deferred, succeed
 from twisted.internet.endpoints import (
     TCP4ClientEndpoint,
+    TCP4ServerEndpoint,
     connectProtocol,
-    serverFromString,
 )
 from twisted.internet.testing import benchmarkWithReactor
 
@@ -73,14 +73,14 @@ class BenchmarkSSHServerFactory(SSHFactory):
 
 
 @benchmarkWithReactor
-def test_connect_and_disconnect():
+async def test_connect_and_disconnect():
     """
     This is the test for key exchange for both client and server.
     Once KEX is done the client disconnects.
     """
     serverFactory = BenchmarkSSHServerFactory()
     serverEndpoint = TCP4ServerEndpoint(reactor, 0)
-    serverPort = yield serverEndpoint.listen(serverFactory)
+    serverPort = await serverEndpoint.listen(serverFactory)
 
     clientProtocol = BenchmarkSSHClientTransport()
     clientProtocol.factory = serverFactory
@@ -91,6 +91,6 @@ def test_connect_and_disconnect():
         serverPort.getHost().port,
         timeout=5,
     )
-    yield connectProtocol(clientEndpoint, clientProtocol)
-    yield serverFactory.clientDisconnected
-    yield serverPort.stopListening()
+    await connectProtocol(clientEndpoint, clientProtocol)
+    await serverFactory.clientDisconnected
+    await serverPort.stopListening()
