@@ -1,0 +1,1 @@
+twisted.web.client and twisted.web.server now disable the Nagle algorithm (enable TCP_NODELAY), reducing the latency of small HTTP queries.

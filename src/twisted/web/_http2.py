@@ -14,7 +14,6 @@ This API is currently considered private because it's in early draft form. When
 it has stabilised, it'll be made public.
 """
 
-
 import io
 from collections import deque
 from typing import List
@@ -36,6 +35,7 @@ from twisted.internet.interfaces import (
     IProtocol,
     IPushProducer,
     ISSLTransport,
+    ITCPTransport,
     ITransport,
 )
 from twisted.internet.protocol import Protocol
@@ -144,6 +144,8 @@ class H2Connection(Protocol, TimeoutMixin):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
@@ -972,7 +974,7 @@ class H2Stream:
                 self._request.gotLength(None)
 
         self._request.parseCookies()
-        expectContinue = self._request.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = self._request.requestHeaders.getRawHeaders(b"Expect")
         if expectContinue and expectContinue[0].lower() == b"100-continue":
             self._send100Continue()
 

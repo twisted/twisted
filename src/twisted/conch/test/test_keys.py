@@ -135,11 +135,17 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicECDSA_openssh), "public_openssh"
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.publicEd25519_openssh),
-                "public_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicSKECDSA_openssh), "public_openssh"
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicEd25519_openssh),
+            "public_openssh",
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicSKEd25519_openssh),
+            "public_openssh",
+        )
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh), "private_openssh"
         )
@@ -159,11 +165,10 @@ class KeyTests(unittest.TestCase):
             keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
             "private_openssh",
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
-                "private_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
+            "private_openssh",
+        )
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh), "public_lsh")
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh), "public_lsh")
         self.assertEqual(
@@ -187,6 +192,21 @@ class KeyTests(unittest.TestCase):
             "blob",
         )
         self.assertEqual(keys.Key._guessStringType(b"not a key"), None)
+
+    def test_OpenSSH_cert_not_supported(self):
+        """
+        OpenSSH certificates are not yet supported.
+        """
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            keydata.publicSKEd25519_cert_openssh,
+        )
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            keydata.publicSKECDSA_cert_openssh,
+        )
 
     def test_public(self):
         """
@@ -236,6 +256,10 @@ class KeyTests(unittest.TestCase):
         self._testPublicFromString(public, type, data)
         self._testPrivateFromString(private, type, data)
 
+    def _testPublicSKFromString(self, public, type, data):
+        self._testPublicFromString(public, type, data)
+        self._testSKFromString(public)
+
     def _testPublicFromString(self, public, type, data):
         publicKey = keys.Key.fromString(public)
         self.assertTrue(publicKey.isPublic())
@@ -249,6 +273,10 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(privateKey.type(), type)
         for k, v in data.items():
             self.assertEqual(privateKey.data()[k], v)
+
+    def _testSKFromString(self, public):
+        publicKey = keys.Key.fromString(public)
+        self.assertTrue(publicKey._sk)
 
     def test_fromOpenSSH(self):
         """
@@ -279,7 +307,19 @@ class KeyTests(unittest.TestCase):
             keydata.DSAData,
         )
 
+        self._testPublicSKFromString(
+            keydata.publicSKECDSA_openssh,
+            "EC",
+            keydata.SKECDatanistp256,
+        )
+
         if ED25519_SUPPORTED:
+            self._testPublicSKFromString(
+                keydata.publicSKEd25519_openssh,
+                "Ed25519",
+                keydata.SKEd25519Data,
+            )
+
             self._testPublicPrivateFromString(
                 keydata.publicEd25519_openssh,
                 keydata.privateEd25519_openssh_new,
@@ -776,10 +816,22 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             keys.Key(self.ecObj).supportedSignatureAlgorithms(),
             [b"ecdsa-sha2-nistp256"],
         )
+        self.assertEqual(
+            keys.Key.fromString(
+                keydata.publicSKECDSA_openssh
+            ).supportedSignatureAlgorithms(),
+            [b"sk-ecdsa-sha2-nistp256@openssh.com"],
+        )
         if ED25519_SUPPORTED:
             self.assertEqual(
                 keys.Key(self.ed25519Obj).supportedSignatureAlgorithms(),
                 [b"ssh-ed25519"],
+            )
+            self.assertEqual(
+                keys.Key.fromString(
+                    keydata.publicSKEd25519_openssh
+                ).supportedSignatureAlgorithms(),
+                [b"sk-ssh-ed25519@openssh.com"],
             )
         self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
         self.assertRaises(RuntimeError, keys.Key(self).supportedSignatureAlgorithms)
@@ -861,6 +913,33 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(eckey.isPublic())
         self.assertEqual(ecPublicData, eckey.data())
 
+    def test_fromBlobSKECDSA(self):
+        """
+        It can load public SK-ECDSA key from blob format.
+        """
+        from cryptography import utils
+
+        skEcPublicData = {
+            "x": keydata.SKECDatanistp256["x"],
+            "y": keydata.SKECDatanistp256["y"],
+            "curve": keydata.SKECDatanistp256["curve"],
+        }
+
+        skEcblob = (
+            common.NS(keydata.SKECDatanistp256["curve"])
+            + common.NS(keydata.SKECDatanistp256["curve"][-8:])
+            + common.NS(
+                b"\x04"
+                + utils.int_to_bytes(skEcPublicData["x"], 32)
+                + utils.int_to_bytes(skEcPublicData["y"], 32)
+            )
+        )
+
+        skEckey = keys.Key.fromString(skEcblob)
+        self.assertTrue(skEckey.isPublic())
+        self.assertTrue(skEckey._sk)
+        self.assertEqual(skEcPublicData, skEckey.data())
+
     @skipWithoutEd25519
     def test_fromBlobEd25519(self):
         """
@@ -876,6 +955,24 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertTrue(ed25519Key.isPublic())
         self.assertEqual(ed25519PublicData, ed25519Key.data())
+
+    def test_fromBlobSKEd25519(self):
+        """
+        A public SK-Ed25519 key is correctly generated from a public key blob.
+        """
+        skEd25519PublicData = {
+            "a": keydata.SKEd25519Data["a"],
+        }
+
+        skEd25519Blob = common.NS(b"sk-ssh-ed25519@openssh.com") + common.NS(
+            skEd25519PublicData["a"]
+        )
+
+        skEd25519Key = keys.Key.fromString(skEd25519Blob)
+
+        self.assertTrue(skEd25519Key.isPublic())
+        self.assertTrue(skEd25519Key._sk)
+        self.assertEqual(skEd25519PublicData, skEd25519Key.data())
 
     def test_fromPrivateBlobUnsupportedType(self):
         """

@@ -1,3 +1,0 @@
-twisted.web.soap was removed.
-The SOAP support was already broken, for at least the last 4 years.
-The SOAP support in Twisted has no active maintainer.

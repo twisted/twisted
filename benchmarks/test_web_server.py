@@ -29,10 +29,22 @@ class Data(resource.Resource):
         return self.data
 
 
-def test_http11_server_empty_request(benchmark):
+class ComplexData(Data):
+    """
+    Interact more with the request.
+    """
+
+    def render_GET(self, request):
+        request.setLastModified(123)
+        request.setETag(b"xykjlk")
+        _ = request.getRequestHostname()
+        request.setHost(b"example.com", 80)
+        return Data.render_GET(self, request)
+
+
+def http11_server_empty_request(resource, benchmark):
     """Benchmark of handling an bodyless HTTP/1.1 request."""
-    data = Data(b"This is a result hello hello" * 4, b"text/plain")
-    factory = server.Site(data)
+    factory = server.Site(resource)
 
     def go():
         transport = StringTransport()
@@ -52,4 +64,152 @@ Content-Length: 0
         )
         assert b"200 OK" in transport.io.getvalue()
 
+    benchmark(go)
+
+
+def test_http11_server_empty_request(benchmark):
+    """Benchmark just returning some data."""
+    data = Data(b"This is a result hello hello" * 4, b"text/plain")
+    http11_server_empty_request(data, benchmark)
+
+
+def test_bit_more_complex_response(benchmark):
+    """Benchmark that also involves calling more request methods."""
+    data = ComplexData(b"This is a result hello hello" * 4, b"text/plain")
+    http11_server_empty_request(data, benchmark)
+
+
+def test_http11_server_many_headers(benchmark):
+    """Benchmark handling of an HTTP/1.1 request with many headers."""
+    request = b"\r\n".join(
+        [
+            b"GET / HTTP/1.1",
+            b"Host: example.com",
+        ]
+        + [f"X-{name}: {name}".encode() for name in ("foo", "bar", "Baz", "biff")]
+        + [f"x-tab:   {name}\t{name}".encode() for name in ("x", "y", "z", "q")]
+        + [
+            f"Cookie:   {c}={c * 26}".encode()
+            for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        ]
+        + [b"", b""]
+    )
+    data = Data(b"...\n", b"text/plain")
+    factory = server.Site(data)
+
+    def go():
+        transport = StringTransport()
+        protocol = factory.buildProtocol(None)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(request)
+        assert b"200 OK" in transport.io.getvalue()
+
+    benchmark(go)
+
+
+def test_http11_server_chunked_request(benchmark):
+    """
+    Benchmark receipt of a largeish chunked request.
+    """
+    request = (
+        b"""\
+GET / HTTP/1.1
+Host: example.com
+user-agent: XXX
+Transfer-encoding: chunked
+
+""".replace(
+            b"\n", b"\r\n"
+        )
+        + b"d\r\nHello, world!\r\n" * 100
+        + b"0\r\n\r\n"
+    )
+    data = Data(b"Goodbye!\n", b"text/plain")
+    factory = server.Site(data)
+
+    def go():
+        transport = StringTransport()
+        protocol = factory.buildProtocol(None)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(request)
+        assert transport.io.getvalue().startswith(b"HTTP/1.1 200 ")
+
+    benchmark(go)
+
+
+class Chunker(resource.Resource):
+    """
+    Static data that is written out in chunks.
+    """
+
+    isLeaf = True  # no getChild
+
+    def __init__(self, chunks, type):
+        resource.Resource.__init__(self)
+        self.chunks = chunks
+        self.type = type
+
+    def render_GET(self, request):
+        request.setHeader(b"Content-Type", self.type)
+        for chunk in self.chunks:
+            request.write(chunk)
+        request.finish()
+        return server.NOT_DONE_YET
+
+
+class BitbucketTransport(StringTransport):
+    """
+    Throw away any data written, in Web Scale (TM) fashion.
+    """
+
+    def write(self, data):
+        """
+        Carefully ensure that nothing is done with the data.
+        """
+
+    def writeSequence(self, iovec):
+        """
+        Lovingly misplace the data.
+        """
+        # This override method is necessary because the superclass
+        # method is implemented as self.write(b"".join(iovec)),
+        # which does too much work!
+
+
+def test_http11_server_chunked_response(benchmark):
+    """
+    Benchmark generation of a largeish chunked response.
+    """
+    data = Chunker(
+        [
+            bytes([c]) * 1024
+            for c in b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        ],
+        b"application/octet-stream",
+    )
+    factory = server.Site(data)
+
+    def go(*, transportFactory=BitbucketTransport):
+        transport = transportFactory()
+        protocol = factory.buildProtocol(None)
+        protocol.makeConnection(transport)
+        protocol.dataReceived(
+            b"""\
+GET / HTTP/1.1
+host: example.com
+accept: *
+
+""".replace(
+                b"\n", b"\r\n"
+            )
+        )
+        return transport
+
+    # Sanity-check that the benchmark logic produces a chunked response.
+    transport = go(transportFactory=StringTransport)
+    response = transport.io.getvalue()
+    assert response.startswith(b"HTTP/1.1 200 ")
+    assert b"Transfer-Encoding: chunked" in response[:1024]
+
+    # Now benchmark, discarding all the HTTP response bytes.
     benchmark(go)
