@@ -9,7 +9,17 @@ from __future__ import annotations
 
 from io import BytesIO
 from socket import AF_INET, AF_INET6
-from typing import Any, Callable, Coroutine, Iterator, Generator, Sequence, Union, TypeVar, overload
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generator,
+    Iterator,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
@@ -19,7 +29,7 @@ from typing_extensions import ParamSpec, Self
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.defer import Deferred, ensureDeferred, inlineCallbacks
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
     IConnector,
@@ -972,17 +982,23 @@ class EventLoggingObserver(Sequence[LogEvent]):
 _T = TypeVar("_T")
 
 
-def benchmarkWithReactor(test_target: Callable[[], Union[
-        Coroutine[Deferred[Any], Any, _T],
-        Generator[Deferred[Any], Any, _T],
-        Deferred[_T],
-    ]]) -> Callable[[Any], None]:
+def benchmarkWithReactor(
+    test_target: Callable[
+        [],
+        Union[
+            Coroutine[Deferred[Any], Any, _T],
+            Generator[Deferred[Any], Any, _T],
+            Deferred[_T],
+        ],
+    ]
+) -> Callable[[Any], None]:
     """
     Decorator for running a benchmark tests that loops the reactor.
 
     This is designed to decorate test method executed using pytest and
     pytest-benchmark.
     """
+
     def deferredWrapper():
         return ensureDeferred(test_target())
 
@@ -992,7 +1008,7 @@ def benchmarkWithReactor(test_target: Callable[[], Union[
     return benchmark_test
 
 
-def _runReactor(callback: Callable[[], Deferred]) -> None:
+def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
     """
     (re)Start a reactor that might have been previously started.
     """
@@ -1002,8 +1018,8 @@ def _runReactor(callback: Callable[[], Deferred]) -> None:
     from twisted.internet import reactor
 
     deferred = callback()
-    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))
-    reactor.run(installSignalHandlers=False)
+    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))  # type: ignore[attr-defined]
+    reactor.run(installSignalHandlers=False)  # type: ignore[attr-defined]
 
 
 def _stopReactor(reactor):
