@@ -642,7 +642,6 @@ class ProcmonTests(unittest.TestCase):
 
 
 class DeprecationTests(unittest.SynchronousTestCase):
-
     """
     Tests that check functionality that should be deprecated is deprecated.
     """

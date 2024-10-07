@@ -2136,7 +2136,6 @@ def stubApplicationRunnerFactoryCreator(signum):
 
 
 class ExitWithSignalTests(TestCase):
-
     """
     Tests for L{twisted.application.app._exitWithSignal}.
     """
