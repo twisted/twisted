@@ -1017,7 +1017,7 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
     # installed.
     from twisted.internet import reactor
 
-    errors : list[failure.Failure] = []
+    errors: list[failure.Failure] = []
 
     deferred = callback()
     deferred.addErrback(errors.append)
