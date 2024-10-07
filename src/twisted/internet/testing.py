@@ -1017,9 +1017,16 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
     # installed.
     from twisted.internet import reactor
 
+    errors : list[failure.Failure] = []
+
     deferred = callback()
+    deferred.addErrback(errors.append)
     deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))  # type: ignore[attr-defined]
     reactor.run(installSignalHandlers=False)  # type: ignore[attr-defined]
+
+    if errors:
+        # Make sure the test fails in a visible way:
+        errors[0].raiseException()
 
 
 def _stopReactor(reactor):
