@@ -58,7 +58,6 @@ from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -2711,17 +2710,27 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
     def test_bytes(self):
         ba = b"1.2.3.4"
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
-        self.assertEqual(ep._bindAddress, (b"1.2.3.4", 0))
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
 
     def test_str(self):
         ba = "1.2.3.4"
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
 
-    def test_tuple(self):
+    def test_tuple_bytes(self):
+        ba = (b"1.2.3.4", 1234)
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+
+    def test_tuple_str(self):
         ba = ("1.2.3.4", 1234)
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+
+    def test_none(self):
+        ba = None
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, None)
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -4214,14 +4223,14 @@ class WrapClientTLSParserTests(unittest.TestCase):
         reactor = object()
         endpoint = endpoints.clientFromString(
             reactor,
-            nativeString("tls:example.com:443:timeout=10:bindAddress=127.0.0.1"),
+            "tls:example.com:443:timeout=10:bindAddress=127.0.0.1",
         )
         hostnameEndpoint = endpoint._wrappedEndpoint
         self.assertIs(hostnameEndpoint._reactor, reactor)
         self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
-        self.assertEqual(hostnameEndpoint._bindAddress, (nativeString("127.0.0.1"), 0))
+        self.assertEqual(hostnameEndpoint._bindAddress, ("127.0.0.1", 0))
 
     def test_utf8Encoding(self):
         """

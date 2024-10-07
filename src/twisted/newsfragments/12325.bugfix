@@ -1,1 +1,1 @@
-TLS endpoint strings with "bindAddress=" should no longer crash during connect. The HostnameEndpoint() "bindAddress" argument now accepts either hostnames or (host,port) tuples.
+twisted.internet.endpoints.clientFromString for TLS endpoints with "bindAddress="  no longer crashes during connect. twisted.internet.endpoints.HostnameEndpoint() no longer crashes when given a bindAddress= argument that is just a string, and that argument now accepts either address strings or (address, port) tuples.
