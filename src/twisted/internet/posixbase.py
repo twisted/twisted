@@ -9,7 +9,7 @@ Posix reactor base class
 
 import socket
 import sys
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from zope.interface import classImplements, implementer
 
@@ -26,6 +26,8 @@ from twisted.internet.interfaces import (
     IReactorUDP,
     IReactorUNIX,
     IReactorUNIXDatagram,
+    IReadDescriptor,
+    IWriteDescriptor,
 )
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 from twisted.python import failure, log
@@ -398,7 +400,9 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         else:
             assert False, "SSL support is not present"
 
-    def _removeAll(self, readers, writers):
+    def _removeAll(
+        self, readers: Iterable[IReadDescriptor], writers: Iterable[IWriteDescriptor]
+    ) -> list[IReadDescriptor | IWriteDescriptor]:
         """
         Remove all readers and writers, and list of removed L{IReadDescriptor}s
         and L{IWriteDescriptor}s.

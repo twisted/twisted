@@ -21,7 +21,15 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
-from typing import Union
+import os
+from typing import TYPE_CHECKING, Union
+
+if not TYPE_CHECKING:
+    if hasattr("os", "add_dll_directory"):
+        try:
+            os.add_dll_directory("c:/GTK/release/bin")
+        except FileNotFoundError:
+            pass
 
 from gi.repository import GLib
 
