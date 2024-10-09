@@ -11,14 +11,17 @@ from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
 from typing import Optional
+from unittest import skipIf
 
 cryptSkip: Optional[str]
 try:
     import crypt
 except ImportError:
     cryptSkip = "cannot run without crypt module"
+    has_method_crypt = False
 else:
     cryptSkip = None
+    has_method_crypt = getattr(crypt, "METHOD_CRYPT", None) in crypt.methods
 
 from zope.interface.verify import verifyObject
 
@@ -64,6 +67,7 @@ class HelperTests(TestCase):
     def setUp(self):
         self.mockos = MockOS()
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_verifyCryptedPassword(self):
         """
         L{verifyCryptedPassword} returns C{True} if the plaintext password
@@ -79,6 +83,7 @@ class HelperTests(TestCase):
             ),
         )
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_verifyCryptedPasswordMD5(self):
         """
         L{verifyCryptedPassword} returns True if the provided cleartext password
@@ -460,6 +465,7 @@ class UNIXPasswordDatabaseTests(TestCase):
         """
         self.assertEqual(self.successResultOf(d), username)
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_defaultCheckers(self):
         """
         L{UNIXPasswordDatabase} with no arguments has checks the C{pwd} database
@@ -515,6 +521,7 @@ class UNIXPasswordDatabaseTests(TestCase):
         """
         self.failureResultOf(d, checkers.UnauthorizedLogin)
 
+    @skipIf(not has_method_crypt, "Required crypt method is unavailable: METHOD_CRYPT")
     def test_passInCheckers(self):
         """
         L{UNIXPasswordDatabase} takes a list of functions to check for UNIX
