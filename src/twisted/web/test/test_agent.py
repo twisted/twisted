@@ -96,7 +96,7 @@ except ImportError:
 else:
     ssl = _ssl
     sslPresent = True
-    from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
+    from twisted.internet._sslverify import IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols import tls
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
@@ -1444,15 +1444,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         endpoint = self.makeEndpoint(port=expectedPort)
         self.assertEqual(endpoint._wrappedEndpoint._port, expectedPort)
 
-    def test_contextFactoryType(self):
-        """
-        L{Agent} wraps its connection creator creator and uses modern TLS APIs.
-        """
-        endpoint = self.makeEndpoint()
-        contextFactory = endpoint._wrapperFactory(None)._connectionCreator
-        self.assertIsInstance(contextFactory, ClientTLSOptions)
-        self.assertEqual(contextFactory._hostname, "example.com")
-
     def test_connectHTTPSCustomConnectionCreator(self):
         """
         If a custom L{WebClientConnectionCreator}-like object is passed to
@@ -1480,6 +1471,11 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
                 The connection started.  Record that fact.
                 """
                 self.connectState = True
+
+            def get_context(self):
+                """
+                Get the context object.
+                """
 
         contextArgs = []
 
@@ -1572,8 +1568,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
-        self.assertTrue(trustRoot.called)
         connection = creator.clientConnectionForTLS(None)
+        self.assertTrue(trustRoot.called)
         self.assertIs(trustRoot.context, connection.get_context())
 
     def integrationTest(self, hostName, expectedAddress, addressType):
@@ -3303,6 +3299,8 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
+        firstConnection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, firstConnection.get_context())
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
         self.assertEquals(1, len(policy._cache))

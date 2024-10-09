@@ -7,6 +7,8 @@ L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
 
+from __future__ import annotations
+
 from errno import EPERM
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
@@ -36,13 +38,18 @@ from twisted.internet.address import (
     UNIXAddress,
     _ProcessAddress,
 )
-from twisted.internet.endpoints import StandardErrorBehavior
+from twisted.internet.endpoints import (
+    StandardErrorBehavior,
+    TCP6ServerEndpoint,
+    _WrapperEndpoint,
+)
 from twisted.internet.error import ConnectingCancelledError
 from twisted.internet.interfaces import (
     IConsumer,
     IHostnameResolver,
     IPushProducer,
     IReactorPluggableNameResolver,
+    IReactorTCP,
     ITransport,
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol
@@ -101,9 +108,17 @@ try:
         DiffieHellmanParameters,
         KeyPair,
         PrivateCertificate,
+        optionsForClientTLS,
+    )
+    from twisted.protocols._sni import (
+        ServerNameIndictionConfiguration,
+        SNIConnectionCreator,
     )
     from twisted.protocols.tls import TLSMemoryBIOFactory
-    from twisted.test.test_sslverify import makeCertificate
+    from twisted.test.test_sslverify import (
+        certificatesForAuthorityAndServer,
+        makeCertificate,
+    )
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -2844,6 +2859,168 @@ class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         )
 
 
+@skipIf(skipSSL, skipSSLReason)
+class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
+    """
+    Tests for TLS Endpoints.
+    """
+
+    def expectedServers(self, reactor):
+        """
+        @return: List of calls to L{IReactorSSL.listenSSL}
+        """
+        return reactor.tcpServers
+
+    def expectedClients(self, reactor):
+        """
+        @return: List of calls to L{IReactorSSL.connectSSL}
+        """
+        return reactor.sslClients
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, contextFactory, timeout, and bindAddress in
+        C{receivedArgs} to C{expectedArgs}.  We ignore the factory because we
+        don't only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{contextFactory}, C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorSSL.connectSSL}.
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{contextFactory}, C{timeout}, C{bindAddress}) that we expect to
+            have been passed to L{IReactorSSL.connectSSL}.
+        """
+        (
+            host,
+            port,
+            ignoredFactory,
+            contextFactory,
+            timeout,
+            bindAddress,
+        ) = receivedArgs
+
+        (
+            expectedHost,
+            expectedPort,
+            _ignoredFactory,
+            expectedContextFactory,
+            expectedTimeout,
+            expectedBindAddress,
+        ) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(contextFactory, expectedContextFactory)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {"timeout": 10, "bindAddress": ("localhost", 49595)}
+
+    def listenArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to listen
+        """
+        return {"backlog": 100, "interface": "127.0.0.1"}
+
+    def setUp(self):
+        """
+        Set up client and server SSL contexts for use later.
+        """
+        serviceIdentity = "endpoint-test.example.com"
+        ca, server = certificatesForAuthorityAndServer(serviceIdentity)
+        self.clientSSLContext = optionsForClientTLS(serviceIdentity, trustRoot=ca)
+
+    def createServerEndpoint(
+        self, reactor: object, factory: Factory, **listenArgs: object
+    ) -> tuple[endpoints.TLSServerEndpoint, tuple[object, ...], IPv6Address]:
+        """
+        Create an L{TLSServerEndpoint} and return the tools to verify its
+        behaviour.
+
+        @param factory: The thing that we expect to be passed to our
+            L{IStreamServerEndpoint.listen} implementation.
+        @param reactor: A fake L{IReactorSSL} that L{TLSServerEndpoint} can
+            call L{IReactorSSL.listenSSL} on.
+        @param listenArgs: Optional dictionary of arguments to
+            L{IReactorSSL.listenSSL}.
+        """
+        address = IPv6Address("TCP", "::", 0)
+
+        from twisted.internet.endpoints import autoReloadingDirectoryOfPEMs
+
+        fp = FilePath(self.mktemp())
+        snic = ServerNameIndictionConfiguration(autoReloadingDirectoryOfPEMs(fp))
+
+        class FactoryChecker:
+            def __eq__(iself, other: object) -> bool:
+                assert isinstance(other, TLSMemoryBIOFactory)
+                self.assertIs(other.wrappedFactory, factory)
+
+                # This is a very unfortunate white-box test, but I just want to
+                # look at the *value* of the SNI configuration; given that
+                # OpenSSL hides everything internally I can't verify that we
+                # build a correct-looking connection, so instead we have to do
+                # this:
+                sorryAboutThis = other._creatorCallable.__self__  # type:ignore
+                assert isinstance(sorryAboutThis, SNIConnectionCreator)
+                self.assertIs(sorryAboutThis._configForSNI, snic)
+
+                return True
+
+        return (
+            endpoints.TLSServerEndpoint(
+                TCP6ServerEndpoint(reactor, address.port, **listenArgs),
+                snic,
+            ),
+            (
+                address.port,
+                # TLSMemoryBIOFactory(snic, False, factory),
+                FactoryChecker(),
+                listenArgs.get("backlog", 50),
+                listenArgs.get("interface", "::"),
+            ),
+            address,
+        )
+
+    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+        """
+        Create an L{TLSClientEndpoint} and return the values needed to verify
+        its behaviour.
+
+        @param reactor: A fake L{IReactorSSL} that L{TLSClientEndpoint} can
+            call L{IReactorSSL.connectSSL} on.
+        @param clientFactory: The thing that we expect to be passed to our
+            L{IStreamClientEndpoint.connect} implementation.
+        @param connectArgs: Optional dictionary of arguments to
+            L{IReactorSSL.connectSSL}
+        """
+        address = IPv4Address("TCP", "localhost", 80)
+
+        return (
+            endpoints.SSL4ClientEndpoint(
+                reactor,
+                address.host,
+                address.port,
+                self.clientSSLContext,
+                **connectArgs,
+            ),
+            (
+                address.host,
+                address.port,
+                clientFactory,
+                self.clientSSLContext,
+                connectArgs.get("timeout", 30),
+                connectArgs.get("bindAddress", None),
+            ),
+            address,
+        )
+
+
 class UNIXEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for UnixSocket Endpoints.
@@ -3128,6 +3305,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
+
+    @skipIf(skipSSL, skipSSLReason)
+    def test_tls(self) -> None:
+        from OpenSSL.SSL import Context
+
+        from twisted.protocols._sni import SNIConnectionCreator
+
+        reactor = object()
+        server = endpoints.serverFromString(
+            reactor,
+            "tls:./cert-path:1234:backlog=12:interface=10.0.0.1",
+        )
+        self.assertIsInstance(server, endpoints.TLSServerEndpoint)
+        subendpoint = server.endpoint
+        self.assertIs(subendpoint._reactor, reactor)
+        self.assertEqual(subendpoint._port, 1234)
+        self.assertEqual(subendpoint._backlog, 12)
+        self.assertEqual(subendpoint._interface, "10.0.0.1")
+        ctx = server.contextFactory
+        self.assertIsInstance(ctx, endpoints.ServerNameIndictionConfiguration)
+        sc: SNIConnectionCreator = ctx.createServerCreator(
+            lambda con: None,
+            lambda ctx: None,
+        )
+        self.assertIsInstance(sc, SNIConnectionCreator)
+        factory = TLSMemoryBIOFactory(ctx, False, Factory.forProtocol(Protocol))
+        proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
+        st = StringTransport()
+        proto.makeConnection(st)
+        builtCtx = proto._tlsConnection.get_context()
+        self.assertIsInstance(builtCtx, Context)
 
     @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
@@ -4152,10 +4360,12 @@ class WrapperClientEndpointTests(unittest.TestCase):
         self.assertIs(proto.transport.transport, pump.clientIO)
 
 
-def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
+def tlsHostnameFromEndpoint(
+    memoryReactor: IReactorTCP, tlsEndpoint: _WrapperEndpoint
+) -> str:
     """
     Given a L{MemoryReactor} and the result of calling L{wrapClientTLS},
-    extract the L{IOpenSSLClientConnectionCreator} associated with it.
+    extract the hostname that TLS will be verified against.
 
     Implementation presently uses private attributes but could (and should) be
     refactored to just call C{.connect()} on the endpoint, when
@@ -4168,11 +4378,18 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
     @param tlsEndpoint: The result of calling L{wrapClientTLS}.
 
-    @return: the client connection creator associated with the endpoint
-        wrapper.
-    @rtype: L{IOpenSSLClientConnectionCreator}
+    @return: the IDNA-decoded str hostname.
     """
-    return tlsEndpoint._wrapperFactory(None)._connectionCreator
+    tlsMemoryBIOFactory: TLSMemoryBIOFactory = tlsEndpoint._wrapperFactory(
+        Factory.forProtocol(Protocol)
+    )
+    protocol = tlsMemoryBIOFactory.buildProtocol(None)
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+        protocol
+    ).get_servername()
+    assert tlsExtServerNameBytes is not None
+    hostname = tlsExtServerNameBytes.decode("idna")
+    return hostname
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -4211,8 +4428,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(
             endpoint._wrappedEndpoint._hostBytes, b"xn--xample-9ua.example.com"
         )
-        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(connectionCreator._hostname, "\xe9xample.example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "\xe9xample.example.com")
 
     def test_tls(self):
         """
@@ -4287,8 +4504,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(reactor, b"tls:example.com:443")
-        creator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(creator._hostname, "example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "example.com")
         self.assertEqual(endpoint._wrappedEndpoint._hostBytes, b"example.com")
 
 

@@ -6,11 +6,15 @@
 Tests for L{twisted.internet._sslverify}.
 """
 
+from __future__ import annotations
+
 import datetime
+import gc
 import itertools
-import sys
 import textwrap
+from dataclasses import dataclass
 from unittest import skipIf
+from weakref import ref
 
 from zope.interface import implementer
 
@@ -18,14 +22,15 @@ from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet._idna import _idnaText
+from twisted.internet.address import IPv4Address
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
+from twisted.internet.interfaces import IOpenSSLContextFactory
 from twisted.internet.task import Clock
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.reflect import requireModule
 from twisted.test.iosim import connectedServerAndClient
-from twisted.test.test_twisted import SetAsideModule
 from twisted.trial import util
 from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 
@@ -43,7 +48,10 @@ if requireModule("OpenSSL"):
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.asymmetric.rsa import (
+        RSAPrivateKey,
+        generate_private_key,
+    )
     from cryptography.hazmat.primitives.serialization import (
         Encoding,
         NoEncryption,
@@ -52,6 +60,8 @@ if requireModule("OpenSSL"):
     from cryptography.x509.oid import NameOID
 
     from twisted.internet import ssl
+    from twisted.protocols._sni import PEMObjects
+    from ._ca_with_intermediate import createCA, createIntermediate, createLeaf
 
     try:
         ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -75,9 +85,13 @@ else:
 
 if not skipSSL:
     from twisted.internet import _sslverify as sslverify
-    from twisted.internet.ssl import VerificationError, platformTrust
-    from twisted.protocols.tls import TLSMemoryBIOFactory
-
+    from twisted.internet._sslverify import _verifyCB
+    from twisted.internet.ssl import (
+        VerificationError,
+        optionsForClientTLS,
+        platformTrust,
+    )
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
 
 # A couple of static PEM-format certificates to be used by various tests.
 A_HOST_CERTIFICATE_PEM = """
@@ -150,7 +164,58 @@ def makeCertificate(**kw):
     return keypair, certificate
 
 
-def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
+oneDay = datetime.timedelta(1, 0, 0)
+
+
+@dataclass
+class TestingAuthority:
+    name: x509.Name
+    cert: x509.Certificate
+    key: RSAPrivateKey
+
+    @classmethod
+    def create(
+        cls, aroundTimestamp: datetime.datetime = datetime.datetime.today()
+    ) -> TestingAuthority:
+        commonNameForCA = x509.Name(
+            [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
+        )
+        privateKeyForCA = generate_private_key(
+            public_exponent=65537, key_size=4096, backend=default_backend()
+        )
+        publicKeyForCA = privateKeyForCA.public_key()
+        caCertificate = (
+            x509.CertificateBuilder()
+            .subject_name(commonNameForCA)
+            .issuer_name(commonNameForCA)
+            .not_valid_before(aroundTimestamp - oneDay)
+            .not_valid_after(aroundTimestamp + oneDay)
+            .serial_number(x509.random_serial_number())
+            .public_key(publicKeyForCA)
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=9),
+                critical=True,
+            )
+            .sign(
+                private_key=privateKeyForCA,
+                algorithm=hashes.SHA256(),
+                backend=default_backend(),
+            )
+        )
+
+        return TestingAuthority(commonNameForCA, caCertificate, privateKeyForCA)
+
+    def authoritize(self, builder: x509.CertificateBuilder) -> x509.Certificate:
+        return builder.issuer_name(self.name).sign(
+            private_key=self.key,
+            algorithm=hashes.SHA256(),
+            backend=default_backend(),
+        )
+
+
+def certificatesForAuthorityAndServer(
+    serviceIdentity: str = "example.com",
+) -> tuple[sslverify.Certificate, sslverify.PrivateCertificate]:
     """
     Create a self-signed CA certificate and server certificate signed by the
     CA.
@@ -163,40 +228,15 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
     @rtype: L{tuple} of (L{sslverify.Certificate},
         L{sslverify.PrivateCertificate})
     """
-    commonNameForCA = x509.Name(
-        [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
-    )
+    authority = TestingAuthority.create()
     commonNameForServer = x509.Name(
         [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example Server")]
     )
-    oneDay = datetime.timedelta(1, 0, 0)
-    privateKeyForCA = rsa.generate_private_key(
-        public_exponent=65537, key_size=4096, backend=default_backend()
-    )
-    publicKeyForCA = privateKeyForCA.public_key()
-    caCertificate = (
-        x509.CertificateBuilder()
-        .subject_name(commonNameForCA)
-        .issuer_name(commonNameForCA)
-        .not_valid_before(datetime.datetime.today() - oneDay)
-        .not_valid_after(datetime.datetime.today() + oneDay)
-        .serial_number(x509.random_serial_number())
-        .public_key(publicKeyForCA)
-        .add_extension(
-            x509.BasicConstraints(ca=True, path_length=9),
-            critical=True,
-        )
-        .sign(
-            private_key=privateKeyForCA,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
-        )
-    )
-
-    privateKeyForServer = rsa.generate_private_key(
+    privateKeyForServer = generate_private_key(
         public_exponent=65537, key_size=4096, backend=default_backend()
     )
     publicKeyForServer = privateKeyForServer.public_key()
+    subjectAlternativeNames: list[x509.IPAddress | x509.DNSName]
 
     try:
         ipAddress = ipaddress.ip_address(serviceIdentity)
@@ -207,10 +247,9 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
     else:
         subjectAlternativeNames = [x509.IPAddress(ipAddress)]
 
-    serverCertificate = (
+    serverBuilder = (
         x509.CertificateBuilder()
         .subject_name(commonNameForServer)
-        .issuer_name(commonNameForCA)
         .not_valid_before(datetime.datetime.today() - oneDay)
         .not_valid_after(datetime.datetime.today() + oneDay)
         .serial_number(x509.random_serial_number())
@@ -223,13 +262,11 @@ def certificatesForAuthorityAndServer(serviceIdentity="example.com"):
             x509.SubjectAlternativeName(subjectAlternativeNames),
             critical=True,
         )
-        .sign(
-            private_key=privateKeyForCA,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
-        )
     )
-    caSelfCert = sslverify.Certificate.loadPEM(caCertificate.public_bytes(Encoding.PEM))
+    serverCertificate = authority.authoritize(serverBuilder)
+    caSelfCert = sslverify.Certificate.loadPEM(
+        authority.cert.public_bytes(Encoding.PEM)
+    )
     serverCert = sslverify.PrivateCertificate.loadPEM(
         b"\n".join(
             [
@@ -325,6 +362,7 @@ def loopbackTLSConnection(trustRoot, privateKeyFile, chainedCertFile=None):
     @rtype: L{tuple}
     """
 
+    @implementer(IOpenSSLContextFactory)
     class ContextFactory:
         def getContext(self):
             """
@@ -562,6 +600,97 @@ class FakeContext:
         @param curve: See L{OpenSSL.SSL.Context.set_tmp_ecdh}
         """
         self._ecCurve = curve
+
+
+class PEMCollectionTests(SynchronousTestCase):
+    """
+    Tests for collecting PEMs into collections of L{PrivateCertificate}
+    objects.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def test_inferCertificates(self) -> None:
+        """
+        Create certificates with different intermediates and verify that
+        they're loaded into a single certificate mapping.
+        """
+        fp = FilePath(self.mktemp())
+        rootKey, rootCert = createCA("example CA")
+        im1Key, im1Cert = createIntermediate(
+            "example intermediate 1", rootCert, rootKey
+        )
+        im2Key, im2Cert = createIntermediate(
+            "example intermediate 2", rootCert, rootKey
+        )
+        im3Key, im3Cert = createIntermediate("example intermediate 3", im2Cert, im2Key)
+        leaf1Key, leaf1Cert = createLeaf("domain1.example.com", im1Cert, im1Key)
+        leaf2Key, leaf2Cert = createLeaf("domain2.example.net", im3Cert, im3Key)
+        leaf3Key, leaf3Cert = createLeaf("domain3.example.org", rootCert, rootKey)
+        fp.makedirs(ignoreExistingDirectory=True)
+        randomSubdirectory = fp.child("xyz")
+        randomSubdirectory.makedirs()
+
+        im1bytes = im1Cert.public_bytes(Encoding.PEM)
+        im2bytes = im2Cert.public_bytes(Encoding.PEM)
+        im3bytes = im3Cert.public_bytes(Encoding.PEM)
+
+        l1kbytes = leaf1Key.private_bytes(
+            Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()
+        )
+        l2kbytes = leaf2Key.private_bytes(
+            Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()
+        )
+        l3kbytes = leaf3Key.private_bytes(
+            Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()
+        )
+
+        l1cbytes = leaf1Cert.public_bytes(Encoding.PEM)
+        l2cbytes = leaf2Cert.public_bytes(Encoding.PEM)
+        l3cbytes = leaf3Cert.public_bytes(Encoding.PEM)
+
+        everything = [
+            im1bytes,
+            im2bytes,
+            im3bytes,
+            l1cbytes,
+            l2cbytes,
+            l1kbytes,
+            l2kbytes,
+            l3kbytes,
+            l3cbytes,
+        ]
+
+        # spray the files somewhat randomly across the hierarchy
+        for i, obj in enumerate(everything):
+            (fp if (i % 2) else randomSubdirectory).child(f"object-{i}.pem").setContent(
+                obj
+            )
+
+        objs = PEMObjects.fromDirectory(fp)
+        mapping = objs.inferDomainMapping()
+        self.assertEqual(
+            set(mapping.keys()),
+            {"domain1.example.com", "domain2.example.net", "domain3.example.org"},
+        )
+        domain1 = mapping["domain1.example.com"]
+        domain2 = mapping["domain2.example.net"]
+        domain3 = mapping["domain3.example.org"]
+        self.maxDiff = 9999
+
+        def certBytesCompare(
+            twistedCert: sslverify.Certificate, someBytes: bytes
+        ) -> None:
+            self.assertEqual(twistedCert.dumpPEM().decode(), someBytes.decode())
+
+        self.assertEqual(len(domain1.extraCertChain), 1)
+        self.assertEqual(len(domain2.extraCertChain), 2)
+        self.assertEqual(len(domain3.extraCertChain), 0)
+
+        certBytesCompare(sslverify.Certificate(domain1.extraCertChain[0]), im1bytes)
+        certBytesCompare(sslverify.Certificate(domain2.extraCertChain[1]), im2bytes)
+        certBytesCompare(sslverify.Certificate(domain2.extraCertChain[0]), im3bytes)
 
 
 class ClientOptionsTests(SynchronousTestCase):
@@ -1094,6 +1223,39 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         self.assertIn("method", e.exception.args[0])
         self.assertIn("lowerMaximumSecurityTo", e.exception.args[0])
         self.assertIn("exclusive", e.exception.args[0])
+
+    def test_verifyCallbackCrashNoRetain(self) -> None:
+        """
+        Since circular references go through CFFI here, the verification
+        callback has to be very careful to avoid creating any circular
+        references which OpenSSL will hold on to.  Make sure that the
+        TLSMemoryBIOProtocol is no longer referenced after the verification
+        callback runs, even if it explodes with a totally unexpected error.
+        """
+        f = protocol.Factory.forProtocol(protocol.Protocol)
+        proto = TLSMemoryBIOProtocol(
+            TLSMemoryBIOFactory(
+                optionsForClientTLS("just-testing"),
+                True,
+                f,
+            ),
+            f.buildProtocol(IPv4Address("TCP", "192.168.1.1", 8123)),
+        )
+        r = ref(proto)
+        # intentional type check failure
+        cb = _verifyCB(proto, True, "just-testing")
+        # consistency check: we still retain a reference.
+        self.assertIsNot(r(), None)
+        # testing internal bug-reporting here, so we intentionally break its
+        # type contract and expect some random explosion. Just specifying
+        # AttributeError here so if behavior changes and it's something else we
+        # get notified in the future.
+        cb(None, None, None, 0, None)  # type:ignore
+        self.flushLoggedErrors(AttributeError)
+        del proto
+        gc.collect()
+        it = r()
+        self.assertIs(it, None)
 
     def test_tlsVersionRangeInOrder(self):
         """
@@ -1976,7 +2138,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         clientPresentsCertificate=False,
         validClientCertificate=True,
         serverVerifies=False,
-        buggyInfoCallback=False,
         fakePlatformTrust=False,
         useDefaultTrust=False,
     ):
@@ -2013,11 +2174,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         @param serverVerifies: Should the server verify the client's
             certificate?  Defaults to 'no'.
         @type serverVerifies: L{bool}
-
-        @param buggyInfoCallback: Should we patch the implementation so that
-            the C{info_callback} passed to OpenSSL to have a bug and raise an
-            exception (L{ZeroDivisionError})?  Defaults to 'no'.
-        @type buggyInfoCallback: L{bool}
 
         @param fakePlatformTrust: Should we fake the platformTrust to be the
             same as our fake server certificate authority, so that we can test
@@ -2057,23 +2213,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         serverContextSetup(serverOpts.getContext())
         if not validCertificate:
             serverCA, otherServer = certificatesForAuthorityAndServer(serverHostname)
-        if buggyInfoCallback:
-
-            def broken(*a, **k):
-                """
-                Raise an exception.
-
-                @param a: Arguments for an C{info_callback}
-
-                @param k: Keyword arguments for an C{info_callback}
-                """
-                1 / 0
-
-            self.patch(
-                sslverify.ClientTLSOptions,
-                "_identityVerifyingInfoCallback",
-                broken,
-            )
 
         signature = {"hostname": clientHostname}
         if passClientCert:
@@ -2326,61 +2465,6 @@ class ServiceIdentityTests(SynchronousTestCase):
         self.assertIsNone(cErr)
         self.assertIsNone(sErr)
 
-    def test_fallback(self):
-        """
-        L{sslverify.simpleVerifyHostname} checks string equality on the
-        commonName of a connection's certificate's subject, doing nothing if it
-        matches and raising L{VerificationError} if it doesn't.
-        """
-        name = "something.example.com"
-
-        class Connection:
-            def get_peer_certificate(self):
-                """
-                Fake of L{OpenSSL.SSL.Connection.get_peer_certificate}.
-
-                @return: A certificate with a known common name.
-                @rtype: L{OpenSSL.crypto.X509}
-                """
-                cert = X509()
-                cert.get_subject().commonName = name
-                return cert
-
-        conn = Connection()
-        self.assertIs(
-            sslverify.simpleVerifyHostname(conn, "something.example.com"), None
-        )
-        self.assertRaises(
-            sslverify.SimpleVerificationError,
-            sslverify.simpleVerifyHostname,
-            conn,
-            "nonsense",
-        )
-
-    def test_surpriseFromInfoCallback(self):
-        """
-        pyOpenSSL isn't always so great about reporting errors.  If one occurs
-        in the verification info callback, it should be logged and the
-        connection should be shut down (if possible, anyway; the app_data could
-        be clobbered but there's no point testing for that).
-        """
-        cProto, sProto, cWrapped, sWrapped, pump = self.serviceIdentitySetup(
-            "correct-host.example.com",
-            "correct-host.example.com",
-            buggyInfoCallback=True,
-        )
-
-        self.assertEqual(cWrapped.data, b"")
-        self.assertEqual(sWrapped.data, b"")
-
-        cErr = cWrapped.lostReason.value
-        sErr = sWrapped.lostReason.value
-
-        self.assertIsInstance(cErr, ZeroDivisionError)
-        self.assertIsInstance(sErr, (ConnectionClosed, SSL.Error))
-        errors = self.flushLoggedErrors(ZeroDivisionError)
-        self.assertTrue(errors)
-
 
 def negotiateProtocol(serverProtocols, clientProtocols, clientOptions=None):
     """
@@ -2513,6 +2597,17 @@ class ALPNTests(TestCase):
         """
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
         self.assertTrue(sslverify.ProtocolNegotiationSupport.ALPN in supportedProtocols)
+
+    def test_negotiateEmpty(self) -> None:
+        """
+        When negotiating with an empty acceptable protocols list, no protocol
+        is assigned but the connection is not lost.
+        """
+        negotiatedProtocol, lostReason = negotiateProtocol(
+            serverProtocols=[], clientProtocols=[]
+        )
+        self.assertIs(negotiatedProtocol, None)
+        self.assertIs(lostReason, None)
 
 
 class NPNAndALPNAbsentTests(TestCase):
@@ -3355,76 +3450,3 @@ class KeyPairTests(TestCase):
 
         certPEM = noTrailingNewlineKeyPemPath.getContent()
         ssl.Certificate.loadPEM(certPEM)
-
-
-class SelectVerifyImplementationTests(SynchronousTestCase):
-    """
-    Tests for L{_selectVerifyImplementation}.
-    """
-
-    if skipSSL:
-        skip = skipSSL
-
-    def test_dependencyMissing(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} returns L{simpleVerifyHostname} and
-        L{SimpleVerificationError}.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            result = sslverify._selectVerifyImplementation()
-            expected = (
-                sslverify.simpleVerifyHostname,
-                sslverify.simpleVerifyIPAddress,
-                sslverify.SimpleVerificationError,
-            )
-            self.assertEqual(expected, result)
-
-    test_dependencyMissing.suppress = [  # type: ignore[attr-defined]
-        util.suppress(
-            message=(
-                "You do not have a working installation of the "
-                "service_identity module"
-            ),
-        ),
-    ]
-
-    def test_dependencyMissingWarning(self):
-        """
-        If I{service_identity} cannot be imported then
-        L{_selectVerifyImplementation} emits a L{UserWarning} advising the user
-        of the exact error.
-        """
-        with SetAsideModule("service_identity"):
-            sys.modules["service_identity"] = None
-
-            sslverify._selectVerifyImplementation()
-
-        [warning] = list(
-            warning
-            for warning in self.flushWarnings()
-            if warning["category"] == UserWarning
-        )
-
-        expectedMessage = (
-            "You do not have a working installation of the "
-            "service_identity module: "
-            "'import of service_identity halted; None in sys.modules'.  "
-            "Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> "
-            "and make sure all of its dependencies are satisfied.  "
-            "Without the service_identity module, Twisted can perform only"
-            " rudimentary TLS client hostname verification.  Many valid "
-            "certificate/hostname mappings may be rejected."
-        )
-
-        self.assertEqual(warning["message"], expectedMessage)
-        # Make sure we're abusing the warning system to a sufficient
-        # degree: there is no filename or line number that makes sense for
-        # this warning to "blame" for the problem.  It is a system
-        # misconfiguration.  So the location information should be blank
-        # (or as blank as we can make it).
-        self.assertEqual(warning["filename"], "")
-        self.assertEqual(warning["lineno"], 0)

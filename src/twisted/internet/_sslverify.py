@@ -8,12 +8,14 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import Dict
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar, Union
 
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
 from OpenSSL._util import lib as pyOpenSSLlib
+from OpenSSL.crypto import X509
+from OpenSSL.SSL import VERIFY_FAIL_IF_NO_PEER_CERT, VERIFY_PEER, Connection
 
 import attr
 from constantly import FlagConstant, Flags, NamedConstant, Names
@@ -26,6 +28,7 @@ from twisted.internet.interfaces import (
     IAcceptableCiphers,
     ICipher,
     IOpenSSLClientConnectionCreator,
+    IOpenSSLClientConnectionCreatorFactory,
     IOpenSSLContextFactory,
 )
 from twisted.logger import Logger
@@ -35,6 +38,19 @@ from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import nameToLabel
 from ._idna import _idnaBytes
+from ._service_identity import (
+    DNS_ID,
+    IPAddress_ID,
+    ServiceID,
+    VerificationError,
+    extract_patterns,
+    verify_service_identity,
+)
+
+if TYPE_CHECKING:
+    from twisted.protocols.tls import TLSMemoryBIOProtocol
+
+_log = Logger()
 
 _log = Logger()
 
@@ -87,52 +103,6 @@ def _getExcludedTLSProtocols(oldest, newest):
     return excludedVersions
 
 
-class SimpleVerificationError(Exception):
-    """
-    Not a very useful verification error.
-    """
-
-
-def simpleVerifyHostname(connection, hostname):
-    """
-    Check only the common name in the certificate presented by the peer and
-    only for an exact match.
-
-    This is to provide I{something} in the way of hostname verification to
-    users who haven't installed C{service_identity}. This check is overly
-    strict, relies on a deprecated TLS feature (you're supposed to ignore the
-    commonName if the subjectAlternativeName extensions are present, I
-    believe), and lots of valid certificates will fail.
-
-    @param connection: the OpenSSL connection to verify.
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: The hostname expected by the user.
-    @type hostname: L{unicode}
-
-    @raise twisted.internet.ssl.VerificationError: if the common name and
-        hostname don't match.
-    """
-    commonName = connection.get_peer_certificate().get_subject().commonName
-    if commonName != hostname:
-        raise SimpleVerificationError(repr(commonName) + "!=" + repr(hostname))
-
-
-def simpleVerifyIPAddress(connection, hostname):
-    """
-    Always fails validation of IP addresses
-
-    @param connection: the OpenSSL connection to verify.
-    @type connection: L{OpenSSL.SSL.Connection}
-
-    @param hostname: The hostname expected by the user.
-    @type hostname: L{unicode}
-
-    @raise twisted.internet.ssl.VerificationError: Always raised
-    """
-    raise SimpleVerificationError("Cannot verify certificate IP addresses")
-
-
 def _usablePyOpenSSL(version):
     """
     Check pyOpenSSL version string whether we can use it for host verification.
@@ -144,46 +114,6 @@ def _usablePyOpenSSL(version):
     """
     major, minor = (int(part) for part in version.split(".")[:2])
     return (major, minor) >= (0, 12)
-
-
-def _selectVerifyImplementation():
-    """
-    Determine if C{service_identity} is installed. If so, use it. If not, use
-    simplistic and incorrect checking as implemented in
-    L{simpleVerifyHostname}.
-
-    @return: 2-tuple of (C{verify_hostname}, C{VerificationError})
-    @rtype: L{tuple}
-    """
-
-    whatsWrong = (
-        "Without the service_identity module, Twisted can perform only "
-        "rudimentary TLS client hostname verification.  Many valid "
-        "certificate/hostname mappings may be rejected."
-    )
-
-    try:
-        from service_identity import VerificationError
-        from service_identity.pyopenssl import verify_hostname, verify_ip_address
-
-        return verify_hostname, verify_ip_address, VerificationError
-    except ImportError as e:
-        warnings.warn_explicit(
-            "You do not have a working installation of the "
-            "service_identity module: '" + str(e) + "'.  "
-            "Please install it from "
-            "<https://pypi.python.org/pypi/service_identity> and make "
-            "sure all of its dependencies are satisfied.  " + whatsWrong,
-            # Unfortunately the lineno is required.
-            category=UserWarning,
-            filename="",
-            lineno=0,
-        )
-
-    return simpleVerifyHostname, simpleVerifyIPAddress, SimpleVerificationError
-
-
-verifyHostname, verifyIPAddress, VerificationError = _selectVerifyImplementation()
 
 
 class ProtocolNegotiationSupport(Flags):
@@ -334,13 +264,13 @@ class DistinguishedName(Dict[str, bytes]):
             value = value.encode("ascii")
         self[realAttr] = value
 
-    def inspect(self):
+    def inspect(self) -> str:
         """
         Return a multi-line, human-readable representation of this DN.
 
         @rtype: L{str}
         """
-        l = []
+        lines = []
         lablen = 0
 
         def uniqueValues(mapping):
@@ -351,11 +281,9 @@ class DistinguishedName(Dict[str, bytes]):
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
-                l.append((label, nativeString(v)))
+                lines.append((label, nativeString(v)))
         lablen += 2
-        for n, (label, attrib) in enumerate(l):
-            l[n] = label.rjust(lablen) + ": " + attrib
-        return "\n".join(l)
+        return "\n".join(label.rjust(lablen) + ": " + attrib for label, attrib in lines)
 
 
 DN = DistinguishedName
@@ -426,6 +354,9 @@ def _handleattrhelper(Class, transport, methodName):
     return Class(cert)
 
 
+_Self = TypeVar("_Self", bound="Certificate")
+
+
 class Certificate(CertBase):
     """
     An x509 certificate.
@@ -444,7 +375,12 @@ class Certificate(CertBase):
         return NotImplemented
 
     @classmethod
-    def load(Class, requestData, format=crypto.FILETYPE_ASN1, args=()):
+    def load(
+        Class: type[_Self],
+        requestData: bytes,
+        format: int = crypto.FILETYPE_ASN1,
+        args: tuple[Any, ...] = (),
+    ) -> _Self:
         """
         Load a certificate from an ASN.1- or PEM-format string.
 
@@ -465,7 +401,7 @@ class Certificate(CertBase):
         return self.dump(crypto.FILETYPE_PEM)
 
     @classmethod
-    def loadPEM(Class, data):
+    def loadPEM(Class, data: bytes) -> Certificate:
         """
         Load a certificate from a PEM-format data string.
 
@@ -1071,7 +1007,10 @@ def _tolerateErrors(wrapped):
     return infoCallback
 
 
-@implementer(IOpenSSLClientConnectionCreator)
+@implementer(
+    IOpenSSLClientConnectionCreatorFactory,
+    IOpenSSLClientConnectionCreator,
+)
 class ClientTLSOptions:
     """
     Client creator for TLS.
@@ -1080,16 +1019,13 @@ class ClientTLSOptions:
     L{optionsForClientTLS} API.
 
     @ivar _ctx: The context to use for new connections.
-    @type _ctx: L{OpenSSL.SSL.Context}
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
-    @type _hostname: L{unicode}
 
     @ivar _hostnameBytes: The hostname to verify, decoded into IDNA-encoded
         bytes.  This is passed to APIs which think that hostnames are bytes,
         such as OpenSSL's SNI implementation.
-    @type _hostnameBytes: L{bytes}
 
     @ivar _hostnameASCII: The hostname, as transcoded into IDNA ASCII-range
         unicode code points.  This is pre-transcoded because the
@@ -1097,25 +1033,35 @@ class ClientTLSOptions:
         C{idna} package from PyPI for internationalized domain names, rather
         than working with Python's built-in (but sometimes broken) IDNA
         encoding.  ASCII values, however, will always work.
-    @type _hostnameASCII: L{unicode}
 
     @ivar _hostnameIsDnsName: Whether or not the C{_hostname} is a DNSName.
         Will be L{False} if C{_hostname} is an IP address or L{True} if
         C{_hostname} is a DNSName
-    @type _hostnameIsDnsName: L{bool}
     """
 
-    def __init__(self, hostname, ctx):
+    _ctx: Optional[SSL.Context]
+    _hostname: str
+    _hostnameASCII: str
+    _hostnameIsDnsName: bool
+    _hostnameBytes: bytes
+
+    def __init__(
+        self,
+        hostname: str,
+        context: Optional[SSL.Context],
+        createContext: Callable[[], SSL.Context],
+        configureContext: Callable[[SSL.Context], None],
+        configureConnection: Callable[[SSL.Connection], None],
+    ) -> None:
         """
         Initialize L{ClientTLSOptions}.
 
         @param hostname: The hostname to verify as input by a human.
         @type hostname: L{unicode}
 
-        @param ctx: an L{OpenSSL.SSL.Context} to use for new connections.
-        @type ctx: L{OpenSSL.SSL.Context}.
+        @param createContext: A function that will create an SSL context.
         """
-        self._ctx = ctx
+        self._createContext = createContext
         self._hostname = hostname
 
         if isIPAddress(hostname) or isIPv6Address(hostname):
@@ -1126,17 +1072,30 @@ class ClientTLSOptions:
             self._hostnameIsDnsName = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
-        ctx.set_info_callback(_tolerateErrors(self._identityVerifyingInfoCallback))
+        self._ctx = context
+        self._createContext = createContext
+        self._configureContext = configureContext
+        self._configureConnection = configureConnection
 
-    def clientConnectionForTLS(self, tlsProtocol):
+    def createClientCreator(
+        self,
+        connectionSetupHook: Callable[[SSL.Connection], None],
+        contextSetupHook: Callable[[SSL.Context], None],
+    ) -> IOpenSSLClientConnectionCreator:
+        """
+        Create a client creator.
+        """
+        return ClientTLSOptions(
+            self._hostname,
+            None,
+            self._createContext,
+            contextSetupHook,
+            connectionSetupHook,
+        )
+
+    def clientConnectionForTLS(self, tlsProtocol: TLSMemoryBIOProtocol) -> Connection:
         """
         Create a TLS connection for a client.
-
-        @note: This will call C{set_app_data} on its connection.  If you're
-            delegating to this implementation of this method, don't ever call
-            C{set_app_data} or C{set_info_callback} on the returned connection,
-            or you'll break the implementation of various features of this
-            class.
 
         @param tlsProtocol: the TLS protocol initiating the connection.
         @type tlsProtocol: L{twisted.protocols.tls.TLSMemoryBIOProtocol}
@@ -1144,51 +1103,65 @@ class ClientTLSOptions:
         @return: the configured client connection.
         @rtype: L{OpenSSL.SSL.Connection}
         """
+        if self._ctx is None:
+            self._ctx = self._createContext()
+            self._configureContext(self._ctx)
         context = self._ctx
         connection = SSL.Connection(context, None)
-        connection.set_app_data(tlsProtocol)
-        return connection
-
-    def _identityVerifyingInfoCallback(self, connection, where, ret):
-        """
-        U{info_callback
-        <http://pythonhosted.org/pyOpenSSL/api/ssl.html#OpenSSL.SSL.Context.set_info_callback>
-        } for pyOpenSSL that verifies the hostname in the presented certificate
-        matches the one passed to this L{ClientTLSOptions}.
-
-        @param connection: the connection which is handshaking.
-        @type connection: L{OpenSSL.SSL.Connection}
-
-        @param where: flags indicating progress through a TLS handshake.
-        @type where: L{int}
-
-        @param ret: ignored
-        @type ret: ignored
-        """
         # Literal IPv4 and IPv6 addresses are not permitted
         # as host names according to the RFCs
-        if where & SSL.SSL_CB_HANDSHAKE_START and self._hostnameIsDnsName:
+        if self._hostnameIsDnsName:
             connection.set_tlsext_host_name(self._hostnameBytes)
-        elif where & SSL.SSL_CB_HANDSHAKE_DONE:
+        callback = _verifyCB(tlsProtocol, self._hostnameIsDnsName, self._hostnameASCII)
+        connection.set_verify(VERIFY_PEER | VERIFY_FAIL_IF_NO_PEER_CERT, callback)
+        self._configureConnection(connection)
+        return connection
+
+
+def _verifyCB(
+    tlsProtocol: TLSMemoryBIOProtocol, hostIsDNS: bool, hostnameASCII: str
+) -> Callable[[Connection, X509, int, int, bool], bool]:
+    svcid: ServiceID
+    if hostIsDNS:
+        svcid = DNS_ID(hostnameASCII)
+    else:
+        svcid = IPAddress_ID(hostnameASCII)
+
+    weakProtoRef: TLSMemoryBIOProtocol | None = tlsProtocol
+
+    def verifyCallback(
+        conn: Connection, cert: X509, err: int, depth: int, ok: bool
+    ) -> bool:
+        ourVerifyResult = ok
+        nonlocal weakProtoRef
+        try:
+            if depth != 0:
+                # We are only verifying the leaf certificate.
+                return ourVerifyResult
             try:
-                if self._hostnameIsDnsName:
-                    verifyHostname(connection, self._hostnameASCII)
-                else:
-                    verifyIPAddress(connection, self._hostnameASCII)
+                verify_service_identity(extract_patterns(cert), [svcid], [])
             except VerificationError:
+                ourVerifyResult = False
                 f = Failure()
-                transport = connection.get_app_data()
-                transport.failVerification(f)
+                assert weakProtoRef is not None
+                weakProtoRef.failVerification(f)
+        except BaseException:
+            _log.failure("while verifying certificate")
+        # Ensure that no reference remains to the protocol.
+        weakProtoRef = None
+        return ourVerifyResult
+
+    return verifyCallback
 
 
 def optionsForClientTLS(
-    hostname,
-    trustRoot=None,
-    clientCertificate=None,
-    acceptableProtocols=None,
+    hostname: str,
+    trustRoot: Optional[Union[IOpenSSLTrustRoot, Certificate]] = None,
+    clientCertificate: Optional[PrivateCertificate] = None,
+    acceptableProtocols: Optional[List[bytes]] = None,
     *,
-    extraCertificateOptions=None,
-):
+    extraCertificateOptions: Optional[dict[str, Any]] = None,
+) -> ClientTLSOptions:
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1256,7 +1229,13 @@ def optionsForClientTLS(
         acceptableProtocols=acceptableProtocols,
         **extraCertificateOptions,
     )
-    return ClientTLSOptions(hostname, certificateOptions.getContext())
+    return ClientTLSOptions(
+        hostname,
+        None,
+        certificateOptions.getContext,
+        lambda _: None,
+        lambda _: None,
+    )
 
 
 @implementer(IOpenSSLContextFactory)
@@ -1625,7 +1604,7 @@ class OpenSSLCertificateOptions:
     def __setstate__(self, state):
         self.__dict__ = state
 
-    def getContext(self):
+    def getContext(self) -> SSL.Context:
         """
         Return an L{OpenSSL.SSL.Context} object.
         """
@@ -1633,7 +1612,7 @@ class OpenSSLCertificateOptions:
             self._context = self._makeContext()
         return self._context
 
-    def _makeContext(self):
+    def _makeContext(self) -> SSL.Context:
         ctx = self._contextFactory(self.method)
         ctx.set_options(self._options)
         ctx.set_mode(self._mode)
@@ -1960,35 +1939,39 @@ class OpenSSLDiffieHellmanParameters:
         return cls(filePath)
 
 
-def _setAcceptableProtocols(context, acceptableProtocols):
+def _setAcceptableProtocols(
+    context: SSL.Context, acceptableProtocols: list[bytes]
+) -> None:
     """
     Called to set up the L{OpenSSL.SSL.Context} for doing NPN and/or ALPN
     negotiation.
 
-    @param context: The context which is set up.
-    @type context: L{OpenSSL.SSL.Context}
+    @param context: The context which is being set up.
 
     @param acceptableProtocols: The protocols this peer is willing to speak
         after the TLS negotiation has completed, advertised over both ALPN and
-        NPN. If this argument is specified, and no overlap can be found with
-        the other peer, the connection will fail to be established. If the
+        NPN.  If this argument is specified, and no overlap can be found with
+        the other peer, the connection will fail to be established.  If the
         remote peer does not offer NPN or ALPN, the connection will be
-        established, but no protocol wil be negotiated. Protocols earlier in
+        established, but no protocol wil be negotiated.  Protocols earlier in
         the list are preferred over those later in the list.
-    @type acceptableProtocols: L{list} of L{bytes}
     """
 
-    def protoSelectCallback(conn, protocols):
-        """
-        NPN client-side and ALPN server-side callback used to select
-        the next protocol. Prefers protocols found earlier in
-        C{_acceptableProtocols}.
+    # If we don't actually have protocols to negotiate, don't set anything up.
+    # Depending on OpenSSL version, failing some of the selection callbacks can
+    # cause the handshake to fail, which is presumably not what was intended
+    # here.
+    if not acceptableProtocols:
+        return
 
-        @param conn: The context which is set up.
-        @type conn: L{OpenSSL.SSL.Connection}
+    def protoSelectCallback(conn: Connection, protocols: list[bytes]) -> bytes:
+        """
+        NPN client-side and ALPN server-side callback used to select the next
+        protocol.  Prefers protocols found earlier in C{_acceptableProtocols}.
+
+        @param conn: The L{Connection} that is being established.
 
         @param conn: Protocols advertised by the other side.
-        @type conn: L{list} of L{bytes}
         """
         overlap = set(protocols) & set(acceptableProtocols)
 
@@ -1998,18 +1981,11 @@ def _setAcceptableProtocols(context, acceptableProtocols):
         else:
             return b""
 
-    # If we don't actually have protocols to negotiate, don't set anything up.
-    # Depending on OpenSSL version, failing some of the selection callbacks can
-    # cause the handshake to fail, which is presumably not what was intended
-    # here.
-    if not acceptableProtocols:
-        return
-
     supported = protocolNegotiationMechanisms()
 
     if supported & ProtocolNegotiationSupport.NPN:
 
-        def npnAdvertiseCallback(conn):
+        def npnAdvertiseCallback(conn: Connection) -> list[bytes]:
             return acceptableProtocols
 
         context.set_npn_advertise_callback(npnAdvertiseCallback)

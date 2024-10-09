@@ -12,12 +12,13 @@ parsed by the L{clientFromString} and L{serverFromString} functions.
 @since: 10.1
 """
 
+from __future__ import annotations
 
 import os
 import re
 import socket
 import warnings
-from typing import Optional, Sequence, Type
+from typing import Any, Optional, Sequence, Type
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer, provider
@@ -37,10 +38,12 @@ from twisted.internet.interfaces import (
     IAddress,
     IHostnameResolver,
     IHostResolution,
+    IReactorCore,
     IReactorPluggableNameResolver,
     IReactorSocket,
     IResolutionReceiver,
     IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
@@ -67,7 +70,9 @@ from ._idna import _idnaBytes, _idnaText
 
 try:
     from OpenSSL.SSL import Error as SSLError
-
+except ImportError:
+    TLSMemoryBIOFactory = None
+else:
     from twisted.internet.ssl import (
         Certificate,
         CertificateOptions,
@@ -76,10 +81,13 @@ try:
         optionsForClientTLS,
         trustRootFromCertificates,
     )
+    from twisted.protocols._sni import (
+        ServerNameIndictionConfiguration,
+        TLSServerEndpoint,
+        autoReloadingDirectoryOfPEMs,
+    )
     from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
-except ImportError:
-    TLSMemoryBIOFactory = None
-else:
+
     TLSMemoryBIOFactory = _TLSMemoryBIOFactory
 
 __all__ = [
@@ -2297,9 +2305,11 @@ def _parseClientTLS(
             trustRoot=_parseTrustRootPath(trustRoots),
             clientCertificate=_privateCertFromPaths(certificate, privateKey),
         ),
-        clientFromString(reactor, endpoint)
-        if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
+        (
+            clientFromString(reactor, endpoint)
+            if endpoint is not None
+            else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress)
+        ),
     )
 
 
@@ -2336,3 +2346,38 @@ class _TLSClientEndpointParser:
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
+
+
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _TLSServerEndpointParser:
+    """
+    TLS server endpoint parser.
+    """
+
+    prefix: str = "tls"
+
+    def _actualParseStreamServer(
+        self,
+        reactor: IReactorCore,
+        path: str,
+        port: str = "443",
+        backlog: str = "50",
+        interface: str = "::",
+    ) -> IStreamServerEndpoint:
+        """
+        Actual parsing method, with detailed signature breaking out all
+        parameters.
+        """
+        p = FilePath(path)
+        return TLSServerEndpoint(
+            TCP6ServerEndpoint(reactor, int(port), int(backlog), interface),
+            ServerNameIndictionConfiguration(autoReloadingDirectoryOfPEMs(p)),
+        )
+
+    def parseStreamServer(
+        self, reactor: IReactorCore, *args: Any, **kwargs: Any
+    ) -> IStreamServerEndpoint:
+        """
+        Parse a TLS stream server.
+        """
+        return self._actualParseStreamServer(reactor, *args, **kwargs)
