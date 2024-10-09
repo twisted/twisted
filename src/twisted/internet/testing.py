@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from socket import AF_INET, AF_INET6
+from time import time
 from typing import (
     Any,
     Callable,
@@ -29,7 +30,7 @@ from typing_extensions import ParamSpec, Self
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.defer import Deferred, ensureDeferred
+from twisted.internet.defer import Deferred, ensureDeferred, succeed
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
     IConnector,
@@ -1003,6 +1004,26 @@ def benchmarkWithReactor(
         return ensureDeferred(test_target())
 
     def benchmark_test(benchmark: Any) -> None:
+        # Spinning up and spinning down the reactor adds quite a lot of
+        # overhead to the benchmarked function. So, make sure that the overhead
+        # isn't making the benchmark meaningless before we bother with any real
+        # benchmarking.
+        start = time()
+        _runReactor(lambda: succeed(None))
+        justReactorElapsed = time() - start
+
+        start = time()
+        _runReactor(deferredWrapper)
+        benchmarkElapsed = time() - start
+
+        if benchmarkElapsed / justReactorElapsed < 5:
+            raise RuntimeError(
+                "The function you are benchmarking is fast enough that its "
+                "run time is being swamped by the startup/shutdown of the "
+                "reactor. Consider adding a for loop to the benchmark "
+                "function so it does the work a number of times."
+            )
+
         benchmark(_runReactor, deferredWrapper)
 
     return benchmark_test
@@ -1017,7 +1038,7 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
     # installed.
     from twisted.internet import reactor
 
-    errors : list[failure.Failure] = []
+    errors: list[failure.Failure] = []
 
     deferred = callback()
     deferred.addErrback(errors.append)
