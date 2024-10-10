@@ -131,11 +131,11 @@ class LockWorker:
         @param work: the work to do with the lock held.
         """
         lock = self._lock
-        assert lock is not None, "LockWorker used after quit()"
         local = self._local
         self._quit.check()
         working = getattr(local, "working", None)
         if working is None:
+            assert lock is not None, "LockWorker used after quit()"
             working = local.working = []
             working.append(work)
             lock.acquire()
