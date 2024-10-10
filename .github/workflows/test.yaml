@@ -136,8 +136,8 @@ jobs:
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
 
-          # Pre-release Python 3.13 with default settings.
-          - python-version: '3.13-dev'
+          # Just Python 3.13 with default settings.
+          - python-version: '3.13'
 
           # Newest macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
@@ -146,16 +146,10 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Newest macOS and newest Python supported versions.
-          - python-version: '3.12'
+          - python-version: '3.13'
             runs-on: 'macos-12'
             job-name: 'macos-12-default-tests'
             tox-env: 'macos-withcov-alldeps'
-
-          # Pre-release Python 3.13 on macOS with default settings.
-          - python-version: '3.13-dev'
-            runs-on: 'macos-12'
-            tox-env: 'macos-withcov-alldeps'
-            job-name: 'macos-alldeps-3.13'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.8'
@@ -168,37 +162,20 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.12'
+          - python-version: '3.13'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
             trial-args: '--reactor=iocp'
 
-          # Prerelease Python 3.13 on Windows with select reactor.
-          # pywin32 doesn't have wheels for Python 3.13 yet.
-          # See https://github.com/mhammond/pywin32/issues/2294
-          # # Prerelease Python 3.13 on Windows with select reactor.
-          # - python-version: '3.13'
-          #   runs-on: 'windows-2022'
-          #   tox-env: 'alldeps-withcov-windows'
-          #   job-name: 'win-3.13-tests-select'
-          #   # Distributed trial is not yet suported on Windows so we overwrite
-          #   # the default trial-args to remove concurrent runs and to
-          #   # select a reactor.
-          #   trial-args: '--reactor=select'
-
-          # Prerelease Python 3.13 on Windows with iocp reactor.
-          # pywin32 doesn't have wheels for Python 3.13 yet.
-          # See https://github.com/mhammond/pywin32/issues/2294
-          # - python-version: '3.13'
-          #   runs-on: 'windows-2022'
-          #   tox-env: 'alldeps-withcov-windows'
-          #   job-name: 'win-3.13-tests-iocp'
-          #   # Distributed trial is not yet suported on Windows so we overwrite
-          #   # the default trial-args to remove concurrent runs and to
-          #   # select a reactor.
-          #   trial-args: '--reactor=iocp'
+          # Windows, newest Python supported version with iocp reactor.
+          - python-version: '3.13'
+            runs-on: 'windows-2022'
+            tox-env: 'alldeps-withcov-windows'
+            job-name: 'win-default-tests-select-latest'
+            # Distributed trial is not yet suported on Windows.
+            trial-args: '--reactor=iocp'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
