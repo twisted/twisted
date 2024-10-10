@@ -432,7 +432,7 @@ class _Assertions(pyunit.TestCase):
     # unittest.TestCase.assertRaises() is defined with 4 arguments
     # but we define it with 5 arguments.  So we need to tell mypy
     # to ignore the following assignment to failUnlessRaises
-    failUnlessRaises = assertRaises
+    failUnlessRaises = assertRaises  # type: ignore[assignment]
 
     def assertEqual(self, first, second, msg=None):
         """
@@ -545,8 +545,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertNotAlmostEquals = assertNotAlmostEqual
-    failIfAlmostEqual = assertNotAlmostEqual
+    assertNotAlmostEquals = assertNotAlmostEqual  # type:ignore[assignment]
+    failIfAlmostEqual = assertNotAlmostEqual  # type:ignore[assignment]
     failIfAlmostEquals = assertNotAlmostEqual
 
     def assertAlmostEqual(self, first, second, places=7, msg=None, delta=None):
@@ -567,8 +567,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertAlmostEquals = assertAlmostEqual
-    failUnlessAlmostEqual = assertAlmostEqual
+    assertAlmostEquals = assertAlmostEqual  # type:ignore[assignment]
+    failUnlessAlmostEqual = assertAlmostEqual  # type:ignore[assignment]
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         """
