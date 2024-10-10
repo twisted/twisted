@@ -5,16 +5,41 @@
 """
 Implementation of an L{IWorker} based on native threads and queues.
 """
+from __future__ import annotations
 
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Callable, Iterator, Literal, Protocol, TypeVar
 
-from typing import Callable
+if TYPE_CHECKING:
+    import threading
 
 from zope.interface import implementer
 
 from ._convenience import Quit
 from ._ithreads import IExclusiveWorker
 
-_stop = object()
+
+class Stop(Enum):
+    Thread = auto()
+
+
+StopThread = Stop.Thread
+
+T = TypeVar("T")
+U = TypeVar("U")
+
+
+class SimpleQueue(Protocol[T]):
+    def put(self, item: T) -> None:
+        ...
+
+    def get(self) -> T:
+        ...
+
+
+# when the sentinel value is a literal in a union, this is how iter works
+smartiter: Callable[[Callable[[], T | U], U], Iterator[T]]
+smartiter = iter  # type:ignore[assignment]
 
 
 @implementer(IExclusiveWorker)
@@ -27,25 +52,26 @@ class ThreadWorker:
     thread.
     """
 
-    def __init__(self, startThread, queue):
+    def __init__(
+        self,
+        startThread: Callable[[Callable[[], object]], object],
+        queue: SimpleQueue[Callable[[], object] | Literal[Stop.Thread]],
+    ):
         """
         Create a L{ThreadWorker} with a function to start a thread and a queue
         to use to communicate with that thread.
 
         @param startThread: a callable that takes a callable to run in another
             thread.
-        @type startThread: callable taking a 0-argument callable and returning
-            nothing.
 
         @param queue: A L{Queue} to use to give tasks to the thread created by
             C{startThread}.
-        @type queue: L{Queue}
         """
         self._q = queue
         self._hasQuit = Quit()
 
-        def work():
-            for task in iter(queue.get, _stop):
+        def work() -> None:
+            for task in smartiter(queue.get, StopThread):
                 task()
 
         startThread(work)
@@ -59,14 +85,22 @@ class ThreadWorker:
         self._hasQuit.check()
         self._q.put(task)
 
-    def quit(self):
+    def quit(self) -> None:
         """
         Reject all future work and stop the thread started by C{__init__}.
         """
         # Reject all future work.  Set this _before_ enqueueing _stop, so
         # that no work is ever enqueued _after_ _stop.
         self._hasQuit.set()
-        self._q.put(_stop)
+        self._q.put(StopThread)
+
+
+class SimpleLock(Protocol):
+    def acquire(self) -> bool:
+        ...
+
+    def release(self) -> None:
+        ...
 
 
 @implementer(IExclusiveWorker)
@@ -75,7 +109,7 @@ class LockWorker:
     An L{IWorker} implemented based on a mutual-exclusion lock.
     """
 
-    def __init__(self, lock, local):
+    def __init__(self, lock: SimpleLock, local: threading.local):
         """
         @param lock: A mutual-exclusion lock, with C{acquire} and C{release}
             methods.
@@ -85,7 +119,7 @@ class LockWorker:
         @type local: L{threading.local}
         """
         self._quit = Quit()
-        self._lock = lock
+        self._lock: SimpleLock | None = lock
         self._local = local
 
     def do(self, work: Callable[[], None]) -> None:
@@ -97,6 +131,7 @@ class LockWorker:
         @param work: the work to do with the lock held.
         """
         lock = self._lock
+        assert lock is not None, "LockWorker used after quit()"
         local = self._local
         self._quit.check()
         working = getattr(local, "working", None)
@@ -113,7 +148,7 @@ class LockWorker:
         else:
             working.append(work)
 
-    def quit(self):
+    def quit(self) -> None:
         """
         Quit this L{LockWorker}.
         """
