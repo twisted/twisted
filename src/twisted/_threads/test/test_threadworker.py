@@ -5,6 +5,7 @@
 Tests for L{twisted._threads._threadworker}.
 """
 
+from __future__ import annotations
 
 import gc
 import weakref
