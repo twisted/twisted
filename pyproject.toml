@@ -128,8 +128,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy~=1.8",
-    "mypy-zope~=1.0.3",
+    "mypy<1.11",
+    "mypy-zope",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
