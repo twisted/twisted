@@ -829,7 +829,6 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
-    @onlyOnPOSIX
     def test_shebang(self):
         """
         Spawning a process with an executable which is a script starting
