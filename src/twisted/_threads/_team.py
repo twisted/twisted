@@ -158,7 +158,7 @@ class Team:
         if self._shouldQuitCoordinator and self._busyCount == 0:
             self._coordinator.quit()
 
-    def do(self, task: Callable[[], None]) -> None:
+    def do(self, task: Callable[[], object]) -> None:
         """
         Perform some work in a worker created by C{createWorker}.
 
