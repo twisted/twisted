@@ -22,6 +22,7 @@ Stanzas.
 @type Reset: Basic object.
 """
 
+from __future__ import annotations
 
 from binascii import hexlify
 from hashlib import sha1
@@ -32,9 +33,13 @@ from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
 from twisted.internet.error import ConnectionLost
+from twisted.internet.interfaces import IReactorTime
+from twisted.internet.reactors import getGlobal
 from twisted.python import failure, log, randbytes
 from twisted.words.protocols.jabber import error, ijabber, jid
+from twisted.words.protocols.jabber.ijabber import IInitiatingInitializer
 from twisted.words.xish import domish, xmlstream
+from twisted.words.xish.domish import IElement
 from twisted.words.xish.xmlstream import (
     STREAM_CONNECTED_EVENT,
     STREAM_END_EVENT,
@@ -507,21 +512,17 @@ class XmlStream(xmlstream.XmlStream):
 
     _headerSent = False  # True if the stream header has been sent
 
-    def __init__(self, authenticator):
+    def __init__(self, authenticator: Authenticator) -> None:
         xmlstream.XmlStream.__init__(self)
 
         self.prefixes = {NS_STREAMS: "stream"}
         self.authenticator = authenticator
-        self.initializers = []
-        self.features = {}
+        self.initializers: list[IInitiatingInitializer] = []
+        self.features: dict[tuple[str, str], IElement] = {}
+        self._callLater = getGlobal(IReactorTime).callLater
 
         # Reset the authenticator
         authenticator.associateWithStream(self)
-
-    def _callLater(self, *args, **kwargs):
-        from twisted.internet import reactor
-
-        return reactor.callLater(*args, **kwargs)
 
     def reset(self):
         """
@@ -795,7 +796,7 @@ class IQ(domish.Element):
         self["type"] = stanzaType
         self._xmlstream = xmlstream
 
-    def send(self, to=None):
+    def send(self, to: object = None) -> defer.Deferred[IElement]:
         """
         Send out this iq.
 
@@ -813,7 +814,7 @@ class IQ(domish.Element):
         if not ijabber.IIQResponseTracker.providedBy(self._xmlstream):
             upgradeWithIQResponseTracker(self._xmlstream)
 
-        d = defer.Deferred()
+        d: defer.Deferred[IElement] = defer.Deferred()
         self._xmlstream.iqDeferreds[self["id"]] = d
 
         timeout = self.timeout or self._xmlstream.iqDefaultTimeout
