@@ -836,10 +836,10 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         evaluate the script.
         """
         shebangOutput = b"this is the shebang output"
-
+        executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(pyExe.decode("ascii")),
+                "#!{}".format(executable),
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
