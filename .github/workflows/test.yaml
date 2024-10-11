@@ -169,13 +169,13 @@ jobs:
             # Distributed trial is not yet suported on Windows.
             trial-args: '--reactor=iocp'
 
-          # Windows, newest Python supported version with iocp reactor.
+          # Windows, newest Python supported version with select reactor.
           - python-version: '3.13'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select-latest'
             # Distributed trial is not yet suported on Windows.
-            trial-args: '--reactor=iocp'
+            trial-args: '--reactor=select'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
