@@ -861,7 +861,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
             return passthrough
 
         def start():
-            d = utils.getProcessOutputAndValue(scriptFile, reactor=reactor)
+            d = utils.getProcessOutputAndValue(
+                scriptFile, reactor=reactor, env={"PYTHONPATH": "", "PYTHONHOME": ""}
+            )
             d.addBoth(shutdown)
             d.addCallback(cbProcessExited)
             d.addErrback(err)
