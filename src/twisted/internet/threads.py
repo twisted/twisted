@@ -128,7 +128,7 @@ def blockingCallFromThread(
         L{Deferred} which fires with a L{Failure}, C{blockingCallFromThread}
         will raise that failure's exception (see L{Failure.raiseException}).
     """
-    queue = Queue.Queue[_R | Failure]()
+    queue: Queue.Queue[_R | Failure] = Queue.Queue()
 
     def _callFromThread() -> None:
         result = maybeDeferred(f, *a, **kw)
