@@ -983,7 +983,7 @@ class EventLoggingObserver(Sequence[LogEvent]):
 _T = TypeVar("_T")
 
 
-def benchmarkWithReactor(
+def _benchmarkWithReactor(
     test_target: Callable[
         [],
         Union[

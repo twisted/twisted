@@ -15,7 +15,7 @@ from twisted.internet.endpoints import (
     TCP4ServerEndpoint,
     connectProtocol,
 )
-from twisted.internet.testing import benchmarkWithReactor
+from twisted.internet.testing import _benchmarkWithReactor as benchmarkWithReactor
 
 PUBLIC_KEY = (
     b"ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAGEArzJx8OYOnJmzf4tfBEvLi8DVPrJ3/c9k2I/Az6"
