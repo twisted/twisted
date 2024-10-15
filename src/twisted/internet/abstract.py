@@ -242,13 +242,17 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.
         """
-        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
+        remaining = len(self.dataBuffer) - self.offset
+        if remaining < self.SEND_LIMIT:
             # If there is currently less than SEND_LIMIT bytes left to send
             # in the string, extend it with the array data.
-            self.dataBuffer = _concatenate(
-                self.dataBuffer, self.offset, self._tempDataBuffer
-            )
-            self.offset = 0
+            if remaining:
+                self.dataBuffer = _concatenate(
+                    self.dataBuffer, self.offset, self._tempDataBuffer
+                )
+                self.offset = 0
+            else:
+                self.dataBuffer = b"".join(self._tempDataBuffer)
             self._tempDataBuffer = []
             self._tempDataLen = 0
 
