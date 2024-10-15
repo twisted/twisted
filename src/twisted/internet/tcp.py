@@ -275,7 +275,7 @@ class Connection(
         """
         # Limit length of buffer to try to send, because some OSes are too
         # stupid to do so themselves (ahem windows)
-        limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
+        limitedData = memoryview(data)[:self.SEND_LIMIT]
 
         try:
             return untilConcludes(self.socket.send, limitedData)
