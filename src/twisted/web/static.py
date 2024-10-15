@@ -5,6 +5,7 @@
 """
 Static resources for L{twisted.web}.
 """
+
 from __future__ import annotations
 
 import errno
@@ -29,10 +30,10 @@ from twisted.python.deprecate import deprecated
 from twisted.python.runtime import platformType
 from twisted.python.url import URL
 from twisted.python.util import InsensitiveDict
-from twisted.web import http, resource, server
+from twisted.web import http, pages, resource, server
 from twisted.web.util import redirectTo
 
-dangerousPathError = resource._UnsafeNoResource("Invalid request URL.")
+dangerousPathError = pages.notFound("Invalid request URL.")
 
 
 def isDangerous(path):
@@ -261,8 +262,8 @@ class File(resource.Resource, filepath.FilePath[str]):
         """
         self.ignoredExts.append(ext)
 
-    childNotFound = resource._UnsafeNoResource("File not found.")
-    forbidden = resource._UnsafeForbiddenResource()
+    childNotFound = pages.notFound("File not found.")
+    forbidden = pages.forbidden()
 
     def directoryListing(self):
         """
@@ -293,7 +294,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         @type request: An that provides L{twisted.web.iweb.IRequest}.
 
         @return: A resource representing the requested file or
-            directory, or L{NoResource} if the path cannot be
+            directory, or L{File.childNotFound} if the path cannot be
             accessed.
         @rtype: An object that provides L{resource.IResource}.
         """

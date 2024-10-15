@@ -3,18 +3,23 @@
 # See LICENSE for details.
 
 """
-I contain PythonScript, which is a very simple python script resource.
+I contain L{PythonScript} and L{ResourceScript} which execute Python
+code to handle requests.
 """
-
 
 import os
 import traceback
 from io import StringIO
 
+from incremental import Version
+
 from twisted import copyright
 from twisted.python.compat import execfile, networkString
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.web import http, resource, server, static, util
+from twisted.web import pages, resource, server, static, util
+from twisted.web.iweb import IRequest
+from twisted.web.resource import Resource
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
@@ -25,6 +30,46 @@ import mygreatresource
 resource = mygreatresource.MyGreatResource()
 </pre>
 """
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "No longer in use.",
+    "twisted.web.script",
+    "rpyNoResource",
+)
+
+
+class _RpyNoResource(Resource):
+    def render(self, request: IRequest) -> bytes:
+        """
+        Indicate
+        """
+        return b"""\
+<!DOCTYPE html>
+<html>
+<head><title>500 - Whoops! Internal Error"</title></head>
+<body>
+<h1>500 - Whoops! Internal Error"</h1>
+<p>You forgot to assign to the variable "resource" in your script. For example:</p>
+<pre>
+# MyCoolWebApp.rpy
+
+import mygreatresource
+
+resource = mygreatresource.MyGreatResource()
+</pre>
+</body>
+</html>
+"""
+
+    def getChild(self, path: bytes, request: IRequest) -> Resource:
+        """
+        Handle all requests for which L{_RpyNoResource} lacks a child
+        by returning this error page.
+        """
+        return self
+
+
+noRsrc = _RpyNoResource()
 
 
 class AlreadyCached(Exception):
@@ -49,14 +94,11 @@ class CacheScanner:
         self.doCache = 1
 
 
-noRsrc = resource._UnsafeErrorPage(500, "Whoops! Internal Error", rpyNoResource)
-
-
 def ResourceScript(path, registry):
     """
     I am a normal py file which must define a 'resource' global, which should
     be an instance of (a subclass of) web.resource.Resource; it will be
-    renderred.
+    rendered.
     """
     cs = CacheScanner(path, registry)
     glob = {
@@ -81,9 +123,7 @@ def ResourceTemplate(path, registry):
 
     glob = {
         "__file__": _coerceToFilesystemEncoding("", path),
-        "resource": resource._UnsafeErrorPage(
-            500, "Whoops! Internal Error", rpyNoResource
-        ),
+        "resource": rpyNoResource,
         "registry": registry,
     }
 
@@ -135,15 +175,15 @@ class ResourceScriptDirectory(resource.Resource):
             return ResourceScriptDirectory(fn, self.registry)
         if os.path.exists(fn):
             return ResourceScript(fn, self.registry)
-        return resource._UnsafeNoResource()
+        return pages.notFound()
 
     def render(self, request):
-        return resource._UnsafeNoResource().render(request)
+        return pages.notFound().render(request)
 
 
 class PythonScript(resource.Resource):
     """
-    I am an extremely simple dynamic resource; an embedded python script.
+    I am an extremely simple dynamic resource; an embedded Python script.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
@@ -177,12 +217,8 @@ class PythonScript(resource.Resource):
         }
         try:
             execfile(self.filename, namespace, namespace)
-        except OSError as e:
-            if e.errno == 2:  # file not found
-                request.setResponseCode(http.NOT_FOUND)
-                request.write(
-                    resource._UnsafeNoResource("File not found.").render(request)
-                )
+        except FileNotFoundError:
+            return pages.notFound("File not found.").render(request)
         except BaseException:
             io = StringIO()
             traceback.print_exc(file=io)

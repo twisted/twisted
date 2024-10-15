@@ -54,7 +54,7 @@ class ResourceScriptDirectoryTests(TestCase):
 
         return d.addCallback(cbRendered)
 
-    def test_render(self) -> defer.Deferred[None]:
+    def test_render(self) -> None:
         """
         L{ResourceScriptDirectory.getChild} returns a resource which renders a
         response with the HTTP 200 status code and the content of the rpy's
@@ -74,12 +74,8 @@ resource = TestResource()"""
         resource = ResourceScriptDirectory(tmp._asBytesPath())
         request = DummyRequest([b""])
         child = resource.getChild(b"test.rpy", request)
-        d = _render(child, request)
-
-        def cbRendered(ignored: object) -> None:
-            self.assertEqual(b"".join(request.written), b"ok")
-
-        return d.addCallback(cbRendered)
+        self.successResultOf(_render(child, request))
+        self.assertEqual(b"".join(request.written), b"ok")
 
 
 class PythonScriptTests(TestCase):
@@ -87,25 +83,34 @@ class PythonScriptTests(TestCase):
     Tests for L{PythonScript}.
     """
 
-    def test_notFoundRender(self) -> defer.Deferred[None]:
+    def test_notFoundRender(self) -> None:
         """
         If the source file a L{PythonScript} is initialized with doesn't exist,
         L{PythonScript.render} sets the HTTP response code to I{NOT FOUND}.
         """
         resource = PythonScript(self.mktemp(), None)
         request = DummyRequest([b""])
-        d = _render(resource, request)
+        self.successResultOf(_render(resource, request))
+        self.assertEqual(request.responseCode, NOT_FOUND)
 
-        def cbRendered(ignored: object) -> None:
-            self.assertEqual(request.responseCode, NOT_FOUND)
-
-        return d.addCallback(cbRendered)
-
-    def test_renderException(self) -> defer.Deferred[None]:
+    def test_render(self) -> None:
         """
-        L{ResourceScriptDirectory.getChild} returns a resource which renders a
-        response with the HTTP 200 status code and the content of the rpy's
-        C{request} global.
+        The source file a L{PythonScript} is initialized with can generate
+        a response by calling C{request.write()}.
+        """
+        tmp = FilePath(self.mktemp())
+        tmp.makedirs()
+        child = tmp.child("test.epy")
+        child.setContent(b'request.write(b"Hello, world!")')
+        resource = PythonScript(child._asBytesPath(), None)
+        request = DummyRequest([b""])
+        self.successResultOf(_render(resource, request))
+        self.assertEqual(b"Hello, world!", b"".join(request.written))
+
+    def test_renderException(self) -> None:
+        """
+        If executing the source file a L{PythonScript} is initialized with
+        raises an exception L{PythonScript.render} displays that exception.
         """
         tmp = FilePath(self.mktemp())
         tmp.makedirs()
@@ -113,9 +118,5 @@ class PythonScriptTests(TestCase):
         child.setContent(b'raise Exception("nooo")')
         resource = PythonScript(child._asBytesPath(), None)
         request = DummyRequest([b""])
-        d = _render(resource, request)
-
-        def cbRendered(ignored: object) -> None:
-            self.assertIn(b"nooo", b"".join(request.written))
-
-        return d.addCallback(cbRendered)
+        self.successResultOf(_render(resource, request))
+        self.assertIn(b"nooo", b"".join(request.written))

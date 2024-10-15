@@ -13,15 +13,14 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-
 from zope.interface import implementer
 
 from twisted.cred import error
 from twisted.cred.credentials import Anonymous
 from twisted.logger import Logger
 from twisted.python.components import proxyForInterface
-from twisted.web import util
-from twisted.web.resource import IResource, _UnsafeErrorPage
+from twisted.web import pages, util
+from twisted.web.resource import IResource
 
 
 @implementer(IResource)
@@ -125,7 +124,7 @@ class HTTPAuthSessionWrapper:
             return UnauthorizedResource(self._credentialFactories)
         except BaseException:
             self._log.failure("Unexpected failure from credentials factory")
-            return _UnsafeErrorPage(500, "Internal Error", "")
+            return pages.errorPage(500, "Internal Error", "")
         else:
             return util.DeferredResource(self._login(credentials))
 
@@ -213,7 +212,7 @@ class HTTPAuthSessionWrapper:
                 "unexpected error",
                 failure=result,
             )
-            return _UnsafeErrorPage(500, "Internal Error", "")
+            return pages.errorPage(500, "Internal Error", "")
 
     def _selectParseHeader(self, header):
         """

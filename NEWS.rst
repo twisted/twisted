@@ -511,7 +511,7 @@ Deprecations and Removals
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - twisted.web.resource.Resource.putChild now raises TypeError when the path argument is not bytes, rather than issuing a deprecation warning. (#8985)
-- The twisted.web.resource.ErrorPage, NoResource, and ForbiddenResource classes have been deprecated in favor of new implementations twisted.web.pages module because they permit HTML injection. (#11716)
+- The twisted.web.resource.ErrorPage, NoResource, and ForbiddenResource classes have been deprecated in favor of new implementations in the twisted.web.pages module because they permit HTML injection. (#11716)
 
 
 Mail
