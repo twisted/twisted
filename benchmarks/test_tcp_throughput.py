@@ -58,9 +58,6 @@ class Client(object):
         if self._sent == self._sendAmount:
             self._client.transport.unregisterProducer()
 
-    def stopProducing(self):
-        self._client.transport.loseConnection()
-
 
 @benchmarkWithReactor
 async def test_tcp_throughput():
