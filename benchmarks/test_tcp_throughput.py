@@ -1,13 +1,12 @@
+from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from twisted.internet.protocol import Factory, Protocol, ServerFactory
-from twisted.protocols.wire import Echo
 from twisted.internet.testing import _benchmarkWithReactor as benchmarkWithReactor
-from twisted.internet import reactor
+from twisted.protocols.wire import Echo
 
 
 class Server(Echo):
-
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
 
@@ -15,7 +14,7 @@ class Server(Echo):
 class Counter(Protocol):
     count = 0
     sendAmount = 0
-    finished : None | Deferred = None
+    finished: None | Deferred = None
 
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -31,7 +30,6 @@ class Counter(Protocol):
 
 
 class Client(object):
-
     def __init__(self, reactor, server):
         self._reactor = reactor
         self._server = server
@@ -39,7 +37,7 @@ class Client(object):
 
     def run(self, sendAmount, chunkSize):
         self._sendAmount = sendAmount
-        self._bytes = b'x' * chunkSize
+        self._bytes = b"x" * chunkSize
         # Set up a connection
         factory = Factory()
         factory.protocol = Counter
@@ -73,7 +71,7 @@ async def test_tcp_throughput():
     server.protocol = Server
     port = reactor.listenTCP(0, server)
     client = Client(
-        reactor, TCP4ClientEndpoint(reactor, '127.0.0.1', port.getHost().port)
+        reactor, TCP4ClientEndpoint(reactor, "127.0.0.1", port.getHost().port)
     )
     result = await client.run(sendAmount, chunkSize)
     await port.stopListening()
