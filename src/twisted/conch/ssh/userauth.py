@@ -11,6 +11,7 @@ Maintainer: Paul Swartz
 
 
 import struct
+from hashlib import sha256
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
@@ -261,9 +262,8 @@ class SSHUserAuthServer(service.SSHService):
         """
         hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
-
         try:
-            keys.Key.fromString(blob)
+            pubKey = keys.Key.fromString(blob)
         except keys.BadKeyError:
             error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
@@ -271,7 +271,7 @@ class SSHUserAuthServer(service.SSHService):
 
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
-            b = (
+            originalSignedData = (
                 NS(self.transport.sessionID)
                 + bytes((MSG_USERAUTH_REQUEST,))
                 + NS(self.user)
@@ -281,13 +281,75 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(algName)
                 + NS(blob)
             )
-            c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
+            if self._isSecurityKey(pubKey):
+                originalSignedData = self._wrapSecurityKeySignedData(
+                    signature, blob, originalSignedData
+                )
+            c = credentials.SSHPrivateKey(
+                self.user, algName, blob, originalSignedData, signature
+            )
             return self.portal.login(c, None, interfaces.IConchUser)
         else:
             c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
             return self.portal.login(c, None, interfaces.IConchUser).addErrback(
                 self._ebCheckKey, packet[1:]
             )
+
+    def _isSecurityKey(self, pubKey):
+        """
+        Return True if pubKey is an OpenSSH security key.
+        """
+        return pubKey.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
+    def _wrapSecurityKeySignedData(self, signature, blob, originalSignedData):
+        """
+        Return the data used to verify the pubkey authentication for
+        a security key.
+        From OpenSSH docs:
+        byte[32]	SHA256(application)
+        byte		flags (including "user present", extensions present)
+        uint32		counter
+        byte[]		extensions
+        byte[32]	SHA256(message)
+        Where `message` is the "normal" signed data, as defined in
+        rfc4252 section 7
+        For now, `extensions` is always empty.
+        We only support the `user present` flag.
+        """
+        # Extract the `application` string from the public key.
+        sshType, rest = getNS(blob)
+        application = None
+
+        if sshType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            parts = getNS(rest, 3)
+            application = parts[2]
+
+        if sshType == b"sk-ssh-ed25519@openssh.com":
+            parts = getNS(rest, 2)
+            application = parts[1]
+
+        # Extract the flags and counter.
+        parts = getNS(signature, 2)
+
+        # TODO
+        # fail if flags indicated an extension.
+        flags = parts[2][0:1]
+        counter = parts[2][1:]
+
+        # Even for ED keys, SHA256 is used.
+        return (
+            sha256(application).digest()
+            + flags
+            + counter
+            +
+            # We don't support any extensions.
+            # so nothing is added.
+            # The original message is added last.
+            sha256(originalSignedData).digest()
+        )
 
     def _ebCheckKey(self, reason, packet):
         """
