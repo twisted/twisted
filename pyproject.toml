@@ -128,8 +128,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy~=1.8",
-    "mypy-zope~=1.0.3",
+    "mypy==1.10.1",
+    "mypy-zope==1.0.6",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -387,8 +387,6 @@ module = [
 allow_untyped_defs = true
 check_untyped_defs = false
 module = [
-    'twisted._threads.test.test_team',
-    'twisted._threads.test.test_threadworker',
     'twisted.application.app',
     'twisted.application.internet',
     'twisted.application.service',
@@ -785,10 +783,6 @@ module = [
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 module = [
-    'twisted._threads._convenience',
-    'twisted._threads._ithreads',
-    'twisted._threads._memory',
-    'twisted._threads._threadworker',
     'twisted.conch.avatar',
     'twisted.conch.checkers',
     'twisted.conch.client.connect',

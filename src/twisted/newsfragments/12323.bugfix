@@ -1,0 +1,2 @@
+twisted.logger.eventAsText can now format the output having types/classes as input.
+This was a regression introduced in Twisted 24.3.0.
