@@ -992,7 +992,7 @@ def _benchmarkWithReactor(
             Deferred[_T],
         ],
     ]
-) -> Callable[[Any], None]:
+) -> Callable[[Any], None]:  # pragma: no cover
     """
     Decorator for running a benchmark tests that loops the reactor.
 
@@ -1029,7 +1029,7 @@ def _benchmarkWithReactor(
     return benchmark_test
 
 
-def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
+def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:  # pragma: no cover
     """
     (re)Start a reactor that might have been previously started.
     """
@@ -1050,7 +1050,7 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
         errors[0].raiseException()
 
 
-def _stopReactor(reactor):
+def _stopReactor(reactor):  # pragma: no cover
     """
     Stop the reactor and allow it to be re-started later.
     """
