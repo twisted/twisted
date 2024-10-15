@@ -836,6 +836,9 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         evaluate the script.
         """
         shebangOutput = b"this is the shebang output"
+        # On Windows on Python 3.13, sys.executable seems to result in some
+        # weird output, so try the original executable, if any, a virtualenv is
+        # based on.
         executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
