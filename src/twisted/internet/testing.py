@@ -1017,7 +1017,7 @@ def _benchmarkWithReactor(
         benchmarkElapsed = time() - start
 
         if benchmarkElapsed / justReactorElapsed < 5:
-            raise RuntimeError(
+            raise RuntimeError(  # pragma: no cover
                 "The function you are benchmarking is fast enough that its "
                 "run time is being swamped by the startup/shutdown of the "
                 "reactor. Consider adding a for loop to the benchmark "
@@ -1045,7 +1045,7 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:
     deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))  # type: ignore[attr-defined]
     reactor.run(installSignalHandlers=False)  # type: ignore[attr-defined]
 
-    if errors:
+    if errors:  # pragma: no cover
         # Make sure the test fails in a visible way:
         errors[0].raiseException()
 
