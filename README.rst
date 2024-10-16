@@ -34,13 +34,13 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installations.rst>`_.
+Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installation.html>`_.
 
 
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
+Twisted's documentation is available from the `Twisted Matrix Read The Docs website <https://docs.twisted.org/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
 Help is also available on the `Twisted mailing list <https://mail.python.org/mailman3/lists/twisted.python.org/>`_.
@@ -75,7 +75,7 @@ Some of these tests may fail if you:
 Static Code Checkers
 --------------------
 
-You can ensure that code complies to Twisted `coding standards <https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html>`_::
+You can ensure that code complies to Twisted `coding standards <https://docs.twisted.org/en/latest/development/coding-standard.html>`_::
 
   $ tox -e lint   # run pre-commit to check coding stanards
   $ tox -e mypy   # run MyPy static type checker to check for type errors
