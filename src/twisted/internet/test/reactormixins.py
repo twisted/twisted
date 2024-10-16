@@ -154,6 +154,7 @@ class ReactorBuilder:
         )
 
         _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet._threadedselect.ThreadedSelectReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")

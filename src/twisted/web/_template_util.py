@@ -24,7 +24,7 @@ from typing import (
     cast,
 )
 from xml.sax import handler, make_parser
-from xml.sax.xmlreader import Locator
+from xml.sax.xmlreader import AttributesNSImpl, Locator
 
 from zope.interface import implementer
 
@@ -92,7 +92,7 @@ def redirectTo(URL: bytes, request: IRequest) -> bytes:
     </body>
 </html>
 """ % {
-        b"url": URL
+        b"url": escape(URL.decode("utf-8")).encode("utf-8")
     }
     return content
 
@@ -116,34 +116,6 @@ class Redirect(resource.Resource):
 
     def getChild(self, name, request):
         return self
-
-
-# FIXME: This is totally broken, see https://twistedmatrix.com/trac/ticket/9838
-class ChildRedirector(Redirect):
-    isLeaf = False
-
-    def __init__(self, url):
-        # XXX is this enough?
-        if (
-            (url.find("://") == -1)
-            and (not url.startswith(".."))
-            and (not url.startswith("/"))
-        ):
-            raise ValueError(
-                (
-                    "It seems you've given me a redirect (%s) that is a child of"
-                    " myself! That's not good, it'll cause an infinite redirect."
-                )
-                % url
-            )
-        Redirect.__init__(self, url)
-
-    def getChild(self, name, request):
-        newUrl = self.url
-        if not newUrl.endswith("/"):
-            newUrl += "/"
-        newUrl += name
-        return ChildRedirector(newUrl)
 
 
 class ParentRedirect(resource.Resource):
@@ -462,7 +434,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self,
         namespaceAndName: Tuple[str, str],
         qname: Optional[str],
-        attrs: Mapping[Tuple[Optional[str], str], str],
+        attrs: AttributesNSImpl,
     ) -> None:
         """
         Gets called when we encounter a new xmlns attribute.
@@ -505,14 +477,14 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
         render = None
 
-        attrs = OrderedDict(attrs)
-        for k, v in list(attrs.items()):
+        ordered = OrderedDict(attrs)
+        for k, v in list(ordered.items()):
             attrNS, justTheName = k
             if attrNS != TEMPLATE_NAMESPACE:
                 continue
             if justTheName == "render":
                 render = v
-                del attrs[k]
+                del ordered[k]
 
         # nonTemplateAttrs is a dictionary mapping attributes that are *not* in
         # TEMPLATE_NAMESPACE to their values.  Those in TEMPLATE_NAMESPACE were
@@ -522,7 +494,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # preserving the xml namespace prefix given in the document.
 
         nonTemplateAttrs = OrderedDict()
-        for (attrNs, attrName), v in attrs.items():
+        for (attrNs, attrName), v in ordered.items():
             nsPrefix = self.prefixMap.get(attrNs)
             if nsPrefix is None:
                 attrKey = attrName

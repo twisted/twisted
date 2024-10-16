@@ -1,0 +1,1 @@
+twisted.internet.defer APIs are 2%-4% faster in many cases.

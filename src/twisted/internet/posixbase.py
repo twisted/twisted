@@ -39,7 +39,6 @@ from ._signals import (
 )
 
 # Exceptions that doSelect might return frequently
-_NO_FILENO = error.ConnectionFdescWentAway("Handler has no fileno method")
 _NO_FILEDESC = error.ConnectionFdescWentAway("File descriptor lost")
 
 
@@ -68,7 +67,7 @@ if unixEnabled:
 
 if platform.isWindows():
     try:
-        import win32process  # type: ignore[import]
+        import win32process
 
         processEnabled = True
     except ImportError:

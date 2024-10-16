@@ -8,6 +8,7 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 from collections.abc import Sequence
 from sys import exc_info
+from typing import List, Union
 from warnings import warn
 
 from zope.interface import implementer
@@ -19,79 +20,49 @@ from twisted.web.http import INTERNAL_SERVER_ERROR
 from twisted.web.resource import IResource
 from twisted.web.server import NOT_DONE_YET
 
-# PEP-3333 -- which has superseded PEP-333 -- states that, in both Python 2
-# and Python 3, text strings MUST be represented using the platform's native
-# string type, limited to characters defined in ISO-8859-1. Byte strings are
-# used only for values read from wsgi.input, passed to write() or yielded by
-# the application.
+
+# PEP-3333 -- which has superseded PEP-333 -- states that text strings MUST
+# be represented using the platform's native string type, limited to
+# characters defined in ISO-8859-1. Byte strings are used only for values
+# read from wsgi.input, passed to write() or yielded by the application.
 #
 # Put another way:
 #
-# - In Python 2, all text strings and binary data are of type str/bytes and
-#   NEVER of type unicode. Whether the strings contain binary data or
-#   ISO-8859-1 text depends on context.
-#
-# - In Python 3, all text strings are of type str, and all binary data are of
+# - All text strings are of type str, and all binary data are of
 #   type bytes. Text MUST always be limited to that which can be encoded as
 #   ISO-8859-1, U+0000 to U+00FF inclusive.
 #
 # The following pair of functions -- _wsgiString() and _wsgiStringToBytes() --
 # are used to make Twisted's WSGI support compliant with the standard.
-if str is bytes:
+def _wsgiString(string: Union[str, bytes]) -> str:
+    """
+    Convert C{string} to a WSGI "bytes-as-unicode" string.
 
-    def _wsgiString(string):  # Python 2.
-        """
-        Convert C{string} to an ISO-8859-1 byte string, if it is not already.
+    If it's a byte string, decode as ISO-8859-1. If it's a Unicode string,
+    round-trip it to bytes and back using ISO-8859-1 as the encoding.
 
-        @type string: C{str}/C{bytes} or C{unicode}
-        @rtype: C{str}/C{bytes}
+    @type string: C{str} or C{bytes}
+    @rtype: C{str}
 
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        if isinstance(string, str):
-            return string
-        else:
-            return string.encode("iso-8859-1")
+    @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
+    """
+    if isinstance(string, str):
+        return string.encode("iso-8859-1").decode("iso-8859-1")
+    else:
+        return string.decode("iso-8859-1")
 
-    def _wsgiStringToBytes(string):  # Python 2.
-        """
-        Return C{string} as is; a WSGI string is a byte string in Python 2.
 
-        @type string: C{str}/C{bytes}
-        @rtype: C{str}/C{bytes}
-        """
-        return string
+def _wsgiStringToBytes(string: str) -> bytes:
+    """
+    Convert C{string} from a WSGI "bytes-as-unicode" string to an
+    ISO-8859-1 byte string.
 
-else:
+    @type string: C{str}
+    @rtype: C{bytes}
 
-    def _wsgiString(string):  # Python 3.
-        """
-        Convert C{string} to a WSGI "bytes-as-unicode" string.
-
-        If it's a byte string, decode as ISO-8859-1. If it's a Unicode string,
-        round-trip it to bytes and back using ISO-8859-1 as the encoding.
-
-        @type string: C{str} or C{bytes}
-        @rtype: C{str}
-
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        if isinstance(string, str):
-            return string.encode("iso-8859-1").decode("iso-8859-1")
-        else:
-            return string.decode("iso-8859-1")
-
-    def _wsgiStringToBytes(string):  # Python 3.
-        """
-        Convert C{string} from a WSGI "bytes-as-unicode" string to an
-        ISO-8859-1 byte string.
-
-        @type string: C{str}
-        @rtype: C{bytes}
-
-        @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
-        """
-        return string.encode("iso-8859-1")
+    @raise UnicodeEncodeError: If C{string} contains non-ISO-8859-1 chars.
+    """
+    return string.encode("iso-8859-1")
 
 
 class _ErrorStream:
@@ -108,7 +79,7 @@ class _ErrorStream:
 
     _log = Logger()
 
-    def write(self, data):
+    def write(self, data: str) -> None:
         """
         Generate an event for the logging system with the given bytes as the
         message.
@@ -117,27 +88,19 @@ class _ErrorStream:
 
         @type data: str
 
-        @raise TypeError: On Python 3, if C{data} is not a native string. On
-            Python 2 a warning will be issued.
+        @raise TypeError: if C{data} is not a native string.
         """
         if not isinstance(data, str):
-            if str is bytes:
-                warn(
-                    "write() argument should be str, not %r (%s)"
-                    % (data, type(data).__name__),
-                    category=UnicodeWarning,
-                )
-            else:
-                raise TypeError(
-                    "write() argument must be str, not %r (%s)"
-                    % (data, type(data).__name__)
-                )
+            raise TypeError(
+                "write() argument must be str, not %r (%s)"
+                % (data, type(data).__name__)
+            )
 
         # Note that in old style, message was a tuple.  logger._legacy
         # will overwrite this value if it is not properly formatted here.
         self._log.error(data, system="wsgi", isError=True, message=(data,))
 
-    def writelines(self, iovec):
+    def writelines(self, iovec: List[str]) -> None:
         """
         Join the given lines and pass them to C{write} to be handled in the
         usual way.
@@ -147,8 +110,7 @@ class _ErrorStream:
         @param iovec: A C{list} of C{'\\n'}-terminated C{str} which will be
             logged.
 
-        @raise TypeError: On Python 3, if C{iovec} contains any non-native
-            strings. On Python 2 a warning will be issued.
+        @raise TypeError: if C{iovec} contains any non-native strings.
         """
         self.write("".join(iovec))
 
@@ -287,9 +249,11 @@ class _WSGIResponse:
 
         # All keys and values need to be native strings, i.e. of type str in
         # *both* Python 2 and Python 3, so says PEP-3333.
+        remotePeer = request.getClientAddress()
         self.environ = {
             "REQUEST_METHOD": _wsgiString(request.method),
-            "REMOTE_ADDR": _wsgiString(request.getClientAddress().host),
+            "REMOTE_ADDR": _wsgiString(remotePeer.host),
+            "REMOTE_PORT": _wsgiString(str(remotePeer.port)),
             "SCRIPT_NAME": _wsgiString(scriptName),
             "PATH_INFO": _wsgiString(pathInfo),
             "QUERY_STRING": _wsgiString(queryString),
@@ -357,8 +321,7 @@ class _WSGIResponse:
             raise excInfo[1].with_traceback(excInfo[2])
 
         # PEP-3333 mandates that status should be a native string. In practice
-        # this is mandated by Twisted's HTTP implementation too, so we enforce
-        # on both Python 2 and Python 3.
+        # this is mandated by Twisted's HTTP implementation too.
         if not isinstance(status, str):
             raise TypeError(
                 "status must be str, not {!r} ({})".format(
@@ -534,6 +497,9 @@ class WSGIResource:
     """
     An L{IResource} implementation which delegates responsibility for all
     resources hierarchically inferior to it to a WSGI application.
+
+    The C{environ} argument passed to the application, includes the
+    C{REMOTE_PORT} key to complement the C{REMOTE_ADDR} key.
 
     @ivar _reactor: An L{IReactorThreads} provider which will be passed on to
         L{_WSGIResponse} to schedule calls in the I/O thread.

@@ -10,6 +10,7 @@ Tests for implementations of L{IReactorProcess}.
 
 
 import io
+import json
 import os
 import signal
 import subprocess
@@ -29,6 +30,7 @@ from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
+from twisted.test.test_process import Accumulator
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 # Get the current Python executable as a bytestring.
@@ -834,10 +836,13 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         evaluate the script.
         """
         shebangOutput = b"this is the shebang output"
-
+        # On Windows on Python 3.13, sys.executable seems to result in some
+        # weird output, so try the original executable, if any, a virtualenv is
+        # based on.
+        executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(pyExe.decode("ascii")),
+                "#!{}".format(executable),
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
@@ -999,6 +1004,136 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         hamcrest.assert_that(
             results,
             hamcrest.equal_to(["process already removed as desired"]),
+        )
+
+    def checkSpawnProcessEnvironment(self, spawnKwargs, expectedEnv, usePosixSpawnp):
+        """
+        Shared code for testing the environment variables
+        present in the spawned process.
+
+        The spawned process serializes its environ to stderr or stdout (depending on usePTY)
+        which is checked against os.environ of the calling process.
+        """
+        p = Accumulator()
+        d = p.endedDeferred = Deferred()
+
+        reactor = self.buildReactor()
+        reactor._neverUseSpawn = not usePosixSpawnp
+
+        reactor.callWhenRunning(
+            reactor.spawnProcess,
+            p,
+            pyExe,
+            [
+                pyExe,
+                b"-c",
+                networkString(
+                    "import os, sys, json; "
+                    "env = dict(os.environ); "
+                    "sys.stderr.write(json.dumps(env))"
+                ),
+            ],
+            usePTY=self.usePTY,
+            **spawnKwargs,
+        )
+
+        def shutdown(ign):
+            reactor.stop()
+
+        d.addBoth(shutdown)
+
+        self.runReactor(reactor)
+
+        # Subprocess might get COLUMNS and LINES added for some reason in 3.13
+        # or later. LC_CTYPE is set by python, see
+        # https://peps.python.org/pep-0538/.
+        expectedExcess = {"COLUMNS", "LINES", "LC_CTYPE", "__CF_USER_TEXT_ENCODING"}
+        for var in expectedExcess:
+            expectedEnv.pop(var, None)
+
+        resultEnv = json.loads(
+            p.outF.getvalue() if self.usePTY else p.errF.getvalue()
+        ).items()
+        self.assertGreaterEqual(resultEnv, expectedEnv.items())
+        resultExcess = {pair[0] for pair in resultEnv - expectedEnv.items()}
+        self.assertGreaterEqual(expectedExcess, resultExcess)
+
+    def checkSpawnProcessEnvironmentWithPosixSpawnp(self, spawnKwargs, expectedEnv):
+        return self.checkSpawnProcessEnvironment(
+            spawnKwargs, expectedEnv, usePosixSpawnp=True
+        )
+
+    def checkSpawnProcessEnvironmentWithFork(self, spawnKwargs, expectedEnv):
+        return self.checkSpawnProcessEnvironment(
+            spawnKwargs, expectedEnv, usePosixSpawnp=False
+        )
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvNotSet(self):
+        """
+        An empty environment is passed to the spawned process, when the default value of the C{env}
+        is used. That is, when the C{env} argument is not explicitly set.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp({}, {})
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvNotSet(self):
+        """
+        An empty environment is passed to the spawned process, when the default value of the C{env}
+        is used. That is, when the C{env} argument is not explicitly set.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork({}, {})
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvNone(self):
+        """
+        The parent process environment is passed to the spawned process, when C{env} is set to
+        C{None}.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp(
+            {"env": None}, os.environ
+        )
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvNone(self):
+        """
+        The parent process environment is passed to the spawned process, when C{env} is set to
+        C{None}.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork({"env": None}, os.environ)
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvCustom(self):
+        """
+        The user-specified environment without extra variables from parent process is passed to the
+        spawned process, when C{env} is set to a dictionary.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp(
+            {"env": {"MYENV1": "myvalue1"}},
+            {"MYENV1": "myvalue1"},
+        )
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvCustom(self):
+        """
+        The user-specified environment without extra variables from parent process is passed to the
+        spawned process, when C{env} is set to a dictionary.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork(
+            {"env": {"MYENV1": "myvalue1"}},
+            {"MYENV1": "myvalue1"},
         )
 
 

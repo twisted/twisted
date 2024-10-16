@@ -7,27 +7,21 @@ import socket
 import subprocess
 import sys
 from itertools import count
-from unittest import skipIf
 
 from zope.interface import implementer
 
 from twisted.conch.error import ConchError
-from twisted.conch.test.keydata import (
-    privateDSA_openssh,
-    privateRSA_openssh,
-    publicDSA_openssh,
-    publicRSA_openssh,
-)
+from twisted.conch.test.keydata import privateRSA_openssh, publicRSA_openssh
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.cred import portal
 from twisted.internet import defer, protocol, reactor
 from twisted.internet.error import ProcessExitedAlready
 from twisted.internet.task import LoopingCall
-from twisted.internet.utils import getProcessValue
 from twisted.python import filepath, log, runtime
 from twisted.python.filepath import FilePath
 from twisted.python.procutils import which
 from twisted.python.reflect import requireModule
+from twisted.test.testutils import HAS_IPV6, skipWithoutIPv6
 from twisted.trial.unittest import SkipTest, TestCase
 
 try:
@@ -58,26 +52,6 @@ except ImportError as e:
     del e
 else:
     StdioInteractingSession = _StdioInteractingSession
-
-
-def _has_ipv6():
-    """Returns True if the system can bind an IPv6 address."""
-    sock = None
-    has_ipv6 = False
-
-    try:
-        sock = socket.socket(socket.AF_INET6)
-        sock.bind(("::1", 0))
-        has_ipv6 = True
-    except OSError:
-        pass
-
-    if sock:
-        sock.close()
-    return has_ipv6
-
-
-HAS_IPV6 = _has_ipv6()
 
 
 class FakeStdio:
@@ -319,20 +293,15 @@ class ConchServerSetupMixin:
         return ConchTestRealm(b"testuser")
 
     def _createFiles(self):
-        for f in ["rsa_test", "rsa_test.pub", "dsa_test", "dsa_test.pub", "kh_test"]:
+        for f in ["rsa_test", "rsa_test.pub", "kh_test"]:
             if os.path.exists(f):
                 os.remove(f)
         with open("rsa_test", "wb") as f:
             f.write(privateRSA_openssh)
         with open("rsa_test.pub", "wb") as f:
             f.write(publicRSA_openssh)
-        with open("dsa_test.pub", "wb") as f:
-            f.write(publicDSA_openssh)
-        with open("dsa_test", "wb") as f:
-            f.write(privateDSA_openssh)
-        os.chmod("dsa_test", 0o600)
         os.chmod("rsa_test", 0o600)
-        permissions = FilePath("dsa_test").getPermissions()
+        permissions = FilePath("rsa_test").getPermissions()
         if permissions.group.read or permissions.other.read:
             raise SkipTest(
                 "private key readable by others despite chmod;"
@@ -567,51 +536,33 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
-        # PubkeyAcceptedKeyTypes does not exist prior to OpenSSH 7.0 so we
-        # first need to check if we can set it. If we can, -V will just print
-        # the version without doing anything else; if we can't, we will get a
-        # configuration error.
-        d = getProcessValue(
-            which("ssh")[0], ("-o", "PubkeyAcceptedKeyTypes=ssh-dss", "-V")
-        )
-
-        def hasPAKT(status):
-            if status == 0:
-                opts = "-oPubkeyAcceptedKeyTypes=ssh-dss "
-            else:
-                opts = ""
-
-            process.deferred = defer.Deferred()
-            # Pass -F /dev/null to avoid the user's configuration file from
-            # being loaded, as it may contain settings that cause our tests to
-            # fail or hang.
-            cmdline = (
-                (
-                    "ssh -2 -l testuser -p %i "
-                    "-F /dev/null "
-                    "-oUserKnownHostsFile=kh_test "
-                    "-oPasswordAuthentication=no "
-                    # Always use the RSA key, since that's the one in kh_test.
-                    "-oHostKeyAlgorithms=ssh-rsa "
-                    "-a "
-                    "-i dsa_test "
-                )
-                + opts
-                + sshArgs
-                + " 127.0.0.1 "
-                + remoteCommand
+        process.deferred = defer.Deferred()
+        # Pass -F /dev/null to avoid the user's configuration file from
+        # being loaded, as it may contain settings that cause our tests to
+        # fail or hang.
+        cmdline = (
+            (
+                "ssh -2 -l testuser -p %i "
+                "-F /dev/null "
+                "-oIdentitiesOnly=yes "
+                "-oUserKnownHostsFile=kh_test "
+                "-oPasswordAuthentication=no "
+                # Always use the RSA key, since that's the one in kh_test.
+                "-oHostKeyAlgorithms=ssh-rsa "
+                "-a "
+                "-i rsa_test "
             )
-            port = self.conchServer.getHost().port
-            cmds = (cmdline % port).split()
-            encodedCmds = []
-            for cmd in cmds:
-                if isinstance(cmd, str):
-                    cmd = cmd.encode("utf-8")
-                encodedCmds.append(cmd)
-            reactor.spawnProcess(process, which("ssh")[0], encodedCmds)
-            return process.deferred
-
-        return d.addCallback(hasPAKT)
+            + sshArgs
+            + " 127.0.0.1 "
+            + remoteCommand
+        )
+        port = self.conchServer.getHost().port
+        cmds = (cmdline % port).split()
+        encodedCmds = []
+        for cmd in cmds:
+            encodedCmds.append(cmd.encode("utf-8"))
+        reactor.spawnProcess(process, which("ssh")[0], encodedCmds)
+        return process.deferred
 
 
 class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCase):
@@ -711,7 +662,7 @@ class OpenSSHClientForwardingTests(ForwardingMixin, OpenSSHClientMixin, TestCase
     Connection forwarding tests run against the OpenSSL command line client.
     """
 
-    @skipIf(not HAS_IPV6, "Requires IPv6 support")
+    @skipWithoutIPv6
     def test_localToRemoteForwardingV6(self):
         """
         Forwarding of arbitrary IPv6 TCP connections via SSH.
@@ -754,7 +705,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
             "--known-hosts kh_test "
             "--user-authentications publickey "
             "-a "
-            "-i dsa_test "
+            "-i rsa_test "
             "-v ".format(port) + sshArgs + " 127.0.0.1 " + remoteCommand
         )
         cmds = _makeArgs(conchArgs + cmd.split())

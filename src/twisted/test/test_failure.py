@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import linecache
 import pdb
+import pickle
 import re
 import sys
 import traceback
@@ -15,19 +16,34 @@ from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from types import TracebackType
-from typing import Any, Generator
+from typing import Any, Generator, cast
 from unittest import skipIf
 
-from cython_test_exception_raiser import raiser  # type: ignore[import]
+from cython_test_exception_raiser import raiser
 
 from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
+
+
+class ComparableException(Exception):
+    """An exception that can be compared by value."""
+
+    def __eq__(self, other: object) -> bool:
+        return (self.__class__ == other.__class__) and (
+            self.args == cast(ComparableException, other).args
+        )
 
 
 def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
     """
     Make a C{Failure} of a divide-by-zero error.
     """
+    if captureVars:
+        exampleLocalVar = "xyz"
+        # Silence the linter as this variable is checked via
+        # the traceback.
+        exampleLocalVar
+
     try:
         1 / 0
     except BaseException:
@@ -144,9 +160,6 @@ class FailureTests(SynchronousTestCase):
 
         The body contains the stacktrace::
 
-          /twisted/trial/_synctest.py:1180: _run(...)
-          /twisted/python/util.py:1076: runWithWarningsSuppressed(...)
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39: getDivisionFailure(...)
 
         If C{captureVars} is enabled the body also includes a list of
@@ -175,12 +188,6 @@ class FailureTests(SynchronousTestCase):
         @param cleanFailure: Enables L{Failure.cleanFailure}.
         @type cleanFailure: C{bool}
         """
-        if captureVars:
-            exampleLocalVar = "xyz"
-            # Silence the linter as this variable is checked via
-            # the traceback.
-            exampleLocalVar
-
         f = getDivisionFailure(captureVars=captureVars)
         out = StringIO()
         if cleanFailure:
@@ -225,14 +232,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback: <type 'exceptions.ZeroDivisionError'>: float division
 
-        The body with the stacktrace::
-
-          /twisted/trial/_synctest.py:1180:_run
-          /twisted/python/util.py:1076:runWithWarningsSuppressed
-
         And the footer::
 
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39:getDivisionFailure
 
         @param captureVars: Enables L{Failure.captureVars}.
@@ -256,7 +257,7 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             f"Traceback: {zde}: ",
-            f"{failure.EXCEPTION_CAUGHT_HERE}\n{stack}",
+            f"{stack}",
         )
 
         if captureVars:
@@ -270,14 +271,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback (most recent call last):
 
-        The body with traceback::
-
-          File "/twisted/trial/_synctest.py", line 1180, in _run
-             runWithWarningsSuppressed(suppress, method)
-
         And the footer::
 
-          --- <exception caught here> ---
             File "twisted/test/test_failure.py", line 39, in getDivisionFailure
               1 / 0
             exceptions.ZeroDivisionError: float division
@@ -303,9 +298,8 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             "Traceback (most recent call last):",
-            "%s\n%s%s: %s\n"
+            "%s%s: %s\n"
             % (
-                failure.EXCEPTION_CAUGHT_HERE,
                 stack,
                 reflect.qual(f.type),
                 reflect.safe_str(f.value),
@@ -397,14 +391,6 @@ class FailureTests(SynchronousTestCase):
         f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, "1 / 0")
-
-    def test_stringExceptionConstruction(self) -> None:
-        """
-        Constructing a C{Failure} with a string as its exception value raises
-        a C{TypeError}, as this is no longer supported as of Python 2.6.
-        """
-        exc = self.assertRaises(TypeError, failure.Failure, "ono!")
-        self.assertIn("Strings are not supported by Failure", str(exc))
 
     def test_ConstructionFails(self) -> None:
         """
@@ -517,6 +503,100 @@ class FailureTests(SynchronousTestCase):
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
 
+    def test_stackDeprecation(self) -> None:
+        """
+        C{Failure.stack} is gettable and settable, but depreacted.
+        """
+        f = getDivisionFailure()
+        f.stack = f.stack  # type: ignore[method-assign]
+        warnings = self.flushWarnings()
+        self.assertTrue(len(warnings) >= 1)
+        for w in warnings[-2:]:
+            self.assertEqual(
+                "twisted.python.failure.Failure.stack was deprecated in Twisted NEXT",
+                w["message"],
+            )
+
+    def test_failureWithoutTraceback(self) -> None:
+        """
+        C{Failure._withoutTraceback(exc)} gives the same result as
+        C{Failure(exc)}.
+        """
+        exc = ZeroDivisionError("hello")
+        dict1 = failure.Failure(exc).__dict__.copy()
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertIsInstance(failure2, failure.Failure)
+        dict2 = failure2.__dict__.copy()
+
+        # count increments with each new Failure constructed:
+        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
+
+        # The rest of the attributes should be identical:
+        self.assertEqual(dict1, dict2)
+
+    def test_failurePickling(self) -> None:
+        """
+        C{Failure(exc)} and C{Failure._withoutTraceback(exc)} can be pickled
+        and unpickled.
+        """
+        exc = ComparableException("hello")
+        failure1 = failure.Failure(exc)
+        self.assertPicklingRoundtrips(failure1)
+
+        # You would think this test is unnecessary, since it's just a
+        # C{Failure}, but actually the behavior of pickling can sometimes be
+        # different because of the way the constructor works!
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertPicklingRoundtrips(failure2)
+
+        # Here we test a Failure with a traceback:
+        try:
+            raise ComparableException("boo")
+        except BaseException:
+            failure3 = failure.Failure()
+        self.assertPicklingRoundtrips(failure3)
+
+    def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
+        """
+        The failure can be pickled and unpickled, and the C{parents} attribute
+        is included in the pickle.
+        """
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        expected = original_failure.__dict__.copy()
+        expected["pickled"] = 1
+        expected["tb"] = None
+        result = failure2.__dict__.copy()
+        self.assertEqual(expected, result)
+        self.assertEqual(failure2.frames, original_failure.frames)
+
+    def test_failurePicklingIncludesParents(self) -> None:
+        """
+        C{Failure.parents} is included in the pickle.
+        """
+        f = failure.Failure(ComparableException("hello"))
+        self.assertEqual(f.__getstate__()["parents"], f.parents)
+
+    def test_settableFrames(self) -> None:
+        """
+        C{Failure.frames} can be set, both before and after pickling.
+        """
+        original_failure = failure.Failure(getDivisionFailure())
+        original_failure.frames = original_failure.frames[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.frames = failure2.frames[:-1]
+        self.assertEqual(failure2.frames, original_failure.frames[:-1])
+
+    def test_settableParents(self) -> None:
+        """
+        C{Failure.parents} can be set, both before and after pickling.
+
+        This is used by Foolscap.
+        """
+        original_failure = failure.Failure(ComparableException("hello"))
+        original_failure.parents = original_failure.parents[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.parents = failure2.parents[:]
+
 
 class BrokenStr(Exception):
     """
@@ -619,65 +699,8 @@ class GetTracebackTests(SynchronousTestCase):
 
 class FindFailureTests(SynchronousTestCase):
     """
-    Tests for functionality related to L{Failure._findFailure}.
+    Tests for functionality related to identifying the C{Failure}.
     """
-
-    def test_findNoFailureInExceptionHandler(self) -> None:
-        """
-        Within an exception handler, _findFailure should return
-        L{None} in case no Failure is associated with the current
-        exception.
-        """
-        try:
-            1 / 0
-        except BaseException:
-            self.assertIsNone(failure.Failure._findFailure())
-        else:
-            self.fail("No exception raised from 1/0!?")
-
-    def test_findNoFailure(self) -> None:
-        """
-        Outside of an exception handler, _findFailure should return None.
-        """
-        self.assertIsNone(sys.exc_info()[-1])  # environment sanity check
-        self.assertIsNone(failure.Failure._findFailure())
-
-    def test_findFailure(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by raiseException).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            self.assertEqual(failure.Failure._findFailure(), f)
-        else:
-            self.fail("No exception raised from raiseException!?")
-
-    def test_failureConstructionFindsOriginalFailure(self) -> None:
-        """
-        When a Failure is constructed in the context of an exception
-        handler that is handling an exception raised by
-        raiseException, the new Failure should be chained to that
-        original Failure.
-        Means the new failure should still show the same origin frame,
-        but with different complete stack trace (as not thrown at same place).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            newF = failure.Failure()
-            tb = f.getTraceback().splitlines()
-            new_tb = newF.getTraceback().splitlines()
-            self.assertNotEqual(tb, new_tb)
-            self.assertEqual(tb[-3:], new_tb[-3:])
-        else:
-            self.fail("No exception raised from raiseException!?")
 
     @skipIf(raiser is None, "raiser extension not available")
     def test_failureConstructionWithMungedStackSucceeds(self) -> None:
@@ -718,7 +741,7 @@ class FormattableTracebackTests(SynchronousTestCase):
         to be passed to L{traceback.extract_tb}, and we should get a singleton
         list containing a (filename, lineno, methodname, line) tuple.
         """
-        tb = failure._Traceback([], [["method", "filename.py", 123, {}, {}]])
+        tb = failure._Traceback([["method", "filename.py", 123, {}, {}]])
         # Note that we don't need to test that extract_tb correctly extracts
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
@@ -733,10 +756,6 @@ class FormattableTracebackTests(SynchronousTestCase):
         containing a tuple for each frame.
         """
         tb = failure._Traceback(
-            [
-                ["caller1", "filename.py", 7, {}, {}],
-                ["caller2", "filename.py", 8, {}, {}],
-            ],
             [
                 ["method1", "filename.py", 123, {}, {}],
                 ["method2", "filename.py", 235, {}, {}],
@@ -754,8 +773,6 @@ class FormattableTracebackTests(SynchronousTestCase):
         self.assertEqual(
             traceback.extract_stack(tb.tb_frame),
             [
-                _tb("filename.py", 7, "caller1", None),
-                _tb("filename.py", 8, "caller2", None),
                 _tb("filename.py", 123, "method1", None),
             ],
         )
@@ -939,30 +956,6 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1 / 0")
 
-    def test_findFailureInGenerator(self) -> None:
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by throwExceptionIntoGenerator).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        foundFailures = []
-
-        def generator() -> Generator[None, None, None]:
-            try:
-                yield
-            except BaseException:
-                foundFailures.append(failure.Failure._findFailure())
-            else:
-                self.fail("No exception sent to generator")
-
-        g = generator()
-        next(g)
-        self._throwIntoGenerator(f, g)
-
-        self.assertEqual(foundFailures, [f])
-
     def test_failureConstructionFindsOriginalFailure(self) -> None:
         """
         When a Failure is constructed in the context of an exception
@@ -1001,9 +994,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureInGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} inside the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        inside the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:
@@ -1022,9 +1015,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
     def test_ambiguousFailureFromGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} above the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        above the generator should find the reraised exception rather than
+        original one.
         """
 
         def generator() -> Generator[None, None, None]:

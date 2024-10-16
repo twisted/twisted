@@ -13,7 +13,6 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-
 import copy
 import os
 import re
@@ -25,19 +24,23 @@ from urllib.parse import quote as _quote
 
 from zope.interface import implementer
 
-from incremental import Version
-
 from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.logger import Logger
 from twisted.python import components, failure, reflect
 from twisted.python.compat import nativeString, networkString
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.spread.pb import Copyable, ViewPoint
 from twisted.web import http, iweb, resource, util
 from twisted.web.error import UnsupportedMethod
-from twisted.web.http import unquote
+from twisted.web.http import (
+    NO_CONTENT,
+    NOT_MODIFIED,
+    HTTPFactory,
+    Request as _HTTPRequest,
+    datetimeToString,
+    unquote,
+)
 
 NOT_DONE_YET = 1
 
@@ -50,23 +53,6 @@ __all__ = [
     "NOT_DONE_YET",
     "GzipEncoderFactory",
 ]
-
-
-# backwards compatibility
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.datetimeToString instead",
-    "twisted.web.server",
-    "date_time_string",
-)
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.stringToDatetime instead",
-    "twisted.web.server",
-    "string_date_time",
-)
-date_time_string = http.datetimeToString
-string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
@@ -101,8 +87,7 @@ class Request(Copyable, http.Request, components.Componentized):
         will be transmitted only over HTTPS.
     """
 
-    defaultContentType = b"text/html"
-
+    defaultContentType: Optional[bytes] = b"text/html"
     site = None
     appRootURL = None
     prepath: Optional[List[bytes]] = None
@@ -113,7 +98,7 @@ class Request(Copyable, http.Request, components.Componentized):
     _log = Logger()
 
     def __init__(self, *args, **kw):
-        http.Request.__init__(self, *args, **kw)
+        _HTTPRequest.__init__(self, *args, **kw)
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -188,7 +173,7 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            http.Request.gotLength(self, length)
+            _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -206,8 +191,8 @@ class Request(Copyable, http.Request, components.Componentized):
         self.site = self.channel.site
 
         # set various default headers
-        self.setHeader(b"server", version)
-        self.setHeader(b"date", http.datetimeToString())
+        self.setHeader(b"Server", version)
+        self.setHeader(b"Date", datetimeToString())
 
         # Resource Identification
         self.prepath = []
@@ -241,9 +226,9 @@ class Request(Copyable, http.Request, components.Componentized):
             # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
-            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
-            contentType = self.responseHeaders.getRawHeaders(b"content-type")
-            contentLength = self.responseHeaders.getRawHeaders(b"content-length")
+            needsCT = self.code not in (NOT_MODIFIED, NO_CONTENT)
+            contentType = self.responseHeaders.getRawHeaders(b"Content-Type")
+            contentLength = self.responseHeaders.getRawHeaders(b"Content-Length")
             contentLengthZero = contentLength and (contentLength[0] == b"0")
 
             if (
@@ -253,7 +238,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 and not contentLengthZero
             ):
                 self.responseHeaders.setRawHeaders(
-                    b"content-type", [self.defaultContentType]
+                    b"Content-Type", [self.defaultContentType]
                 )
 
         # Only let the write happen if we're not generating a HEAD response by
@@ -264,17 +249,17 @@ class Request(Copyable, http.Request, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            http.Request.write(self, data)
+            _HTTPRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{http.Request.finish} for possible encoding.
+        Override L{twisted.web.http.Request.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                http.Request.write(self, data)
-        return http.Request.finish(self)
+                _HTTPRequest.write(self, data)
+        return _HTTPRequest.finish(self)
 
     def render(self, resrc):
         """
@@ -312,7 +297,7 @@ class Request(Copyable, http.Request, components.Componentized):
                     )
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b"content-length", b"%d" % (len(body),))
+                    self.setHeader(b"Content-Length", b"%d" % (len(body),))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -375,10 +360,10 @@ class Request(Copyable, http.Request, components.Componentized):
                     slf=self,
                     resrc=resrc,
                 )
-                self.setHeader(b"content-length", b"%d" % (len(body),))
+                self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(b"")
         else:
-            self.setHeader(b"content-length", b"%d" % (len(body),))
+            self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(body)
         self.finish()
 
@@ -411,8 +396,8 @@ class Request(Copyable, http.Request, components.Componentized):
             )
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
-        self.setHeader(b"content-type", b"text/html")
-        self.setHeader(b"content-length", b"%d" % (len(body),))
+        self.setHeader(b"Content-Type", b"text/html")
+        self.setHeader(b"Content-Length", b"%d" % (len(body),))
         self.write(body)
         self.finish()
         return reason
@@ -619,16 +604,16 @@ class GzipEncoderFactory:
         request if so.
         """
         acceptHeaders = b",".join(
-            request.requestHeaders.getRawHeaders(b"accept-encoding", [])
+            request.requestHeaders.getRawHeaders(b"Accept-Encoding", [])
         )
         if self._gzipCheckRegex.search(acceptHeaders):
-            encoding = request.responseHeaders.getRawHeaders(b"content-encoding")
+            encoding = request.responseHeaders.getRawHeaders(b"Content-Encoding")
             if encoding:
                 encoding = b",".join(encoding + [b"gzip"])
             else:
                 encoding = b"gzip"
 
-            request.responseHeaders.setRawHeaders(b"content-encoding", [encoding])
+            request.responseHeaders.setRawHeaders(b"Content-Encoding", [encoding])
             return _GzipEncoder(self.compressLevel, request)
 
 
@@ -660,7 +645,7 @@ class _GzipEncoder:
         if not self._request.startedWriting:
             # Remove the content-length header, we can't honor it
             # because we compress on the fly.
-            self._request.responseHeaders.removeHeader(b"content-length")
+            self._request.responseHeaders.removeHeader(b"Content-Length")
         return self._zlibCompressor.compress(data)
 
     def finish(self):
@@ -769,7 +754,7 @@ version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
-class Site(http.HTTPFactory):
+class Site(HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 

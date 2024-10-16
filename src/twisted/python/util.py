@@ -40,7 +40,6 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    cast,
 )
 
 from incremental import Version
@@ -628,10 +627,8 @@ class FancyStrMixin:
             if isinstance(attr, str):
                 r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
-                attr = cast(Tuple[str, Callable[[Any], str]], attr)
                 r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
-                attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
         r.append(">")
         return "".join(r)

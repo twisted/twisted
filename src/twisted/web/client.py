@@ -37,7 +37,7 @@ from twisted.python.deprecate import (
 from twisted.python.failure import Failure
 from twisted.web import error, http
 from twisted.web._newclient import _ensureValidMethod, _ensureValidURI
-from twisted.web.http_headers import Headers
+from twisted.web.http_headers import Headers, _nameEncoder
 from twisted.web.iweb import (
     UNKNOWN_LENGTH,
     IAgent,
@@ -924,10 +924,10 @@ class _AgentBase:
         # Create minimal headers, if necessary:
         if headers is None:
             headers = Headers()
-        if not headers.hasHeader(b"host"):
+        if not headers.hasHeader(b"Host"):
             headers = headers.copy()
             headers.addRawHeader(
-                b"host",
+                b"Host",
                 self._computeHostValue(
                     parsedURI.scheme, parsedURI.host, parsedURI.port
                 ),
@@ -1367,12 +1367,12 @@ class CookieAgent:
         lastRequest = _FakeStdlibRequest(uri)
         # Setting a cookie header explicitly will disable automatic request
         # cookies.
-        if not actualHeaders.hasHeader(b"cookie"):
+        if not actualHeaders.hasHeader(b"Cookie"):
             self.cookieJar.add_cookie_header(lastRequest)
             cookieHeader = lastRequest.get_header("Cookie", None)
             if cookieHeader is not None:
                 actualHeaders = actualHeaders.copy()
-                actualHeaders.addRawHeader(b"cookie", networkString(cookieHeader))
+                actualHeaders.addRawHeader(b"Cookie", networkString(cookieHeader))
 
         return self._agent.request(
             method, uri, actualHeaders, bodyProducer
@@ -1502,7 +1502,7 @@ class ContentDecoderAgent:
             headers = Headers()
         else:
             headers = headers.copy()
-        headers.addRawHeader(b"accept-encoding", self._supported)
+        headers.addRawHeader(b"Accept-Encoding", self._supported)
         deferred = self._agent.request(method, uri, headers, bodyProducer)
         return deferred.addCallback(self._handleResponse)
 
@@ -1510,7 +1510,7 @@ class ContentDecoderAgent:
         """
         Check if the response is encoded, and wrap it to handle decompression.
         """
-        contentEncodingHeaders = response.headers.getRawHeaders(b"content-encoding", [])
+        contentEncodingHeaders = response.headers.getRawHeaders(b"Content-Encoding", [])
         contentEncodingHeaders = b",".join(contentEncodingHeaders).split(b",")
         while contentEncodingHeaders:
             name = contentEncodingHeaders.pop().strip()
@@ -1523,14 +1523,14 @@ class ContentDecoderAgent:
                 break
         if contentEncodingHeaders:
             response.headers.setRawHeaders(
-                b"content-encoding", [b",".join(contentEncodingHeaders)]
+                b"Content-Encoding", [b",".join(contentEncodingHeaders)]
             )
         else:
-            response.headers.removeHeader(b"content-encoding")
+            response.headers.removeHeader(b"Content-Encoding")
         return response
 
 
-_canonicalHeaderName = Headers()._canonicalNameCaps
+_canonicalHeaderName = _nameEncoder.encode
 _defaultSensitiveHeaders = frozenset(
     [
         b"Authorization",

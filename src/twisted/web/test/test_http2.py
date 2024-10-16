@@ -5,19 +5,25 @@
 Test HTTP/2 support.
 """
 
-
 import itertools
 
 from zope.interface import directlyProvides, providedBy
 
+import httpx
+
 from twisted.internet import defer, error, reactor, task
 from twisted.internet.address import IPv4Address
 from twisted.internet.testing import MemoryReactorClock, StringTransport
+from twisted.internet.threads import deferToThread
 from twisted.python import failure
 from twisted.python.compat import iterbytes
+from twisted.python.reflect import requireModule
 from twisted.test.test_internet import DummyProducer
+from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial import unittest
 from twisted.web import http
+from twisted.web.server import Site
+from twisted.web.static import Data
 from twisted.web.test.test_http import (
     DelayedHTTPHandler,
     DelayedHTTPHandlerProxy,
@@ -33,12 +39,12 @@ skipH2 = None
 try:
     # These third-party imports are guaranteed to be present if HTTP/2 support
     # is compiled in. We do not use them in the main code: only in the tests.
-    import h2  # type: ignore[import]
-    import h2.errors  # type: ignore[import]
-    import h2.exceptions  # type: ignore[import]
+    import h2
+    import h2.errors
+    import h2.exceptions
     import hyperframe
-    import priority  # type: ignore[import]
-    from hpack.hpack import Decoder, Encoder  # type: ignore[import]
+    import priority
+    from hpack.hpack import Decoder, Encoder
 
     from twisted.web._http2 import H2Connection
 except ImportError:
@@ -2918,3 +2924,34 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
         # Invalid frames don't reset any timeouts, so the above has
         # forcibly disconnected us via abortConnection.
         self.assertTrue(transport.disconnected)
+
+
+class EndToEndTests(unittest.TestCase):
+    """
+    Tests that run real TCP-based communication with a HTTP/2 server.
+    """
+
+    if skipH2 or not requireModule("OpenSSL"):
+        skip = skipH2
+
+    async def test_realRequest(self) -> None:
+        """
+        Twisted's HTTP/2 server can talk to a third-party HTTP/2 client.
+        """
+        _, serverCert = certificatesForAuthorityAndServer("test.local")
+        resource = Data(b"hello world", "application/octet-stream")
+        resource.isLeaf = True
+        port = reactor.listenSSL(0, Site(resource), serverCert.options())  # type: ignore[attr-defined]
+        portNum = port.getHost().port
+        self.addCleanup(port.stopListening)
+
+        def run_http2_query():
+            client = httpx.Client(http2=True, verify=False)
+            response = client.get(f"https://127.0.0.1:{portNum}/")
+            result = (response.http_version, response.content)
+            client.close()
+            return result
+
+        (httpVersion, content) = await deferToThread(run_http2_query)
+        self.assertEqual(httpVersion, "HTTP/2")
+        self.assertEqual(content, b"hello world")

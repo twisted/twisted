@@ -1157,9 +1157,10 @@ class NewRenderResource(resource.Resource):
 
 
 @implementer(resource.IResource)
-class HeadlessResource:
+class HeadlessWriter:
     """
-    A resource that implements GET but not HEAD.
+    A resource that implements GET but not HEAD, and
+    calls C{request.write()} when rendering GET.
     """
 
     allowedMethods = [b"GET"]
@@ -1175,21 +1176,46 @@ class HeadlessResource:
         return server.NOT_DONE_YET
 
     def isLeaf(self):
-        """
         # IResource.isLeaf
-        """
         raise NotImplementedError()
 
     def getChildWithDefault(self, name, request):
-        """
         # IResource.getChildWithDefault
-        """
         raise NotImplementedError()
 
     def putChild(self, path, child):
-        """
         # IResource.putChild
+        raise NotImplementedError()
+
+
+@implementer(resource.IResource)
+class HeadlessReturner:
+    """
+    A resource that implements GET but not HEAD, and
+    returns C{bytes} when rendering GET.
+    """
+
+    allowedMethods = [b"GET"]
+
+    def render(self, request):
         """
+        Leave the request open for future writes.
+        """
+        self.request = request
+        if request.method not in self.allowedMethods:
+            raise error.UnsupportedMethod(self.allowedMethods)
+        return b"some data"
+
+    def isLeaf(self):
+        # IResource.isLeaf
+        raise NotImplementedError()
+
+    def getChildWithDefault(self, name, request):
+        # IResource.getChildWithDefault
+        raise NotImplementedError()
+
+    def putChild(self, path, child):
+        # IResource.putChild
         raise NotImplementedError()
 
 
@@ -1257,21 +1283,44 @@ class NewRenderTests(unittest.TestCase):
         event = logObserver[0]
         self.assertEquals(event["log_level"], LogLevel.info)
 
-    def test_unsupportedHead(self):
+    def test_unsupportedHeadWrite(self):
+        """
+        HEAD requests against resource that only claim support for GET
+        should not include a body in the response. When the resource
+        returns C{NOT_DONE_YET} a cryptic message is logged and no
+        Content-Length header is synthesized.
+        """
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+
+        resource = HeadlessWriter()
+        req = self._getReq(resource)
+        req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
+        headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
+        self.assertEqual(req.code, 200)
+        self.assertEqual(body, b"")
+        self.assertNotIn(b"Content-Length:", headers)
+        [faking, cryptic] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
+        self.assertIn("it got away from me", cryptic["log_format"])
+
+    def test_unsupportedHeadReturn(self):
         """
         HEAD requests against resource that only claim support for GET
         should not include a body in the response.
         """
-        logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
 
-        resource = HeadlessResource()
+        resource = HeadlessReturner()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
         headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b"")
-
-        self.assertEquals(2, len(logObserver))
+        self.assertIn(b"Content-Length:", headers)
+        [faking] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
 
     def test_noBytesResult(self):
         """
@@ -1780,53 +1829,6 @@ class LogEscapingTests(unittest.TestCase):
         self.assertLogs(
             b'"1.2.3.4" - - [25/Oct/2004:12:31:59 +0000] '
             b'"GET /dummy HTTP/1.0" 123 - "-" "Malicious Web\\" Evil"\n'
-        )
-
-
-class ServerAttributesTests(unittest.TestCase):
-    """
-    Tests that deprecated twisted.web.server attributes raise the appropriate
-    deprecation warnings when used.
-    """
-
-    def test_deprecatedAttributeDateTimeString(self):
-        """
-        twisted.web.server.date_time_string should not be used; instead use
-        twisted.web.http.datetimeToString directly
-        """
-        server.date_time_string
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedAttributeDateTimeString]
-        )
-
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            (
-                "twisted.web.server.date_time_string was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.datetimeToString instead"
-            ),
-        )
-
-    def test_deprecatedAttributeStringDateTime(self):
-        """
-        twisted.web.server.string_date_time should not be used; instead use
-        twisted.web.http.stringToDatetime directly
-        """
-        server.string_date_time
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedAttributeStringDateTime]
-        )
-
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            (
-                "twisted.web.server.string_date_time was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.stringToDatetime instead"
-            ),
         )
 
 
