@@ -184,6 +184,21 @@ class ListeningTests(TestCase):
         self.addCleanup(p1.stopListening)
         self.assertTrue(interfaces.IListeningPort.providedBy(p1))
 
+    def test_multiListen(self):
+        """
+        Test that multiple sockets can listen on the same port
+        """
+        if not hasattr(socket, "SO_REUSEPORT"):
+            raise SkipTest("SO_REUSEPORT not supported")
+        f = MyServerFactory()
+        p1 = reactor.listenTCPReusePort(0, f, interface="127.0.0.1")
+        self.addCleanup(p1.stopListening)
+        p2 = reactor.listenTCPReusePort(p1._realPortNumber, f, interface="127.0.0.1")
+        self.addCleanup(p2.stopListening)
+        self.assertTrue(interfaces.IListeningPort.providedBy(p1))
+        self.assertTrue(interfaces.IListeningPort.providedBy(p2))
+        self.assertEqual(p1._realPortNumber, p2._realPortNumber)
+
     def testStopListening(self):
         """
         The L{IListeningPort} returned by L{IReactorTCP.listenTCP} can be

@@ -1260,6 +1260,7 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ""
     backlog = 50
+    reusePort = False
 
     _type = "TCP"
 
@@ -1275,7 +1276,13 @@ class Port(base.BasePort, _SocketCloser):
     _addressType = address.IPv4Address
     _logger = Logger()
 
-    def __init__(self, port, factory, backlog=50, interface="", reactor=None):
+    @classmethod
+    def hasReusePort(cls):
+        return hasattr(socket, "SO_REUSEPORT")
+
+    def __init__(
+        self, port, factory, backlog=50, interface="", reactor=None, reusePort=False
+    ):
         """Initialize with a numeric port to listen on."""
         base.BasePort.__init__(self, reactor=reactor)
         self.port = port
@@ -1285,6 +1292,7 @@ class Port(base.BasePort, _SocketCloser):
             self.addressFamily = socket.AF_INET6
             self._addressType = address.IPv6Address
         self.interface = interface
+        self.reusePort = reusePort
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):
@@ -1326,6 +1334,10 @@ class Port(base.BasePort, _SocketCloser):
         s = base.BasePort.createInternetSocket(self)
         if platformType == "posix" and sys.platform != "cygwin":
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self.reusePort:
+                if not hasattr(socket, "SO_REUSEPORT"):
+                    raise NotImplementedError("Asked to reuse port, " "cannot do it")
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return s
 
     def startListening(self):

@@ -23,6 +23,7 @@ from twisted.internet.interfaces import (
     IReactorSocket,
     IReactorSSL,
     IReactorTCP,
+    IReactorTCPReusePort,
     IReactorUDP,
     IReactorUNIX,
     IReactorUNIXDatagram,
@@ -368,6 +369,12 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         c.connect()
         return c
 
+    # IReactorTCPReusePort
+    def listenTCPReusePort(self, port, factory, backlog=50, interface=""):
+        p = tcp.Port(port, factory, backlog, interface, self, reusePort=True)
+        p.startListening()
+        return p
+
     # IReactorSSL (sometimes, not implemented)
 
     def connectSSL(
@@ -640,6 +647,8 @@ class _ContinuousPolling(_PollLikeMixin, _DisconnectSelectableMixin):
         return fd in self._writers
 
 
+if tcp.Port.hasReusePort():
+    classImplements(PosixReactorBase, IReactorTCPReusePort)
 if tls is not None or ssl is not None:
     classImplements(PosixReactorBase, IReactorSSL)
 if unixEnabled:
