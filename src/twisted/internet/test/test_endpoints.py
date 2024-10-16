@@ -58,7 +58,6 @@ from twisted.logger import ILogObserver, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
 from twisted.python import log
-from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
@@ -2699,6 +2698,41 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.assertEqual([], self.mreactor.getDelayedCalls())
 
 
+class HostnameEndpointBindAddressTypes(unittest.TestCase):
+    """
+    Tests that HostnameEndpoint accepts all specified types for the
+    'bindAddress=' argument.
+    """
+
+    def setUp(self):
+        self.drr = deterministicResolvingReactor(MemoryReactor(), ["127.0.0.1"])
+
+    def test_bytes(self):
+        ba = b"1.2.3.4"
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
+
+    def test_str(self):
+        ba = "1.2.3.4"
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
+
+    def test_tuple_bytes(self):
+        ba = (b"1.2.3.4", 1234)
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+
+    def test_tuple_str(self):
+        ba = ("1.2.3.4", 1234)
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+
+    def test_none(self):
+        ba = None
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, None)
+
+
 @skipIf(skipSSL, skipSSLReason)
 class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
@@ -4189,14 +4223,14 @@ class WrapClientTLSParserTests(unittest.TestCase):
         reactor = object()
         endpoint = endpoints.clientFromString(
             reactor,
-            nativeString("tls:example.com:443:timeout=10:bindAddress=127.0.0.1"),
+            "tls:example.com:443:timeout=10:bindAddress=127.0.0.1",
         )
         hostnameEndpoint = endpoint._wrappedEndpoint
         self.assertIs(hostnameEndpoint._reactor, reactor)
         self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
-        self.assertEqual(hostnameEndpoint._bindAddress, nativeString("127.0.0.1"))
+        self.assertEqual(hostnameEndpoint._bindAddress, ("127.0.0.1", 0))
 
     def test_utf8Encoding(self):
         """
@@ -4239,14 +4273,18 @@ class WrapClientTLSParserTests(unittest.TestCase):
         # containing the cert itself for the CAs list.
         endpoint = endpoints.clientFromString(
             deterministicResolvingReactor(reactor, ["127.0.0.1"]),
-            "tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}".format(
+            "tls:localhost:4321:privateKey={}:certificate={}:trustRoots={}:bindAddress=127.0.0.1".format(
                 escapedPEMPathName,
                 escapedPEMPathName,
                 endpoints.quoteStringArgument(pemPath.parent().path),
-            ).encode("ascii"),
+            ).encode(
+                "ascii"
+            ),
         )
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
+        self.assertIs(type(bindAddress), tuple)
+        self.assertEqual(bindAddress, ("127.0.0.1", 0))
         clientProtocol = factory.buildProtocol(None)
         self.assertNoResult(d)
         assert clientProtocol is not None
