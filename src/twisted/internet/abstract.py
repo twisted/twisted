@@ -273,31 +273,27 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if self.offset == len(self.dataBuffer) and not self._tempDataLen:
             self.dataBuffer = b""
             self.offset = 0
+            # stop writing.
+            self.stopWriting()
             # If I've got a producer who is supposed to supply me with data,
             if self.producer is not None and (
                 (not self.streamingProducer) or self.producerPaused
             ):
                 # tell them to supply some more.
                 self.producerPaused = False
-                # The presumption is that this will write some data, so as an
-                # optimization we don't need to call stopWriting():
                 self.producer.resumeProducing()
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
                 # so.
-                self.stopWriting()
                 return self._postLoseConnection()
             elif self._writeDisconnecting:
                 # I was previously asked to half-close the connection.  We
                 # set _writeDisconnected before calling handler, in case the
                 # handler calls loseConnection(), which will want to check for
                 # this attribute.
-                self.stopWriting()
                 self._writeDisconnected = True
                 result = self._closeWriteConnection()
                 return result
-            else:
-                self.stopWriting()
         return None
 
     def _postLoseConnection(self):
