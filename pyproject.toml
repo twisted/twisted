@@ -147,12 +147,16 @@ twist = "twisted.application.twist._twist:Twist.main"
 twistd = "twisted.scripts.twistd:run"
 
 [project.urls]
+# For available URL types see
+# https://docs.pypi.org/project_metadata/
 Changelog = "https://github.com/twisted/twisted/blob/HEAD/NEWS.rst"
 Documentation = "https://docs.twisted.org/"
 Homepage = "https://twisted.org/"
 Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
 Twitter = "https://twitter.com/twistedmatrix"
+Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
+Funding-GitHub = "https://github.com/sponsors/twisted"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
