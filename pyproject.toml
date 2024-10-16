@@ -19,7 +19,7 @@ license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.8.0"
 authors = [
-    { name = "Twisted Matrix Laboratories", email = "twisted-python@twistedmatrix.com" },
+    { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -147,12 +147,16 @@ twist = "twisted.application.twist._twist:Twist.main"
 twistd = "twisted.scripts.twistd:run"
 
 [project.urls]
+# For available URL types see
+# https://docs.pypi.org/project_metadata/
 Changelog = "https://github.com/twisted/twisted/blob/HEAD/NEWS.rst"
-Documentation = "https://docs.twistedmatrix.com/"
-Homepage = "https://twistedmatrix.com/"
-Issues = "https://twistedmatrix.com/trac/report"
+Documentation = "https://docs.twisted.org/"
+Homepage = "https://twisted.org/"
+Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
 Twitter = "https://twitter.com/twistedmatrix"
+Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
+Funding-GitHub = "https://github.com/sponsors/twisted"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
