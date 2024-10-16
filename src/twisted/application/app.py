@@ -2,6 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
 
 import getpass
 import os
@@ -11,14 +12,14 @@ import sys
 import traceback
 import warnings
 from operator import attrgetter
+from typing import TextIO
 
 from twisted import copyright, logger, plugin
 from twisted.application import reactors, service
-
-# Expose the new implementation of installReactor at the old location.
 from twisted.application.reactors import NoSuchReactor, installReactor
 from twisted.internet import defer
-from twisted.internet.interfaces import _ISupportsExitSignalCapturing
+from twisted.internet.interfaces import IReactorCore, _ISupportsExitSignalCapturing
+from twisted.internet.reactors import getGlobal
 from twisted.persisted import sob
 from twisted.python import failure, log, logfile, runtime, usage, util
 from twisted.python.reflect import namedAny, namedModule, qual
@@ -207,12 +208,11 @@ class AppLogger:
         logger.globalLogBeginner.beginLoggingTo(observers)
         self._initialLog()
 
-    def _initialLog(self):
+    def _initialLog(self) -> None:
         """
         Print twistd start log message.
         """
-        from twisted.internet import reactor
-
+        reactor = getGlobal(IReactorCore)
         logger._loggerFor(self).info(
             "twistd {version} ({exe} {pyVersion}) starting up.",
             version=copyright.version,
@@ -244,13 +244,14 @@ class AppLogger:
             self._observer = None
 
 
-def fixPdb():
-    def do_stop(self, arg):
+def fixPdb() -> None:
+    def do_stop(self: pdb.Pdb, arg: str) -> int:
         self.clear_all_breaks()
         self.set_continue()
-        from twisted.internet import reactor
+        from twisted.internet.interfaces import IReactorCore, IReactorTime
+        from twisted.internet.reactors import getGlobal
 
-        reactor.callLater(0, reactor.stop)
+        getGlobal(IReactorTime).callLater(0, getGlobal(IReactorCore).stop)
         return 1
 
     def help_stop(self):
@@ -261,12 +262,18 @@ def fixPdb():
     def set_quit(self):
         os._exit(0)
 
-    pdb.Pdb.set_quit = set_quit
-    pdb.Pdb.do_stop = do_stop
-    pdb.Pdb.help_stop = help_stop
+    pdb.Pdb.set_quit = set_quit  # type:ignore[method-assign]
+    pdb.Pdb.do_stop = do_stop  # type:ignore[attr-defined]
+    pdb.Pdb.help_stop = help_stop  # type:ignore[attr-defined]
 
 
-def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=None):
+def runReactorWithLogging(
+    config: ServerOptions,
+    oldstdout: TextIO,
+    oldstderr: TextIO,
+    profiler: AppProfiler | None = None,
+    reactor: IReactorCore | None = None,
+) -> None:
     """
     Start the reactor, using profiling if specified by the configuration, and
     log any error happening in the process.
@@ -287,7 +294,7 @@ def runReactorWithLogging(config, oldstdout, oldstderr, profiler=None, reactor=N
         be used.
     """
     if reactor is None:
-        from twisted.internet import reactor
+        reactor = getGlobal(IReactorCore)
     try:
         if config["profile"]:
             if profiler is not None:

@@ -8,9 +8,8 @@ Testing helpers related to the module system.
 
 __all__ = ["NoReactor", "AlternateReactor"]
 
-import sys
-
 import twisted.internet
+from twisted.internet import reactors
 from twisted.test.test_twisted import SetAsideModule
 
 
@@ -27,12 +26,14 @@ class NoReactor(SetAsideModule):
         SetAsideModule.__enter__(self)
         if "twisted.internet.reactor" in self.modules:
             del twisted.internet.reactor
+            reactors._theGlobalReactor = None
 
     def __exit__(self, excType, excValue, traceback):
         SetAsideModule.__exit__(self, excType, excValue, traceback)
         # Clean up 'reactor' attribute that may have been set on
         # twisted.internet:
         reactor = self.modules.get("twisted.internet.reactor", None)
+        reactors._theGlobalReactor = reactor
         if reactor is not None:
             twisted.internet.reactor = reactor
         else:
@@ -57,5 +58,4 @@ class AlternateReactor(NoReactor):
 
     def __enter__(self):
         NoReactor.__enter__(self)
-        twisted.internet.reactor = self.alternate
-        sys.modules["twisted.internet.reactor"] = self.alternate
+        reactors.installGlobalReactor(self.alternate)

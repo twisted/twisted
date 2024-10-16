@@ -229,6 +229,19 @@ class ConnectionDone(ConnectionClosed):
         return s
 
 
+CONNECTION_DONE = ConnectionDone("Connection done")
+"""
+A pre-created L{ConnectionDone} exception, shared to avoid creating many
+exceptions in a tight loop.
+"""
+
+CONNECTION_LOST = ConnectionLost("Connection lost")
+"""
+A pre-created L{ConnectionLost} exception, shared to avoid creating many
+exceptions in a tight loop.
+"""
+
+
 class FileDescriptorOverrun(ConnectionLost):
     """
     A mis-use of L{IUNIXTransport.sendFileDescriptor} caused the connection to
@@ -490,7 +503,9 @@ __all__ = [
     "getConnectError",
     "ConnectionClosed",
     "ConnectionLost",
+    "CONNECTION_LOST",
     "ConnectionDone",
+    "CONNECTION_DONE",
     "ConnectionFdescWentAway",
     "AlreadyCalled",
     "AlreadyCancelled",

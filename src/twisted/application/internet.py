@@ -43,6 +43,7 @@ from typing import List
 from twisted.application import service
 from twisted.internet import task
 from twisted.internet.defer import CancelledError
+from twisted.internet.interfaces import IConnector, IReactorTCP, IReactorTime
 from twisted.python import log
 from ._client_service import ClientService, _maybeGlobalReactor, backoffPolicy
 
@@ -114,7 +115,10 @@ class _AbstractServer(_VolatileDataService):
             L{twisted.internet.interfaces.IListeningPort}.
         """
         return getattr(
-            _maybeGlobalReactor(self.reactor),
+            # Note: this interface could be more precise, but practically
+            # speaking these interfaces live on the same object as Twisted is
+            # currently implemented.
+            _maybeGlobalReactor(IReactorTCP, self.reactor),
             "listen{}".format(
                 self.method,
             ),
@@ -160,16 +164,18 @@ class _AbstractClient(_VolatileDataService):
             self._connection.disconnect()
             del self._connection
 
-    def _getConnection(self):
+    def _getConnection(self) -> IConnector:
         """
         Wrapper around the appropriate connect method of the reactor.
 
         @return: the port object returned by the connect method.
         @rtype: an object providing L{twisted.internet.interfaces.IConnector}.
         """
-        return getattr(_maybeGlobalReactor(self.reactor), f"connect{self.method}")(
-            *self.args, **self.kwargs
+        connectMethod = getattr(
+            _maybeGlobalReactor(IReactorTCP, self.reactor), f"connect{self.method}"
         )
+        connector: IConnector = connectMethod(*self.args, **self.kwargs)
+        return connector
 
 
 _clientDoc = """Connect to {tran}
@@ -272,7 +278,7 @@ class TimerService(_VolatileDataService):
         self.call = (callable, args, kwargs)
         self.clock = None
 
-    def startService(self):
+    def startService(self) -> None:
         service.Service.startService(self)
         callable, args, kwargs = self.call
         # we have to make a new LoopingCall each time we're started, because
@@ -280,7 +286,7 @@ class TimerService(_VolatileDataService):
         # LoopingCall were a _VolatileDataService, we wouldn't need to do
         # this.
         self._loop = task.LoopingCall(callable, *args, **kwargs)
-        self._loop.clock = _maybeGlobalReactor(self.clock)
+        self._loop.clock = _maybeGlobalReactor(IReactorTime, self.clock)
         self._loopFinished = self._loop.start(self.step, now=True)
         self._loopFinished.addErrback(self._failed)
 
