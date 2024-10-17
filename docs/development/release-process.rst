@@ -1,5 +1,5 @@
-Twisted Release Process
-=======================
+Release Process
+===============
 
 This document describes the Twisted release process.
 Although it is still incomplete, every effort has been made to ensure that it is accurate and up-to-date.

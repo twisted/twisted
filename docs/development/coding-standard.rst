@@ -1,5 +1,5 @@
-Twisted Coding Standard
-=======================
+Coding Standard
+===============
 
 Naming
 ------
