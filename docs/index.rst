@@ -31,6 +31,7 @@ Sponsors
 --------
 
 |thinkst|_
+
 |sftpplus|_
 
 .. |thinkst| image:: https://github.com/user-attachments/assets/a5b52432-2d18-4d91-a3c9-772fb2e02781

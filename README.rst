@@ -16,6 +16,7 @@ Twisted is an MIT-licensed open source project with its ongoing development made
 If you'd like to join them, please consider `sponsoring Twisted's <https://docs.twisted.org/en/latest/development/sponsorship.html>`_ development.
 
 |thinkst|_
+
 |sftpplus|_
 
 

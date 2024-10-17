@@ -5,7 +5,19 @@ Sponsor the project
 Sponsors
 --------
 
+..
+   Note to maintainers.
+   Sponsors of the same level, should be kept on separate lines, but without
+   an empty line between them.
+   This will render them inline.
+
 |thinkst|_
+
+..
+   Note to maintainers.
+   We have empty lines between sponsors of different levels,
+   to render them as separate rows.
+
 |sftpplus|_
 
 
