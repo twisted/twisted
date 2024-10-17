@@ -1,5 +1,5 @@
-Sponsor the project development
-===============================
+Sponsor the project
+===================
 
 
 Sponsors
@@ -127,7 +127,7 @@ Logos
 Sponsors logos are displayed on the following sites:
 
 * `twisted.org <https://twisted.org/>`_ project presentation site
-* `docs.twisted.org https://docs.twisted.org/en/stable/`_ Read The Docs site
+* `docs.twisted.org <https://docs.twisted.org/en/stable/>`_ Read The Docs site
 * `twisted/twisted <github.com/twisted/twisted>`_ GitHub repository
 
 Logos will only be there for the year that a sponsor has donated.
@@ -140,6 +140,8 @@ New logos for the same sponsorship level are added after the existing logos.
 Make sure your logo looks good on both dark and light backgrounds.
 
 The size of the logo should be about 300x100 pixels.
+
+Logos can link to any URL suggested by the sponsors.
 
 
 Non-monetary donations and contributions
