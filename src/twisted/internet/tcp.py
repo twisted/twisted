@@ -727,6 +727,7 @@ class _BaseTCPClient:
             whenDone = None
         if whenDone and bindAddress is not None:
             try:
+                assert type(bindAddress) == tuple
                 if abstract.isIPv6Address(bindAddress[0]):
                     bindinfo = _resolveIPv6(*bindAddress)
                 else:

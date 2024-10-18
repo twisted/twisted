@@ -808,9 +808,18 @@ class HostnameEndpoint:
             seconds to wait before assuming the connection has failed.
         @type timeout: L{float} or L{int}
 
-        @param bindAddress: the local address of the network interface to make
-            the connections from.
-        @type bindAddress: L{bytes}
+        @param bindAddress: The client socket normally uses whatever
+            local interface (eth0, en0, lo, etc) is best suited for the
+            target address, and a randomly-assigned port. This argument
+            allows that local address/port to be overridden. Providing
+            just an address (as a str) will bind the client socket to
+            whichever interface is assigned that address. Providing a
+            tuple of (str, int) will bind it to both an interface and a
+            specific local port. To bind the port, but leave the
+            interface unbound, use a tuple of ("", port), or ("0.0.0.0",
+            port) for IPv4, or ("::0", port) for IPv6. To leave both
+            interface and port unbound, just use None.
+        @type bindAddress: L{str}, L{tuple}, or None
 
         @param attemptDelay: The number of seconds to delay between connection
             attempts.
@@ -827,6 +836,11 @@ class HostnameEndpoint:
         self._hostStr = self._hostBytes if bytes is str else self._hostText
         self._port = port
         self._timeout = timeout
+        if bindAddress is not None:
+            if isinstance(bindAddress, (bytes, str)):
+                bindAddress = (bindAddress, 0)
+            if isinstance(bindAddress[0], bytes):
+                bindAddress = (bindAddress[0].decode(), bindAddress[1])
         self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
@@ -2299,7 +2313,9 @@ def _parseClientTLS(
         ),
         clientFromString(reactor, endpoint)
         if endpoint is not None
-        else HostnameEndpoint(reactor, _idnaBytes(host), port, timeout, bindAddress),
+        else HostnameEndpoint(
+            reactor, _idnaBytes(host), port, timeout, (bindAddress, 0)
+        ),
     )
 
 
