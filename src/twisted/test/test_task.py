@@ -751,7 +751,7 @@ class LoopTests(unittest.TestCase):
         """
         self.assertEqual(
             repr(task.LoopingCall(installReactor, 1, key=2)),
-            "LoopingCall<None>(installReactor, *(1,), **{'key': 2})",
+            "LoopingCall<None>(installGlobalReactor, *(1,), **{'key': 2})",
         )
 
     def test_reprMethod(self):

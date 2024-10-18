@@ -32,20 +32,21 @@ from twisted.internet.interfaces import (
     IStreamClientEndpoint,
     ITransport,
 )
+from twisted.internet.reactors import getGlobal
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 
 T = TypeVar("T")
 
 
-def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
+def _maybeGlobalReactor(
+    whatInterface: Callable[..., T], maybeReactor: Optional[T]
+) -> T:
     """
     @return: the argument, or the global reactor if the argument is L{None}.
     """
     if maybeReactor is None:
-        from twisted.internet import reactor
-
-        return reactor  # type:ignore[return-value]
+        return getGlobal(whatInterface)
     else:
         return maybeReactor
 
@@ -530,7 +531,7 @@ class ClientService(Service):
 
             Present Since Twisted 18.7.0
         """
-        clock = _maybeGlobalReactor(clock)
+        clock = _maybeGlobalReactor(IReactorTime, clock)
         retryPolicy = _defaultPolicy if retryPolicy is None else retryPolicy
 
         self._machine: _Client = ClientMachine(
