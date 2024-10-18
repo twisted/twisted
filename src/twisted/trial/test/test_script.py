@@ -722,6 +722,10 @@ class MakeRunnerTests(unittest.TestCase):
         self.assertEqual("Expecting integer argument to jobs, got 'nan'", str(exc))
 
     def test_jobsNonPositive(self) -> None:
+        """
+        C{parseOptions} raises a C{UsageError} when C{--jobs} is passed a non-positive
+        integer.
+        """
         exc = self.assertRaises(UsageError, self.options.parseOptions, ["--jobs", "0"])
         self.assertEqual(
             "Argument to jobs must be a strictly positive integer or 'auto'", str(exc)
