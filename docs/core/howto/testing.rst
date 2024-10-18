@@ -240,7 +240,8 @@ Some caveats apply in parallel mode:
 
 * Anything written to standard out or standard error,
   such as by the ``print()`` function,
-  is suppressed.
+  is captured in separate text files.
+  The console output is suppressed.
 * Trial's ``--debug`` flag doesn't work,
   nor does the ``breakpoint()`` built-in.
-* Parallel mode doesn't work on Windows.
+* Parallel mode doesn't work on Windows. See `GitHub Issue 10152 <https://github.com/twisted/twisted/issues/10152>`_ if you want to help with support for Windows.
