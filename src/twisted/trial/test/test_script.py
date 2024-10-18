@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import gc
+import os
 import re
 import sys
 import textwrap
 import types
 from io import StringIO
 from typing import List
+from unittest import skipIf
 
 from hamcrest import assert_that, contains_string
 from hypothesis import given
@@ -502,6 +504,60 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.assertRaises(ImportError, self._checkSMTP)
 
 
+class AutoJobsTests(unittest.SynchronousTestCase):
+    """
+    Test {twisted.scripts.trial._autoJobs}
+    """
+
+    hasProcessCpuCount = sys.version_info[:2] >= (3, 13)
+    hasSchedGetaffinity = getattr(os, "sched_getaffinity", None) is not None
+
+    @skipIf(not hasProcessCpuCount, "Requires os.process_cpu_count()")
+    def test_processCpuCount(self) -> None:
+        """
+        When `os.process_cpu_count()` is available (Python 3.13+), `_autoJobs`
+        returns its result.
+        """
+        count = os.process_cpu_count()  # type: ignore
+        self.assertEqual(trial._autoJobs(), count)
+
+    @skipIf(
+        hasProcessCpuCount or not hasSchedGetaffinity,
+        "Requires os.sched_getaffinity() without os.process_cpu_count()",
+    )
+    def test_schedGetAffinity(self) -> None:
+        """
+        When `os.sched_getaffinity()` is available but `os.process_cpu_count()`
+        is not (Python 3.3 through Python 3.12 on "some Unix platforms"),
+        `_autoJobs` uses it to returns the number of CPUs that the current
+        process is restricted to.
+        """
+        self.assertEqual(trial._autoJobs(), len(os.sched_getaffinity(0)))
+
+    def test_cpuCount(self) -> None:
+        """
+        When only `os.cpu_count()` is available, `_autoJobs` returns
+        its result.
+        """
+        self.assertEqual(trial._autoJobs(), os.cpu_count())
+
+    def test_cpuCountUnknown(self) -> None:
+        """
+        When `os.cpu_count()` returns L{None}, `_autoJobs`
+        rounds up to 1.
+
+        This test relies on patching because all platforms currently
+        supported by Twisted provide a functioning `os.cpu_count()`.
+        """
+        if self.hasProcessCpuCount:
+            self.patch(os, "process_cpu_count", lambda: None)
+        if self.hasSchedGetaffinity:
+            self.patch(os, "sched_getaffinity", lambda pid: set())
+        self.patch(os, "cpu_count", lambda: None)
+
+        self.assertEqual(trial._autoJobs(), 1)
+
+
 class CoverageTests(unittest.SynchronousTestCase):
     """
     Tests for the I{coverage} option.
@@ -655,6 +711,34 @@ class MakeRunnerTests(unittest.TestCase):
         self.assertIsInstance(runner, DistTrialRunner)
         self.assertEqual(4, runner._maxWorkers)
         self.assertEqual(["--force-gc"], runner._workerArguments)
+
+    def test_jobsNotANumber(self) -> None:
+        """
+        C{parseOptions} raises a C{UsageError} when C{--jobs} is passed a non-integer.
+        """
+        exc = self.assertRaises(
+            UsageError, self.options.parseOptions, ["--jobs", "nan"]
+        )
+        self.assertEqual("Expecting integer argument to jobs, got 'nan'", str(exc))
+
+    def test_jobsNonPositive(self) -> None:
+        exc = self.assertRaises(UsageError, self.options.parseOptions, ["--jobs", "0"])
+        self.assertEqual(
+            "Argument to jobs must be a strictly positive integer or 'auto'", str(exc)
+        )
+
+    def test_autoDetectAvailableCpusForJobs(self) -> None:
+        """
+        C{--jobs auto} guesses the number of workers to use.
+        """
+        self.patch(trial, "_autoJobs", lambda: 77)
+
+        options = trial.Options()
+        options.parseOptions(["--jobs", "auto"])
+        runner = trial._makeRunner(options)
+
+        assert isinstance(runner, DistTrialRunner)
+        self.assertEqual(77, runner._maxWorkers)
 
     def test_dryRunWithJobs(self) -> None:
         """
