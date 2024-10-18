@@ -36,8 +36,8 @@ Sponsors
 
 .. |thinkst| image:: https://github.com/user-attachments/assets/a5b52432-2d18-4d91-a3c9-772fb2e02781
     :alt: Thinkst Canary
-    :target: https://thinkst.com/
+.. _thinkst: https://thinkst.com/
 
 .. |sftpplus| image:: https://github.com/user-attachments/assets/5f585316-c7e8-4ef1-8fbb-923f0756ceed
     :alt: SFTPPlus
-    :target: https://www.sftpplus.com/
+.. _sftpplus: https://www.sftpplus.com/
