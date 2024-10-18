@@ -840,7 +840,7 @@ class HostnameEndpoint:
             if isinstance(bindAddress, (bytes, str)):
                 bindAddress = (bindAddress, 0)
             if isinstance(bindAddress[0], bytes):
-                bindAddress = (nativeString(bindAddress[0]), bindAddress[1])
+                bindAddress = (bindAddress[0].decode(), bindAddress[1])
         self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
