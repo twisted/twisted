@@ -1,4 +1,4 @@
-Sponsor the project
+Sponsor the Project
 ===================
 
 
@@ -24,7 +24,7 @@ Sponsors
 How to donate
 -------------
 
-Since April 2023, the Twisted project got fiscal sponsorship from the `Python Software Foundation <https://www.python.org/psf-landing/>`_.
+Since April 2023, the Twisted project has been fiscally sponsored by the `Python Software Foundation <https://www.python.org/psf-landing/>`_.
 
 This enables Twisted to dedicate financial resources to maintenance and development.
 
@@ -43,7 +43,7 @@ The PSF is a recognized 501(c)(3) non-profit organization.
 GitHub Sponsors allows monthly donations or one time donations.
 
 For the contributions made using Tidelift we don't have any insights.
-At the moment, we receive about $300 per month via Tidelift.
+As of October 2024, we receive about $300 per month via Tidelift.
 
 If you would prefer to make other arrangements (e.g., your corporation requires the use of a purchase order,
 even when donating to a charity), contact PSF at `sponsors@python.org`.
@@ -109,7 +109,7 @@ $200 per month or equivalent
 With $200 per month or the equivalent $2400/year we can have your logo:
 
 * In the README file of the twisted/twisted project.
-* On the twisted.org website in the Donation section
+* On the twisted.org website in the "Sponsors" section
 
 Your contribution is also mentioned:
 
@@ -136,7 +136,7 @@ Your contribution is also mentioned:
 Logos
 -----
 
-Sponsors logos are displayed on the following sites:
+Sponsor logos are displayed on the following sites:
 
 * `twisted.org <https://twisted.org/>`_ project presentation site
 * `docs.twisted.org <https://docs.twisted.org/en/stable/>`_ Read The Docs site
@@ -162,7 +162,7 @@ Non-monetary donations and contributions
 The Twisted Project will consider the value of non-monetary donations to the project, for example, donations of hardware, software licenses, or hosting - on a case-by-case basis.
 
 If your company is directly contributing code development or code review,
-we encourage to use company email addresses.
+we encourage you to use a company email address.
 You can mention in the description of a pull request,
 that the work for that pull request is supported by your company,
 and provide a link to your company.
@@ -179,7 +179,9 @@ In general, we suggest cash donations, as that process is much simpler.
    Once the file is uploaded, you can get the link.
 
 .. |thinkst| image:: https://github.com/user-attachments/assets/a5b52432-2d18-4d91-a3c9-772fb2e02781
-.. _thinkst: https://thinkst.com/
+    :alt: Thinkst Canary
+    :target: https://thinkst.com/
 
 .. |sftpplus| image:: https://github.com/user-attachments/assets/5f585316-c7e8-4ef1-8fbb-923f0756ceed
-.. _sftpplus: https://www.sftpplus.com/
+    :alt: SFTPPlus
+    :target: https://www.sftpplus.com/

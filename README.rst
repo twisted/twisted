@@ -134,7 +134,9 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 .. _rtd: https://docs.twistedmatrix.com
 
 .. |thinkst| image:: https://github.com/user-attachments/assets/a5b52432-2d18-4d91-a3c9-772fb2e02781
-.. _thinkst: https://thinkst.com/
+    :alt: Thinkst Canary
+    :target: https://thinkst.com/
 
 .. |sftpplus| image:: https://github.com/user-attachments/assets/5f585316-c7e8-4ef1-8fbb-923f0756ceed
-.. _sftpplus: https://www.sftpplus.com/
+    :alt: SFTPPlus
+    :target: https://www.sftpplus.com/
