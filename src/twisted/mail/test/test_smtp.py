@@ -24,6 +24,7 @@ from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
+from twisted.internet.protocol import Factory
 from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
@@ -33,6 +34,7 @@ from twisted.trial.unittest import TestCase
 
 sslSkip: Optional[str]
 try:
+    from twisted.internet.ssl import optionsForClientTLS
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     sslSkip = "OpenSSL not present"
@@ -667,6 +669,46 @@ class TLSTests(TestCase, LoopbackMixin):
             self.assertEqual(server.startedTLS, True)
 
         return self.loopback(server, client).addCallback(check)
+
+    def test_ESMTPSenderFactory_TLSError(self) -> None:
+        """
+        Attempting to connect to an ESMTP server which presents an invalid certificate will trigger a failure that contains information that the failure was caused by the vertificate validation.
+        """
+        # set up a dummy ESMTP server which will present a self-signed cert after
+        # STARTTLS
+        buildServerProtocol = lambda: DummyESMTP(contextFactory=ServerTLSContext())
+        serverFactory = Factory.forProtocol(buildServerProtocol)
+        serverPort = reactor.listenTCP(0, serverFactory, interface="127.0.0.1")
+        self.addCleanup(serverPort.stopListening)
+
+        # build a client, which won't accept the certificate presented by the dummy
+        # server.
+        sentDeferred = defer.Deferred()
+        clientFactory = smtp.ESMTPSenderFactory(
+            "username",
+            "password",
+            "source@address",
+            "recipient@address",
+            BytesIO(b"message"),
+            sentDeferred,
+            retries=0,
+            requireAuthentication=False,
+            contextFactory=optionsForClientTLS("testdomain"),
+        )
+
+        # connect the two together
+        connector = reactor.connectTCP(
+            serverPort.getHost().host, serverPort.getHost().port, clientFactory
+        )
+        self.addCleanup(connector.disconnect)
+
+        def checkVerifyFailedMessage(e: smtp.SMTPConnectError) -> None:
+            # check that the SMTPConnectError has a message relating to the TLS error
+            self.assertIn("certificate verify failed", str(e))
+
+        return self.assertFailure(sentDeferred, smtp.SMTPConnectError).addCallback(
+            checkVerifyFailedMessage
+        )
 
 
 class EmptyLineTests(TestCase):
