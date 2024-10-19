@@ -1,1 +1,0 @@
-The twisted.web HTTP server and client now reject HTTP header names containing whitespace or other invalid characters by raising twisted.web.http_headers.InvalidHeaderName, improving compliance with RFC 9110. As a side effect, the server is slightly faster.

@@ -1,1 +1,0 @@
-twisted.internet.address no longer raises DeprecationWarning when used with attrs>=24.1.0.
