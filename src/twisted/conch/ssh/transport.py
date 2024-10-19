@@ -630,20 +630,39 @@ class SSHTransportBase(protocol.Protocol):
                 payload
             ) + self.outgoingCompression.flush(2)
         bs = self.currentEncryptions.encBlockSize
-        # 4 for the packet length and 1 for the padding length
-        totalSize = 5 + len(payload)
+
+        isGCM = self.currentEncryptions.outCipType.endswith(b"-gcm@openssh.com")
+
+        # 1 for the padding length
+        totalSize = 1 + len(payload)
+
+        if not isGCM:
+            totalSize += 4
+
         lenPad = bs - (totalSize % bs)
         if lenPad < 4:
             lenPad = lenPad + bs
+
+        if isGCM:
+            totalSize = totalSize + lenPad
+        else:
+            totalSize = totalSize + lenPad - 4
+
         packet = (
             struct.pack("!LB", totalSize + lenPad - 4, lenPad)
             + payload
             + randbytes.secureRandom(lenPad)
         )
-        encPacket = self.currentEncryptions.encrypt(
-            packet
-        ) + self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
-        self.transport.write(encPacket)
+
+        if isGCM:
+            encPacket = self.currentEncryptions.encrypt(packet)
+            self.transport.write(encPacket)
+            self.outgoingPacketSequence += 1
+            return
+
+        encPacket = self.currentEncryptions.encrypt(packet)
+        macPacket = self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
+        self.transport.write(encPacket + macPacket)
         self.outgoingPacketSequence += 1
 
     def getPacket(self):
@@ -655,10 +674,20 @@ class SSHTransportBase(protocol.Protocol):
         @return: The decoded packet, if any.
         """
         bs = self.currentEncryptions.decBlockSize
-        ms = self.currentEncryptions.verifyDigestSize
         if len(self.buf) < bs:
             # Not enough data for a block
             return
+
+        isGCM = self.currentEncryptions.inCipType.endswith(b"-gcm@openssh.com")
+
+        if isGCM:
+            return self._getPacketGCM()
+
+        return self._getPacketMTE()
+
+    def _getPacketMTE(self):
+        bs = self.currentEncryptions.decBlockSize
+        ms = self.currentEncryptions.verifyDigestSize
         if not hasattr(self, "first"):
             first = self.currentEncryptions.decrypt(self.buf[:bs])
         else:
@@ -697,6 +726,54 @@ class SSHTransportBase(protocol.Protocol):
                 self.sendDisconnect(DISCONNECT_MAC_ERROR, b"bad MAC")
                 return
         payload = packet[5:-paddingLen]
+        if self.incomingCompression:
+            try:
+                payload = self.incomingCompression.decompress(payload)
+            except Exception:
+                # Tolerate any errors in decompression
+                self._log.failure("Error decompressing payload")
+                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, b"compression error")
+                return
+        self.incomingPacketSequence += 1
+        return payload
+
+    def _getPacketGCM(self):
+        # For GCM we don't use the MAC size.
+        bs = self.currentEncryptions.decBlockSize
+
+        packetLen = struct.unpack("!L", self.buf[:4])[0]
+
+        if packetLen > 1048576:  # 1024 ** 2
+            self.sendDisconnect(
+                DISCONNECT_PROTOCOL_ERROR,
+                networkString(f"bad packet length {packetLen}"),
+            )
+            return
+
+        if len(self.buf) < packetLen + 4 + 16:
+            # Not enough data for a packet
+            return
+
+        if packetLen % bs != 0:
+            self.sendDisconnect(
+                DISCONNECT_PROTOCOL_ERROR,
+                networkString(
+                    "bad packet mod (%i%%%i == %i)"
+                    % (packetLen + 4, bs, (packetLen + 4) % bs)
+                ),
+            )
+            return
+        encData, self.buf = self.buf[: 4 + packetLen], self.buf[4 + packetLen :]
+        # We ignore the diget size and only read the GCM authenticaition tag.
+        macData, self.buf = self.buf[:16], self.buf[16:]
+
+        packet = self.currentEncryptions.decrypt(encData + macData)
+        if len(packet) != packetLen:
+            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, b"bad decryption")
+            return
+
+        paddingLen = struct.unpack("!B", packet[:1])[0]
+        payload = packet[1:-paddingLen]
         if self.incomingCompression:
             try:
                 payload = self.incomingCompression.decompress(payload)
