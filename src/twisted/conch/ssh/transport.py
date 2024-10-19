@@ -32,7 +32,7 @@ from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
 from twisted.python import randbytes
-from twisted.python.compat import iterbytes, networkString
+from twisted.python.compat import iterbytes
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
@@ -113,6 +113,8 @@ class SSHCiphers:
         b"none": (None, 0, modes.CBC),
     }
     macMap = {
+        b"hmac-sha2-256-etm@openssh.com": sha256,
+        b"hmac-sha2-512-etm@openssh.com": sha512,
         b"hmac-sha2-512": sha512,
         b"hmac-sha2-384": sha384,
         b"hmac-sha2-256": sha256,
@@ -274,6 +276,24 @@ class SSHCiphers:
         data = struct.pack(">L", seqid) + data
         outer = hmac.HMAC(self.inMAC.key, data, self.inMAC[0]).digest()
         return hmac.compare_digest(mac, outer)
+
+    def isOutMACETM(self) -> bool:
+        """
+        @return True if outgoing MAC is ETM.
+        """
+        return self.outMACType.endswith(b"-etm@openssh.com")
+
+    def isInMACETM(self) -> bool:
+        """
+        @return True if incoming MAC is ETM.
+        """
+        return self.inMACType.endswith(b"-etm@openssh.com")
+
+
+class _InvalidPacket(Exception):
+    """
+    Used internally when an invalid packet was received.
+    """
 
 
 def _getSupportedCiphers():
@@ -446,9 +466,11 @@ class SSHTransportBase(protocol.Protocol):
     # List ordered by preference.
     supportedCiphers = _getSupportedCiphers()
     supportedMACs = [
-        b"hmac-sha2-512",
-        b"hmac-sha2-384",
+        b"hmac-sha2-256-etm@openssh.com",
+        b"hmac-sha2-512-etm@openssh.com",
         b"hmac-sha2-256",
+        b"hmac-sha2-384",
+        b"hmac-sha2-512",
         b"hmac-sha1",
         b"hmac-md5",
         # `none`,
@@ -629,36 +651,111 @@ class SSHTransportBase(protocol.Protocol):
             payload = self.outgoingCompression.compress(
                 payload
             ) + self.outgoingCompression.flush(2)
-        bs = self.currentEncryptions.encBlockSize
-        # 4 for the packet length and 1 for the padding length
-        totalSize = 5 + len(payload)
-        lenPad = bs - (totalSize % bs)
-        if lenPad < 4:
-            lenPad = lenPad + bs
-        packet = (
-            struct.pack("!LB", totalSize + lenPad - 4, lenPad)
-            + payload
-            + randbytes.secureRandom(lenPad)
-        )
-        encPacket = self.currentEncryptions.encrypt(
-            packet
-        ) + self.currentEncryptions.makeMAC(self.outgoingPacketSequence, packet)
-        self.transport.write(encPacket)
+
+        wirePacket = self._createPacket(payload)
+
+        self.transport.write(wirePacket)
         self.outgoingPacketSequence += 1
 
-    def getPacket(self):
+    def _createPacket(self, payload: bytes) -> bytes:
+        """
+        Return the SSH packet at it should be sent to the peer over the wire.
+
+        `payload` is the actual data.
+        """
+        # Start by computing the required padding.
+        #
+        # Extra 1 byte for the padding length
+        payloadSize = len(payload) + 1
+        isETM = self.currentEncryptions.isOutMACETM()
+
+        if not isETM:
+            # For not ETM, the packet length is also included.
+            payloadSize += 4
+
+        bs = self.currentEncryptions.encBlockSize
+        lenPad = bs - (payloadSize % bs)
+        if lenPad < 4:
+            lenPad = lenPad + bs
+
+        # Create the unencrypted packet.
+        payloadPacket = (
+            struct.pack("!B", lenPad) + payload + randbytes.secureRandom(lenPad)
+        )
+
+        if isETM:
+            # For Encrypt-then-MAC the total size is not encrypted.
+            encryptedPayload = self.currentEncryptions.encrypt(payloadPacket)
+            totalSizePacket = struct.pack("!L", len(encryptedPayload))
+            macTarget = totalSizePacket + encryptedPayload
+            macPacket = self.currentEncryptions.makeMAC(
+                self.outgoingPacketSequence, macTarget
+            )
+            return macTarget + macPacket
+
+        # For non ETM, we subtract the 4 bytes added to compute the
+        # padding size.
+        # But we also encrypt the package length.
+        totalSizePacket = struct.pack("!L", payloadSize + lenPad - 4)
+        encryptedPacket = self.currentEncryptions.encrypt(
+            totalSizePacket + payloadPacket
+        )
+        macTarget = totalSizePacket + payloadPacket
+
+        macPacket = self.currentEncryptions.makeMAC(
+            self.outgoingPacketSequence, macTarget
+        )
+
+        return encryptedPacket + macPacket
+
+    def getPacket(self) -> bytes | None:
         """
         Try to return a decrypted, authenticated, and decompressed packet
         out of the buffer.  If there is not enough data, return None.
 
-        @rtype: L{str} or L{None}
-        @return: The decoded packet, if any.
+        @return: The decoded packet, if any. C{None} is returned if no packet was received yet.
+        """
+        if len(self.buf) < self.currentEncryptions.decBlockSize:
+            # Not enough data for a block
+            return
+
+        try:
+            if self.currentEncryptions.isInMACETM():
+                payload = self._getPacketETM()
+            else:
+                payload = self._getPacketMTE()
+
+        except _InvalidPacket as error:
+            self.sendDisconnect(
+                DISCONNECT_PROTOCOL_ERROR,
+                error.args[0].encode("ascii"),
+            )
+            return
+
+        if payload is None:
+            # No packet received yet.
+            return
+
+        if self.incomingCompression:
+            try:
+                payload = self.incomingCompression.decompress(payload)
+            except Exception:
+                self._log.failure("Error decompressing payload")
+                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, b"compression error")
+                return
+
+        self.incomingPacketSequence += 1
+        return payload
+
+    def _getPacketMTE(self) -> bytes | None:
+        """
+        Handle decoding a packet when mac then encrypt.
+
+        @return: None if no packet was yet received.
         """
         bs = self.currentEncryptions.decBlockSize
         ms = self.currentEncryptions.verifyDigestSize
-        if len(self.buf) < bs:
-            # Not enough data for a block
-            return
+
         if not hasattr(self, "first"):
             first = self.currentEncryptions.decrypt(self.buf[:bs])
         else:
@@ -666,46 +763,74 @@ class SSHTransportBase(protocol.Protocol):
             del self.first
         packetLen, paddingLen = struct.unpack("!LB", first[:5])
         if packetLen > 1048576:  # 1024 ** 2
-            self.sendDisconnect(
-                DISCONNECT_PROTOCOL_ERROR,
-                networkString(f"bad packet length {packetLen}"),
-            )
-            return
+            raise _InvalidPacket(f"bad packet length {packetLen}")
+
         if len(self.buf) < packetLen + 4 + ms:
             # Not enough data for a packet
             self.first = first
             return
         if (packetLen + 4) % bs != 0:
-            self.sendDisconnect(
-                DISCONNECT_PROTOCOL_ERROR,
-                networkString(
-                    "bad packet mod (%i%%%i == %i)"
-                    % (packetLen + 4, bs, (packetLen + 4) % bs)
-                ),
+            raise _InvalidPacket(
+                "bad packet mod ({}%{} == {})".format(
+                    packetLen + 4, bs, (packetLen + 4) % bs
+                )
             )
-            return
+
         encData, self.buf = self.buf[: 4 + packetLen], self.buf[4 + packetLen :]
         packet = first + self.currentEncryptions.decrypt(encData[bs:])
         if len(packet) != 4 + packetLen:
-            self.sendDisconnect(DISCONNECT_PROTOCOL_ERROR, b"bad decryption")
-            return
+            raise _InvalidPacket("bad decryption")
+
         if ms:
             macData, self.buf = self.buf[:ms], self.buf[ms:]
             if not self.currentEncryptions.verify(
                 self.incomingPacketSequence, packet, macData
             ):
-                self.sendDisconnect(DISCONNECT_MAC_ERROR, b"bad MAC")
-                return
+                raise _InvalidPacket("bad MAC for MTE")
+
         payload = packet[5:-paddingLen]
-        if self.incomingCompression:
-            try:
-                payload = self.incomingCompression.decompress(payload)
-            except Exception:
-                # Tolerate any errors in decompression
-                self._log.failure("Error decompressing payload")
-                self.sendDisconnect(DISCONNECT_COMPRESSION_ERROR, b"compression error")
-                return
-        self.incomingPacketSequence += 1
+        return payload
+
+    def _getPacketETM(self) -> bytes | None:
+        """
+        Handle decoding a packet when encrypt then MAC is used.
+
+        @return: None if no packet was yet received.
+        """
+        bs = self.currentEncryptions.decBlockSize
+        ms = self.currentEncryptions.verifyDigestSize
+
+        packetLen = struct.unpack("!L", self.buf[:4])[0]
+
+        if packetLen > 1048576:  # 1024 ** 2
+            raise _InvalidPacket(f"bad packet length {packetLen}")
+
+        if packetLen % bs != 0:
+            raise _InvalidPacket(
+                "bad packet mod ({}%{} == {})".format(packetLen, bs, packetLen % bs)
+            )
+
+        if len(self.buf) < packetLen + ms:
+            # Not enough data for a packet
+            return
+
+        # Consume the encrypted data from the buffer.
+        #
+        # The first 4 bytes are the package lenght field.
+        encData, self.buf = self.buf[: 4 + packetLen], self.buf[4 + packetLen :]
+        packet = self.currentEncryptions.decrypt(encData[4:])
+        if len(packet) != packetLen:
+            raise _InvalidPacket("bad decryption")
+
+        # Consume the MAC data from the buffer.
+        macData, self.buf = self.buf[:ms], self.buf[ms:]
+        if not self.currentEncryptions.verify(
+            self.incomingPacketSequence, encData, macData
+        ):
+            raise _InvalidPacket("bad MAC for ETM")
+
+        paddingLen = struct.unpack("!B", packet[:1])[0]
+        payload = packet[1:-paddingLen]
         return payload
 
     def _unsupportedVersionReceived(self, remoteVersion):
