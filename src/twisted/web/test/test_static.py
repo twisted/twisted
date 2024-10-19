@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.web.static}.
 """
+
 import errno
 import inspect
 import mimetypes
@@ -22,7 +23,7 @@ from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
-from twisted.web import http, resource, script, static
+from twisted.web import http, pages, resource, script, static
 from twisted.web._responses import FOUND
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test._util import _render
@@ -245,9 +246,9 @@ class StaticFileTests(TestCase):
 
     def test_forbiddenResource_default(self):
         """
-        L{File.forbidden} defaults to L{resource.ForbiddenResource}.
+        L{File.forbidden} defaults to an L{_ErrorPage} instance.
         """
-        self.assertIsInstance(static.File(b".").forbidden, resource.ForbiddenResource)
+        self.assertIsInstance(static.File(b".").forbidden, pages._ErrorPage)
 
     def test_forbiddenResource_customize(self):
         """
@@ -1721,13 +1722,8 @@ class DirectoryListerTests(TestCase):
         lister = static.DirectoryLister(path.path)
         request = self._request(b"")
         child = resource.getChildForRequest(lister, request)
-        result = _render(child, request)
-
-        def cbRendered(ignored):
-            self.assertEqual(request.responseCode, http.NOT_FOUND)
-
-        result.addCallback(cbRendered)
-        return result
+        self.successResultOf(_render(child, request))
+        self.assertEqual(request.responseCode, http.NOT_FOUND)
 
     def test_repr(self):
         """

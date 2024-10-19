@@ -1,0 +1,1 @@
+``twisted.web`` no longer generates deprecation warnings interally. Many code paths use the ``twisted.web.pages`` helper functions rather than the ``ErrorPage`` types deprecated in Twisted 22.10.0.

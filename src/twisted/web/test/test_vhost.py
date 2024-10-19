@@ -5,11 +5,10 @@
 Tests for L{twisted.web.vhost}.
 """
 
-
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND
-from twisted.web.resource import NoResource
+from twisted.web.pages import _ErrorPage
 from twisted.web.server import Site
 from twisted.web.static import Data
 from twisted.web.test._util import _render
@@ -50,7 +49,7 @@ class HostResourceTests(TestCase):
 
         request = DummyRequest([b"uri", b"test"])
         step = root.getChild(b"uri", request)
-        self.assertIsInstance(step, NoResource)
+        self.assertIsInstance(step, _ErrorPage)
 
 
 class NameVirtualHostTests(TestCase):
@@ -180,7 +179,7 @@ class NameVirtualHostTests(TestCase):
         request.requestHeaders.addRawHeader(b"host", b"norm.example.org")
         request.prepath = [b""]
 
-        self.assertIsInstance(virtualHostResource.getChild(b"", request), NoResource)
+        self.assertIsInstance(virtualHostResource.getChild(b"", request), _ErrorPage)
         self.assertEqual(request.prepath, [b""])
         self.assertEqual(request.postpath, [])
 
