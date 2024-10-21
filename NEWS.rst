@@ -55,7 +55,7 @@ Bugfixes
 
 - twisted.conch tests no longer rely on OpenSSH supporting DSA keys, fixing compatibility with OpenSSH >= 9.8. (#12273)
 - twisted.conch.ssh.SSHCiphers no longer supports the cast128-ctr, cast128-cbc, blowfish-ctr, and blowfish-cbc ciphers.
-  The Blowfish and CAST5 ciphers were removed as they were deprecated by the Python cryptography library.``` (#12308)
+  The Blowfish and CAST5 ciphers were removed as they were deprecated by the Python cryptography library. (#12308)
 
 
 Misc
