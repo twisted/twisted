@@ -8,6 +8,113 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 24.10.0rc1 (2024-10-19)
+===============================
+
+Features
+--------
+
+- Python 3.13 is now supported. (#11750)
+- twisted.internet.defer.succeed() is significantly faster, and awaiting Deferred has also been sped up. (#12225)
+- twisted.python.failure.Failure creation no longer records the place where it was created. This reduces creation time by 60% at least, thereby speeding up Deferred error handling. (#12230)
+- twisted.internet.defer.Deferred no longer removes the traceback object from Failures. This may result in more objects staying in memory if you don't clean up failed Deferreds, but it speeds up error handling and enables improvements to traceback reporting. (#12234)
+- twisted.internet.defer APIs are 2%-4% faster in many cases. (#12237)
+- twisted.internet.defer.Deferred runs callbacks with chained Deferreds a little faster. (#12284)
+- The reactor now will use a little less CPU when events have been scheduled with callLater(). (#12286)
+- Creation of twisted.python.failure.Failure is now faster. (#12288)
+- twisted.web.server is 1-2% faster in some cases. (#12318)
+
+
+Bugfixes
+--------
+
+- Fixed unreleased regression caused by PR 12109. (#12279)
+- twisted.logger.eventAsText can now format the output having types/classes as input.
+  This was a regression introduced in Twisted 24.3.0. (#12323)
+- twisted.internet.endpoints.clientFromString for TLS endpoints with "bindAddress="  no longer crashes during connect. twisted.internet.endpoints.HostnameEndpoint() no longer crashes when given a bindAddress= argument that is just a string, and that argument now accepts either address strings or (address, port) tuples. (#12325)
+- The URLs from README and pyproject.toml were updated. (#12327)
+
+
+Misc
+----
+
+- #11236, #12060, #12062, #12099, #12219, #12290, #12296, #12305, #12329, #12331, #12339
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh.keys.Key can now load public blob keys of type sk-ssh-ed25519@openssh.com and sk-ecdsa-sha2-nistp256@openssh.com. (#12211)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch tests no longer rely on OpenSSH supporting DSA keys, fixing compatibility with OpenSSH >= 9.8. (#12273)
+- twisted.conch.ssh.SSHCiphers no longer supports the cast128-ctr, cast128-cbc, blowfish-ctr, and blowfish-cbc ciphers.
+  The Blowfish and CAST5 ciphers were removed as they were deprecated by the Python cryptography library. (#12308)
+
+
+Misc
+~~~~
+
+- #12313
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- The twisted.web HTTP server and client now reject HTTP header names containing whitespace or other invalid characters by raising twisted.web.http_headers.InvalidHeaderName, improving compliance with RFC 9110. As a side effect, the server is slightly faster. (#12191)
+- twisted.web.client and twisted.web.server now disable the Nagle algorithm (enable TCP_NODELAY), reducing the latency of small HTTP queries. (#12311)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web's HTTP/1.1 server now rejects header values containing a NUL byte with a 400 error, in compliance with RFC 9110. (#12228)
+- twisted.internet.address no longer raises DeprecationWarning when used with attrs>=24.1.0. (#12277)
+- twisted.web's HTTP/1.1 server now accepts '&' within tokens (methods, header field names, etc.), in compliance with RFC 9110. (#12301)
+
+
+Misc
+~~~~
+
+- #9743, #12276
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- Trial's ``-j`` flag now accepts an ``auto`` keyword to spawn a number of workers based on the available CPUs. (#5824)
+
+
 Twisted 24.7.0 (2024-08-08)
 ===========================
 

@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferred runs callbacks with chained Deferreds a little faster.

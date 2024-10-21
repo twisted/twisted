@@ -1,1 +1,0 @@
-twisted.web's HTTP/1.1 server now accepts '&' within tokens (methods, header field names, etc.), in compliance with RFC 9110.
