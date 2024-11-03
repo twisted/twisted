@@ -2487,7 +2487,8 @@ abasdfg
 
     def test_multipartEmptyHeaderProcessingFailure(self):
         """
-        When the multipart does not contain a header is should be skipped
+        When a multipart segment is missing required headers, it should fail
+        the request.
         """
         processed = []
 
@@ -2509,8 +2510,7 @@ Content-Length: 14
 --AaBb1313--
 """
         channel = self.runRequest(req, MyRequest, success=False)
-        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
-        self.assertEqual(processed[0].args, {})
+        self.assertEqual(channel.transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
     def test_multipartFormData(self):
         """

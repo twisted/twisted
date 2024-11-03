@@ -108,9 +108,6 @@ import os
 import re
 import tempfile
 import warnings
-from collections import defaultdict
-from email import message_from_bytes
-from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
 from typing import AnyStr, Callable, Protocol as TypingProtocol
@@ -122,6 +119,7 @@ from urllib.parse import (
 
 from zope.interface import Attribute, Interface, implementer, provider
 
+import multipart
 from incremental import Version
 
 from twisted.internet import address, interfaces, protocol
@@ -292,47 +290,6 @@ def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
         raise ValueError("Invalid version")
 
     return method, request, version
-
-
-def _parseContentType(line: bytes) -> bytes:
-    """
-    Parse the Content-Type header.
-    """
-    msg = EmailMessage()
-    msg["content-type"] = line.decode("charmap")
-    key = msg.get_content_type()
-    encodedKey = key.encode("charmap")
-    return encodedKey
-
-
-class _MultiPartParseException(Exception):
-    """
-    Failed to parse the multipart/form-data payload.
-    """
-
-
-def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
-    """
-    Parse the content of a multipart/form-data request.
-    """
-    result = defaultdict(list)
-    multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
-    msg = message_from_bytes(multiPartHeaders + content)
-    if not msg.is_multipart():
-        raise _MultiPartParseException("Not a multipart.")
-
-    part: Message
-    # "per Python docs, a list of Message objects when is_multipart() is True,
-    # or a string when is_multipart() is False"
-    for part in msg.get_payload():  # type:ignore[assignment]
-        name: str | None = part.get_param(
-            "name", header="content-disposition"
-        )  # type:ignore[assignment]
-        if not name:
-            continue
-        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
-        result[name.encode("utf8")].append(payload)
-    return result
 
 
 def urlparse(url):
@@ -1065,8 +1022,9 @@ class Request:
             self.path, argstring = x
             self.args = parse_qs(argstring, 1)
 
-        # Argument processing
-        args = self.args
+        # Parse form requests into self.args
+        # TODO: Make parsing optional or only do that on-demand
+
         ctype = self.requestHeaders.getRawHeaders(b"Content-Type")
         if ctype is not None:
             ctype = ctype[0]
@@ -1077,21 +1035,39 @@ class Request:
             and clength
             and self._parsePOSTFormSubmission
         ):
-            mfd = b"multipart/form-data"
-            key = _parseContentType(ctype)
-            if key == b"application/x-www-form-urlencoded":
-                args.update(parse_qs(self.content.read(), 1))
-            elif key == mfd:
+            try:
+                key, opts = multipart.parse_options_header(str(ctype[0], "ASCII"))
+            except UnicodeDecodeError:
+                # Content-Type and all options must be ASCII
+                self.channel._respondToBadRequestAndDisconnect()
+                return
+
+            if key == "application/x-www-form-urlencoded":
+                self.args.update(parse_qs(self.content.read(), 1))
+                self.content.seek(0, 0)
+            elif key == "multipart/form-data" and "boundary" in opts:
                 try:
-                    self.content.seek(0)
-                    content = self.content.read()
-                    self.args.update(_getMultiPartArgs(content, ctype))
-                except _MultiPartParseException:
-                    # It was a bad request.
+                    parser = multipart.MultipartParser(
+                        stream=self.content,
+                        boundary=opts["boundary"],
+                        charset="charmap",
+                        # TODO: Make limits configurable. The default limits are
+                        # very generous to not break existing apps that rely on
+                        # large form fields.
+                        part_limit=1024,
+                        spool_limit=1024 * 1024,  # 1MB
+                        memory_limit=1024 * 1024 * 128,  # 128MB
+                    )
+                    for part in parser:
+                        # TODO: Put file uploads into a separate attribute
+                        # (e.g. self.files) and do not load them into memory.
+                        self.args.setdefault(part.name.encode("charmap"), []).append(
+                            part.raw
+                        )
+                    self.content.seek(0, 0)
+                except multipart.MultipartError:
                     self.channel._respondToBadRequestAndDisconnect()
                     return
-
-            self.content.seek(0, 0)
 
         self.process()
 
