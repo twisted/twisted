@@ -1062,7 +1062,7 @@ class Request:
         clength = self.content.tell()
         self.content.seek(0, 0)
         self.args = {}
-        self.filenames: dict[bytes, str] = {}
+        self.filenames = {}
 
         self.method, self.uri = command, path
         self.clientproto = version
