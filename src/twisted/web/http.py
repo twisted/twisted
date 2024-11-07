@@ -112,11 +112,13 @@ from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
+from types import MappingProxyType
 from typing import (
     AnyStr,
     Callable,
     Dict,
     List,
+    Mapping,
     Optional,
     Protocol as TypingProtocol,
     Tuple,
@@ -888,7 +890,7 @@ class Request:
 
     @ivar filenames: A mapping of file upload names to their filename,
         if it was given as part of a multipart file upload.
-    @type args: L{dict} of L{bytes} to L{str}
+    @type filenames: L{Mapping} of L{bytes} to L{str}
 
     @ivar content: A file-like object giving the request body.  This may be
         a file on disk, an L{io.BytesIO}, or some other type.  The
@@ -931,6 +933,7 @@ class Request:
     etag = None
     lastModified = None
     args = None
+    filenames: Mapping[bytes, str] = MappingProxyType({})
     path = None
     content = None
     _forceSSL = 0
@@ -1062,7 +1065,6 @@ class Request:
         clength = self.content.tell()
         self.content.seek(0, 0)
         self.args = {}
-        self.filenames = {}
 
         self.method, self.uri = command, path
         self.clientproto = version
@@ -1075,7 +1077,6 @@ class Request:
             self.args = parse_qs(argstring, 1)
 
         # Argument processing
-        args = self.args
         ctype = self.requestHeaders.getRawHeaders(b"Content-Type")
         if ctype is not None:
             ctype = ctype[0]
@@ -1084,14 +1085,14 @@ class Request:
             mfd = b"multipart/form-data"
             key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":
-                args.update(parse_qs(self.content.read(), 1))
+                self.args.update(parse_qs(self.content.read(), 1))
             elif key == mfd:
                 try:
                     self.content.seek(0)
                     content = self.content.read()
-                    moreArgs, moreFilenames = _getMultiPartArgs(content, ctype)
+                    moreArgs, filenames = _getMultiPartArgs(content, ctype)
                     self.args.update(moreArgs)
-                    self.filenames.update(moreFilenames)
+                    self.filenames = filenames
                 except _MultiPartParseException:
                     # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
