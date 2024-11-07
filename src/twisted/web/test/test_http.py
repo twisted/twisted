@@ -2542,6 +2542,7 @@ abasdfg
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+        self.assertEqual(processed[0].filenames, {})
 
     def test_multipartFileData(self):
         """
@@ -2580,6 +2581,7 @@ Content-Length: """
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
+        self.assertEqual(processed[0].filenames, {b"uploadedfile": "test"})
 
     def test_chunkedEncoding(self):
         """

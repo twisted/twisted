@@ -319,11 +319,14 @@ class _MultiPartParseException(Exception):
     """
 
 
-def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
+def _getMultiPartArgs(
+    content: bytes, ctype: bytes
+) -> tuple[dict[bytes, list[bytes]], dict[bytes, str]]:
     """
     Parse the content of a multipart/form-data request.
     """
     result = {}
+    filenames = {}
     multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
     msg = message_from_bytes(multiPartHeaders + content)
     if not msg.is_multipart():
@@ -340,7 +343,10 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
             continue
         payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
         result[name.encode("utf8")] = [payload]
-    return result
+        filename: str | None = part.get_param("filename", header="content-disposition")  # type: ignore[assignment]
+        if filename is not None:
+            filenames[name.encode("utf-8")] = filename
+    return result, filenames
 
 
 def urlparse(url):
@@ -880,6 +886,10 @@ class Request:
         b'quux': [b'spam']}}.
     @type args: L{dict} of L{bytes} to L{list} of L{bytes}
 
+    @ivar filenames: A mapping of file upload names to their filename,
+        if it was given as part of a multipart file upload.
+    @type args: L{dict} of L{bytes} to L{str}
+
     @ivar content: A file-like object giving the request body.  This may be
         a file on disk, an L{io.BytesIO}, or some other type.  The
         implementation is free to decide on a per-request basis.
@@ -1052,6 +1062,7 @@ class Request:
         clength = self.content.tell()
         self.content.seek(0, 0)
         self.args = {}
+        self.filenames: dict[bytes, str] = {}
 
         self.method, self.uri = command, path
         self.clientproto = version
@@ -1078,7 +1089,9 @@ class Request:
                 try:
                     self.content.seek(0)
                     content = self.content.read()
-                    self.args.update(_getMultiPartArgs(content, ctype))
+                    moreArgs, moreFilenames = _getMultiPartArgs(content, ctype)
+                    self.args.update(moreArgs)
+                    self.filenames.update(moreFilenames)
                 except _MultiPartParseException:
                     # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
