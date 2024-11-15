@@ -1713,7 +1713,7 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         return channel
 
-    def test_multipartFormData(self):
+    async def test_multipartFormData(self):
         """
         Test that chunked uploads are actually processed into args.
 
@@ -1747,6 +1747,7 @@ abasdfg
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
+        self.assertEqual(len([i async for i in processed[0].files()]), 0)
 
 
 class ParsingTests(unittest.TestCase):
@@ -2511,7 +2512,7 @@ Content-Length: 14
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(processed[0].args, {})
 
-    def test_multipartFormData(self):
+    async def test_multipartFormData(self):
         """
         If the request has a Content-Type of C{multipart/form-data}, and the
         form data is parseable, the form arguments will be added to the
@@ -2542,9 +2543,12 @@ abasdfg
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
-        self.assertEqual(processed[0].filenames, {})
+        uploads = 0
+        async for _ in processed[0].files():
+            uploads += 1
+        self.assertEqual(uploads, 0)
 
-    def test_multipartFileData(self):
+    async def test_multipartFileData(self):
         """
         If the request has a Content-Type of C{multipart/form-data},
         and the form data is parseable and contains files, the file
@@ -2581,7 +2585,14 @@ Content-Length: """
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
-        self.assertEqual(processed[0].filenames, {b"uploadedfile": "test"})
+        uploads = 0
+        async for upload in processed[0].files():
+            self.assertEqual(upload.name, "uploadedfile")
+            self.assertEqual(upload.data.getvalue(), b"abasdfg")
+            self.assertEqual(upload.filename, "test")
+            self.assertEqual(upload.contentType, "application/octet-stream")
+            uploads += 1
+        self.assertEqual(uploads, 1)
 
     def test_chunkedEncoding(self):
         """

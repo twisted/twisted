@@ -108,17 +108,19 @@ import os
 import re
 import tempfile
 import warnings
+from dataclasses import dataclass
 from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
-from types import MappingProxyType
 from typing import (
     AnyStr,
+    AsyncIterable,
+    BinaryIO,
     Callable,
     Dict,
+    Iterable,
     List,
-    Mapping,
     Optional,
     Protocol as TypingProtocol,
     Tuple,
@@ -321,14 +323,26 @@ class _MultiPartParseException(Exception):
     """
 
 
+@dataclass
+class FileUpload:
+    """
+    A file that was uploaded to the web server as part of multipart request.
+    """
+
+    data: BinaryIO
+    name: str
+    filename: str
+    contentType: str
+
+
 def _getMultiPartArgs(
     content: bytes, ctype: bytes
-) -> tuple[dict[bytes, list[bytes]], dict[bytes, str]]:
+) -> tuple[dict[bytes, list[bytes]], list[FileUpload]]:
     """
     Parse the content of a multipart/form-data request.
     """
     result = {}
-    filenames = {}
+    files = []
     multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
     msg = message_from_bytes(multiPartHeaders + content)
     if not msg.is_multipart():
@@ -346,9 +360,16 @@ def _getMultiPartArgs(
         payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
         result[name.encode("utf8")] = [payload]
         filename: str | None = part.get_param("filename", header="content-disposition")  # type: ignore[assignment]
-        if filename is not None:
-            filenames[name.encode("utf-8")] = filename
-    return result, filenames
+        if filename:
+            files.append(
+                FileUpload(
+                    data=BytesIO(payload),
+                    name=name,
+                    filename=filename,
+                    contentType=part.get_content_type(),
+                )
+            )
+    return result, files
 
 
 def urlparse(url):
@@ -933,7 +954,7 @@ class Request:
     etag = None
     lastModified = None
     args = None
-    filenames: Mapping[bytes, str] = MappingProxyType({})
+    _files: Iterable[FileUpload] = ()
     path = None
     content = None
     _forceSSL = 0
@@ -1090,9 +1111,8 @@ class Request:
                 try:
                     self.content.seek(0)
                     content = self.content.read()
-                    moreArgs, filenames = _getMultiPartArgs(content, ctype)
+                    moreArgs, self._files = _getMultiPartArgs(content, ctype)
                     self.args.update(moreArgs)
-                    self.filenames = filenames
                 except _MultiPartParseException:
                     # It was a bad request.
                     self.channel._respondToBadRequestAndDisconnect()
@@ -1101,6 +1121,14 @@ class Request:
             self.content.seek(0, 0)
 
         self.process()
+
+    async def files(self) -> AsyncIterable[FileUpload]:
+        """
+        Return any files uploaded in the request body (multipart MIME
+        encoding).
+        """
+        for f in self._files:
+            yield f
 
     def __repr__(self) -> str:
         """
