@@ -16,6 +16,7 @@ from hashlib import md5, sha256
 from typing import Any
 
 import bcrypt
+from constantly import NamedConstant, Names
 from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -32,7 +33,6 @@ from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, nativeString
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
@@ -99,11 +99,11 @@ class FingerprintFormats(Names):
 
     @cvar MD5_HEX: Named constant representing fingerprint format generated
         using md5[RFC1321] algorithm in hexadecimal encoding.
-    @type MD5_HEX: L{twisted.python.constants.NamedConstant}
+    @type MD5_HEX: L{constantly.NamedConstant}
 
     @cvar SHA256_BASE64: Named constant representing fingerprint format
         generated using sha256[RFC4634] algorithm in base64 encoding
-    @type SHA256_BASE64: L{twisted.python.constants.NamedConstant}
+    @type SHA256_BASE64: L{constantly.NamedConstant}
     """
 
     MD5_HEX = NamedConstant()
