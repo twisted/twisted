@@ -41,7 +41,6 @@ produced by Yapps, and a context class that keeps track of the parse stack.
 These have been copied from the Yapps runtime module.
 """
 
-from __future__ import print_function
 import sys, re
 
 MIN_WINDOW=4096

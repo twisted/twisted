@@ -787,7 +787,10 @@ class IReactorUNIX(Interface):
     """
 
     def connectUNIX(
-        address: str, factory: "ClientFactory", timeout: float, checkPID: bool
+        address: str,
+        factory: "ClientFactory",
+        timeout: float = 30,
+        checkPID: bool = False,
     ) -> IConnector:
         """
         Connect a client protocol to a UNIX socket.
@@ -804,7 +807,11 @@ class IReactorUNIX(Interface):
         """
 
     def listenUNIX(
-        address: str, factory: "Factory", backlog: int, mode: int, wantPID: bool
+        address: str,
+        factory: "Factory",
+        backlog: int = 50,
+        mode: int = 0o666,
+        wantPID: bool = False,
     ) -> "IListeningPort":
         """
         Listen on a UNIX socket.

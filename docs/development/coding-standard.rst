@@ -94,7 +94,6 @@ Modules must be named in all lower-case, preferably short, single words.
 If a module name contains multiple words, they may be separated by underscores or not separated at all.
 
 Modules must have a copyright message, a docstring, and a reference to a test module that contains the bulk of its tests.
-New modules must have the ``absolute_import``, ``division``, and optionally the ``print_function`` imports from the ``__future__`` module.
 
 Use this template:
 

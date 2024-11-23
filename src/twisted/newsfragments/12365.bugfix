@@ -1,0 +1,2 @@
+HTTP server can handle listening on filesystem UNIX sockets.
+This was a regression introduced in 24.10.0.

@@ -337,7 +337,18 @@ class Connection(
         return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        try:
+            # There are bug reports about failures when setting TCP_NODELAY under certain conditions
+            # on macOS: https://github.com/thespianpy/Thespian/issues/70,
+            # https://github.com/envoyproxy/envoy/issues/1446.
+            #
+            # It is reasonable to simply eat errors coming from setting TCP_NODELAY because
+            # TCP_NODELAY is relatively small performance optimization. In almost all cases the
+            # caller will not be able to do anything to remedy the situation and will simply
+            # continue.
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        except OSError as e:  # pragma: no cover
+            log.err(e, "got error when setting TCP_NODELAY on TCP socket")
 
     def getTcpKeepAlive(self):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
