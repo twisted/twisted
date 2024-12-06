@@ -1693,7 +1693,7 @@ def _tokenize(description):
     yield _STRING, current
 
 
-def _parse(description):
+def parseDescription(description):
     """
     Convert a description string into a list of positional and keyword
     parameters, using logic vaguely like what Python does.
@@ -1704,7 +1704,7 @@ def _parse(description):
     @return: a 2-tuple of C{(args, kwargs)}, where 'args' is a list of all
         ':'-separated C{str}s not containing an '=' and 'kwargs' is a map of
         all C{str}s which do contain an '='.  For example, the result of
-        C{_parse('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
+        C{parseDescription('a:b:d=1:c')} would be C{(['a', 'b', 'c'], {'d': '1'})}.
     """
     args, kw = [], {}
     colon = _matchingString(":", description)
@@ -1755,7 +1755,7 @@ def _parseServer(description, factory):
 
     @return: a 3-tuple of (plugin or name, arguments, keyword arguments)
     """
-    args, kw = _parse(description)
+    args, kw = parseDescription(description)
     endpointType = args[0]
     parser = _serverParsers.get(endpointType)
     if parser is None:
@@ -2168,7 +2168,7 @@ def clientFromString(reactor, description):
 
     @since: 10.2
     """
-    args, kwargs = _parse(description)
+    args, kwargs = parseDescription(description)
     aname = args.pop(0)
     name = aname.upper()
     if name not in _clientParsers:

@@ -10,8 +10,8 @@ from twisted.internet.endpoints import (
     TCP4ServerEndpoint,
     TCP6ServerEndpoint,
     UNIXServerEndpoint,
-    _parse as parseEndpoint,
     _WrapperServerEndpoint,
+    parseDescription,
     serverFromString,
 )
 from twisted.internet.testing import MemoryReactor
@@ -36,7 +36,7 @@ class UnparseEndpointTests(TestCase):
             order.)
         @type input: native L{str}
         """
-        self.assertEqual(unparseEndpoint(*parseEndpoint(input)), input)
+        self.assertEqual(unparseEndpoint(*parseDescription(input)), input)
 
     def test_basicUnparse(self) -> None:
         """

@@ -7,7 +7,7 @@
 sufficient use cases get identified """
 
 
-from twisted.internet.endpoints import _parse
+from twisted.internet.endpoints import parseDescription
 
 
 def _parseTCPSSL(factory, domain, port):
@@ -23,7 +23,7 @@ _funcs = {"tcp": _parseTCPSSL, "unix": _parseUNIX, "ssl": _parseTCPSSL}
 
 
 def parse(description, factory):
-    args, kw = _parse(description)
+    args, kw = parseDescription(description)
     return (args[0].upper(),) + _funcs[args[0]](factory, *args[1:], **kw)
 
 
