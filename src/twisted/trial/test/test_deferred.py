@@ -254,5 +254,62 @@ class TimeoutTests(TestTester):
         self._wasTimeout(result.errors[0][1])
 
 
+class AsyncSetUpTests(unittest.TestCase):
+    def _loadSuite(
+        self, klass: type[pyunit.TestCase]
+    ) -> tuple[reporter.TestResult, pyunit.TestSuite]:
+        loader = pyunit.TestLoader()
+        r = reporter.TestResult()
+        s = loader.loadTestsFromTestCase(klass)
+        return r, s
+
+    def test_success(self) -> None:
+        result, suite = self._loadSuite(detests.AsyncSetUpOK)
+        suite(result)
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+
+    def test_fail(self) -> None:
+        self.assertFalse(detests.AsyncSetUpFail.testCalled)
+        result, suite = self._loadSuite(detests.AsyncSetUpFail)
+        suite(result)
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertFalse(detests.AsyncSetUpFail.testCalled)
+
+    def test_callbackFail(self) -> None:
+        self.assertFalse(detests.AsyncSetUpCallbackFail.testCalled)
+        result, suite = self._loadSuite(detests.AsyncSetUpCallbackFail)
+        suite(result)
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertFalse(detests.AsyncSetUpCallbackFail.testCalled)
+
+    def test_error(self) -> None:
+        self.assertFalse(detests.AsyncSetUpError.testCalled)
+        result, suite = self._loadSuite(detests.AsyncSetUpError)
+        suite(result)
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 1)
+        self.assertFalse(detests.AsyncSetUpError.testCalled)
+
+    def test_skip(self) -> None:
+        self.assertFalse(detests.AsyncSetUpSkip.testCalled)
+        result, suite = self._loadSuite(detests.AsyncSetUpSkip)
+        suite(result)
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.failures), 0)
+        self.assertEqual(len(result.errors), 0)
+        self.assertEqual(len(result.skips), 1)
+        self.assertFalse(detests.AsyncSetUpSkip.testCalled)
+
+
 # The test loader erroneously attempts to run this:
 del TestTester
