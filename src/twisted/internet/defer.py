@@ -329,16 +329,22 @@ DeferredErrback = Callable[..., object]
 _CallbackOrderedArguments = Tuple[object, ...]
 _CallbackKeywordArguments = Mapping[str, object]
 _CallbackChain = Tuple[
-    Tuple[
-        Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
-        _CallbackOrderedArguments,
-        _CallbackKeywordArguments,
+    Union[
+        Tuple[
+            Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
+            _CallbackOrderedArguments,
+            _CallbackKeywordArguments,
+        ],
+        None
     ],
-    Tuple[
-        Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
-        _CallbackOrderedArguments,
-        _CallbackKeywordArguments,
-    ],
+    Union[
+        Tuple[
+            Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
+            _CallbackOrderedArguments,
+            _CallbackKeywordArguments,
+        ],
+        None,
+    ]
 ]
 
 _NONE_KWARGS: _CallbackKeywordArguments = MappingProxyType({})
@@ -622,7 +628,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+        self.callbacks.append(((callback, args, kwargs), None))
 
         if self.called:
             self._runCallbacks()
@@ -664,7 +670,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+        self.callbacks.append((None, (errback, args, kwargs)))
 
         if self.called:
             self._runCallbacks()
@@ -1051,11 +1057,16 @@ class Deferred(Awaitable[_SelfResultT]):
             while current.callbacks:
                 item = current.callbacks.pop(0)
                 if not isinstance(current.result, Failure):
-                    callback, args, kwargs = item[0]
+                    callbackData = item[0]
                 else:
                     # type note: Callback signature also works for Errbacks in
                     #     this context.
-                    callback, args, kwargs = item[1]
+                    callbackData = item[1]
+
+                if callbackData is None:
+                    continue
+
+                callback, args, kwargs = callbackData
 
                 # Avoid recursion if we can.
                 if callback is _CONTINUE:
