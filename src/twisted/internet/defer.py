@@ -17,7 +17,7 @@ from asyncio import AbstractEventLoop, Future, iscoroutine
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
-from sys import exc_info, implementation
+from sys import implementation
 from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
@@ -30,7 +30,6 @@ from typing import (
     Iterable,
     List,
     Mapping,
-    NoReturn,
     Optional,
     Sequence,
     Tuple,
@@ -1896,31 +1895,6 @@ def deferredGenerator(
 ## inlineCallbacks
 
 
-class _DefGen_Return(BaseException):
-    def __init__(self, value: object) -> None:
-        self.value = value
-
-
-@deprecated(
-    Version("Twisted", 24, 7, 0),
-    replacement="standard return statement",
-)
-def returnValue(val: object) -> NoReturn:
-    """
-    Return val from a L{inlineCallbacks} generator.
-
-    Note: this is currently implemented by raising an exception
-    derived from L{BaseException}.  You might want to change any
-    'except:' clauses to an 'except Exception:' clause so as not to
-    catch this exception.
-
-    Also: while this function currently will work when called from
-    within arbitrary functions called from within the generator, do
-    not rely upon this behavior.
-    """
-    raise _DefGen_Return(val)
-
-
 @attr.s(auto_attribs=True)
 class _CancellationStatus(Generic[_SelfResultT]):
     """
@@ -2019,90 +1993,6 @@ def _inlineCallbacks(
             # fell off the end, or "return" statement
             stopIteration = True
             callbackValue = getattr(e, "value", None)
-
-        except _DefGen_Return as e:
-            # returnValue() was called; time to give a result to the original
-            # Deferred.  First though, let's try to identify the potentially
-            # confusing situation which results when returnValue() is
-            # accidentally invoked from a different function, one that wasn't
-            # decorated with @inlineCallbacks.
-
-            # The traceback starts in this frame (the one for
-            # _inlineCallbacks); the next one down should be the application
-            # code.
-            excInfo = exc_info()
-            assert excInfo is not None
-
-            traceback = excInfo[2]
-            assert traceback is not None
-
-            appCodeTrace = traceback.tb_next
-            assert appCodeTrace is not None
-
-            if _oldPypyStack:
-                # PyPy versions through 7.3.13 add an extra frame; 7.3.14 fixed
-                # this discrepancy with CPython.  This code can be removed once
-                # we no longer need to support PyPy 7.3.13 or older.
-                appCodeTrace = appCodeTrace.tb_next
-                assert appCodeTrace is not None
-
-            if isFailure:
-                # If we invoked this generator frame by throwing an exception
-                # into it, then throwExceptionIntoGenerator will consume an
-                # additional stack frame itself, so we need to skip that too.
-                appCodeTrace = appCodeTrace.tb_next
-                assert appCodeTrace is not None
-
-            # Now that we've identified the frame being exited by the
-            # exception, let's figure out if returnValue was called from it
-            # directly.  returnValue itself consumes a stack frame, so the
-            # application code will have a tb_next, but it will *not* have a
-            # second tb_next.
-            #
-            # Note that there's one additional level due to returnValue being
-            # deprecated
-            assert appCodeTrace.tb_next is not None
-            assert appCodeTrace.tb_next.tb_next is not None
-            if appCodeTrace.tb_next.tb_next.tb_next:
-                # If returnValue was invoked non-local to the frame which it is
-                # exiting, identify the frame that ultimately invoked
-                # returnValue so that we can warn the user, as this behavior is
-                # confusing.
-                #
-                # Note that there's one additional level due to returnValue being
-                # deprecated
-                ultimateTrace = appCodeTrace
-
-                assert ultimateTrace is not None
-                assert ultimateTrace.tb_next is not None
-
-                # Note that there's one additional level due to returnValue being
-                # deprecated
-                assert ultimateTrace.tb_next.tb_next is not None
-                while ultimateTrace.tb_next.tb_next.tb_next:
-                    ultimateTrace = ultimateTrace.tb_next
-                    assert ultimateTrace is not None
-
-                filename = ultimateTrace.tb_frame.f_code.co_filename
-                lineno = ultimateTrace.tb_lineno
-
-                assert ultimateTrace.tb_frame is not None
-                assert appCodeTrace.tb_frame is not None
-                warnings.warn_explicit(
-                    "returnValue() in %r causing %r to exit: "
-                    "returnValue should only be invoked by functions decorated "
-                    "with inlineCallbacks"
-                    % (
-                        ultimateTrace.tb_frame.f_code.co_name,
-                        appCodeTrace.tb_frame.f_code.co_name,
-                    ),
-                    DeprecationWarning,
-                    filename,
-                    lineno,
-                )
-
-            stopIteration = True
-            callbackValue = e.value
 
         except BaseException:
             status.deferred.errback()
@@ -2263,7 +2153,7 @@ def inlineCallbacks(
 
     You can cancel the L{Deferred} returned from your L{inlineCallbacks}
     generator before it is fired by your generator completing (either by
-    reaching its end, a C{return} statement, or by calling L{returnValue}).
+    reaching its end, a C{return} statement.
     A C{CancelledError} will be raised from the C{yield}ed L{Deferred} that
     has been cancelled if that C{Deferred} does not otherwise suppress it.
 
@@ -2281,13 +2171,7 @@ def inlineCallbacks(
 
     @wraps(f)
     def unwindGenerator(*args: _P.args, **kwargs: _P.kwargs) -> Deferred[_T]:
-        try:
-            gen = f(*args, **kwargs)
-        except _DefGen_Return:
-            raise TypeError(
-                "inlineCallbacks requires %r to produce a generator; instead"
-                "caught returnValue being used in a non-generator" % (f,)
-            )
+        gen = f(*args, **kwargs)
         if not isinstance(gen, GeneratorType):
             raise TypeError(
                 "inlineCallbacks requires %r to produce a generator; "
@@ -2727,7 +2611,6 @@ __all__ = [
     "waitForDeferred",
     "deferredGenerator",
     "inlineCallbacks",
-    "returnValue",
     "DeferredLock",
     "DeferredSemaphore",
     "DeferredQueue",
