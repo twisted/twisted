@@ -335,7 +335,7 @@ _CallbackChain = Tuple[
             _CallbackOrderedArguments,
             _CallbackKeywordArguments,
         ],
-        None
+        None,
     ],
     Union[
         Tuple[
@@ -344,7 +344,7 @@ _CallbackChain = Tuple[
             _CallbackKeywordArguments,
         ],
         None,
-    ]
+    ],
 ]
 
 _NONE_KWARGS: _CallbackKeywordArguments = MappingProxyType({})
