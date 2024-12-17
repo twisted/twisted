@@ -1921,8 +1921,8 @@ def returnValue(val: object) -> NoReturn:
     raise _DefGen_Return(val)
 
 
-@attr.s(auto_attribs=True)
-class _CancellationStatus(Generic[_SelfResultT]):
+@attr.s(auto_attribs=True, slots=True)
+class _InlineCallbackStatus(Generic[_SelfResultT]):
     """
     Cancellation status of an L{inlineCallbacks} invocation.
 
@@ -1934,16 +1934,17 @@ class _CancellationStatus(Generic[_SelfResultT]):
 
     deferred: Deferred[_SelfResultT]
     waitingOn: Optional[Deferred[_SelfResultT]] = None
+    waiting: bool = True
+    result: Optional[object] = None
 
 
 def _gotResultInlineCallbacks(
     r: object,
-    waiting: List[Any],
     gen: Union[
         Generator[Deferred[Any], Any, _T],
         Coroutine[Deferred[Any], Any, _T],
     ],
-    status: _CancellationStatus[_T],
+    status: _InlineCallbackStatus[_T],
     context: _Context,
 ) -> None:
     """
@@ -1953,12 +1954,12 @@ def _gotResultInlineCallbacks(
     @param waiting: Whether the L{_inlineCallbacks} was waiting, and the result.
     @param gen: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of C{gen}
     @param context: the contextvars context to run `gen` in
     """
-    if waiting[0]:
-        waiting[0] = False
-        waiting[1] = r
+    if status.waiting:
+        status.waiting = False
+        status.result = r
     else:
         _inlineCallbacks(r, gen, status, context)
 
@@ -1970,7 +1971,7 @@ def _inlineCallbacks(
         Generator[Deferred[Any], Any, _T],
         Coroutine[Deferred[Any], Any, _T],
     ],
-    status: _CancellationStatus[_T],
+    status: _InlineCallbackStatus[_T],
     context: _Context,
 ) -> None:
     """
@@ -1989,7 +1990,7 @@ def _inlineCallbacks(
     @param gen: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
 
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of C{gen}
 
     @param context: the contextvars context to run `gen` in
     """
@@ -1998,8 +1999,8 @@ def _inlineCallbacks(
     # loop and the waiting variable solve that by manually unfolding the
     # recursion.
 
-    # waiting for result?  # result
-    waiting: List[Any] = [True, None]
+    status.waiting = True
+    status.result = None
 
     stopIteration: bool = False
     callbackValue: Any = None
@@ -2126,33 +2127,33 @@ def _inlineCallbacks(
             # We don't cast() to Deferred because that does more work in the hot path
 
             # a deferred was yielded, get the result.
-            result.addBoth(_gotResultInlineCallbacks, waiting, gen, status, context)  # type: ignore[attr-defined]
-            if waiting[0]:
+            result.addBoth(_gotResultInlineCallbacks, gen, status, context)  # type: ignore[attr-defined]
+            if status.waiting:
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
-                waiting[0] = False
+                status.waiting = False
                 status.waitingOn = result  # type: ignore[assignment]
                 return
 
-            result = waiting[1]
+            result = status.result
             # Reset waiting to initial values for next loop.  gotResult uses
             # waiting, but this isn't a problem because gotResult is only
             # executed once, and if it hasn't been executed yet, the return
             # branch above would have been taken.
 
-            waiting[0] = True
-            waiting[1] = None
+            status.waiting = True
+            status.result = None
 
 
 def _addCancelCallbackToDeferred(
-    it: Deferred[_T], status: _CancellationStatus[_T]
+    it: Deferred[_T], status: _InlineCallbackStatus[_T]
 ) -> None:
     """
     Helper for L{_cancellableInlineCallbacks} to add
     L{_handleCancelInlineCallbacks} as the first errback.
 
     @param it: The L{Deferred} to add the errback to.
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of C{gen}
     """
     it.callbacks, tmp = [], it.callbacks
     it = it.addErrback(_handleCancelInlineCallbacks, status)
@@ -2161,7 +2162,7 @@ def _addCancelCallbackToDeferred(
 
 
 def _handleCancelInlineCallbacks(
-    result: Failure, status: _CancellationStatus[_T], /
+    result: Failure, status: _InlineCallbackStatus[_T], /
 ) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -2169,7 +2170,7 @@ def _handleCancelInlineCallbacks(
 
     @param result: An L{_InternalInlineCallbacksCancelledError} from
         C{cancel()}.
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a L{_InlineCallbackStatus} tracking the current status of C{gen}
     @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
         can callback or errback through.
     """
@@ -2201,7 +2202,7 @@ def _cancellableInlineCallbacks(
     """
 
     deferred: Deferred[_T] = Deferred(lambda d: _addCancelCallbackToDeferred(d, status))
-    status = _CancellationStatus(deferred)
+    status = _InlineCallbackStatus(deferred)
 
     _inlineCallbacks(None, gen, status, _copy_context())
 
