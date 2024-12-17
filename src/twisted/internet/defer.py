@@ -1921,20 +1921,24 @@ def returnValue(val: object) -> NoReturn:
     raise _DefGen_Return(val)
 
 
-@attr.s(auto_attribs=True)
-class _CancellationStatus(Generic[_SelfResultT]):
-    """
-    Cancellation status of an L{inlineCallbacks} invocation.
-
-    @ivar deferred: the L{Deferred} to callback or errback when the generator
-        invocation has finished.
-    @ivar waitingOn: the L{Deferred} being waited upon (which
-        L{_inlineCallbacks} must fill out before returning)
-    """
-
-    deferred: Deferred[_SelfResultT]
-    waitingOn: Optional[Deferred[_SelfResultT]] = None
-
+# The code below uses lists instead of classes in order to speed up execution,
+# as list operations are around 2x faster than operations with classes (even
+# if they use slots) as of Python 3.13.
+#
+# The following two data types are used:
+#
+# waiting: represents waiting status.
+#
+# - First element is whether operation is still waited on
+# - Second element represents the result if waiting has been completed
+#
+# cancelStatus: represents cancellation status of an L{inlineCallbacks}
+# invocation.
+#
+# - First element is the L{Deferred} to callback or errback when the generator
+#   invocation has finished.
+# - Second element the L{Deferred} being waited upon (which
+#   L{_inlineCallbacks} must fill out before returning)
 
 def _gotResultInlineCallbacks(
     r: object,
@@ -1943,7 +1947,7 @@ def _gotResultInlineCallbacks(
         Generator[Deferred[Any], Any, _T],
         Coroutine[Deferred[Any], Any, _T],
     ],
-    status: _CancellationStatus[_T],
+    status: List[Any],
     context: _Context,
 ) -> None:
     """
@@ -1953,7 +1957,7 @@ def _gotResultInlineCallbacks(
     @param waiting: Whether the L{_inlineCallbacks} was waiting, and the result.
     @param gen: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a cancellation status tracking the current status of C{gen}
     @param context: the contextvars context to run `gen` in
     """
     if waiting[0]:
@@ -1970,7 +1974,7 @@ def _inlineCallbacks(
         Generator[Deferred[Any], Any, _T],
         Coroutine[Deferred[Any], Any, _T],
     ],
-    status: _CancellationStatus[_T],
+    status: List[Any],
     context: _Context,
 ) -> None:
     """
@@ -1989,7 +1993,7 @@ def _inlineCallbacks(
     @param gen: a generator object returned by calling a function or method
         decorated with C{@}L{inlineCallbacks}
 
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a cancellation status tracking the current status of C{gen}
 
     @param context: the contextvars context to run `gen` in
     """
@@ -2105,14 +2109,14 @@ def _inlineCallbacks(
             callbackValue = e.value
 
         except BaseException:
-            status.deferred.errback()
+            status[0].errback()
             return
 
         if stopIteration:
             # Call the callback outside of the exception handler to avoid inappropriate/confusing
             # "During handling of the above exception, another exception occurred:" if the callback
             # itself throws an exception.
-            status.deferred.callback(callbackValue)
+            status[0].callback(callbackValue)
             return
 
         isDeferred = type(result) in _DEFERRED_SUBCLASSES
@@ -2131,7 +2135,7 @@ def _inlineCallbacks(
                 # Haven't called back yet, set flag so that we get reinvoked
                 # and return from the loop
                 waiting[0] = False
-                status.waitingOn = result  # type: ignore[assignment]
+                status[1] = result  # type: ignore[assignment]
                 return
 
             result = waiting[1]
@@ -2144,15 +2148,13 @@ def _inlineCallbacks(
             waiting[1] = None
 
 
-def _addCancelCallbackToDeferred(
-    it: Deferred[_T], status: _CancellationStatus[_T]
-) -> None:
+def _addCancelCallbackToDeferred(it: Deferred[_T], status: List[Any]) -> None:
     """
     Helper for L{_cancellableInlineCallbacks} to add
     L{_handleCancelInlineCallbacks} as the first errback.
 
     @param it: The L{Deferred} to add the errback to.
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a cancelation status tracking the current status of C{gen}
     """
     it.callbacks, tmp = [], it.callbacks
     it = it.addErrback(_handleCancelInlineCallbacks, status)
@@ -2161,7 +2163,7 @@ def _addCancelCallbackToDeferred(
 
 
 def _handleCancelInlineCallbacks(
-    result: Failure, status: _CancellationStatus[_T], /
+    result: Failure, status: List[Any], /
 ) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
@@ -2169,20 +2171,20 @@ def _handleCancelInlineCallbacks(
 
     @param result: An L{_InternalInlineCallbacksCancelledError} from
         C{cancel()}.
-    @param status: a L{_CancellationStatus} tracking the current status of C{gen}
+    @param status: a cancelation status tracking the current status of C{gen}
     @return: A new L{Deferred} that the C{@}L{inlineCallbacks} generator
         can callback or errback through.
     """
     result.trap(_InternalInlineCallbacksCancelledError)
-    status.deferred = Deferred(lambda d: _addCancelCallbackToDeferred(d, status))
+    status[0] = Deferred(lambda d: _addCancelCallbackToDeferred(d, status))
 
     # We would only end up here if the inlineCallback is waiting on
     # another Deferred.  It needs to be cancelled.
-    awaited = status.waitingOn
+    awaited = status[1]
     assert awaited is not None
     awaited.cancel()
 
-    return status.deferred
+    return status[0]
 
 
 def _cancellableInlineCallbacks(
@@ -2201,7 +2203,7 @@ def _cancellableInlineCallbacks(
     """
 
     deferred: Deferred[_T] = Deferred(lambda d: _addCancelCallbackToDeferred(d, status))
-    status = _CancellationStatus(deferred)
+    status = [deferred, None]
 
     _inlineCallbacks(None, gen, status, _copy_context())
 
