@@ -1940,6 +1940,7 @@ def returnValue(val: object) -> NoReturn:
 # - Second element the L{Deferred} being waited upon (which
 #   L{_inlineCallbacks} must fill out before returning)
 
+
 def _gotResultInlineCallbacks(
     r: object,
     waiting: List[Any],
@@ -2162,9 +2163,7 @@ def _addCancelCallbackToDeferred(it: Deferred[_T], status: List[Any]) -> None:
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
-def _handleCancelInlineCallbacks(
-    result: Failure, status: List[Any], /
-) -> Deferred[_T]:
+def _handleCancelInlineCallbacks(result: Failure, status: List[Any], /) -> Deferred[_T]:
     """
     Propagate the cancellation of an C{@}L{inlineCallbacks} to the
     L{Deferred} it is waiting on.
