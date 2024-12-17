@@ -217,7 +217,7 @@ def maybeDeferred(
     except BaseException:
         return fail(Failure(captureVars=Deferred.debug))
 
-    if type(result) in _DEFERRED_SUBCLASSES:
+    if hasattr(result, "_twistedPrivateIsDeferred"):
         return result  # type: ignore[return-value]
     elif hasattr(result, "_twistedPrivateIsFailure"):
         return fail(result)  # type: ignore[arg-type]
@@ -436,6 +436,12 @@ class Deferred(Awaitable[_SelfResultT]):
     # recursive running of callbacks when a reentrant call to add a callback is
     # used.
     _runningCallbacks = False
+
+    # Used to optimize isinstance(obj, Deferred) by
+    # hasattr(obj, "_twistedPrivateIsDeferred"). Note that the name of the
+    # attribute must be unique across user codebase as well in order for this
+    # kind of isinstance optimization to work.
+    _twistedPrivateIsDeferred = None
 
     # Keep this class attribute for now, for compatibility with code that
     # sets it directly.
@@ -969,9 +975,9 @@ class Deferred(Awaitable[_SelfResultT]):
                 # There was no canceller, or the canceller didn't call
                 # callback or errback.
                 self.errback(Failure(CancelledError()))
-        elif isinstance(self.result, Deferred):
+        elif hasattr(self.result, "_twistedPrivateIsDeferred"):
             # Waiting for another deferred -- cancel it instead.
-            self.result.cancel()
+            self.result.cancel()  # type: ignore[attr-defined]
 
     def _startRunCallbacks(self, result: object) -> None:
         if self.called:
@@ -1108,8 +1114,7 @@ class Deferred(Awaitable[_SelfResultT]):
                     # expensive, so we avoid it unless self.debug is set.
                     current.result = Failure(captureVars=self.debug)
                 else:
-                    # isinstance() with Awaitable subclass is expensive:
-                    if type(current.result) in _DEFERRED_SUBCLASSES:
+                    if hasattr(current.result, "_twistedPrivateIsDeferred"):
                         # Can't use cast() cause it's in the performance hot path:
                         currentResult: Deferred[_SelfResultT] = current.result  # type: ignore[assignment]
                         # The result is another Deferred.  If it has a result,
@@ -1117,7 +1122,7 @@ class Deferred(Awaitable[_SelfResultT]):
                         resultResult = getattr(currentResult, "result", _NO_RESULT)
                         if (
                             resultResult is _NO_RESULT
-                            or type(resultResult) in _DEFERRED_SUBCLASSES
+                            or hasattr(resultResult, "_twistedPrivateIsDeferred")
                             or currentResult.paused
                         ):
                             # Nope, it didn't.  Pause and chain.
@@ -1332,14 +1337,6 @@ class Deferred(Awaitable[_SelfResultT]):
             return _cancellableInlineCallbacks(coro)
         raise NotACoroutineError(f"{coro!r} is not a coroutine")
 
-    def __init_subclass__(cls: Type[Deferred[Any]], **kwargs: Any):
-        # Whenever a subclass is created, record it in L{_DEFERRED_SUBCLASSES}
-        # so we can emulate C{isinstance()} more efficiently.
-        _DEFERRED_SUBCLASSES.append(cls)
-
-
-_DEFERRED_SUBCLASSES = [Deferred]
-
 
 def ensureDeferred(
     coro: Union[
@@ -1358,11 +1355,11 @@ def ensureDeferred(
 
     @param coro: The coroutine object to schedule, or a L{Deferred}.
     """
-    if type(coro) in _DEFERRED_SUBCLASSES:
+    if hasattr(coro, "_twistedPrivateIsDeferred"):
         return coro  # type: ignore[return-value]
     else:
         try:
-            return Deferred.fromCoroutine(coro)  # type: ignore[arg-type]
+            return Deferred.fromCoroutine(coro)
         except NotACoroutineError:
             # It's not a coroutine. Raise an exception, but say that it's also
             # not a Deferred so the error makes sense.
@@ -1955,7 +1952,7 @@ def _inlineCallbacks(
             status.deferred.callback(callbackValue)
             return
 
-        isDeferred = type(result) in _DEFERRED_SUBCLASSES
+        isDeferred = hasattr(result, "_twistedPrivateIsDeferred")
         # iscoroutine() is pretty expensive in this context, so avoid calling
         # it unnecessarily:
         if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
