@@ -1,1 +1,1 @@
-twisted.internet.defer.Deferred processing is sligtly faster.
+twisted.internet.defer.Deferred and twisted.python.failure.Failure processing are sligtly faster. This was implemented by using a the private twisted.internet.defer.Deferred._twistedPrivateIsDeferred attribute to detect a Deferred instance and twisted.python.failure.Failure._twistedPrivateIsFailure to detect a Failure instance.

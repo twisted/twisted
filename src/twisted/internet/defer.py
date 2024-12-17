@@ -1045,11 +1045,13 @@ class Deferred(Awaitable[_SelfResultT]):
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain: List[Deferred[Any]] = [self]
+        #
+        # As an optimization, the front element of the chain is always stored
+        # in current. This way array operations are avoided in many cases.
+        chain: Optional[List[Deferred[Any]]] = None
+        current = self
 
-        while chain:
-            current = chain[-1]
-
+        while True:
             if current.paused:
                 # This Deferred isn't going to produce a result at all.  All the
                 # Deferreds up the chain waiting on it will just have to...
@@ -1080,7 +1082,11 @@ class Deferred(Awaitable[_SelfResultT]):
                     if current._debugInfo is not None:
                         current._debugInfo.failResult = None
                     chainee.paused -= 1
-                    chain.append(chainee)
+                    if chain is None:
+                        chain = [current]
+                    else:
+                        chain.append(current)
+                    current = chainee  # type: ignore[assignment]
                     # Delay cleaning this Deferred and popping it from the chain
                     # until after we've dealt with chainee.
                     finished = False
@@ -1161,7 +1167,9 @@ class Deferred(Awaitable[_SelfResultT]):
 
                 # This Deferred is done, pop it from the chain and move back up
                 # to the Deferred which supplied us with our result.
-                chain.pop()
+                if not chain:
+                    break
+                current = chain.pop()
 
     def __str__(self) -> str:
         """
