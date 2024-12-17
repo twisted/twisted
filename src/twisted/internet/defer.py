@@ -219,8 +219,8 @@ def maybeDeferred(
 
     if type(result) in _DEFERRED_SUBCLASSES:
         return result  # type: ignore[return-value]
-    elif isinstance(result, Failure):
-        return fail(result)
+    elif hasattr(result, "_twistedPrivateIsFailure"):
+        return fail(result)  # type: ignore[arg-type]
     elif type(result) is CoroutineType:
         # A note on how we identify this case ...
         #
@@ -924,7 +924,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         if fail is None:
             fail = Failure(captureVars=self.debug)
-        elif not isinstance(fail, Failure):
+        elif not hasattr(fail, "_twistedPrivateIsFailure"):
             fail = Failure(fail)
 
         self._startRunCallbacks(fail)
@@ -1054,7 +1054,7 @@ class Deferred(Awaitable[_SelfResultT]):
             current._chainedTo = None
             while current._callbacks:
                 item = current._callbacks.pop(0)
-                if not isinstance(current.result, Failure):
+                if not hasattr(current.result, "_twistedPrivateIsFailure"):
                     callback, args, kwargs = item[0]
                 else:
                     # type note: Callback signature also works for Errbacks in
@@ -1142,12 +1142,12 @@ class Deferred(Awaitable[_SelfResultT]):
                 # processed right now has been.  The current Deferred is waiting on
                 # another Deferred or for more callbacks.  Before finishing with it,
                 # make sure its _debugInfo is in the proper state.
-                if isinstance(current.result, Failure):
+                if hasattr(current.result, "_twistedPrivateIsFailure"):
                     # Stash the Failure in the _debugInfo for unhandled error
                     # reporting.
                     if current._debugInfo is None:
                         current._debugInfo = DebugInfo()
-                    current._debugInfo.failResult = current.result
+                    current._debugInfo.failResult = current.result  # type: ignore[assignment]
                 else:
                     # Clear out any Failure in the _debugInfo, since the result
                     # is no longer a Failure.
@@ -1187,12 +1187,12 @@ class Deferred(Awaitable[_SelfResultT]):
                 yield self
                 continue
 
-            if isinstance(result, Failure):
+            if hasattr(result, "_twistedPrivateIsFailure"):
                 # Clear the failure on debugInfo so it doesn't raise "unhandled
                 # exception"
                 assert self._debugInfo is not None
                 self._debugInfo.failResult = None
-                result.raiseException()
+                result.raiseException()  # type: ignore[union-attr]
             else:
                 return result  # type: ignore[return-value]
 
@@ -1566,8 +1566,8 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
             if succeeded == SUCCESS and self.fireOnOneCallback:
                 self.callback((result, index))  # type: ignore[arg-type]
             elif succeeded == FAILURE and self.fireOnOneErrback:
-                assert isinstance(result, Failure)
-                self.errback(Failure(FirstError(result, index)))
+                assert hasattr(result, "_twistedPrivateIsFailure")
+                self.errback(Failure(FirstError(result, index)))  # type: ignore[arg-type]
             elif self.finishedCount == len(self.resultList):
                 # At this point, None values in self.resultList have been
                 # replaced by result values, so we cast it to
@@ -1847,7 +1847,7 @@ def _inlineCallbacks(
     while 1:
         try:
             # Send the last result back as the result of the yield expression.
-            isFailure = isinstance(result, Failure)
+            isFailure = hasattr(result, "_twistedPrivateIsFailure")
 
             if isFailure:
                 result = context.run(

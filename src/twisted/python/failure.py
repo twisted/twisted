@@ -252,6 +252,12 @@ class Failure(BaseException):
     pickled = 0
     _parents = None
 
+    # Used to optimize isinstance(obj, Failure) by
+    # hasattr(obj, "_twistedPrivateIsFailure"). Note that the name of the
+    # attribute must be unique across user codebase as well in order for this
+    # kind of isinstance optimization to work.
+    _twistedPrivateIsFailure = None
+
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None, captureVars=False):
         """
         Initialize me with an explanation of the error.
