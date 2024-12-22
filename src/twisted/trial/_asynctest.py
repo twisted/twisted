@@ -70,6 +70,9 @@ class TestCase(SynchronousTestCase):
         # It is run only if setUp succeeded
         self._twistedPrivateNeedsTearDown = False
 
+        # Cached suppressions list
+        self._twistedPrivateSuppressions = self._getSuppress()
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -128,9 +131,14 @@ class TestCase(SynchronousTestCase):
                 "{!r} is a generator function and therefore will never run".format(func)
             )
             return defer.fail(exc)
-        d = defer.maybeDeferred(
-            utils.runWithWarningsSuppressed, self._getSuppress(), func
-        )
+
+        if self._twistedPrivateSuppressions:
+            d = defer.maybeDeferred(
+                utils.runWithWarningsSuppressed, self._twistedPrivateSuppressions, func
+            )
+        else:
+            d = defer.maybeDeferred(func)
+
         call = self._twistedPrivateScheduler.callLater(timeout, onTimeout, d)
         d.addBoth(lambda x: call.active() and call.cancel() or x)
         return d
