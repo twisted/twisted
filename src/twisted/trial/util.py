@@ -24,7 +24,7 @@ from typing import Any, Callable, TextIO, TypeVar
 
 from typing_extensions import ParamSpec
 
-from twisted.internet import interfaces, utils
+from twisted.internet import interfaces
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.lockfile import FilesystemLock
@@ -97,7 +97,7 @@ class _Janitor:
         Called by L{unittest.TestCase} after a test to catch any logged errors
         or pending L{DelayedCall<twisted.internet.base.DelayedCall>}s.
         """
-        calls = self._cleanPending()
+        calls = self._cleanPending(self.test._twistedPrivateReactorIterate)
         if calls:
             aggregate = DirtyReactorAggregateError(calls)
             self.result.addError(self.test, Failure(aggregate))
@@ -112,7 +112,7 @@ class _Janitor:
         L{DelayedCall<twisted.internet.base.DelayedCall>}s, open sockets etc.
         """
         selectables = self._cleanReactor()
-        calls = self._cleanPending()
+        calls = self._cleanPending(self.test._twistedPrivateReactorIterate)
         if selectables or calls:
             aggregate = DirtyReactorAggregateError(calls, selectables)
             self.result.addError(self.test, Failure(aggregate))
@@ -128,15 +128,18 @@ class _Janitor:
             from twisted.internet import reactor
         return reactor
 
-    def _cleanPending(self):
+    def _cleanPending(self, iterateMethod):
         """
         Cancel all pending calls and return their string representations.
+
+        @param iterateMethod reactor.iterate() method. It is passed explicitly
+        because it is disabled in tests.
         """
         reactor = self._getReactor()
 
         # flush short-range timers
-        reactor.iterate(0)
-        reactor.iterate(0)
+        iterateMethod(0)
+        iterateMethod(0)
 
         delayedCallStrings = []
         for p in reactor.getDelayedCalls():
@@ -147,17 +150,6 @@ class _Janitor:
                 print("WEIRDNESS! pending timed call not active!")
             delayedCallStrings.append(delayedString)
         return delayedCallStrings
-
-    _cleanPending = utils.suppressWarnings(
-        _cleanPending,
-        (
-            ("ignore",),
-            {
-                "category": DeprecationWarning,
-                "message": r"reactor\.iterate cannot be used.*",
-            },
-        ),
-    )
 
     def _cleanThreads(self):
         reactor = self._getReactor()

@@ -188,6 +188,16 @@ class StubErrorReporter:
         self.errors.append((test, error))
 
 
+class StubTestCase:
+    """
+    A subset of L{twisted.trial.unittest.TestCase} which contains attributes
+    accessed by L{_Janitor}.
+    """
+
+    def __init__(self, reactor: StubReactor) -> None:
+        self._twistedPrivateReactorIterate = reactor.iterate
+
+
 class JanitorTests(SynchronousTestCase):
     """
     Tests for L{_Janitor}!
@@ -202,7 +212,7 @@ class JanitorTests(SynchronousTestCase):
         """
         reactor = StubReactor([])
         jan = _Janitor(None, None, reactor=reactor)
-        jan._cleanPending()
+        jan._cleanPending(reactor.iterate)
         self.assertEqual(reactor.iterations, [0, 0])
 
     def test_cleanPendingCancelsCalls(self) -> None:
@@ -217,7 +227,7 @@ class JanitorTests(SynchronousTestCase):
         delayedCall = DelayedCall(300, func, (), {}, cancelled.append, lambda x: None)
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
-        jan._cleanPending()
+        jan._cleanPending(reactor.iterate)
         self.assertEqual(cancelled, [delayedCall])
 
     def test_cleanPendingReturnsDelayedCallStrings(self) -> None:
@@ -234,7 +244,7 @@ class JanitorTests(SynchronousTestCase):
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall])
         jan = _Janitor(None, None, reactor=reactor)
-        strings = jan._cleanPending()
+        strings = jan._cleanPending(reactor.iterate)
         self.assertEqual(strings, [delayedCallString])
 
     def test_cleanReactorRemovesSelectables(self) -> None:
@@ -298,7 +308,7 @@ class JanitorTests(SynchronousTestCase):
         on the result if there are no pending calls.
         """
         reactor = StubReactor([])
-        test = object()
+        test = StubTestCase(reactor)
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         self.assertTrue(jan.postCaseCleanup())
@@ -315,7 +325,7 @@ class JanitorTests(SynchronousTestCase):
         )
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall], [])
-        test = object()
+        test = StubTestCase(reactor)
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         self.assertFalse(jan.postCaseCleanup())
@@ -328,7 +338,7 @@ class JanitorTests(SynchronousTestCase):
         if there are no pending calls or selectables.
         """
         reactor = StubReactor([])
-        test = object()
+        test = StubTestCase(reactor)
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
@@ -344,7 +354,7 @@ class JanitorTests(SynchronousTestCase):
         )
         delayedCallString = str(delayedCall)
         reactor = StubReactor([delayedCall], [])
-        test = object()
+        test = StubTestCase(reactor)
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
@@ -358,7 +368,7 @@ class JanitorTests(SynchronousTestCase):
         """
         selectable = "SELECTABLE HERE"
         reactor = StubReactor([], [selectable])
-        test = object()
+        test = StubTestCase(reactor)
         reporter = StubErrorReporter()
         jan = _Janitor(test, reporter, reactor=reactor)
         jan.postClassCleanup()
