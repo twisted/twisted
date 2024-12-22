@@ -546,9 +546,7 @@ class Reporter(TestResult):
          - [1]: C{defer.__iter__}
          - [2]: C{defer.raiseException}
          - [3]: C{defer.maybeDeferred}
-         - [4]: C{utils.runWithWarningsSuppressed}
-         - [5]: C{utils.runWithWarningsSuppressed}
-         - [6:-2]: code in the test method which failed
+         - [4:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a method fails inside a C{Deferred} (i.e., when the test method
@@ -609,7 +607,7 @@ class Reporter(TestResult):
         if frames[:2] == syncCase:
             newFrames = newFrames[2:]
         elif frames[:3] == asyncCase:
-            newFrames = newFrames[6:]
+            newFrames = newFrames[4:]
         elif frames[:3] == deferCase:
             newFrames = newFrames[3:]
 

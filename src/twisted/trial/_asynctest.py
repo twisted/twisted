@@ -121,7 +121,7 @@ class TestCase(SynchronousTestCase):
                 # if the deferred has been called already but the *back chain
                 # is still unfinished, crash the reactor and report timeout
                 # error ourself.
-                self._twistedPrivateScheduler.crash()
+                self._twistedPrivateReactorCrash()
                 self._timedOut = True  # see self._wait
                 todo = self.getTodo()
                 if todo is not None and todo.expected(f):
@@ -129,9 +129,6 @@ class TestCase(SynchronousTestCase):
                 else:
                     result.addError(self, f)
 
-        onTimeout = utils.suppressWarnings(
-            onTimeout, util.suppress(category=DeprecationWarning)
-        )
         if inspect.isgeneratorfunction(func):
             exc = TypeError(
                 "{!r} is a generator function and therefore will never run".format(func)
@@ -400,24 +397,7 @@ class TestCase(SynchronousTestCase):
 
         def crash(ign):
             if results is not None:
-                reactor.crash()
-
-        crash = utils.suppressWarnings(
-            crash,
-            util.suppress(
-                message=r"reactor\.crash cannot be used.*", category=DeprecationWarning
-            ),
-        )
-
-        def stop():
-            reactor.crash()
-
-        stop = utils.suppressWarnings(
-            stop,
-            util.suppress(
-                message=r"reactor\.crash cannot be used.*", category=DeprecationWarning
-            ),
-        )
+                self._twistedPrivateReactorCrash()
 
         running.append(None)
         try:
@@ -427,7 +407,7 @@ class TestCase(SynchronousTestCase):
                 # called synchronously. Avoid any reactor stuff.
                 return
             d.addBoth(crash)
-            reactor.stop = stop
+            reactor.stop = self._twistedPrivateReactorCrash
             try:
                 reactor.run()
             finally:
