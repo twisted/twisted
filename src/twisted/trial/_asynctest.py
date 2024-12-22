@@ -73,6 +73,12 @@ class TestCase(SynchronousTestCase):
         # Cached suppressions list
         self._twistedPrivateSuppressions = self._getSuppress()
 
+        # Some reactor methods are deprecated during test run and are patched
+        # while test is running.
+        self._twistedPrivateReactorCrash = None
+        self._twistedPrivateReactorIterate = None
+        self._twistedPrivateReactorStop = None
+
     def assertFailure(self, deferred, *expectedFailures):
         """
         Fail if C{deferred} does not errback with one of C{expectedFailures}.
@@ -258,24 +264,6 @@ class TestCase(SynchronousTestCase):
         except BaseException:
             result.addError(self, failure.Failure())
 
-    def _makeReactorMethod(self, name):
-        """
-        Create a method which wraps the reactor method C{name}. The new
-        method issues a deprecation warning and calls the original.
-        """
-
-        def _(*a, **kw):
-            warnings.warn(
-                "reactor.%s cannot be used inside unit tests. "
-                "In the future, using %s will fail the test and may "
-                "crash or hang the test run." % (name, name),
-                stacklevel=2,
-                category=DeprecationWarning,
-            )
-            return self._reactorMethods[name](*a, **kw)
-
-        return _
-
     def _deprecateReactor(self, reactor):
         """
         Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
@@ -284,10 +272,43 @@ class TestCase(SynchronousTestCase):
 
         @param reactor: The Twisted reactor.
         """
-        self._reactorMethods = {}
-        for name in ["crash", "iterate", "stop"]:
-            self._reactorMethods[name] = getattr(reactor, name)
-            setattr(reactor, name, self._makeReactorMethod(name))
+        self._twistedPrivateReactorCrash = reactor.crash
+        self._twistedPrivateReactorIterate = reactor.iterate
+        self._twistedPrivateReactorStop = reactor.stop
+
+        def crash():
+            warnings.warn(
+                "reactor.crash cannot be used inside unit tests. "
+                "In the future, using crash will fail the test and may "
+                "crash or hang the test run.",
+                stacklevel=2,
+                category=DeprecationWarning,
+            )
+            return self._twistedPrivateReactorCrash()
+
+        def iterate(delay=0):
+            warnings.warn(
+                "reactor.iterate cannot be used inside unit tests. "
+                "In the future, using iterate will fail the test and may "
+                "crash or hang the test run.",
+                stacklevel=2,
+                category=DeprecationWarning,
+            )
+            return self._twistedPrivateReactorIterate(delay=delay)
+
+        def stop():
+            warnings.warn(
+                "reactor.stop cannot be used inside unit tests. "
+                "In the future, using stop will fail the test and may "
+                "crash or hang the test run.",
+                stacklevel=2,
+                category=DeprecationWarning,
+            )
+            return self._twistedPrivateReactorStop()
+
+        reactor.crash = crash
+        reactor.iterate = iterate
+        reactor.stop = stop
 
     def _undeprecateReactor(self, reactor):
         """
@@ -296,9 +317,9 @@ class TestCase(SynchronousTestCase):
 
         @param reactor: The Twisted reactor.
         """
-        for name, method in self._reactorMethods.items():
-            setattr(reactor, name, method)
-        self._reactorMethods = {}
+        reactor.crash = self._twistedPrivateReactorCrash
+        reactor.iterate = self._twistedPrivateReactorIterate
+        reactor.stop = self._twistedPrivateReactorStop
 
     def _runFixturesAndTest(self, result):
         """
