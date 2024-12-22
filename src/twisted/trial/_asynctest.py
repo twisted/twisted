@@ -293,19 +293,10 @@ class TestCase(SynchronousTestCase):
             )
             return self._twistedPrivateReactorIterate(delay=delay)
 
-        def stop():
-            warnings.warn(
-                "reactor.stop cannot be used inside unit tests. "
-                "In the future, using stop will fail the test and may "
-                "crash or hang the test run.",
-                stacklevel=2,
-                category=DeprecationWarning,
-            )
-            return self._twistedPrivateReactorStop()
-
         reactor.crash = crash
         reactor.iterate = iterate
-        reactor.stop = stop
+        # stop is not supported when in tests, run crash() instead
+        reactor.stop = crash
 
     def _undeprecateReactor(self, reactor):
         """
@@ -407,11 +398,7 @@ class TestCase(SynchronousTestCase):
                 # called synchronously. Avoid any reactor stuff.
                 return
             d.addBoth(crash)
-            reactor.stop = self._twistedPrivateReactorCrash
-            try:
-                reactor.run()
-            finally:
-                del reactor.stop
+            reactor.run()
 
             # If the reactor was crashed elsewhere due to a timeout, hopefully
             # that crasher also reported an error. Just return.
