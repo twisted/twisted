@@ -29,6 +29,80 @@ _P = ParamSpec("_P")
 
 _waitIsRunning: List[None] = []
 
+# Some tests initiate multiple TestCase instances that all run at the same
+# time, so reactor method deprecation must be tracked at global scope.
+_reactorDeprecatedCount = 0
+_reactorCrash = None
+_reactorIterate = None
+_reactorStop = None
+
+def _deprecateReactor(reactor):
+    """
+    Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
+    each method is wrapped in a function that issues a deprecation
+    warning, then calls the original.
+
+    @param reactor: The Twisted reactor.
+    """
+    global _reactorDeprecatedCount
+    global _reactorCrash
+    global _reactorIterate
+    global _reactorStop
+
+    _reactorDeprecatedCount += 1
+    if _reactorDeprecatedCount != 1:
+        return
+
+    _reactorCrash = reactor.crash
+    _reactorIterate = reactor.iterate
+    _reactorStop = reactor.stop
+
+    def crash():
+        warnings.warn(
+            "reactor.crash cannot be used inside unit tests. "
+            "In the future, using crash will fail the test and may "
+            "crash or hang the test run.",
+            stacklevel=2,
+            category=DeprecationWarning,
+        )
+        return _reactorCrash()
+
+    def iterate(delay=0):
+        warnings.warn(
+            "reactor.iterate cannot be used inside unit tests. "
+            "In the future, using iterate will fail the test and may "
+            "crash or hang the test run.",
+            stacklevel=2,
+            category=DeprecationWarning,
+        )
+        return _reactorIterate(delay=delay)
+
+    reactor.crash = crash
+    reactor.iterate = iterate
+    # stop is not supported when in tests, run crash() instead
+    reactor.stop = crash
+
+
+def _undeprecateReactor(reactor):
+    """
+    Restore the deprecated reactor methods. Undoes what
+    L{_deprecateReactor} did.
+
+    @param reactor: The Twisted reactor.
+    """
+    global _reactorDeprecatedCount
+    global _reactorCrash
+    global _reactorIterate
+    global _reactorStop
+
+    _reactorDeprecatedCount -= 1
+    if _reactorDeprecatedCount != 0:
+        return
+
+    reactor.crash = _reactorCrash
+    reactor.iterate = _reactorIterate
+    reactor.stop = _reactorStop
+
 
 @implementer(itrial.ITestCase)
 class TestCase(SynchronousTestCase):
@@ -73,11 +147,10 @@ class TestCase(SynchronousTestCase):
         # Cached suppressions list
         self._twistedPrivateSuppressions = self._getSuppress()
 
-        # Some reactor methods are deprecated during test run and are patched
-        # while test is running.
-        self._twistedPrivateReactorCrash = None
-        self._twistedPrivateReactorIterate = None
-        self._twistedPrivateReactorStop = None
+    @property
+    def _twistedPrivateReactorIterate(self):
+        global _reactorIterate
+        return _reactorIterate
 
     def assertFailure(self, deferred, *expectedFailures):
         """
@@ -121,7 +194,7 @@ class TestCase(SynchronousTestCase):
                 # if the deferred has been called already but the *back chain
                 # is still unfinished, crash the reactor and report timeout
                 # error ourself.
-                self._twistedPrivateReactorCrash()
+                _reactorCrash()
                 self._timedOut = True  # see self._wait
                 todo = self.getTodo()
                 if todo is not None and todo.expected(f):
@@ -261,54 +334,6 @@ class TestCase(SynchronousTestCase):
         except BaseException:
             result.addError(self, failure.Failure())
 
-    def _deprecateReactor(self, reactor):
-        """
-        Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
-        each method is wrapped in a function that issues a deprecation
-        warning, then calls the original.
-
-        @param reactor: The Twisted reactor.
-        """
-        self._twistedPrivateReactorCrash = reactor.crash
-        self._twistedPrivateReactorIterate = reactor.iterate
-        self._twistedPrivateReactorStop = reactor.stop
-
-        def crash():
-            warnings.warn(
-                "reactor.crash cannot be used inside unit tests. "
-                "In the future, using crash will fail the test and may "
-                "crash or hang the test run.",
-                stacklevel=2,
-                category=DeprecationWarning,
-            )
-            return self._twistedPrivateReactorCrash()
-
-        def iterate(delay=0):
-            warnings.warn(
-                "reactor.iterate cannot be used inside unit tests. "
-                "In the future, using iterate will fail the test and may "
-                "crash or hang the test run.",
-                stacklevel=2,
-                category=DeprecationWarning,
-            )
-            return self._twistedPrivateReactorIterate(delay=delay)
-
-        reactor.crash = crash
-        reactor.iterate = iterate
-        # stop is not supported when in tests, run crash() instead
-        reactor.stop = crash
-
-    def _undeprecateReactor(self, reactor):
-        """
-        Restore the deprecated reactor methods. Undoes what
-        L{_deprecateReactor} did.
-
-        @param reactor: The Twisted reactor.
-        """
-        reactor.crash = self._twistedPrivateReactorCrash
-        reactor.iterate = self._twistedPrivateReactorIterate
-        reactor.stop = self._twistedPrivateReactorStop
-
     def _runFixturesAndTest(self, result):
         """
         Really run C{setUp}, the test method, and C{tearDown}.  Any of these may
@@ -318,7 +343,7 @@ class TestCase(SynchronousTestCase):
         """
         from twisted.internet import reactor
 
-        self._deprecateReactor(reactor)
+        _deprecateReactor(reactor)
         self._timedOut = False
         try:
             d = defer.Deferred.fromCoroutine(self._deferSetUp(result))
@@ -328,7 +353,7 @@ class TestCase(SynchronousTestCase):
                 self._cleanUp(result)
                 self._classCleanUp(result)
         finally:
-            self._undeprecateReactor(reactor)
+            _undeprecateReactor(reactor)
 
     # f should be a positional only argument but that is a breaking change
     # see https://github.com/twisted/twisted/issues/11967
@@ -388,7 +413,7 @@ class TestCase(SynchronousTestCase):
 
         def crash(ign):
             if results is not None:
-                self._twistedPrivateReactorCrash()
+                _reactorCrash()
 
         _waitIsRunning.append(None)
         try:
