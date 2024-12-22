@@ -27,7 +27,7 @@ from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
 _P = ParamSpec("_P")
 
-_wait_is_running: List[None] = []
+_waitIsRunning: List[None] = []
 
 
 @implementer(itrial.ITestCase)
@@ -382,9 +382,9 @@ class TestCase(SynchronousTestCase):
             )
             return util.DEFAULT_TIMEOUT_DURATION
 
-    def _wait(self, d, running=_wait_is_running):
+    def _wait(self, d):
         """Take a Deferred that only ever callbacks. Block until it happens."""
-        if running:
+        if _waitIsRunning:
             raise RuntimeError("_wait is not reentrant")
 
         from twisted.internet import reactor
@@ -399,7 +399,7 @@ class TestCase(SynchronousTestCase):
             if results is not None:
                 self._twistedPrivateReactorCrash()
 
-        running.append(None)
+        _waitIsRunning.append(None)
         try:
             d.addBoth(append)
             if results:
@@ -436,4 +436,4 @@ class TestCase(SynchronousTestCase):
             raise KeyboardInterrupt()
         finally:
             results = None
-            running.pop()
+            _waitIsRunning.pop()
