@@ -11,7 +11,7 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-from typing import Callable
+from typing import Callable, Optional
 
 from zope.interface import implementer
 
@@ -400,20 +400,22 @@ class TestCase(SynchronousTestCase):
 
         from twisted.internet import reactor
 
-        results = []
+        hadResult: Optional[bool] = False
 
         def append(any):
-            if results is not None:
-                results.append(any)
+            nonlocal hadResult
+            if hadResult is not None:
+                hadResult = True
 
         def crash(ign):
-            if results is not None:
+            nonlocal hadResult
+            if hadResult is not None:
                 _reactorCrash()
 
         _waitIsRunning = True
         try:
             d.addBoth(append)
-            if results:
+            if hadResult:
                 # d might have already been fired, in which case append is
                 # called synchronously. Avoid any reactor stuff.
                 return
@@ -424,7 +426,7 @@ class TestCase(SynchronousTestCase):
             # that crasher also reported an error. Just return.
             # _timedOut is most likely to be set when d has fired but hasn't
             # completed its callback chain (see self._run)
-            if results or self._timedOut:  # defined in run() and _run()
+            if hadResult or self._timedOut:  # defined in run() and _run()
                 return
 
             # If the timeout didn't happen, and we didn't get a result or
@@ -442,5 +444,5 @@ class TestCase(SynchronousTestCase):
             # that it should really try to stop as soon as possible.
             raise KeyboardInterrupt()
         finally:
-            results = None
+            hadResult = None
             _waitIsRunning = False
