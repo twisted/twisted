@@ -199,7 +199,7 @@ class DelayedCall(unittest.TestCase):
         delayed call error gets reported.
         """
         reactor.callLater(0, self.go)
-        reactor.iterate(0.01)
+        self._twistedPrivateReactorIterate(0.01)
         self.fail("Deliberate failure to mask the hidden exception")
 
     testHiddenException.suppress = [  # type: ignore[attr-defined]

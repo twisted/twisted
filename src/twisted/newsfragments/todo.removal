@@ -1,0 +1,2 @@
+reactor crash, iterate and stop methods now raise exception when run in tests.
+Calling these methods from tests has already been deprecated for more than a decade.

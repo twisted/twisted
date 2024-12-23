@@ -36,6 +36,21 @@ _reactorCrash = None
 _reactorIterate = None
 _reactorStop = None
 
+
+# Defining these functions here is faster than redefining as e.g. lambdas where
+# they are called.
+def _removedReactorCrash():  # pragma: no cover
+    raise RuntimeError("reactor.crash cannot be used inside unit tests")
+
+
+def _removedReactorIterate(delay=0):  # pragma: no cover
+    raise RuntimeError("reactor.iterate cannot be used inside unit tests")
+
+
+def _removedReactorStop():  # pragma: no cover
+    raise RuntimeError("reactor.stop cannot be used inside unit tests")
+
+
 def _deprecateReactor(reactor):
     """
     Deprecate C{iterate}, C{crash} and C{stop} on C{reactor}. That is,
@@ -57,30 +72,9 @@ def _deprecateReactor(reactor):
     _reactorIterate = reactor.iterate
     _reactorStop = reactor.stop
 
-    def crash():
-        warnings.warn(
-            "reactor.crash cannot be used inside unit tests. "
-            "In the future, using crash will fail the test and may "
-            "crash or hang the test run.",
-            stacklevel=2,
-            category=DeprecationWarning,
-        )
-        return _reactorCrash()
-
-    def iterate(delay=0):
-        warnings.warn(
-            "reactor.iterate cannot be used inside unit tests. "
-            "In the future, using iterate will fail the test and may "
-            "crash or hang the test run.",
-            stacklevel=2,
-            category=DeprecationWarning,
-        )
-        return _reactorIterate(delay=delay)
-
-    reactor.crash = crash
-    reactor.iterate = iterate
-    # stop is not supported when in tests, run crash() instead
-    reactor.stop = crash
+    reactor.crash = _removedReactorCrash
+    reactor.iterate = _removedReactorIterate
+    reactor.stop = _removedReactorStop
 
 
 def _undeprecateReactor(reactor):
