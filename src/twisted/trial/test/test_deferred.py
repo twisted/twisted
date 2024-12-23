@@ -246,6 +246,24 @@ class TimeoutTests(TestTester):
             "(test_expectedFailure) still running at 0.1 secs",
         )
 
+    def test_todoWhenCalled(self) -> None:
+        """
+        See L{twisted.trial.test.detests.TimeoutTests.test_expectedFailureCalledButTimeout}
+
+        Handling of expected failures must support the case when the Deferred
+        returned from test has got initial result, but its callback chain
+        hasn't finished before timeout.
+        """
+        result = self.runTest("test_expectedFailureCalledButTimeout")
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(result.testsRun, 1)
+        self.assertEqual(len(result.expectedFailures), 1)
+        assert isinstance(result.expectedFailures[0][1], Failure)
+        self._wasTimeout(
+            result.expectedFailures[0][1],
+            "(test_expectedFailureCalledButTimeout) still running at 0.1 secs",
+        )
+
     def test_errorPropagation(self) -> None:
         result = self.runTest("test_errorPropagation")
         self.assertFalse(result.wasSuccessful())

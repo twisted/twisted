@@ -204,6 +204,19 @@ class TimeoutTests(unittest.TestCase):
     test_expectedFailure.timeout = 0.1  # type: ignore[attr-defined]
     test_expectedFailure.todo = "i will get it right, eventually"  # type: ignore[attr-defined]
 
+    def test_expectedFailureCalledButTimeout(self):
+        d = defer.Deferred()
+
+        def doesNotFinish(_):
+            return defer.Deferred()
+
+        d.addBoth(doesNotFinish)
+        d.callback(None)
+        return d
+
+    test_expectedFailureCalledButTimeout.timeout = 0.1  # type: ignore[attr-defined]
+    test_expectedFailureCalledButTimeout.todo = "i will get it right, eventually"  # type: ignore[attr-defined]
+
     def test_skip(self):
         return defer.Deferred()
 
