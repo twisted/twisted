@@ -11,7 +11,7 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-from typing import Callable, List
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -27,7 +27,7 @@ from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
 _P = ParamSpec("_P")
 
-_waitIsRunning: List[None] = []
+_waitIsRunning: bool = False
 
 # Some tests initiate multiple TestCase instances that all run at the same
 # time, so reactor method deprecation must be tracked at global scope.
@@ -394,6 +394,7 @@ class TestCase(SynchronousTestCase):
 
     def _wait(self, d):
         """Take a Deferred that only ever callbacks. Block until it happens."""
+        global _waitIsRunning
         if _waitIsRunning:
             raise RuntimeError("_wait is not reentrant")
 
@@ -409,7 +410,7 @@ class TestCase(SynchronousTestCase):
             if results is not None:
                 _reactorCrash()
 
-        _waitIsRunning.append(None)
+        _waitIsRunning = True
         try:
             d.addBoth(append)
             if results:
@@ -442,4 +443,4 @@ class TestCase(SynchronousTestCase):
             raise KeyboardInterrupt()
         finally:
             results = None
-            _waitIsRunning.pop()
+            _waitIsRunning = False
