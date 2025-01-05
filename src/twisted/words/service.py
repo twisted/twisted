@@ -979,9 +979,7 @@ class PBGroup(pb.Referenceable):
 class PBGroupReference(pb.RemoteReference):
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
-        self.name = name
-        if bytes != str and isinstance(self.name, bytes):
-            self.name = self.name.decode("utf-8")
+        self.name = name.decode("utf-8")
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
     def leave(self, reason=None):

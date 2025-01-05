@@ -212,8 +212,7 @@ class IRCProtocolTests(unittest.TestCase):
         If messageType is defined, only messages of that type will be returned.
         """
         response = user.transport.value()
-        if bytes != str and isinstance(response, bytes):
-            response = response.decode("utf-8")
+        response = response.decode("utf-8")
         response = response.splitlines()
         user.transport.clear()
         result = []

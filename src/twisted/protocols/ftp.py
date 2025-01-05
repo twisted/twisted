@@ -6,10 +6,10 @@
 An FTP protocol implementation
 """
 
+# System Imports
 import errno
 import fnmatch
-
-# System Imports
+import ipaddress
 import os
 import re
 import stat
@@ -41,6 +41,7 @@ FILE_STATUS_OK_OPEN_DATA_CNX = "150"
 CMD_OK = "200.1"
 TYPE_SET_OK = "200.2"
 ENTERING_PORT_MODE = "200.3"
+EPSV_ALL_OK = "200.4"
 CMD_NOT_IMPLMNTD_SUPERFLUOUS = "202"
 SYS_STATUS_OR_HELP_REPLY = "211.1"
 FEAT_OK = "211.2"
@@ -80,8 +81,10 @@ SYNTAX_ERR = "500"
 SYNTAX_ERR_IN_ARGS = "501"
 CMD_NOT_IMPLMNTD = "502.1"
 OPTS_NOT_IMPLEMENTED = "502.2"
+PASV_IPV6_NOT_IMPLEMENTED = "502.3"
 BAD_CMD_SEQ = "503"
 CMD_NOT_IMPLMNTD_FOR_PARAM = "504"
+UNSUPPORTED_NETWORK_PROTOCOL = "522"
 NOT_LOGGED_IN = "530.1"  # v1 of code 530 - please log in
 AUTH_FAILURE = "530.2"  # v2 of code 530 - authorization failure
 NEED_ACCT_FOR_STOR = "532"
@@ -110,6 +113,7 @@ RESPONSE = {
     CMD_OK: "200 Command OK",
     TYPE_SET_OK: "200 Type set to %s.",
     ENTERING_PORT_MODE: "200 PORT OK",
+    EPSV_ALL_OK: "200 EPSV ALL OK",
     CMD_NOT_IMPLMNTD_SUPERFLUOUS: "202 Command not implemented, "
     "superfluous at this site",
     SYS_STATUS_OR_HELP_REPLY: "211 System status reply",
@@ -127,8 +131,8 @@ RESPONSE = {
     CLOSING_DATA_CNX: "226 Abort successful",
     TXFR_COMPLETE_OK: "226 Transfer Complete.",
     ENTERING_PASV_MODE: "227 Entering Passive Mode (%s).",
-    # Where is EPSV defined in the RFCs?
-    ENTERING_EPSV_MODE: "229 Entering Extended Passive Mode " "(|||%s|).",
+    # RFC 2428 section 3
+    ENTERING_EPSV_MODE: "229 Entering Extended Passive Mode (|||%s|).",
     USR_LOGGED_IN_PROCEED: "230 User logged in, proceed",
     GUEST_LOGGED_IN_PROCEED: "230 Anonymous login ok, access " "restrictions apply.",
     # i.e. CWD completed OK
@@ -159,8 +163,11 @@ RESPONSE = {
     SYNTAX_ERR_IN_ARGS: "501 syntax error in argument(s) %s.",
     CMD_NOT_IMPLMNTD: "502 Command '%s' not implemented",
     OPTS_NOT_IMPLEMENTED: "502 Option '%s' not implemented.",
+    PASV_IPV6_NOT_IMPLEMENTED: "502 PASV available only for IPv4 (use EPSV instead)",
     BAD_CMD_SEQ: "503 Incorrect sequence of commands: " "%s",
     CMD_NOT_IMPLMNTD_FOR_PARAM: "504 Not implemented for parameter " "'%s'.",
+    # RFC 2428 section 2
+    UNSUPPORTED_NETWORK_PROTOCOL: "522 Network protocol not supported, use (%s)",
     NOT_LOGGED_IN: "530 Please login with USER and PASS.",
     AUTH_FAILURE: "530 Sorry, Authentication failed.",
     NEED_ACCT_FOR_STOR: "532 Need an account for storing " "files",
@@ -176,6 +183,16 @@ RESPONSE = {
     "exceeded file storage allocation",
     FILENAME_NOT_ALLOWED: "553 Requested action not taken, file " "name not allowed",
 }
+
+
+# IANA address family numbers
+# (https://www.iana.org/assignments/address-family-numbers).
+# We only handle IP and IP6 at the moment.
+#
+# If these are needed by other parts of Twisted then they should be moved
+# somewhere more central, filled out, and exported.
+_AFNUM_IP = 1
+_AFNUM_IP6 = 2
 
 
 class InvalidPath(Exception):
@@ -363,6 +380,14 @@ class CmdNotImplementedForArgError(FTPCmdError):
     errorCode = CMD_NOT_IMPLMNTD_FOR_PARAM
 
 
+class PASVIPv6NotImplementedError(FTPCmdError):
+    """
+    Raised when PASV is used with IPv6.
+    """
+
+    errorCode = PASV_IPV6_NOT_IMPLEMENTED
+
+
 class FTPError(Exception):
     pass
 
@@ -385,6 +410,14 @@ class AuthorizationError(FTPCmdError):
     """
 
     errorCode = AUTH_FAILURE
+
+
+class UnsupportedNetworkProtocolError(FTPCmdError):
+    """
+    Raised when the client requests an unsupported network protocol.
+    """
+
+    errorCode = UNSUPPORTED_NETWORK_PROTOCOL
 
 
 def debugDeferred(self, *_):
@@ -718,6 +751,11 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     @ivar listenFactory: A callable with the signature of
         L{twisted.internet.interfaces.IReactorTCP.listenTCP} which will be used
         to create Ports for passive connections (mainly for testing).
+    @ivar _epsvAll: If true, "EPSV ALL" was received from the client,
+        requiring the server to reject all data connection setup commands
+        other than EPSV.  See RFC 2428.
+    @ivar _supportedNetworkProtocols: A collection of network protocol
+        numbers supported by the EPRT and EPSV commands.
 
     @ivar passivePortRange: iterator used as source of passive port numbers.
     @type passivePortRange: C{iterator}
@@ -749,6 +787,8 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     dtpPort = None
     dtpInstance = None
     binary = True
+    _epsvAll = False
+    _supportedNetworkProtocols = (_AFNUM_IP, _AFNUM_IP6)
     PUBLIC_COMMANDS = ["FEAT", "QUIT"]
     FEATURES = ["FEAT", "MDTM", "PASV", "SIZE", "TYPE A;I"]
 
@@ -786,6 +826,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         if hasattr(self.shell, "logout") and self.shell.logout is not None:
             self.shell.logout()
         self.shell = None
+        self._epsvAll = False
         self.transport = None
 
     def timeoutConnection(self):
@@ -794,8 +835,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
     def lineReceived(self, line):
         self.resetTimeout()
         self.pauseProducing()
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
 
         def processFailed(err):
             if err.check(FTPCmdError):
@@ -873,14 +913,21 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 return BAD_CMD_SEQ, "RNTO required after RNFR"
 
-    def getDTPPort(self, factory):
+    def getDTPPort(self, factory, interface=""):
         """
         Return a port for passive access, using C{self.passivePortRange}
         attribute.
+
+        @param factory: the protocol factory to connect to the port.
+        @type factory: L{twisted.internet.protocol.ServerFactory}
+
+        @param interface: the local IPv4 or IPv6 address to which to bind;
+            defaults to "", i.e. all IPv4 addresses.
+        @type interface: C{str}
         """
         for portn in self.passivePortRange:
             try:
-                dtpPort = self.listenFactory(portn, factory)
+                dtpPort = self.listenFactory(portn, factory, interface=interface)
             except error.CannotListenError:
                 continue
             else:
@@ -952,6 +999,28 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             response to this command includes the host and port address this
             server is listening on.
         """
+        if self._epsvAll:
+            return defer.fail(BadCmdSequenceError("may not send PASV after EPSV ALL"))
+
+        host = self.transport.getHost().host
+        try:
+            address = ipaddress.IPv6Address(host)
+        except ipaddress.AddressValueError:
+            pass
+        else:
+            if address.ipv4_mapped is not None:
+                # IPv4-mapped addresses are usable, but we need to make sure
+                # they're encoded as IPv4 in the response.
+                host = str(address.ipv4_mapped)
+            else:
+                # There's no standard defining the behaviour of PASV with
+                # IPv6, so just claim it as unimplemented.  (Some servers
+                # return something like '0,0,0,0' in the host part of the
+                # response in order that at least clients that ignore the
+                # host part can work, and if it becomes necessary then we
+                # could do that too.)
+                return defer.fail(PASVIPv6NotImplementedError())
+
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
             # cleanupDTP sets dtpFactory to none.  Later we'll do
@@ -961,15 +1030,126 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         self.dtpFactory.setTimeout(self.dtpTimeout)
         self.dtpPort = self.getDTPPort(self.dtpFactory)
 
-        host = self.transport.getHost().host
         port = self.dtpPort.getHost().port
         self.reply(ENTERING_PASV_MODE, encodeHostPort(host, port))
         return self.dtpFactory.deferred.addCallback(lambda ign: None)
 
+    def _validateNetworkProtocol(self, protocol):
+        """
+        Validate the network protocol requested in an EPRT or EPSV command.
+
+        For now we just hardcode the protocols we support, since this layer
+        doesn't have a good way to discover that.
+
+        @param protocol: An address family number.  See RFC 2428 section 2.
+        @type protocol: L{str}
+
+        @raise FTPCmdError: If validation fails.
+        """
+        # We can't actually honour an explicit network protocol request
+        # (violating a SHOULD in RFC 2428 section 3), but let's at least
+        # validate it.
+        try:
+            protocol = int(protocol)
+        except ValueError:
+            raise CmdArgSyntaxError(protocol)
+        if protocol not in self._supportedNetworkProtocols:
+            raise UnsupportedNetworkProtocolError(
+                ",".join(str(p) for p in self._supportedNetworkProtocols)
+            )
+
+    def ftp_EPSV(self, protocol=""):
+        """
+        Extended request for a passive connection.
+
+        As described by U{RFC 2428 section
+        3<https://tools.ietf.org/html/rfc2428#section-3>}::
+
+            The EPSV command requests that a server listen on a data port
+            and wait for a connection.  The EPSV command takes an optional
+            argument.  The response to this command includes only the TCP
+            port number of the listening connection.  The format of the
+            response, however, is similar to the argument of the EPRT
+            command.  This allows the same parsing routines to be used for
+            both commands.  In addition, the format leaves a place holder
+            for the network protocol and/or network address, which may be
+            needed in the EPSV response in the future.
+        """
+        if protocol == "ALL":
+            self._epsvAll = True
+            return EPSV_ALL_OK
+        elif protocol:
+            try:
+                self._validateNetworkProtocol(protocol)
+            except FTPCmdError:
+                return defer.fail()
+
+        # if we have a DTP port set up, lose it.
+        if self.dtpFactory is not None:
+            # cleanupDTP sets dtpFactory to none.  Later we'll do
+            # cleanup here or something.
+            self.cleanupDTP()
+        self.dtpFactory = DTPFactory(pi=self)
+        self.dtpFactory.setTimeout(self.dtpTimeout)
+        if not protocol or protocol == _AFNUM_IP6:
+            interface = "::"
+        else:
+            interface = ""
+        self.dtpPort = self.getDTPPort(self.dtpFactory, interface=interface)
+
+        port = self.dtpPort.getHost().port
+        self.reply(ENTERING_EPSV_MODE, port)
+        return self.dtpFactory.deferred.addCallback(lambda ign: None)
+
     def ftp_PORT(self, address):
+        if self._epsvAll:
+            return defer.fail(BadCmdSequenceError("may not send PORT after EPSV ALL"))
+
         addr = tuple(map(int, address.split(",")))
         ip = "%d.%d.%d.%d" % tuple(addr[:4])
         port = addr[4] << 8 | addr[5]
+
+        # if we have a DTP port set up, lose it.
+        if self.dtpFactory is not None:
+            self.cleanupDTP()
+
+        self.dtpFactory = DTPFactory(pi=self, peerHost=self.transport.getPeer().host)
+        self.dtpFactory.setTimeout(self.dtpTimeout)
+        self.dtpPort = reactor.connectTCP(ip, port, self.dtpFactory)
+
+        def connected(ignored):
+            return ENTERING_PORT_MODE
+
+        def connFailed(err):
+            err.trap(PortConnectionError)
+            return CANT_OPEN_DATA_CNX
+
+        return self.dtpFactory.deferred.addCallbacks(connected, connFailed)
+
+    def ftp_EPRT(self, extendedAddress):
+        """
+        Extended request for a data connection.
+
+        As described by U{RFC 2428 section
+        2<https://tools.ietf.org/html/rfc2428#section-2>}::
+
+            The EPRT command allows for the specification of an extended
+            address for the data connection.  The extended address MUST
+            consist of the network protocol as well as the network and
+            transport addresses.
+        """
+        if self._epsvAll:
+            return defer.fail(BadCmdSequenceError("may not send EPRT after EPSV ALL"))
+
+        try:
+            protocol, ip, port = decodeExtendedAddress(extendedAddress)
+        except ValueError:
+            return defer.fail(CmdArgSyntaxError(extendedAddress))
+        if protocol:
+            try:
+                self._validateNetworkProtocol(protocol)
+            except FTPCmdError:
+                return defer.fail()
 
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
@@ -1176,7 +1356,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         @return: a L{Deferred} which will be fired when the transfer is done.
         """
         if self.dtpInstance is None:
-            raise BadCmdSequenceError("PORT or PASV required before RETR")
+            raise BadCmdSequenceError("PORT, PASV, EPRT, or EPSV required before RETR")
 
         try:
             newsegs = toSegments(self.workingDirectory, path)
@@ -1250,7 +1430,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         pathname does not already exist.
         """
         if self.dtpInstance is None:
-            raise BadCmdSequenceError("PORT or PASV required before STOR")
+            raise BadCmdSequenceError("PORT, PASV, EPRT, or EPSV required before STOR")
 
         try:
             newsegs = toSegments(self.workingDirectory, path)
@@ -2421,6 +2601,18 @@ def encodeHostPort(host, port):
     return ",".join(numbers)
 
 
+def decodeExtendedAddress(address):
+    """
+    Decode an FTP protocol/address/port combination, using the syntax
+    defined in RFC 2428 section 2.
+
+    @return: a 3-tuple of (protocol, host, port).
+    """
+    delim = address[0]
+    protocol, host, port, _ = address[1:].split(delim)
+    return protocol, host, int(port)
+
+
 def _unwrapFirstError(failure):
     failure.trap(defer.FirstError)
     return failure.value.subFailure
@@ -2611,8 +2803,7 @@ class FTPClientBasic(basic.LineReceiver):
         (Private) Parses the response messages from the FTP server.
         """
         # Add this line to the current response
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
 
         if self.debug:
             log.msg("--> %s" % line)
@@ -3177,8 +3368,7 @@ class FTPFileListProtocol(basic.LineReceiver):
         self.files = []
 
     def lineReceived(self, line):
-        if bytes != str:
-            line = line.decode(self._encoding)
+        line = line.decode(self._encoding)
         d = self.parseDirectoryLine(line)
         if d is None:
             self.unknownLine(line)

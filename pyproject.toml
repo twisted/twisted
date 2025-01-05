@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 22.10.0",
+    "incremental >= 24.7.0",
 ]
 build-backend = "hatchling.build"
 
@@ -19,7 +19,7 @@ license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.8.0"
 authors = [
-    { name = "Twisted Matrix Laboratories", email = "twisted-python@twistedmatrix.com" },
+    { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -29,16 +29,16 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "zope.interface >= 5",
     "constantly >= 15.1",
-    "incremental >= 22.10.0",
-    "Automat >= 0.8.0",
+    "incremental >= 24.7.0",
+    "Automat >= 24.8.0",
     "hyperlink >= 17.1.1",
-    "attrs >= 21.3.0",
+    "attrs >= 22.2.0",
     "typing_extensions >= 4.2.0",
-    "twisted-iocpsupport >= 1.0.2, <2; platform_system == 'Windows'",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
@@ -55,24 +55,26 @@ test = [
     "cython-test-exception-raiser >= 1.0.2, <2",
     "PyHamcrest >= 2",
     "hypothesis >= 6.56",
+    "httpx[http2] >= 0.27",
 ]
 
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
     "towncrier ~= 23.6",
-    "pydoctor ~= 23.9.0",
+    "pydoctor ~= 24.11.1",
     "sphinx-rtd-theme ~= 1.3",
     "sphinx >= 6, <7",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
+    "twisted[test]",
     "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
-    "coverage >= 6b1, <7",
+    "coverage ~= 7.5",
 ]
 
 tls = [
@@ -95,7 +97,7 @@ serial = [
 ]
 
 http2 = [
-    "h2 >= 3.0, < 5.0",
+    "h2 >= 3.2, < 5.0",
     "priority >= 1.1.0, < 2.0",
 ]
 
@@ -113,6 +115,7 @@ macos-platform = [
 windows-platform = [
     "twisted[all-non-platform]",
     "pywin32 != 226",
+    "twisted-iocpsupport >= 1.0.2",
 ]
 
 osx-platform = [
@@ -126,8 +129,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy~=1.8",
-    "mypy-zope~=1.0.3",
+    "mypy==1.10.1",
+    "mypy-zope==1.0.6",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -144,22 +147,25 @@ twist = "twisted.application.twist._twist:Twist.main"
 twistd = "twisted.scripts.twistd:run"
 
 [project.urls]
+# For available URL types see
+# https://docs.pypi.org/project_metadata/
 Changelog = "https://github.com/twisted/twisted/blob/HEAD/NEWS.rst"
-Documentation = "https://docs.twistedmatrix.com/"
-Homepage = "https://twistedmatrix.com/"
-Issues = "https://twistedmatrix.com/trac/report"
+Documentation = "https://docs.twisted.org/"
+Homepage = "https://twisted.org/"
+Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
-Twitter = "https://twitter.com/twistedmatrix"
+Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
+Funding-GitHub = "https://github.com/sponsors/twisted"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
 # that are defined using underscores.
 allow-ambiguous-features = true
+allow-direct-references = true
+
 
 [tool.hatch.version]
-source = "code"
-path = "src/twisted/__init__.py"
-search-paths = ["src"]
+source = "incremental"
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
 content-type = "text/x-rst"
@@ -368,10 +374,6 @@ module = [
   # documented as an extra.
   "utmp",
 
-  # automat is not typed, or typeable, at least until
-  # https://github.com/glyph/automat/pull/137 is landed
-  "automat",
-
   # I think only used by `twisted.web.script.ResourceTemplate`
   "quixote",
 
@@ -383,16 +385,12 @@ module = [
   "psycopg",
   "MySQLdb",
   "kinterbasdb",
-
-  "SOAPpy",
 ]
 
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 check_untyped_defs = false
 module = [
-    'twisted._threads.test.test_team',
-    'twisted._threads.test.test_threadworker',
     'twisted.application.app',
     'twisted.application.internet',
     'twisted.application.service',
@@ -733,7 +731,6 @@ module = [
     'twisted.web.proxy',
     'twisted.web.resource',
     'twisted.web.server',
-    'twisted.web.soap',
     'twisted.web.static',
     'twisted.web.sux',
     'twisted.web.tap',
@@ -748,7 +745,6 @@ module = [
     'twisted.web.test.test_httpauth',
     'twisted.web.test.test_newclient',
     'twisted.web.test.test_proxy',
-    'twisted.web.test.test_soap',
     'twisted.web.test.test_static',
     'twisted.web.test.test_util',
     'twisted.web.test.test_vhost',
@@ -791,10 +787,6 @@ module = [
 [[tool.mypy.overrides]]
 allow_untyped_defs = true
 module = [
-    'twisted._threads._convenience',
-    'twisted._threads._ithreads',
-    'twisted._threads._memory',
-    'twisted._threads._threadworker',
     'twisted.conch.avatar',
     'twisted.conch.checkers',
     'twisted.conch.client.connect',

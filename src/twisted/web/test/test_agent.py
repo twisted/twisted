@@ -1079,7 +1079,7 @@ class AgentTests(
         endpoint = self.agent._getEndpoint(
             URI.fromBytes(b"http://%b:%d" % (expectedHost, expectedPort))
         )
-        self.assertEqual(endpoint._hostStr, "example.com")
+        self.assertEqual(endpoint._hostText, "example.com")
         self.assertEqual(endpoint._port, expectedPort)
         self.assertIsInstance(endpoint, HostnameEndpoint)
 
@@ -1256,7 +1256,7 @@ class AgentTests(
         agent = client.Agent(self.reactor, bindAddress="192.168.0.1")
         agent.request(b"GET", b"http://foo/")
         address = self.reactor.tcpClients.pop()[4]
-        self.assertEqual("192.168.0.1", address)
+        self.assertEqual(("192.168.0.1", 0), address)
 
     @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_bindAddressSSL(self):
@@ -1267,7 +1267,7 @@ class AgentTests(
         agent = client.Agent(self.reactor, bindAddress="192.168.0.1")
         agent.request(b"GET", b"https://foo/")
         address = self.reactor.tcpClients.pop()[4]
-        self.assertEqual("192.168.0.1", address)
+        self.assertEqual(("192.168.0.1", 0), address)
 
     def test_responseIncludesRequest(self):
         """
@@ -1434,7 +1434,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         If a host is passed, the endpoint respects it.
         """
         endpoint = self.makeEndpoint(host=b"example.com")
-        self.assertEqual(endpoint._wrappedEndpoint._hostStr, "example.com")
+        self.assertEqual(endpoint._wrappedEndpoint._hostText, "example.com")
 
     def test_portArgumentIsRespected(self):
         """

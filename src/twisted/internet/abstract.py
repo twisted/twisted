@@ -6,9 +6,10 @@
 Support for generic select()able objects.
 """
 
+from __future__ import annotations
 
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from zope.interface import implementer
 
@@ -165,6 +166,12 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     valid to be passed to select(2).
     """
 
+    # We have two buffers: a list (_tempDataBuffer), and a byte string
+    # (self.dataBuffer). A given write may not be able to write everything, and
+    # we also limit to sending at most SEND_LIMIT bytes at a time. Thus, we
+    # also have self.offset tracks where in self.dataBuffer we are in the
+    # writing process, to reduce unnecessary copying if we failed to write all
+    # the data.
     connected = 0
     disconnected = 0
     disconnecting = 0
@@ -208,7 +215,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> None:
+    def writeSomeData(self, data: bytes) -> Union[int, BaseException]:
         """
         Write as much as possible of the given data, immediately.
 
@@ -242,12 +249,22 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
         @see: L{twisted.internet.interfaces.IWriteDescriptor.doWrite}.
         """
-        if len(self.dataBuffer) - self.offset < self.SEND_LIMIT:
-            # If there is currently less than SEND_LIMIT bytes left to send
-            # in the string, extend it with the array data.
-            self.dataBuffer = _concatenate(
-                self.dataBuffer, self.offset, self._tempDataBuffer
-            )
+        # We only send at most SEND_LIMIT bytes at a time. If the amount of
+        # bytes in our send-immediately buffer is smaller than that limit,
+        # probably a good time to add the bytes from our secondary, list-based
+        # buffer (self._tempDataBuffer.)
+        remaining = len(self.dataBuffer) - self.offset
+        if remaining < self.SEND_LIMIT:
+            if remaining > 0:
+                # There is currently some data to write, extend it with the
+                # list data.
+                self.dataBuffer = _concatenate(
+                    self.dataBuffer, self.offset, self._tempDataBuffer
+                )
+            else:
+                # self.dataBuffer has nothing left to write, so just convert
+                # the list buffer to bytes buffer in a cheaper way:
+                self.dataBuffer = b"".join(self._tempDataBuffer)
             self.offset = 0
             self._tempDataBuffer = []
             self._tempDataLen = 0
@@ -256,6 +273,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if self.offset:
             l = self.writeSomeData(lazyByteSlice(self.dataBuffer, self.offset))
         else:
+            # Optimization: skip lazyByteSlice() when it's unnecessary.
             l = self.writeSomeData(self.dataBuffer)
 
         # There is no writeSomeData implementation in Twisted which returns

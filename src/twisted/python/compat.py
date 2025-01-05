@@ -420,16 +420,16 @@ def intToBytes(i: int) -> bytes:
 
 def lazyByteSlice(object, offset=0, size=None):
     """
-    Return a copy of the given bytes-like object.
+    Return a memory view of the given bytes-like object.
 
-    If an offset is given, the copy starts at that offset. If a size is
-    given, the copy will only be of that length.
+    If an offset is given, the view starts at that offset. If a size is
+    given, the view will only be of that length.
 
-    @param object: C{bytes} to be copied.
+    @param object: C{bytes} to be sliced.
 
-    @param offset: C{int}, starting index of copy.
+    @param offset: C{int}, starting index of view.
 
-    @param size: Optional, if an C{int} is given limit the length of copy
+    @param size: Optional, if an C{int} is given limit the length of the view
         to this size.
     """
     view = memoryview(object)

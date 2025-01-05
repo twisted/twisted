@@ -520,7 +520,7 @@ setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = _newInstance(CopyableFailure, fail.__dict__)
+    f = _newInstance(CopyableFailure, fail.__getstate__())
     f.unsafeTracebacks = unsafeTracebacks
     return f
 

@@ -475,10 +475,10 @@ if cryptography is not None:
 
         def getPrivateKey(self):
             self.canSucceedPublicKey = 1
-            return defer.succeed(keys.Key.fromString(privateDSA_openssh))
+            return defer.succeed(keys.Key.fromString(privateRSA_openssh))
 
         def getPublicKey(self):
-            return keys.Key.fromString(publicDSA_openssh)
+            return keys.Key.fromString(publicRSA_openssh)
 
     class ConchTestClientConnection(connection.SSHConnection):
         """
@@ -538,7 +538,7 @@ if cryptography is not None:
         @return: L{twisted.conch.checkers.SSHPublicKeyChecker}
         """
         conchTestPublicKeyDB = checkers.InMemorySSHKeyDB(
-            {b"testuser": [keys.Key.fromString(publicDSA_openssh)]}
+            {b"testuser": [keys.Key.fromString(publicRSA_openssh)]}
         )
         return checkers.SSHPublicKeyChecker(conchTestPublicKeyDB)
 

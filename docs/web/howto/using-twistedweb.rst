@@ -50,7 +50,7 @@ Main Concepts
 - :ref:`Resource <web-howto-using-twistedweb-resources>` objects represent a single URL segment. The :py:class:`IResource <twisted.web.resource.IResource>` interface describes the methods a Resource object must implement in order to participate in the object publishing process.
 - :ref:`Resource trees <web-howto-using-twistedweb-trees>` are arrangements of Resource objects into a Resource tree. Starting at the root Resource object, the tree of Resource objects defines the URLs which will be valid.
 - :ref:`.rpy scripts <web-howto-using-twistedweb-rpys>` are python scripts which the twisted.web static file server will execute, much like a CGI. However, unlike CGI they must create a Resource object which will be rendered when the URL is visited.
-- :ref:`Resource rendering <web-howto-using-twistedweb-rendering>` occurs when Twisted Web locates a leaf Resource object. A Resource can either return an html string or write to the request object.
+- :ref:`Resource rendering <web-howto-using-twistedweb-rendering>` occurs when Twisted Web locates a leaf Resource object. A Resource can either return a response as bytes or write to the request object.
 - :ref:`Session <web-howto-using-twistedweb-sessions>` objects allow you to store information across multiple requests. Each individual browser using the system has a unique Session instance.
 
 
@@ -149,7 +149,7 @@ During the Resource location process, the URL segments which have already been p
 
 
 
-A Resource can know where it is in the URL tree by looking at ``request.prepath`` , a list of URL segment strings.
+A Resource can know where it is in the URL tree by looking at ``request.prepath`` , a list of URL segment parts.
 
 
 
@@ -159,7 +159,7 @@ A Resource can know which path segments will be processed after it by looking at
 
 
 
-If the URL ends in a slash, for example ``http://example.com/foo/bar/`` , the final URL segment will be an empty string. Resources can thus know if they were requested with or without a final slash.
+If the URL ends in a slash, for example ``http://example.com/foo/bar/`` , the final URL segment will be empty. Resources can thus know if they were requested with or without a final slash.
 
 
 
@@ -178,7 +178,7 @@ Here is a simple Resource object:
     class Hello(Resource):
         isLeaf = True
         def getChild(self, name, request):
-            if name == '':
+            if name == b'':
                 return self
             return Resource.getChild(self, name, request)
 
@@ -331,7 +331,7 @@ Resource rendering occurs when Twisted Web locates a leaf Resource object to han
 
 
 
-- Return a string
+- Return a response as bytes
 - Call ``request.write(b"stuff")`` as many times as desired, then call ``request.finish()`` and return ``server.NOT_DONE_YET`` (This is deceptive, since you are in fact done with the request, but is the correct way to do this)
 - Request a ``Deferred`` , return ``server.NOT_DONE_YET`` , and call ``request.write("stuff")`` and ``request.finish()`` later, in a callback on the ``Deferred`` .
 

@@ -23,7 +23,7 @@ from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
-from twisted.web import http
+from twisted.web import server
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.test.test_web import DummyChannel
@@ -1275,7 +1275,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         included in the response.
         """
         # Make the Date header value deterministic
-        self.patch(http, "datetimeToString", lambda: "Tuesday")
+        self.patch(server, "datetimeToString", lambda: "Tuesday")
 
         channel = DummyChannel()
 

@@ -2650,8 +2650,7 @@ class IRCClient(basic.LineReceiver):
         basic.LineReceiver.dataReceived(self, data)
 
     def lineReceived(self, line):
-        if bytes != str and isinstance(line, bytes):
-            # decode bytes from transport to unicode
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
 
         line = lowDequote(line)

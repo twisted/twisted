@@ -100,11 +100,13 @@ class LogFileTests(TestCase):
         self.assertEqual(log.size, 10)
         self.assertEqual(log._file.tell(), log.size)
         log.write("abc")
-        self.assertEqual(log.size, 13)
+        log.write(b"def\xff")
+        expectResult = b"0123456789abcdef\xff"
+        self.assertEqual(log.size, len(expectResult))
         self.assertEqual(log._file.tell(), log.size)
         f = log._file
         f.seek(0, 0)
-        self.assertEqual(f.read(), b"0123456789abc")
+        self.assertEqual(f.read(), expectResult)
 
     def test_logReader(self) -> None:
         """

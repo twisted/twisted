@@ -1,0 +1,1 @@
+twisted.internet.defer.waitForDeferred twisted.internet.defer.deferredGenerator have been removed. They have been deprecated since Twisted 15.0.0

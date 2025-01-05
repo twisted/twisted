@@ -1,0 +1,4 @@
+Update pydoctor API documentation generator to 24.11.1.
+Fix "Go to the latest version of this document." links.
+The API documentation pages now includes a <link rel="canonical"> element that points to the stable version.
+Remove google analytics from the API docs.

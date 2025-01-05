@@ -418,7 +418,6 @@ async def _flattenTree(
 
     while stack:
         try:
-            frame = stack[-1].gi_frame
             element = next(stack[-1])
             if isinstance(element, Deferred):
                 # Before suspending flattening for an unknown amount of time,
@@ -428,11 +427,11 @@ async def _flattenTree(
         except StopIteration:
             stack.pop()
         except Exception as e:
-            stack.pop()
             roots = []
             for generator in stack:
-                roots.append(generator.gi_frame.f_locals["root"])
-            roots.append(frame.f_locals["root"])
+                if generator.gi_frame is not None:
+                    roots.append(generator.gi_frame.f_locals["root"])
+            stack.pop()
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
             stack.append(element)

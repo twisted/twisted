@@ -38,11 +38,11 @@ async def addError(
     Then, L{managercommands.AddError} is called with the rest of the
     information and the stream IDs.
 
-    :param amp: The connection to use.
-    :param testName: The name (or ID) of the test the error relates to.
-    :param errorClass: The fully qualified name of the error type.
-    :param error: The string representation of the error.
-    :param frames: The lines of the traceback associated with the error.
+    @param amp: The connection to use.
+    @param testName: The name (or ID) of the test the error relates to.
+    @param errorClass: The fully qualified name of the error type.
+    @param error: The string representation of the error.
+    @param frames: The lines of the traceback associated with the error.
     """
 
     errorStreamId = await stream(amp, chunk(error.encode("utf-8"), MAX_VALUE_LENGTH))
@@ -63,12 +63,12 @@ async def addFailure(
     """
     Like L{addError} but for failures.
 
-    :param amp: See L{addError}
-    :param testName: See L{addError}
-    :param failClass: The fully qualified name of the exception associated
+    @param amp: See L{addError}
+    @param testName: See L{addError}
+    @param failClass: The fully qualified name of the exception associated
         with the failure.
-    :param fail: The string representation of the failure.
-    :param frames: The lines of the traceback associated with the error.
+    @param fail: The string representation of the failure.
+    @param frames: The lines of the traceback associated with the error.
     """
     failStreamId = await stream(amp, chunk(fail.encode("utf-8"), MAX_VALUE_LENGTH))
     framesStreamId = await stream(amp, (frame.encode("utf-8") for frame in frames))
@@ -86,10 +86,10 @@ async def addExpectedFailure(amp: AMP, testName: str, error: str, todo: str) -> 
     """
     Like L{addError} but for expected failures.
 
-    :param amp: See L{addError}
-    :param testName: See L{addError}
-    :param error: The string representation of the expected failure.
-    :param todo: The string description of the expectation.
+    @param amp: See L{addError}
+    @param testName: See L{addError}
+    @param error: The string representation of the expected failure.
+    @param todo: The string description of the expectation.
     """
     errorStreamId = await stream(amp, chunk(error.encode("utf-8"), MAX_VALUE_LENGTH))
 
@@ -113,10 +113,10 @@ class ReportingResults:
     runner believes the test is otherwise complete, it can collect the results
     and do something with any errors.
 
-    :ivar _reporter: The L{WorkerReporter} this object is associated with.
+    @ivar _reporter: The L{WorkerReporter} this object is associated with.
         This is the object doing the result reporting.
 
-    :ivar _results: A list of L{Deferred} instances representing the results
+    @ivar _results: A list of L{Deferred} instances representing the results
         of reporting operations.  This is expected to grow over the course of
         the test run and then be inspected by the runner once the test is
         over.  The public interface to this list is via the context manager
@@ -130,7 +130,7 @@ class ReportingResults:
         """
         Begin a new reportable context in which results can be collected.
 
-        :return: A sequence which will contain the L{Deferred} instances
+        @return: A sequence which will contain the L{Deferred} instances
             representing the results of all test result reporting that happens
             while the context manager is active.  The sequence is extended as
             the test runs so its value should not be consumed until the test

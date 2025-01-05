@@ -110,7 +110,7 @@ def notFound(
 
     @param brief: A short string displayed as the page title.
 
-    @param brief: A longer string displayed in the page body.
+    @param message: A longer string displayed in the page body.
 
     @returns: An L{IResource}
     """
@@ -127,7 +127,7 @@ def forbidden(
 
     @param brief: A short string displayed as the page title.
 
-    @param brief: A longer string displayed in the page body.
+    @param message: A longer string displayed in the page body.
 
     @returns: An L{IResource}
     """
