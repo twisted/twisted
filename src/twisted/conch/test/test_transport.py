@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple, Type
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import _kex, address, service
+from twisted.conch.ssh.transport import SSHCiphers
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
@@ -148,23 +149,17 @@ class MockTransportBase(transport.SSHTransportBase):
         self.ignoreds.append(packet)
 
 
-class MockCipher:
+class MockCipher(SSHCiphers):
     """
     A mocked-up version of twisted.conch.ssh.transport.SSHCiphers.
     """
 
-    outCipType = b"test"
-    encBlockSize = 6
-    inCipType = b"test"
-    decBlockSize = 6
-    inMACType = b"test"
-    outMACType = b"test"
-    verifyDigestSize = 1
-    usedEncrypt = False
-    usedDecrypt = False
-    outMAC = (None, b"", b"", 1)
-    inMAC = (None, b"", b"", 1)
     keys = ()
+
+    def __init__(self, outCip=b"test", inCip=b"test", outMac=b"test", inMac=b"test"):
+        super().__init__(outCip, inCip, outMac, inMac)
+        self.encBlockSize += 6
+        self.decBlockSize += 6
 
     def encrypt(self, x):
         """
@@ -656,11 +651,11 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.currentEncryptions = testCipher = MockCipher()
         proto.sendPacket(ord("A"), b"BCD")
         value = self.transport.value()
-        proto.buf = value[: MockCipher.decBlockSize]
+        proto.buf = value[: testCipher.decBlockSize]
         self.assertIsNone(proto.getPacket())
         self.assertTrue(testCipher.usedDecrypt)
         self.assertEqual(proto.first, b"\x00\x00\x00\x0e\x09A")
-        proto.buf += value[MockCipher.decBlockSize :]
+        proto.buf += value[testCipher.decBlockSize :]
         self.assertEqual(proto.getPacket(), b"ABCD")
         self.assertEqual(proto.buf, b"")
 
