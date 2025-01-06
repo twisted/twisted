@@ -8,7 +8,10 @@ An asynchronous mapping to U{DB-API
 """
 
 
+from typing import Any, Callable
+
 from twisted.internet import threads
+from twisted.internet.defer import Deferred
 from twisted.python import log, reflect
 
 
@@ -289,7 +292,12 @@ class ConnectionPool:
                 log.err(None, "Rollback failed")
             raise
 
-    def runInteraction(self, interaction, *args, **kw):
+    def runInteraction(
+        self,
+        interaction: Callable[[Transaction], Deferred[Any]],
+        *args: object,
+        **kw: object,
+    ) -> Deferred[Any]:
         """
         Interact with the database and return the result.
 
@@ -346,7 +354,7 @@ class ConnectionPool:
         """
         return self.runInteraction(self._runQuery, *args, **kw)
 
-    def runOperation(self, *args, **kw):
+    def runOperation(self, *args: object, **kw: object) -> Deferred[None]:
         """
         Execute an SQL query and return L{None}.
 

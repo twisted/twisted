@@ -7,6 +7,7 @@ Tests for twisted.enterprise.adbapi.
 
 import os
 import stat
+from abc import abstractmethod
 from typing import Dict, Optional
 
 from twisted.enterprise.adbapi import (
@@ -16,6 +17,7 @@ from twisted.enterprise.adbapi import (
     Transaction,
 )
 from twisted.internet import defer, interfaces, reactor
+from twisted.internet.defer import Deferred
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
@@ -37,6 +39,14 @@ class ADBAPITestBase:
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
 
+    dbpool: ConnectionPool
+
+    @abstractmethod
+    def stopDB(self) -> Deferred[None]:
+        """
+        Implement in subclasses to stop the database.
+        """
+
     def extraSetUp(self):
         """
         Set up the database and create a connection pool pointing at it.
@@ -45,7 +55,7 @@ class ADBAPITestBase:
         self.dbpool = self.makePool(cp_openfun=self.openfun)
         self.dbpool.start()
 
-    def tearDown(self):
+    def tearDown(self) -> Deferred[None]:
         d = self.dbpool.runOperation("DROP TABLE simple")
         d.addCallback(lambda res: self.dbpool.close())
         d.addCallback(lambda res: self.stopDB())
