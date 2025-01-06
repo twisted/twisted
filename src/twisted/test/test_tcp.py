@@ -10,7 +10,7 @@ import errno
 import random
 import socket
 from functools import wraps
-from typing import Optional
+from typing import Any, Optional
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -19,6 +19,7 @@ import hamcrest
 
 from twisted.internet import defer, error, interfaces, protocol, reactor
 from twisted.internet.address import IPv4Address
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IHalfCloseableProtocol, IPullProducer
 from twisted.internet.testing import AccumulatingProtocol
 from twisted.protocols import policies
@@ -1361,7 +1362,7 @@ class AddressTests(TestCase):
 
         return defer.gatherResults([self.serverConnMade, self.clientConnMade])
 
-    def tearDown(self):
+    def tearDown(self) -> Deferred[Any]:
         """
         Disconnect the client/server pair and shutdown the port created in
         L{setUp}.
