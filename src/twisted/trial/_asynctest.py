@@ -11,15 +11,12 @@ Maintainer: Jonathan Lange
 
 import inspect
 import warnings
-from typing import Callable, List
+from typing import Any, Callable, List
 
 from zope.interface import implementer
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, override
 
-# We can't import reactor at module-level because this code runs before trial
-# installs a user-specified reactor, installing the default reactor and
-# breaking reactor installation. See also #6047.
 from twisted.internet import defer, utils
 from twisted.python import failure
 from twisted.trial import itrial, util
@@ -194,6 +191,12 @@ class TestCase(SynchronousTestCase):
             )
         else:
             result.addError(self, f)
+
+    @override
+    def tearDown(self) -> Any:
+        """
+        Similar to L{SynchronousTestCase.tearDown} but may return a Deferred.
+        """
 
     async def _deferTearDown(self, result):
         try:
