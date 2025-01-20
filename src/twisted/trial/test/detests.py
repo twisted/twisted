@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from twisted.internet import defer, reactor, threads
 from twisted.python.failure import Failure
-from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import unittest
-from twisted.trial.util import suppress as SUPPRESS
 
 
 class DeferredSetUpOK(unittest.TestCase):
@@ -108,20 +106,6 @@ class DeferredTests(unittest.TestCase):
     def test_pass(self):
         return defer.succeed("success")
 
-    def test_passGenerated(self):
-        self._touchClass(None)
-        yield None
-
-    test_passGenerated = runWithWarningsSuppressed(
-        [
-            SUPPRESS(
-                message="twisted.internet.defer.deferredGenerator was " "deprecated"
-            )
-        ],
-        defer.deferredGenerator,
-        test_passGenerated,
-    )
-
     @defer.inlineCallbacks
     def test_passInlineCallbacks(self):
         """
@@ -185,6 +169,34 @@ class TimeoutTests(unittest.TestCase):
         return defer.Deferred()
 
     test_timeoutZero.timeout = 0  # type: ignore[attr-defined]
+
+    def test_addCleanupPassDefault(self):
+        """
+        A cleanup can return a deferred.
+        The cleanup is successuful as long as the deferred is resolve sooner than the default
+        test case timeout (DEFAULT_TIMEOUT_DURATION seconds)
+        """
+
+        def cleanup():
+            d = defer.Deferred()
+            reactor.callLater(0, d.callback, "success")
+            return d
+
+        self.addCleanup(cleanup)
+
+    def test_addCleanupTimeout(self):
+        """
+        A cleanup can return a deferred.
+        When the deferred returned by addCleanup is not resolved sooner than the
+        test's timeout, the test is considered failed.
+        """
+
+        def cleanup():
+            return defer.Deferred()
+
+        self.addCleanup(cleanup)
+
+    test_addCleanupTimeout.timeout = 0.1  # type: ignore[attr-defined]
 
     def test_expectedFailure(self):
         return defer.Deferred()

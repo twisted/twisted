@@ -90,7 +90,7 @@ class HostKeyChanged(Exception):
     """
 
     def __init__(self, offendingEntry, path, lineno):
-        Exception.__init__(self)
+        Exception.__init__(self, offendingEntry, path, lineno)
         self.offendingEntry = offendingEntry
         self.path = path
         self.lineno = lineno

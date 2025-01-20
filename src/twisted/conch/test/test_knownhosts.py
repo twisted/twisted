@@ -1273,7 +1273,7 @@ class DefaultAPITests(TestCase):
             knownHostsFile.hasHostKey(b"8.7.6.5", Key.fromString(sampleKey))
         )
 
-    def test_verifyQuestion(self):
+    def test_verifyQuestion(self) -> Deferred[bool]:
         """
         L{default.verifyHostKey} should return a L{Default} which fires with
         C{0} when passed an unknown host that the user refuses to acknowledge.
@@ -1281,7 +1281,7 @@ class DefaultAPITests(TestCase):
         self.fakeTransport.factory.options["host"] = b"fake.example.com"
         self.fakeFile.inlines.append(b"no")
         d = default.verifyHostKey(
-            self.fakeTransport, b"9.8.7.6", otherSampleKey, b"No fingerprint!"
+            self.fakeTransport, b"9.8.7.6", otherSampleKey, "No fingerprint!"
         )
         self.assertEqual(
             [

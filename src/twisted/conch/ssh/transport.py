@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Any, Callable, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -29,13 +29,18 @@ from typing_extensions import Literal
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
 from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
+from twisted.conch.ssh.service import SSHService
 from twisted.internet import defer, protocol
 from twisted.logger import Logger
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, networkString
+from twisted.python.failure import Failure
 
 # This import is needed if SHA256 hashing is used.
 # from twisted.python.compat import nativeString
+
+if TYPE_CHECKING:
+    from twisted.conch.ssh.factory import SSHFactory
 
 
 def _mpFromBytes(data):
@@ -311,8 +316,8 @@ def _getSupportedCiphers():
 
 class SSHTransportBase(protocol.Protocol):
     """
-    Protocol supporting basic SSH functionality: sending/receiving packets
-    and message dispatch.  To connect to or run a server, you must use
+    Protocol supporting basic SSH functionality: sending/receiving packets and
+    message dispatch.  To connect to or run a server, you must use
     SSHClientTransport or SSHServerTransport.
 
     @ivar protocolVersion: A string representing the version of the SSH
@@ -321,23 +326,22 @@ class SSHTransportBase(protocol.Protocol):
     @ivar version: A string representing the version of the server or client.
         Currently defaults to 'Twisted'.
 
-    @ivar comment: An optional string giving more information about the
-        server or client.
+    @ivar comment: An optional string giving more information about the server
+        or client.
 
     @ivar supportedCiphers: A list of strings representing the encryption
         algorithms supported, in order from most-preferred to least.
 
     @ivar supportedMACs: A list of strings representing the message
         authentication codes (hashes) supported, in order from most-preferred
-        to least.  Both this and supportedCiphers can include 'none' to use
-        no encryption or authentication, but that must be done manually,
+        to least.  Both this and supportedCiphers can include 'none' to use no
+        encryption or authentication, but that must be done manually,
 
-    @ivar supportedKeyExchanges: A list of strings representing the
-        key exchanges supported, in order from most-preferred to least.
+    @ivar supportedKeyExchanges: A list of strings representing the key
+        exchanges supported, in order from most-preferred to least.
 
-    @ivar supportedPublicKeys:  A list of strings representing the
-        public key algorithms supported, in order from most-preferred to
-        least.
+    @ivar supportedPublicKeys: A list of strings representing the public key
+        algorithms supported, in order from most-preferred to least.
 
     @ivar supportedCompressions: A list of strings representing compression
         types supported, from most-preferred to least.
@@ -350,16 +354,16 @@ class SSHTransportBase(protocol.Protocol):
 
     @ivar isClient: A boolean indicating whether this is a client or server.
 
-    @ivar gotVersion: A boolean indicating whether we have received the
-        version string from the other side.
+    @ivar gotVersion: A boolean indicating whether we have received the version
+        string from the other side.
 
     @ivar buf: Data we've received but hasn't been parsed into a packet.
 
     @ivar outgoingPacketSequence: the sequence number of the next packet we
         will send.
 
-    @ivar incomingPacketSequence: the sequence number of the next packet we
-        are expecting from the other side.
+    @ivar incomingPacketSequence: the sequence number of the next packet we are
+        expecting from the other side.
 
     @ivar outgoingCompression: an object supporting the .compress(str) and
         .flush() methods, or None if there is no outgoing compression.  Used to
@@ -391,8 +395,8 @@ class SSHTransportBase(protocol.Protocol):
         part of the key exchange, sessionID is used to generate the various
         encryption and authentication keys.
 
-    @ivar service: an SSHService instance, or None.  If it's set to an object,
-        it's the currently running service.
+    @ivar service: an L{SSHService} instance, or None.  If it's set to an
+        object, it's the currently running service.
 
     @ivar kexAlg: the agreed-upon key exchange algorithm.
 
@@ -476,8 +480,8 @@ class SSHTransportBase(protocol.Protocol):
     incomingPacketSequence = 0
     outgoingCompression = None
     incomingCompression = None
-    sessionID = None
-    service = None
+    sessionID: bytes | None = None
+    service: SSHService | None = None
 
     # There is no key exchange activity in progress.
     _KEY_EXCHANGE_NONE = "_KEY_EXCHANGE_NONE"
@@ -507,7 +511,13 @@ class SSHTransportBase(protocol.Protocol):
     _peerSupportsExtensions = False
     peerExtensions: Dict[bytes, bytes] = {}
 
-    def connectionLost(self, reason):
+    factory: SSHFactory
+
+    # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
+    avatar: object
+    logoutFunction: Callable[[], None]
+
+    def connectionLost(self, reason: Failure | None = None) -> None:
         """
         When the underlying connection is closed, stop the running service (if
         any), and log out the avatar (if any).
@@ -1171,41 +1181,35 @@ class SSHTransportBase(protocol.Protocol):
             prefix = struct.pack(">L", len(secret))
         return prefix + secret
 
-    def _getKey(self, c, sharedSecret, exchangeHash):
+    def _getKey(self, c: bytes, sharedSecret: bytes, exchangeHash: bytes) -> bytes:
         """
         Get one of the keys for authentication/encryption.
 
-        @type c: L{bytes}
         @param c: The letter identifying which key this is.
 
-        @type sharedSecret: L{bytes}
         @param sharedSecret: The shared secret K.
 
-        @type exchangeHash: L{bytes}
         @param exchangeHash: The hash H from key exchange.
 
-        @rtype: L{bytes}
         @return: The derived key.
         """
         hashProcessor = _kex.getHashProcessor(self.kexAlg)
-        k1 = hashProcessor(sharedSecret + exchangeHash + c + self.sessionID)
-        k1 = k1.digest()
+        assert self.sessionID is not None, "session ID must already have been assigned"
+        k1 = hashProcessor(sharedSecret + exchangeHash + c + self.sessionID).digest()
         k2 = hashProcessor(sharedSecret + exchangeHash + k1).digest()
         k3 = hashProcessor(sharedSecret + exchangeHash + k1 + k2).digest()
         k4 = hashProcessor(sharedSecret + exchangeHash + k1 + k2 + k3).digest()
         return k1 + k2 + k3 + k4
 
-    def _keySetup(self, sharedSecret, exchangeHash):
+    def _keySetup(self, sharedSecret: bytes, exchangeHash: bytes) -> None:
         """
-        Set up the keys for the connection and sends MSG_NEWKEYS when
-        finished,
+        Set up the keys for the connection and sends MSG_NEWKEYS when finished.
 
         @param sharedSecret: a secret string agreed upon using a Diffie-
-                             Hellman exchange, so it is only shared between
-                             the server and the client.
-        @type sharedSecret: L{str}
+            Hellman exchange, so it is only shared between the server and the
+            client.
+
         @param exchangeHash: A hash of various data known by both sides.
-        @type exchangeHash: L{str}
         """
         if not self.sessionID:
             self.sessionID = exchangeHash
@@ -1442,7 +1446,7 @@ class SSHServerTransport(SSHTransportBase):
     isClient = False
     ignoreNextPacket = 0
 
-    def _getHostKeys(self, keyAlg):
+    def _getHostKeys(self, keyAlg: bytes) -> tuple[keys.Key, keys.Key]:
         """
         Get the public and private host keys corresponding to the given
         public key signature algorithm.
@@ -1467,7 +1471,7 @@ class SSHServerTransport(SSHTransportBase):
             keyFormat = keyAlg
         return self.factory.publicKeys[keyFormat], self.factory.privateKeys[keyFormat]
 
-    def ssh_KEXINIT(self, packet):
+    def ssh_KEXINIT(self, packet: bytes) -> None:
         """
         Called when we receive a MSG_KEXINIT message.  For a description
         of the packet, see SSHTransportBase.ssh_KEXINIT().  Additionally,
@@ -1487,29 +1491,26 @@ class SSHServerTransport(SSHTransportBase):
             ):
                 self.ignoreNextPacket = True  # Guess was wrong
 
-    def _ssh_KEX_ECDH_INIT(self, packet):
+    def _ssh_KEX_ECDH_INIT(self, packet: bytes) -> None:
         """
-        Called from L{ssh_KEX_DH_GEX_REQUEST_OLD} to handle
-        elliptic curve key exchanges.
+        Called from L{ssh_KEX_DH_GEX_REQUEST_OLD} to handle elliptic curve key
+        exchanges.
 
         Payload::
 
             string client Elliptic Curve Diffie-Hellman public key
 
         Just like L{_ssh_KEXDH_INIT} this message type is also not dispatched
-        directly. Extra check to determine if this is really KEX_ECDH_INIT
-        is required.
+        directly.  Extra check to determine if this is really KEX_ECDH_INIT is
+        required.
 
-        First we load the host's public/private keys.
-        Then we generate the ECDH public/private keypair for the given curve.
-        With that we generate the shared secret key.
-        Then we compute the hash to sign and send back to the client
-        Along with the server's public key and the ECDH public key.
+        First we load the host's public/private keys.  Then we generate the
+        ECDH public/private keypair for the given curve.  With that we generate
+        the shared secret key.  Then we compute the hash to sign and send back
+        to the client Along with the server's public key and the ECDH public
+        key.
 
-        @type packet: L{bytes}
         @param packet: The message data.
-
-        @return: None.
         """
         # Get the raw client public key.
         pktPub, packet = getNS(packet)
@@ -1547,7 +1548,7 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
-    def _ssh_KEXDH_INIT(self, packet):
+    def _ssh_KEXDH_INIT(self, packet: bytes) -> None:
         """
         Called to handle the beginning of a non-group key exchange.
 
@@ -1588,7 +1589,7 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
-    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet):
+    def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet: bytes) -> None:
         """
         This represents different key exchange methods that share the same
         integer value.  If the message is determined to be a KEXDH_INIT,
@@ -1625,7 +1626,7 @@ class SSHServerTransport(SSHTransportBase):
             self._startEphemeralDH()
             self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
 
-    def ssh_KEX_DH_GEX_REQUEST(self, packet):
+    def ssh_KEX_DH_GEX_REQUEST(self, packet: bytes) -> None:
         """
         Called when we receive a MSG_KEX_DH_GEX_REQUEST message.  Payload::
             integer minimum
@@ -1651,7 +1652,7 @@ class SSHServerTransport(SSHTransportBase):
         self._startEphemeralDH()
         self.sendPacket(MSG_KEX_DH_GEX_GROUP, MP(self.p) + MP(self.g))
 
-    def ssh_KEX_DH_GEX_INIT(self, packet):
+    def ssh_KEX_DH_GEX_INIT(self, packet: bytes) -> None:
         """
         Called when we get a MSG_KEX_DH_GEX_INIT message.  Payload::
             integer e (client DH public key)
@@ -1693,7 +1694,7 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
-    def _keySetup(self, sharedSecret, exchangeHash):
+    def _keySetup(self, sharedSecret: bytes, exchangeHash: bytes) -> None:
         """
         See SSHTransportBase._keySetup().
         """
@@ -1709,13 +1710,12 @@ class SSHServerTransport(SSHTransportBase):
                 [(b"server-sig-algs", b",".join(self.supportedPublicKeys))]
             )
 
-    def ssh_NEWKEYS(self, packet):
+    def ssh_NEWKEYS(self, packet: bytes) -> None:
         """
         Called when we get a MSG_NEWKEYS message.  No payload.
         When we get this, the keys have been set on both sides, and we
         start using them to encrypt and authenticate the connection.
 
-        @type packet: L{bytes}
         @param packet: The message data.
         """
         if packet != b"":
@@ -1723,7 +1723,7 @@ class SSHServerTransport(SSHTransportBase):
             return
         self._newKeys()
 
-    def ssh_SERVICE_REQUEST(self, packet):
+    def ssh_SERVICE_REQUEST(self, packet: bytes) -> None:
         """
         Called when we get a MSG_SERVICE_REQUEST message.  Payload::
             string serviceName
@@ -1906,7 +1906,8 @@ class SSHClientTransport(SSHTransportBase):
         d.addCallback(_continue_KEX_ECDH_REPLY, hostKey, pubKey, signature)
         d.addErrback(
             lambda unused: self.sendDisconnect(
-                DISCONNECT_HOST_KEY_NOT_VERIFIABLE, b"bad host key"
+                DISCONNECT_HOST_KEY_NOT_VERIFIABLE,
+                f"bad host key [ecdh] {unused}".encode("utf-8"),
             )
         )
         return d
@@ -2122,7 +2123,7 @@ class SSHClientTransport(SSHTransportBase):
                 )
         self.setService(self.instance)
 
-    def requestService(self, instance):
+    def requestService(self, instance: SSHService) -> None:
         """
         Request that a service be run over this transport.
 

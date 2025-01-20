@@ -8,6 +8,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
@@ -1719,8 +1720,6 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         This is essentially a copy of ParsingTests.test_multipartFormData,
         just with chunking put in.
-
-        This fails as of twisted version 18.9.0 because of bug #9678.
         """
         processed = []
 
@@ -2543,11 +2542,20 @@ abasdfg
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
+        # Now check the disabled case:
+        channel = self.runRequest(
+            req, partial(MyRequest, parsePOSTFormSubmission=False), success=False
+        )
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
+
     def test_multipartFileData(self):
         """
-        If the request has a Content-Type of C{multipart/form-data},
-        and the form data is parseable and contains files, the file
-        portions will be added to the request's args.
+        If the request has a Content-Type of C{multipart/form-data}, the
+        C{Request} is told to parse the body, and the form data is parseable
+        and contains files, the file portions will be added to the request's
+        args.
         """
         processed = []
 
@@ -2580,6 +2588,16 @@ Content-Length: """
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
+
+        # Now check the disabled case:
+        channel = self.runRequest(
+            req.encode("ascii") + body,
+            partial(MyRequest, parsePOSTFormSubmission=False),
+            success=False,
+        )
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
 
     def test_chunkedEncoding(self):
         """

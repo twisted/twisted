@@ -1485,16 +1485,25 @@ class NewConnectionHelperTests(TestCase):
         """
         self.assertEqual("~/.ssh/known_hosts", _NewConnectionHelper._KNOWN_HOSTS)
 
-    def test_defaultKnownHosts(self):
+    def test_defaultKnownHosts(self) -> None:
         """
         L{_NewConnectionHelper._knownHosts} is used to create a
         L{KnownHostsFile} if one is not passed to the initializer.
         """
         result = object()
-        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls: result)
+        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls, ignored: result)
 
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None
+            None,
+            None,  # type:ignore[arg-type]
+            None,
+            None,  # type:ignore[arg-type]
+            None,  # type:ignore[arg-type]
+            None,
+            None,
+            None,
+            None,
+            None,
         )
 
         self.assertIs(result, helper.knownHosts)

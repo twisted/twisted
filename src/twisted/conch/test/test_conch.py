@@ -1,12 +1,14 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
+from __future__ import annotations
 
 import os
 import socket
 import subprocess
 import sys
 from itertools import count
+from typing import Any
 
 from zope.interface import implementer
 
@@ -14,8 +16,10 @@ from twisted.conch.error import ConchError
 from twisted.conch.test.keydata import privateRSA_openssh, publicRSA_openssh
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.cred import portal
-from twisted.internet import defer, protocol, reactor
+from twisted.internet import protocol, reactor
+from twisted.internet.defer import Deferred, gatherResults, maybeDeferred
 from twisted.internet.error import ProcessExitedAlready
+from twisted.internet.interfaces import IReactorProcess
 from twisted.internet.task import LoopingCall
 from twisted.python import filepath, log, runtime
 from twisted.python.filepath import FilePath
@@ -116,11 +120,15 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     @ivar deferred: Set by whatever uses this object. Accessed using
     L{_getDeferred}, which destroys the value so the Deferred is not
     fired twice. Fires when the process is terminated.
+
+    @ivar expectedExitCode: If the process exit code is not C{expectedExitCode}
+    the set C{deferred} will by triggerd with a failure.
     """
 
-    deferred = None
+    deferred: Deferred[None] | None = None
     buf = b""
     problems = b""
+    expectedExitCode: int = 0
 
     def _getDeferred(self):
         d, self.deferred = self.deferred, None
@@ -138,10 +146,11 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
 
         @param reason: a Failure giving the reason for the process' end.
         """
-        if reason.value.exitCode != 0:
+        if reason.value.exitCode != self.expectedExitCode:
             self._getDeferred().errback(
                 ConchError(
-                    "exit code was not 0: {} ({})".format(
+                    "exit code was not {}: {} ({})".format(
+                        self.expectedExitCode,
                         reason.value.exitCode,
                         self.problems.decode("charmap"),
                     )
@@ -258,7 +267,7 @@ class ConchTestForwardingPort(protocol.Protocol):
         self.protocol.forwardingPortDisconnected(self.buffer)
 
 
-def _makeArgs(args, mod="conch"):
+def _makeArgs(args: list[str], mod: str = "conch") -> list[bytes]:
     start = [
         sys.executable,
         "-c"
@@ -276,12 +285,7 @@ from twisted.conch.scripts.%s import run
 run()"""
         % mod,
     ]
-    madeArgs = []
-    for arg in start + list(args):
-        if isinstance(arg, str):
-            arg = arg.encode("utf-8")
-        madeArgs.append(arg)
-    return madeArgs
+    return [each.encode("utf-8") for each in [*start, *args]]
 
 
 class ConchServerSetupMixin:
@@ -343,7 +347,8 @@ class ConchServerSetupMixin:
             self.echoServerV6 = reactor.listenTCP(0, EchoFactory(), interface="::1")
             self.echoPortV6 = self.echoServerV6.getHost().port
 
-    def tearDown(self):
+    def tearDown(self) -> Any:
+        # c.f. https://github.com/twisted/twisted/issues/12417
         try:
             self.conchFactory.proto.done = 1
         except AttributeError:
@@ -351,12 +356,12 @@ class ConchServerSetupMixin:
         else:
             self.conchFactory.proto.transport.loseConnection()
         deferreds = [
-            defer.maybeDeferred(self.conchServer.stopListening),
-            defer.maybeDeferred(self.echoServer.stopListening),
+            maybeDeferred(self.conchServer.stopListening),
+            maybeDeferred(self.echoServer.stopListening),
         ]
         if HAS_IPV6:
-            deferreds.append(defer.maybeDeferred(self.echoServerV6.stopListening))
-        return defer.gatherResults(deferreds)
+            deferreds.append(maybeDeferred(self.echoServerV6.stopListening))
+        return gatherResults(deferreds)
 
 
 class ForwardingMixin(ConchServerSetupMixin):
@@ -520,7 +525,9 @@ class OpenSSHClientMixin:
     if not which("ssh"):
         skip = "no ssh command-line client available"
 
-    def execute(self, remoteCommand, process, sshArgs=""):
+    def execute(
+        self, remoteCommand: str, process: ConchTestOpenSSHProcess, sshArgs: str = ""
+    ) -> Deferred[None]:
         """
         Connects to the SSH server started in L{ConchServerSetupMixin.setUp} by
         running the 'ssh' command line tool.
@@ -536,7 +543,8 @@ class OpenSSHClientMixin:
 
         @return: L{defer.Deferred}
         """
-        process.deferred = defer.Deferred()
+        result: Deferred[None]
+        result = process.deferred = Deferred()
         # Pass -F /dev/null to avoid the user's configuration file from
         # being loaded, as it may contain settings that cause our tests to
         # fail or hang.
@@ -556,13 +564,13 @@ class OpenSSHClientMixin:
             + " 127.0.0.1 "
             + remoteCommand
         )
-        port = self.conchServer.getHost().port
+        port: int = self.conchServer.getHost().port  # type:ignore[attr-defined]
         cmds = (cmdline % port).split()
         encodedCmds = []
         for cmd in cmds:
             encodedCmds.append(cmd.encode("utf-8"))
-        reactor.spawnProcess(process, which("ssh")[0], encodedCmds)
-        return process.deferred
+        IReactorProcess(reactor).spawnProcess(process, which("ssh")[0], encodedCmds)
+        return result
 
 
 class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCase):
@@ -690,7 +698,14 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
     if runtime.platformType == "win32":
         skip = "can't run cmdline client on win32"
 
-    def execute(self, remoteCommand, process, sshArgs="", conchArgs=None):
+    def execute(
+        self,
+        remoteCommand: str,
+        process: ConchTestOpenSSHProcess,
+        sshArgs: str = "",
+        conchArgs: list[str] | None = None,
+        remoteHost: str = "127.0.0.1",
+    ) -> Deferred[None]:
         """
         As for L{OpenSSHClientTestCase.execute}, except it runs the 'conch'
         command line tool, not 'ssh'.
@@ -698,33 +713,22 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
         if conchArgs is None:
             conchArgs = []
 
-        process.deferred = defer.Deferred()
+        process.deferred = Deferred()
         port = self.conchServer.getHost().port
-        cmd = (
+        cmdtemplate = (
             "-p {} -l testuser "
             "--known-hosts kh_test "
             "--user-authentications publickey "
             "-a "
             "-i rsa_test "
-            "-v ".format(port) + sshArgs + " 127.0.0.1 " + remoteCommand
+            "-v ".format(port) + sshArgs + f" {remoteHost} " + remoteCommand
         )
-        cmds = _makeArgs(conchArgs + cmd.split())
+        split = list(cmdtemplate.split())
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(sys.path)
-        encodedCmds = []
-        encodedEnv = {}
-        for cmd in cmds:
-            if isinstance(cmd, str):
-                cmd = cmd.encode("utf-8")
-            encodedCmds.append(cmd)
-        for var in env:
-            val = env[var]
-            if isinstance(var, str):
-                var = var.encode("utf-8")
-            if isinstance(val, str):
-                val = val.encode("utf-8")
-            encodedEnv[var] = val
-        reactor.spawnProcess(process, sys.executable, encodedCmds, env=encodedEnv)
+        IReactorProcess(reactor).spawnProcess(
+            process, sys.executable, _makeArgs(conchArgs + split), env=env
+        )
         return process.deferred
 
     def test_runWithLogFile(self):
@@ -764,3 +768,40 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
 
         d.addCallback(self.assertEqual, b"goodbye\n")
         return d
+
+    def test_runWithCompressionSpecified(self) -> Deferred[None]:
+        """
+        Simple smoke test for '--compress' flag to ensure we can connect.
+        """
+        return self.execute(
+            remoteCommand="echo compressed",
+            process=ConchTestOpenSSHProcess(),
+            conchArgs=["--compress"],
+        ).addCallback(self.assertEqual, b"compressed\n")
+
+    def test_connectToInvalidHost(self) -> Deferred[None]:
+        """
+        Connecting to an invalid host should fail.
+        """
+        expectError = ConchTestOpenSSHProcess()
+        expectError.expectedExitCode = 1
+        return self.execute(
+            remoteCommand="echo nonfunctional",
+            process=expectError,
+            remoteHost="nowhere.invalid",
+        )
+
+    def test_testFailure(self) -> Deferred[None]:
+        """
+        L{ConchTestOpenSSHProcess} fails with a L{ConchError} if an expectation
+        is not met.
+        """
+        expectError = ConchTestOpenSSHProcess()
+        return self.assertFailure(
+            self.execute(
+                remoteCommand="echo checkfailure",
+                process=expectError,
+                remoteHost="nowhere.invalid",
+            ),
+            ConchError,
+        )

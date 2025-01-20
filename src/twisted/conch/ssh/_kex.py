@@ -6,12 +6,23 @@
 SSH key exchange handling.
 """
 
+from __future__ import annotations
 
 from hashlib import sha1, sha256, sha384, sha512
+from typing import TYPE_CHECKING, Protocol
 
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.conch import error
+
+if TYPE_CHECKING:
+    # NB: Not a real attribute at runtime.
+    from hashlib import _Hash
+
+
+class _HashFactory(Protocol):
+    def __call__(self, data: bytes = ...) -> _Hash:
+        ...
 
 
 class _IKexAlgorithm(Interface):
@@ -19,13 +30,13 @@ class _IKexAlgorithm(Interface):
     An L{_IKexAlgorithm} describes a key exchange algorithm.
     """
 
-    preference = Attribute(
+    preference: int = Attribute(
         "An L{int} giving the preference of the algorithm when negotiating "
         "key exchange. Algorithms with lower precedence values are more "
         "preferred."
     )
 
-    hashProcessor = Attribute(
+    hashProcessor: _HashFactory = Attribute(
         "A callable hash algorithm constructor (e.g. C{hashlib.sha256}) "
         "suitable for use with this key exchange algorithm."
     )
@@ -175,7 +186,7 @@ class _DHGroup14SHA1:
 
 
 # Which ECDH hash function to use is dependent on the size.
-_kexAlgorithms = {
+_kexAlgorithms: dict[bytes, _IKexAlgorithm] = {
     b"curve25519-sha256": _Curve25519SHA256(),
     b"curve25519-sha256@libssh.org": _Curve25519SHA256LibSSH(),
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
@@ -187,7 +198,7 @@ _kexAlgorithms = {
 }
 
 
-def getKex(kexAlgorithm):
+def getKex(kexAlgorithm: bytes) -> _IKexAlgorithm:
     """
     Get a description of a named key exchange algorithm.
 
@@ -201,53 +212,47 @@ def getKex(kexAlgorithm):
     @raises ConchError: if the key exchange algorithm is not found.
     """
     if kexAlgorithm not in _kexAlgorithms:
-        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm}")
+        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm!r}")
     return _kexAlgorithms[kexAlgorithm]
 
 
-def isEllipticCurve(kexAlgorithm):
+def isEllipticCurve(kexAlgorithm: bytes) -> bool:
     """
     Returns C{True} if C{kexAlgorithm} is an elliptic curve.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
 
-    @return: C{True} if C{kexAlgorithm} is an elliptic curve,
-        otherwise C{False}.
-    @rtype: C{bool}
+    @return: C{True} if C{kexAlgorithm} is an elliptic curve, otherwise
+        C{False}.
     """
     return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-def isFixedGroup(kexAlgorithm):
+def isFixedGroup(kexAlgorithm: bytes) -> bool:
     """
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{bytes}
 
     @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
-    @rtype: L{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-def getHashProcessor(kexAlgorithm):
+def getHashProcessor(kexAlgorithm: bytes) -> _HashFactory:
     """
     Get the hash algorithm callable to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{bytes}
 
     @return: A callable hash algorithm constructor (e.g. C{hashlib.sha256}).
-    @rtype: C{callable}
     """
     kex = getKex(kexAlgorithm)
     return kex.hashProcessor
 
 
-def getDHGeneratorAndPrime(kexAlgorithm):
+def getDHGeneratorAndPrime(kexAlgorithm: bytes) -> tuple[int, int]:
     """
     Get the generator and the prime to use in key exchange.
 
@@ -257,17 +262,16 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     @return: A L{tuple} containing L{int} generator and L{int} prime.
     @rtype: L{tuple}
     """
-    kex = getKex(kexAlgorithm)
+    kex = _IFixedGroupKexAlgorithm(getKex(kexAlgorithm))
     return kex.generator, kex.prime
 
 
-def getSupportedKeyExchanges():
+def getSupportedKeyExchanges() -> list[bytes]:
     """
     Get a list of supported key exchange algorithm names in order of
     preference.
 
     @return: A C{list} of supported key exchange algorithm names.
-    @rtype: C{list} of L{bytes}
     """
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec

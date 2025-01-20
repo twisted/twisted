@@ -1675,20 +1675,17 @@ class Key:
                 values = (data["p"], data["q"], data["g"], data["y"], data["x"])
             return common.NS(self.sshType()) + b"".join(map(common.MP, values))
 
-    def sign(self, data, signatureType=None):
+    def sign(self, data: bytes, signatureType: bytes | None = None) -> bytes:
         """
         Sign some data with this key.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
-        @type data: L{bytes}
         @param data: The data to sign.
 
-        @type signatureType: L{bytes}
         @param signatureType: The SSH public key algorithm name to sign this
-        data with, or L{None} to use a reasonable default for the key.
+            data with, or L{None} to use a reasonable default for the key.
 
-        @rtype: L{bytes}
         @return: A signature for the given data.
         """
         keyType = self.type()
@@ -1702,7 +1699,7 @@ class Key:
         hashAlgorithm = self._getHashAlgorithm(signatureType)
         if hashAlgorithm is None:
             raise BadSignatureAlgorithmError(
-                f"public key signature algorithm {signatureType} is not "
+                f"public key signature algorithm {signatureType!r} is not "
                 f"defined for {keyType} keys"
             )
 
@@ -1726,21 +1723,13 @@ class Key:
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
-            # Int_to_bytes returns rb[0] as a str in python2
-            # and an as int in python3
-            if type(rb[0]) is str:
-                rcomp = ord(rb[0])
-            else:
-                rcomp = rb[0]
+            rcomp = rb[0]
 
             # If the MSB is set, prepend a null byte for correct formatting.
             if rcomp & 0x80:
                 rb = b"\x00" + rb
 
-            if type(sb[0]) is str:
-                scomp = ord(sb[0])
-            else:
-                scomp = sb[0]
+            scomp = sb[0]
 
             if scomp & 0x80:
                 sb = b"\x00" + sb
