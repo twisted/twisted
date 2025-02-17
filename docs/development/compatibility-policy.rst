@@ -1,5 +1,5 @@
-Twisted Compatibility Policy
-============================
+Compatibility Policy
+====================
 
 Motivation
 ----------

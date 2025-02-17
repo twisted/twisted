@@ -28,7 +28,7 @@ import uuid
 from base64 import decodebytes, encodebytes
 from io import BytesIO
 from itertools import chain
-from typing import Any, List, cast
+from typing import Any, List, Optional, cast
 
 from zope.interface import implementer
 
@@ -2205,7 +2205,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             hdrs = _formatHeaders(msg.getHeaders(True))
             _w(part.__bytes__() + b" " + _literal(hdrs))
         elif part.empty:
-            _w(part.__bytes__() + b" ")
+            _w(part.getBytes(length=msg.getSize()) + b" ")
             _f()
             if part.part:
                 return FileProducer(msg.getBodyFile()).beginProducing(self.transport)
@@ -5691,7 +5691,14 @@ class _FetchParser:
         def __str__(self) -> str:
             return self.__bytes__().decode("ascii")
 
-        def __bytes__(self) -> bytes:
+        def getBytes(self, length: Optional[int] = None) -> bytes:
+            """
+            Prepare the initial command response for a Fetch BODY request.
+            Interpret the Fetch request from the client and return the
+            appropriate response based on RFC 3501.
+            This is not the body itself of the response, merely the section
+            of the first response line that describes the body part.
+            """
             base = b"BODY"
             part = b""
             separator = b""
@@ -5711,8 +5718,18 @@ class _FetchParser:
             elif self.empty:
                 base += b"[" + part + b"]"
             if self.partialBegin is not None:
-                base += b"<%d.%d>" % (self.partialBegin, self.partialLength)  # type: ignore[unreachable]
+                if length is None or length > self.partialLength:  # type: ignore[unreachable]
+                    base += b"<%d.%d>" % (self.partialBegin, self.partialLength)
+                else:
+                    # IMAP4rev1 says that if the partial length is greater than
+                    # the length of the data, the server should send the entire
+                    # data., with a "0" as the partial length
+                    # https://datatracker.ietf.org/doc/html/rfc3501#section-6.4.5
+                    base += b"<0>"
             return base
+
+        def __bytes__(self) -> bytes:
+            return self.getBytes()
 
     class BodyStructure:
         type = "bodystructure"

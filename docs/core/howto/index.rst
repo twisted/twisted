@@ -50,7 +50,6 @@ Developer Guides
    systemd
    logger
    logging
-   constants
    rdbms
    options
    dirdbm
@@ -197,10 +196,6 @@ Developer Guides
 
     Keep a record of what your application is up to, and inspect that record to discover interesting information.
     (You may also be interested in the :doc:`legacy logging system <logging>` if you are maintaining code written to work with older versions of Twisted.)
-
-  - :doc:`Symbolic constants <constants>`
-
-    enum-like constants. (Deprecated, spun out into `Constantly <http://constantly.readthedocs.org/en/latest/>`_)
 
   - :doc:`Twisted RDBMS support with adbapi <rdbms>`
 

@@ -1,3 +1,5 @@
+from MulticastCommon import group, interface, ipv6, port
+
 from twisted.internet import reactor
 from twisted.internet.protocol import DatagramProtocol
 
@@ -7,10 +9,11 @@ class MulticastPingPong(DatagramProtocol):
         """
         Called after protocol has started listening.
         """
-        # Set the TTL>1 so multicast will cross router hops:
-        self.transport.setTTL(5)
+        if not ipv6:
+            # Set the TTL>1 so multicast will cross router hops:
+            self.transport.setTTL(5)
         # Join a specific multicast group:
-        self.transport.joinGroup("228.0.0.5")
+        self.transport.joinGroup(group)
 
     def datagramReceived(self, datagram, address):
         print(f"Datagram {repr(datagram)} received from {repr(address)}")
@@ -22,5 +25,7 @@ class MulticastPingPong(DatagramProtocol):
 
 # We use listenMultiple=True so that we can run MulticastServer.py and
 # MulticastClient.py on same machine:
-reactor.listenMulticast(9999, MulticastPingPong(), listenMultiple=True)
+reactor.listenMulticast(
+    port, MulticastPingPong(), listenMultiple=True, interface=interface
+)
 reactor.run()

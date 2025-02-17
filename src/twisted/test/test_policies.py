@@ -319,7 +319,6 @@ class WrapperTests(unittest.TestCase):
         L{policies.ProtocolWrapper.connectionLost} sets C{wrappedProtocol} to
         C{None} in order to break reference cycle between wrapper and wrapped
         protocols.
-        :return:
         """
         wrapper = policies.ProtocolWrapper(
             policies.WrappingFactory(Server()), protocol.Protocol()

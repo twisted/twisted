@@ -36,6 +36,39 @@ TBFORMAT_MAP = {
 }
 
 
+def _autoJobs() -> int:
+    """
+    Heuristically guess the number of job workers to run.
+
+    When ``os.process_cpu_count()`` is available (Python 3.13+),
+    return the number of logical CPUs usable by the current
+    process. This respects the ``PYTHON_CPU_COUNT`` environment
+    variable and/or ``python -X cpu_count`` flag.
+
+    Otherwise, if ``os.sched_getaffinity()`` is available (on some
+    Unixes) this returns the number of CPUs this process is
+    restricted to, under the assumption that this affinity will
+    be inherited.
+
+    Otherwise, consult ``os.cpu_count()`` to get the number of
+    logical CPUs.
+
+    Failing all else, return 1.
+
+    @returns: A strictly positive integer.
+    """
+    number: Optional[int]
+    if getattr(os, "process_cpu_count", None) is not None:
+        number = os.process_cpu_count()  # type: ignore[attr-defined]
+    elif getattr(os, "sched_getaffinity", None) is not None:
+        number = len(os.sched_getaffinity(0))
+    else:
+        number = os.cpu_count()
+    if number is None or number < 1:
+        return 1
+    return number
+
+
 def _parseLocalVariables(line):
     """
     Accepts a single line in Emacs local variable declaration format and
@@ -477,18 +510,22 @@ class Options(_BasicOptions, usage.Options, app.ReactorSelectionMixin):
 
     def opt_jobs(self, number):
         """
-        Number of local workers to run, a strictly positive integer.
+        Number of local workers to run, a strictly positive integer or 'auto'
+        to spawn one worker for each available CPU.
         """
-        try:
-            number = int(number)
-        except ValueError:
-            raise usage.UsageError(
-                "Expecting integer argument to jobs, got '%s'" % number
-            )
-        if number <= 0:
-            raise usage.UsageError(
-                "Argument to jobs must be a strictly positive integer"
-            )
+        if number == "auto":
+            number = _autoJobs()
+        else:
+            try:
+                number = int(number)
+            except ValueError:
+                raise usage.UsageError(
+                    "Expecting integer argument to jobs, got '%s'" % number
+                )
+            if number <= 0:
+                raise usage.UsageError(
+                    "Argument to jobs must be a strictly positive integer or 'auto'"
+                )
         self["jobs"] = number
 
     def _getWorkerArguments(self):

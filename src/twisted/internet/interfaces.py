@@ -688,7 +688,10 @@ class IResolver(IResolverSimple):
 
 class IReactorTCP(Interface):
     def listenTCP(
-        port: int, factory: "ServerFactory", backlog: int, interface: str
+        port: int,
+        factory: "ServerFactory",
+        backlog: int = 50,
+        interface: str = "",
     ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -712,8 +715,8 @@ class IReactorTCP(Interface):
         host: str,
         port: int,
         factory: "ClientFactory",
-        timeout: float,
-        bindAddress: Optional[Tuple[str, int]],
+        timeout: float = 30.0,
+        bindAddress: Optional[Tuple[str, int]] = None,
     ) -> IConnector:
         """
         Connect a TCP client.
@@ -784,7 +787,10 @@ class IReactorUNIX(Interface):
     """
 
     def connectUNIX(
-        address: str, factory: "ClientFactory", timeout: float, checkPID: bool
+        address: str,
+        factory: "ClientFactory",
+        timeout: float = 30,
+        checkPID: bool = False,
     ) -> IConnector:
         """
         Connect a client protocol to a UNIX socket.
@@ -801,7 +807,11 @@ class IReactorUNIX(Interface):
         """
 
     def listenUNIX(
-        address: str, factory: "Factory", backlog: int, mode: int, wantPID: bool
+        address: str,
+        factory: "Factory",
+        backlog: int = 50,
+        mode: int = 0o666,
+        wantPID: bool = False,
     ) -> "IListeningPort":
         """
         Listen on a UNIX socket.
@@ -923,21 +933,35 @@ class IReactorMulticast(Interface):
     def listenMulticast(
         port: int,
         protocol: "DatagramProtocol",
-        interface: str,
-        maxPacketSize: int,
-        listenMultiple: bool,
-    ) -> "IListeningPort":
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        listenMultiple: bool = False,
+    ) -> IMulticastTransport:
         """
         Connects a given
         L{DatagramProtocol<twisted.internet.protocol.DatagramProtocol>} to the
         given numeric UDP port.
 
-        @param listenMultiple: If set to True, allows multiple sockets to
-            bind to the same address and port number at the same time.
+        @param port: The port number to bind to.
 
-        @returns: An object which provides L{IListeningPort}.
+        @param protocol: the datagram receiver that will receive multicast
+            packets sent to the given interface and port.
 
-        @see: L{twisted.internet.interfaces.IMulticastTransport}
+        @param interface: The IP address literal of the network interface to
+            bind to.  By default, this will be C{"0.0.0.0"}, i.e. all IPv4
+            interfaces.  Note that the format of this literal determines the
+            address family of the resulting multicast transport: passing an
+            IPv6 literal, such as C{"::"}, will result in an IPv6 multicast
+            transport.
+
+        @param maxPacketSize: The maximum packet size to accept.
+
+        @param listenMultiple: If set to True, allows multiple sockets to bind
+            to the same address and port number at the same time.
+
+        @returns: An L{IMulticastTransport} that can send multicast traffic to
+            C{interface}.
+
         @see: U{http://twistedmatrix.com/documents/current/core/howto/udp.html}
         """
 
@@ -1330,10 +1354,25 @@ class IReactorCore(Interface):
         "I{during shutdown} and C{False} the rest of the time."
     )
 
-    def resolve(name: str, timeout: Sequence[int]) -> "Deferred[str]":
+    def resolve(name: str, timeout: Sequence[int] = (1, 3, 11, 45)) -> "Deferred[str]":
         """
-        Return a L{twisted.internet.defer.Deferred} that will resolve
-        a hostname.
+        Asynchronously resolve a hostname to a single IPv4 address.
+
+        @note: Rather than calling this API directly, you probably want to use
+            L{twisted.internet.endpoints.HostnameEndpoint} to connect to a
+            hostname.  If you do want to resolve a hostname without connecting
+            to it, see L{IReactorPluggableNameResolver} and
+            L{IHostnameResolver} so that you can receive multiple results and
+            IPv6 addresses.
+
+        @param name: The hostname to resolve.
+
+        @param timeout: A sequence of timeouts, meant to mirror the sequence of
+            timeouts used for each hop in recursive queries.  Note that
+            different implementations of the resolver backend may not honor
+            this timeout as such, or at all; if the underlying platform API
+            supports it, implementations make a best-effort attempt to cancel
+            the underlying resolution if the sum of these timeouts elapses.
         """
 
     def run() -> None:
@@ -1477,7 +1516,7 @@ class IReactorPluggableNameResolver(Interface):
     set to a user-supplied object.
     """
 
-    nameResolver = Attribute(
+    nameResolver: IHostnameResolver = Attribute(
         """
         Read-only attribute; the resolver installed with L{installResolver}.
         An L{IHostnameResolver}.
@@ -2569,21 +2608,25 @@ class IUNIXDatagramConnectedTransport(Interface):
         """
 
 
-class IMulticastTransport(Interface):
+class IMulticastTransport(IUDPTransport):
     """
     Additional functionality for multicast UDP.
     """
 
-    def getOutgoingInterface() -> str:
+    def getOutgoingInterface() -> str | int:
         """
         Return interface of outgoing multicast packets.
         """
 
-    def setOutgoingInterface(addr: str) -> None:
+    def setOutgoingInterface(addr: str | int) -> Deferred[int]:
         """
         Set interface for outgoing multicast packets.
 
-        Returns Deferred of success.
+        @note: For IPv4 multicast sockets, the address must be a hostname or IP
+            address.  For IPv6 multicast sockets, the address must be an
+            interface index, as described in L{socket.if_nameindex}.
+
+        @returns: Deferred of (1: success, 0: failure).
         """
 
     def getLoopbackMode() -> bool:
@@ -2606,7 +2649,7 @@ class IMulticastTransport(Interface):
         Set time to live on multicast packets.
         """
 
-    def joinGroup(addr: str, interface: str) -> "Deferred[None]":
+    def joinGroup(addr: str, interface: str = "") -> "Deferred[None]":
         """
         Join a multicast group. Returns L{Deferred} of success or failure.
 
@@ -2614,7 +2657,7 @@ class IMulticastTransport(Interface):
         L{error.MulticastJoinError}.
         """
 
-    def leaveGroup(addr: str, interface: str) -> "Deferred[None]":
+    def leaveGroup(addr: str, interface: str = "") -> "Deferred[None]":
         """
         Leave multicast group, return L{Deferred} of success.
         """

@@ -1,10 +1,5 @@
-
-:LastChangedDate: $LastChangedDate$
-:LastChangedRevision: $LastChangedRevision$
-:LastChangedBy: $LastChangedBy$
-
-Twisted Writing Standard
-========================
+Writing Standard
+================
 
 The Twisted writing standard describes the documentation writing
 styles we prefer in our narrative documentation.

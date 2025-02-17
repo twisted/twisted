@@ -1,0 +1,1 @@
+twisted.trial.unittest.TestCase.deferSetUp, twisted.trial.unittest.TestCase.deferTestMethod, twisted.trial.unittest.TestCase.deferTearDown, and twisted.trial.unittest.TestCase.deferRunCleanups were removed and converted to private methods. These functions expose so much of the internal structure of TestCase that it makes the code hard to change.

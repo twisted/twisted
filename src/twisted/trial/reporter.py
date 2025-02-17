@@ -105,6 +105,9 @@ class TestResult(pyunit.TestResult):
     # The duration of the test. It is None until the test completes.
     _lastTime: Optional[int]
 
+    # Make pytest not think this is test class
+    __test__ = False
+
     def __init__(self):
         super().__init__()
         self.skips = []
@@ -532,29 +535,37 @@ class Reporter(TestResult):
 
         When a C{SynchronousTestCase} method fails synchronously, the stack
         looks like this:
-         - [0]: C{SynchronousTestCase._run}
+         - [0]: C{TestCase._run}
          - [1]: C{util.runWithWarningsSuppressed}
          - [2:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a C{TestCase} method fails synchronously, the stack looks like
         this:
-         - [0]: C{defer.maybeDeferred}
-         - [1]: C{utils.runWithWarningsSuppressed}
-         - [2]: C{utils.runWithWarningsSuppressed}
-         - [3:-2]: code in the test method which failed
+         - [0]: C{TestCase._deferSetUpAndRun}
+         - [1]: C{defer.__iter__}
+         - [2]: C{defer.raiseException}
+         - [3]: C{defer.maybeDeferred}
+         - [4]: C{utils.runWithWarningsSuppressed}
+         - [5]: C{utils.runWithWarningsSuppressed}
+         - [6:-2]: code in the test method which failed
          - [-1]: C{_synctest.fail}
 
         When a method fails inside a C{Deferred} (i.e., when the test method
         returns a C{Deferred}, and that C{Deferred}'s errback fires), the stack
         captured inside the resulting C{Failure} looks like this:
-         - [0]: C{defer.Deferred._runCallbacks}
-         - [1:-2]: code in the testmethod which failed
+
+         - [0]: C{defer._deferSetUpAndRun}
+         - [1]: C{defer.__iter__}
+         - [2]: C{defer.Deferred._runCallbacks}
+         - [3:-2]: code in the testmethod which failed
          - [-1]: C{_synctest.fail}
 
-        As a result, we want to trim either [maybeDeferred, runWWS, runWWS] or
-        [Deferred._runCallbacks] or [SynchronousTestCase._run, runWWS] from the
-        front, and trim the [unittest.fail] from the end.
+        As a result, we want to trim either
+        [deferTestMethod, __iter__, raiseException, maybeDeferred, runWWS, runWWS] or
+        [defer.deferTestMethod, __iter__, Deferred._runCallbacks] or
+        [SynchronousTestCase._run, runWWS] from the front, and trim the [unittest.fail]
+        from the end.
 
         There is also another case, when the test method is badly defined and
         contains extra arguments.
@@ -568,19 +579,25 @@ class Reporter(TestResult):
         """
         newFrames = list(frames)
 
-        if len(frames) < 2:
+        if len(frames) < 3:
             return newFrames
 
-        firstMethod = newFrames[0][0]
-        firstFile = os.path.splitext(os.path.basename(newFrames[0][1]))[0]
+        frames = [
+            (frame[0], os.path.splitext(os.path.basename(frame[1]))[0])
+            for frame in newFrames[:3]
+        ]
 
-        secondMethod = newFrames[1][0]
-        secondFile = os.path.splitext(os.path.basename(newFrames[1][1]))[0]
-
-        syncCase = (("_run", "_synctest"), ("runWithWarningsSuppressed", "util"))
-        asyncCase = (("maybeDeferred", "defer"), ("runWithWarningsSuppressed", "utils"))
-
-        twoFrames = ((firstMethod, firstFile), (secondMethod, secondFile))
+        syncCase = [("_run", "_synctest"), ("runWithWarningsSuppressed", "util")]
+        asyncCase = [
+            ("_deferSetUpAndRun", "_asynctest"),
+            ("__iter__", "defer"),
+            ("raiseException", "failure"),
+        ]
+        deferCase = [
+            ("_deferSetUpAndRun", "_asynctest"),
+            ("__iter__", "defer"),
+            ("_runCallbacks", "defer"),
+        ]
 
         # On PY3, we have an extra frame which is reraising the exception
         for frame in newFrames:
@@ -589,12 +606,12 @@ class Reporter(TestResult):
                 # If it's in the compat module and is reraise, BLAM IT
                 newFrames.pop(newFrames.index(frame))
 
-        if twoFrames == syncCase:
+        if frames[:2] == syncCase:
             newFrames = newFrames[2:]
-        elif twoFrames == asyncCase:
+        elif frames[:3] == asyncCase:
+            newFrames = newFrames[6:]
+        elif frames[:3] == deferCase:
             newFrames = newFrames[3:]
-        elif (firstMethod, firstFile) == ("_runCallbacks", "defer"):
-            newFrames = newFrames[1:]
 
         if not newFrames:
             # The method fails before getting called, probably an argument

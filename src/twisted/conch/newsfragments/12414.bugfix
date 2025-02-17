@@ -1,0 +1,1 @@
+twisted.conch.client.direct.SSHClientTransport.verifyHostKey no longer crashes with an encoding error while attempting to verify the peer's IP address. This means that the `conch` command-line tool will no longer fail host key verification with 'bad host key' when using a known hosts file containing only plaintext, rather than hashed, hostnames.

@@ -1088,7 +1088,7 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
         protocolMadeAndClosed = []
 
         def reconnectFailed(ignored):
-            p = clientFactory.protocol
+            p = clientFactory.lastProtocol
             protocolMadeAndClosed.append((p.made, p.closed))
             reactor.stop()
 

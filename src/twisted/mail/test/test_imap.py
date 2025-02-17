@@ -1161,6 +1161,24 @@ class IMAP4HelperTests(TestCase):
             b"BODY[1.3.9.11.HEADER.FIELDS.NOT (Message-Id Date)]<103.69>",
         )
 
+    def test_fetchParserParseStringPartial(self):
+        """
+        Partial requests starting at 0 and longer than the message
+        return the entire body.
+        """
+        p = imap4._FetchParser()
+        p.parseString(b"BODY.PEEK[]<0.393216>")
+        self.assertEqual(len(p.result), 1)
+        self.assertTrue(isinstance(p.result[0], p.Body))
+        self.assertEqual(p.result[0].peek, True)
+        self.assertEqual(p.result[0].partialBegin, 0)
+        self.assertEqual(p.result[0].partialLength, 393216)
+        self.assertEqual(p.result[0].empty, True)
+        self.assertEqual(
+            p.result[0].getBytes(length=100),
+            b"BODY[]<0>",
+        )
+
     def test_fetchParserQuotedHeader(self):
         """
         Parsing a C{BODY} whose C{HEADER} values require quoting

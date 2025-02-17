@@ -136,26 +136,20 @@ jobs:
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
 
-          # Pre-release Python 3.13 with default settings.
-          - python-version: '3.13-dev'
+          # Just Python 3.13 with default settings.
+          - python-version: '3.13'
 
-          # Newest macOS and oldest Python (major) supported versions.
+          # Newest Intel macOS and oldest Python (major) supported versions.
           - python-version: '3.8'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+            runs-on: 'macos-13'
+            job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
-          # Newest macOS and newest Python supported versions.
-          - python-version: '3.12'
-            runs-on: 'macos-12'
-            job-name: 'macos-12-default-tests'
+          # Newest ARM macOS and newest Python supported versions.
+          - python-version: '3.13'
+            runs-on: 'macos-14'
+            job-name: 'macos-14-default-tests'
             tox-env: 'macos-withcov-alldeps'
-
-          # Pre-release Python 3.13 on macOS with default settings.
-          - python-version: '3.13-dev'
-            runs-on: 'macos-12'
-            tox-env: 'macos-withcov-alldeps'
-            job-name: 'macos-alldeps-3.13'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.8'
@@ -168,37 +162,12 @@ jobs:
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.12'
+          - python-version: '3.13'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
             trial-args: '--reactor=iocp'
-
-          # Prerelease Python 3.13 on Windows with select reactor.
-          # pywin32 doesn't have wheels for Python 3.13 yet.
-          # See https://github.com/mhammond/pywin32/issues/2294
-          # # Prerelease Python 3.13 on Windows with select reactor.
-          # - python-version: '3.13'
-          #   runs-on: 'windows-2022'
-          #   tox-env: 'alldeps-withcov-windows'
-          #   job-name: 'win-3.13-tests-select'
-          #   # Distributed trial is not yet suported on Windows so we overwrite
-          #   # the default trial-args to remove concurrent runs and to
-          #   # select a reactor.
-          #   trial-args: '--reactor=select'
-
-          # Prerelease Python 3.13 on Windows with iocp reactor.
-          # pywin32 doesn't have wheels for Python 3.13 yet.
-          # See https://github.com/mhammond/pywin32/issues/2294
-          # - python-version: '3.13'
-          #   runs-on: 'windows-2022'
-          #   tox-env: 'alldeps-withcov-windows'
-          #   job-name: 'win-3.13-tests-iocp'
-          #   # Distributed trial is not yet suported on Windows so we overwrite
-          #   # the default trial-args to remove concurrent runs and to
-          #   # select a reactor.
-          #   trial-args: '--reactor=iocp'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
@@ -234,6 +203,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
+        check-latest: true
 
     - name: Get pip cache dir
       id: pip-cache
@@ -316,15 +286,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
+        include-hidden-files: true
+        if-no-files-found: error  # 'warn' or 'ignore', defaults to `warn`
         path: .coverage-job-*
-
-    - name: Publish to codecov.io
-      uses: codecov/codecov-action@v4
-      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
-      with:
-        files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
-        fail_ci_if_error: true
 
 
   coverage-report:
@@ -385,6 +349,14 @@ jobs:
         name: html-report
         path: htmlcov
 
+    - name: Publish to codecov.io
+      uses: codecov/codecov-action@v4
+      if: ${{ !cancelled() }}
+      with:
+        files: coverage.xml
+        name: tests-combined
+        fail_ci_if_error: true
+
 
   benchmarks:
     runs-on: ubuntu-22.04
@@ -409,7 +381,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install . pytest pytest-codspeed pytest-cov pytest-benchmark
+        python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
       uses: CodSpeedHQ/action@v3
@@ -434,10 +406,10 @@ jobs:
 
     - name: Publish benchmarks coverage
       uses: codecov/codecov-action@v4
-      if: ${{ !cancelled() && !matrix['skip-coverage'] }}
+      if: ${{ !cancelled() }}
       with:
         files: coverage.xml
-        name: ${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-benchmarks
+        name: benchmarks
         fail_ci_if_error: true
 
     - name: Fail on missing benchmarks coverage
@@ -512,14 +484,14 @@ jobs:
       run: |
         tox -e narrativedocs
 
-
-  # Used for various release automation.
+  # Used for various release automation, but not for publishing, as publishing needs extra permissions for the API token.
+  # So we isolate the actual publish step in a separate job.
   # This is also executed for each PR to exercise the release as much
   # as possible and reduce the possibility of finding bugs in the release
   # process late in the release cycle,
-  # The files are published only when a tag is created.
-  release-publish:
-    name: Check release and publish on twisted-* tag
+  # The files are published only when a tag is created using the next job, release-publish
+  release-build:
+    name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
     - uses: actions/checkout@v4
@@ -541,15 +513,39 @@ jobs:
       run: |
         ls -R dist/
 
+    - uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist
+
     - name: Check matched tag version and branch version - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
       run: python admin/check_tag_version_match.py "${{ github.ref }}"
 
-    - name: Publish to PyPI - on tag
-      if: startsWith(github.ref, 'refs/tags/twisted-')
-      uses: pypa/gh-action-pypi-publish@v1.5.1
+  # Used exclusively for PyPi release publishing.
+  # This is only executed on tags and only does the publishing.
+  # The actual build is done by `release-build` job,
+  # which is executed for each PR to help detect release
+  # defects during the normal development cycle.
+  release-publish:
+    needs:
+      release-build
+    if: startsWith(github.ref, 'refs/tags/twisted-')
+    environment:
+      release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    name: publish on twisted-* tag
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
       with:
-        password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
+        name: dist
+        path: dist
+
+    - name: Publish to PyPI - on tag
+      uses: pypa/gh-action-pypi-publish@v1.12.2
 
 
   # We have this job so that the PR can be blocked on a single job.
@@ -569,7 +565,7 @@ jobs:
       - narrativedocs
       - apidocs
       - static-checks
-      - release-publish
+      - release-build
       - coverage-report
     steps:
       - name: Require all successes

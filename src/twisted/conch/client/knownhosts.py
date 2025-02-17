@@ -15,7 +15,7 @@ import sys
 from binascii import Error as DecodeError, a2b_base64, b2a_base64
 from contextlib import closing
 from hashlib import sha1
-from typing import IO, Callable, Literal
+from typing import IO, Callable, Iterable, Literal
 
 from zope.interface import implementer
 
@@ -33,31 +33,27 @@ from twisted.python.util import FancyEqMixin
 log = Logger()
 
 
-def _b64encode(s):
+def _b64encode(s: bytes) -> bytes:
     """
     Encode a binary string as base64 with no trailing newline.
 
     @param s: The string to encode.
-    @type s: L{bytes}
 
     @return: The base64-encoded string.
-    @rtype: L{bytes}
     """
     return b2a_base64(s).strip()
 
 
-def _extractCommon(string):
+def _extractCommon(string: bytes) -> tuple[bytes, bytes, Key, bytes | None]:
     """
     Extract common elements of base64 keys from an entry in a hosts file.
 
     @param string: A known hosts file entry (a single line).
-    @type string: L{bytes}
 
     @return: a 4-tuple of hostname data (L{bytes}), ssh key type (L{bytes}), key
         (L{Key}), and comment (L{bytes} or L{None}).  The hostname data is
         simply the beginning of the line up to the first occurrence of
         whitespace.
-    @rtype: L{tuple}
     """
     elements = string.split(None, 2)
     if len(elements) != 3:
@@ -86,26 +82,25 @@ class _BaseEntry:
     @type publicKey: L{twisted.conch.ssh.keys.Key}
 
     @ivar comment: Trailing garbage after the key line.
-    @type comment: L{bytes}
+    @type comment: L{bytes} or C{None}
     """
 
-    def __init__(self, keyType, publicKey, comment):
+    def __init__(self, keyType: bytes, publicKey: Key, comment: bytes | None) -> None:
         self.keyType = keyType
         self.publicKey = publicKey
         self.comment = comment
 
-    def matchesKey(self, keyObject):
+    def matchesKey(self, keyObject: Key) -> bool:
         """
         Check to see if this entry matches a given key object.
 
         @param keyObject: A public key object to check.
-        @type keyObject: L{Key}
 
         @return: C{True} if this entry's key matches C{keyObject}, C{False}
             otherwise.
-        @rtype: L{bool}
         """
-        return self.publicKey == keyObject
+        result = self.publicKey == keyObject
+        return result
 
 
 @implementer(IKnownHostEntry)
@@ -118,7 +113,11 @@ class PlainEntry(_BaseEntry):
     """
 
     def __init__(
-        self, hostnames: list[bytes], keyType: bytes, publicKey: Key, comment: bytes
+        self,
+        hostnames: list[bytes],
+        keyType: bytes,
+        publicKey: Key,
+        comment: bytes | None,
     ):
         self._hostnames: list[bytes] = hostnames
         super().__init__(keyType, publicKey, comment)
@@ -188,26 +187,28 @@ class UnparsedEntry:
     parsed; therefore it matches no keys and no hosts.
     """
 
-    def __init__(self, string):
+    keyType: None = None
+
+    def __init__(self, string: bytes) -> None:
         """
         Create an unparsed entry from a line in a known_hosts file which cannot
         otherwise be parsed.
         """
         self._string = string
 
-    def matchesHost(self, hostname):
+    def matchesHost(self, hostname: bytes) -> bool:
         """
         Always returns False.
         """
         return False
 
-    def matchesKey(self, key):
+    def matchesKey(self, key: Key) -> bool:
         """
         Always returns False.
         """
         return False
 
-    def toString(self):
+    def toString(self) -> bytes:
         """
         Returns the input line, without its newline if one was given.
 
@@ -218,18 +219,15 @@ class UnparsedEntry:
         return self._string.rstrip(b"\n")
 
 
-def _hmacedString(key, string):
+def _hmacedString(key: bytes, string: bytes | str) -> bytes:
     """
     Return the SHA-1 HMAC hash of the given key and string.
 
     @param key: The HMAC key.
-    @type key: L{bytes}
 
     @param string: The string to be hashed.
-    @type string: L{bytes}
 
     @return: The keyed hash value.
-    @rtype: L{bytes}
     """
     hash = hmac.HMAC(key, digestmod=sha1)
     if isinstance(string, str):
@@ -298,7 +296,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
         self = cls(a2b_base64(hostSalt), a2b_base64(hostHash), keyType, key, comment)
         return self
 
-    def matchesHost(self, hostname):
+    def matchesHost(self, hostname: bytes) -> bool:
         """
         Implement L{IKnownHostEntry.matchesHost} to compare the hash of the
         input to the stored hash.
@@ -315,7 +313,7 @@ class HashedEntry(_BaseEntry, FancyEqMixin):
             _hmacedString(self._hostSalt, hostname), self._hostHash
         )
 
-    def toString(self):
+    def toString(self) -> bytes:
         """
         Implement L{IKnownHostEntry.toString} by base64-encoding the salt, host
         hash, and key.
@@ -373,7 +371,7 @@ class KnownHostsFile:
         """
         return self._savePath
 
-    def iterentries(self):
+    def iterentries(self) -> Iterable[IKnownHostEntry]:
         """
         Iterate over the host entries in this file.
 
@@ -404,25 +402,22 @@ class KnownHostsFile:
                     entry = UnparsedEntry(line)
                 yield entry
 
-    def hasHostKey(self, hostname, key):
+    def hasHostKey(self, hostname: bytes, key: Key) -> bool:
         """
         Check for an entry with matching hostname and key.
 
         @param hostname: A hostname or IP address literal to check for.
-        @type hostname: L{bytes}
 
         @param key: The public key to check for.
-        @type key: L{Key}
 
-        @return: C{True} if the given hostname and key are present in this file,
-            C{False} if they are not.
-        @rtype: L{bool}
+        @return: C{True} if the given hostname and key are present in this
+            file, C{False} if they are not.
 
         @raise HostKeyChanged: if the host key found for the given hostname
             does not match the given key.
         """
         for lineidx, entry in enumerate(self.iterentries(), -len(self._added)):
-            if entry.matchesHost(hostname) and entry.keyType == key.sshType():
+            if entry.keyType == key.sshType() and entry.matchesHost(hostname):
                 if entry.matchesKey(key):
                     return True
                 else:
@@ -569,7 +564,7 @@ class ConsoleUI:
     console, to be used during key verification.
     """
 
-    def __init__(self, opener: Callable[[], IO[bytes]]):
+    def __init__(self, opener: Callable[[], IO[bytes]]) -> None:
         """
         @param opener: A no-argument callable which should open a console
             binary-mode file-like object to be used for reading and writing.

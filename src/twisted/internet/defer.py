@@ -49,7 +49,7 @@ from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 from twisted.python import lockfile
 from twisted.python.compat import _PYPY, cmp, comparable
-from twisted.python.deprecate import deprecated, warnAboutFunction
+from twisted.python.deprecate import deprecated, deprecatedProperty, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
 log = Logger()
@@ -469,11 +469,15 @@ class Deferred(Awaitable[_SelfResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self.callbacks: List[_CallbackChain] = []
+        self._callbacks: List[_CallbackChain] = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
+
+    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    def callbacks(self) -> List[_CallbackChain]:
+        return self._callbacks
 
     def addCallbacks(
         self,
@@ -528,7 +532,7 @@ class Deferred(Awaitable[_SelfResultT]):
 
         # Note that this logic is duplicated in addCallbac/addErrback/addBoth
         # for performance reasons.
-        self.callbacks.append(
+        self._callbacks.append(
             (
                 (callback, callbackArgs, callbackKeywords),
                 (errback, errbackArgs, errbackKeywords),
@@ -622,7 +626,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
+        self._callbacks.append(((callback, args, kwargs), (_failthru, (), {})))
 
         if self.called:
             self._runCallbacks()
@@ -664,7 +668,7 @@ class Deferred(Awaitable[_SelfResultT]):
         """
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
-        self.callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
+        self._callbacks.append(((passthru, (), {}), (errback, args, kwargs)))
 
         if self.called:
             self._runCallbacks()
@@ -754,7 +758,7 @@ class Deferred(Awaitable[_SelfResultT]):
         # This could be implemented as a call to addCallbacks, but doing it
         # directly is faster.
         call = (callback, args, kwargs)
-        self.callbacks.append((call, call))
+        self._callbacks.append((call, call))
 
         if self.called:
             self._runCallbacks()
@@ -1048,8 +1052,8 @@ class Deferred(Awaitable[_SelfResultT]):
 
             finished = True
             current._chainedTo = None
-            while current.callbacks:
-                item = current.callbacks.pop(0)
+            while current._callbacks:
+                item = current._callbacks.pop(0)
                 if not isinstance(current.result, Failure):
                     callback, args, kwargs = item[0]
                 else:
@@ -1123,7 +1127,7 @@ class Deferred(Awaitable[_SelfResultT]):
                             # running its callbacks right now.  Therefore we can
                             # append to the callbacks list directly instead of
                             # using addCallbacks.
-                            currentResult.callbacks.append(current._continuation())
+                            currentResult._callbacks.append(current._continuation())
                             break
                         else:
                             # Yep, it did.  Steal it.
@@ -1729,170 +1733,6 @@ SUCCESS = True
 FAILURE = False
 
 
-## deferredGenerator
-class waitForDeferred:
-    """
-    See L{deferredGenerator}.
-    """
-
-    result: Any = _NO_RESULT
-
-    def __init__(self, d: Deferred[object]) -> None:
-        warnings.warn(
-            "twisted.internet.defer.waitForDeferred was deprecated in "
-            "Twisted 15.0.0; please use twisted.internet.defer.inlineCallbacks "
-            "instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        if not isinstance(d, Deferred):
-            raise TypeError(
-                f"You must give waitForDeferred a Deferred. You gave it {d!r}."
-            )
-        self.d = d
-
-    def getResult(self) -> Any:
-        if isinstance(self.result, Failure):
-            self.result.raiseException()
-        self.result is not _NO_RESULT
-        return self.result
-
-
-_DeferableGenerator = Generator[object, None, None]
-
-
-def _deferGenerator(
-    g: _DeferableGenerator, deferred: Deferred[object]
-) -> Deferred[Any]:
-    """
-    See L{deferredGenerator}.
-    """
-
-    result = None
-
-    # This function is complicated by the need to prevent unbounded recursion
-    # arising from repeatedly yielding immediately ready deferreds.  This while
-    # loop and the waiting variable solve that by manually unfolding the
-    # recursion.
-
-    # defgen is waiting for result?  # result
-    # type note: List[Any] because you can't annotate List items by index.
-    #     …better fix would be to create a class, but we need to jettison
-    #     deferredGenerator anyway.
-    waiting: List[Any] = [True, None]
-
-    while 1:
-        try:
-            result = next(g)
-        except StopIteration:
-            deferred.callback(result)
-            return deferred
-        except BaseException:
-            deferred.errback()
-            return deferred
-
-        # Deferred.callback(Deferred) raises an error; we catch this case
-        # early here and give a nicer error message to the user in case
-        # they yield a Deferred.
-        if isinstance(result, Deferred):
-            return fail(TypeError("Yield waitForDeferred(d), not d!"))
-
-        if isinstance(result, waitForDeferred):
-            # a waitForDeferred was yielded, get the result.
-            # Pass result in so it don't get changed going around the loop
-            # This isn't a problem for waiting, as it's only reused if
-            # gotResult has already been executed.
-            def gotResult(
-                r: object, result: waitForDeferred = cast(waitForDeferred, result)
-            ) -> None:
-                result.result = r
-                if waiting[0]:
-                    waiting[0] = False
-                    waiting[1] = r
-                else:
-                    _deferGenerator(g, deferred)
-
-            result.d.addBoth(gotResult)
-            if waiting[0]:
-                # Haven't called back yet, set flag so that we get reinvoked
-                # and return from the loop
-                waiting[0] = False
-                return deferred
-            # Reset waiting to initial values for next loop
-            waiting[0] = True
-            waiting[1] = None
-
-            result = None
-
-
-@deprecated(Version("Twisted", 15, 0, 0), "twisted.internet.defer.inlineCallbacks")
-def deferredGenerator(
-    f: Callable[..., _DeferableGenerator]
-) -> Callable[..., Deferred[object]]:
-    """
-    L{deferredGenerator} and L{waitForDeferred} help you write
-    L{Deferred}-using code that looks like a regular sequential function.
-    Consider the use of L{inlineCallbacks} instead, which can accomplish
-    the same thing in a more concise manner.
-
-    There are two important functions involved: L{waitForDeferred}, and
-    L{deferredGenerator}.  They are used together, like this::
-
-        @deferredGenerator
-        def thingummy():
-            thing = waitForDeferred(makeSomeRequestResultingInDeferred())
-            yield thing
-            thing = thing.getResult()
-            print(thing) #the result! hoorj!
-
-    L{waitForDeferred} returns something that you should immediately yield; when
-    your generator is resumed, calling C{thing.getResult()} will either give you
-    the result of the L{Deferred} if it was a success, or raise an exception if it
-    was a failure.  Calling C{getResult} is B{absolutely mandatory}.  If you do
-    not call it, I{your program will not work}.
-
-    L{deferredGenerator} takes one of these waitForDeferred-using generator
-    functions and converts it into a function that returns a L{Deferred}. The
-    result of the L{Deferred} will be the last value that your generator yielded
-    unless the last value is a L{waitForDeferred} instance, in which case the
-    result will be L{None}.  If the function raises an unhandled exception, the
-    L{Deferred} will errback instead.  Remember that C{return result} won't work;
-    use C{yield result; return} in place of that.
-
-    Note that not yielding anything from your generator will make the L{Deferred}
-    result in L{None}. Yielding a L{Deferred} from your generator is also an error
-    condition; always yield C{waitForDeferred(d)} instead.
-
-    The L{Deferred} returned from your deferred generator may also errback if your
-    generator raised an exception.  For example::
-
-        @deferredGenerator
-        def thingummy():
-            thing = waitForDeferred(makeSomeRequestResultingInDeferred())
-            yield thing
-            thing = thing.getResult()
-            if thing == 'I love Twisted':
-                # will become the result of the Deferred
-                yield 'TWISTED IS GREAT!'
-                return
-            else:
-                # will trigger an errback
-                raise Exception('DESTROY ALL LIFE')
-
-    Put succinctly, these functions connect deferred-using code with this 'fake
-    blocking' style in both directions: L{waitForDeferred} converts from a
-    L{Deferred} to the 'blocking' style, and L{deferredGenerator} converts from the
-    'blocking' style to a L{Deferred}.
-    """
-
-    @wraps(f)
-    def unwindGenerator(*args: object, **kwargs: object) -> Deferred[object]:
-        return _deferGenerator(f(*args, **kwargs), Deferred())
-
-    return unwindGenerator
-
-
 ## inlineCallbacks
 
 
@@ -2154,9 +1994,9 @@ def _addCancelCallbackToDeferred(
     @param it: The L{Deferred} to add the errback to.
     @param status: a L{_CancellationStatus} tracking the current status of C{gen}
     """
-    it.callbacks, tmp = [], it.callbacks
+    it._callbacks, tmp = [], it._callbacks
     it = it.addErrback(_handleCancelInlineCallbacks, status)
-    it.callbacks.extend(tmp)
+    it._callbacks.extend(tmp)
     it.errback(_InternalInlineCallbacksCancelledError())
 
 
@@ -2724,8 +2564,6 @@ __all__ = [
     "gatherResults",
     "maybeDeferred",
     "ensureDeferred",
-    "waitForDeferred",
-    "deferredGenerator",
     "inlineCallbacks",
     "returnValue",
     "DeferredLock",

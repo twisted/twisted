@@ -294,6 +294,21 @@ class Server(_SendmsgMixin, tcp.Server):
     def getPeer(self):
         return address.UNIXAddress(self.hostname or None)
 
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Server} inherits from L{twisted.internet.tcp.Server} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
+
 
 def _inFilesystemNamespace(path):
     """
@@ -466,6 +481,21 @@ class Client(_SendmsgMixin, tcp.BaseClient):
 
     def getHost(self):
         return address.UNIXAddress(None)
+
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Client} inherits from L{twisted.internet.tcp.Client} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
 
 
 class Connector(base.BaseConnector):

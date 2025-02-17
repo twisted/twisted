@@ -15,11 +15,11 @@ It accepts a readline-like method which is called repeatedly to get the
 next line of input (or b"" for EOF).  It generates 5-tuples with these
 members:
 
-    the token type (see token.py)
-    the token (a string)
-    the starting (row, column) indices of the token (a 2-tuple of ints)
-    the ending (row, column) indices of the token (a 2-tuple of ints)
-    the original line (string)
+    - the token type (see token.py)
+    - the token (a string)
+    - the starting (row, column) indices of the token (a 2-tuple of ints)
+    - the ending (row, column) indices of the token (a 2-tuple of ints)
+    - the original line (string)
 
 It is designed to match the working of the Python tokenizer exactly, except
 that it produces COMMENT tokens for comments and gives type OP for all
@@ -446,9 +446,9 @@ def untokenize(iterable):
     only two tokens are passed, the resulting output is poor.
 
     Round-trip invariant for full input:
-        Untokenized source will match input source exactly
+    Untokenized source will match input source exactly
 
-    Round-trip invariant for limited input:
+    Round-trip invariant for limited input::
         # Output bytes will tokenize back to the input
         t1 = [tok[:2] for tok in tokenize(f.readline)]
         newcode = untokenize(t1)
@@ -591,7 +591,7 @@ def tokenize(readline):
     must be a callable object which provides the same interface as the
     readline() method of built-in file objects.  Each call to the function
     should return one line of input as bytes.  Alternatively, readline
-    can be a callable function terminating with StopIteration:
+    can be a callable function terminating with StopIteration::
         readline = open(myfile, 'rb').__next__  # Example of alternate readline
 
     The generator produces 5-tuples with these members: the token type; the

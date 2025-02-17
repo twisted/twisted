@@ -310,7 +310,9 @@ def deprecated(
     return deprecationDecorator
 
 
-def deprecatedProperty(version, replacement=None):
+def deprecatedProperty(
+    version: Version, replacement: str | Callable[..., object] | None = None
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """
     Return a decorator that marks a property as deprecated. To deprecate a
     regular callable or class, see L{deprecated}.
