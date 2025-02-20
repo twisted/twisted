@@ -468,6 +468,7 @@ class UsernamePassword:
 
     def checkPassword(self, password: bytes) -> bool:
         return hmac.compare_digest(self.password, password)
+
     def checkPassword(self, password: bytes) -> bool:
         return self.password == password
 
