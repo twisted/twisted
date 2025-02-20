@@ -41,7 +41,6 @@ class FingerProtocol(basic.LineReceiver):
 
 @implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ClientFactory):
-
     protocol = FingerProtocol
 
     def __init__(self, service):
@@ -67,7 +66,6 @@ class FingerClient(protocol.Protocol):
 
 
 class FingerClientFactory(protocol.ClientFactory):
-
     protocol = FingerClient
 
     def __init__(self, user):

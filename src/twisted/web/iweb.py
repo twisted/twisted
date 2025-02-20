@@ -9,6 +9,7 @@ Interface definitions for L{twisted.web}.
     L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
+
 from typing import TYPE_CHECKING, Callable, List, Optional
 
 from zope.interface import Attribute, Interface
@@ -595,15 +596,15 @@ class IResponse(Interface):
         L{IPushProducer}.  The protocol's C{connectionLost} method will be
         called with:
 
-            - ResponseDone, which indicates that all bytes from the response
+            - L{ResponseDone}, which indicates that all bytes from the response
               have been successfully delivered.
 
-            - PotentialDataLoss, which indicates that it cannot be determined
+            - L{PotentialDataLoss}, which indicates that it cannot be determined
               if the entire response body has been delivered.  This only occurs
               when making requests to HTTP servers which do not set
               I{Content-Length} or a I{Transfer-Encoding} in the response.
 
-            - ResponseFailed, which indicates that some bytes from the response
+            - L{ResponseFailed}, which indicates that some bytes from the response
               were lost.  The C{reasons} attribute of the exception may provide
               more specific indications as to why.
         """

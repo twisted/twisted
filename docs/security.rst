@@ -1,11 +1,16 @@
 Report a security issue
 =======================
 
+..
+  ATTENTION: This is the reStructuredText version of /SECURITY.md.
+  Any changes should also be made in the Markdown version.
+
 We take security very seriously.
 Your input and feedback on our security is always appreciated.
 
-You can send urgent or sensitive reports directly to security@twistedmatrix.com
+You can send urgent or sensitive reports via `GitHub Security Advisory <https://github.com/twisted/twisted/security/advisories/new>`_.
 
+If you prefer, you can send via email to <security@twistedmatrix.com>.
 You may use our PGP public key if you wish.
 We will create a GitHub security advisory to coordinate a fix.
 Include your GitHub username so that we add you as a collaborator on the advisory.

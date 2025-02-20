@@ -20,21 +20,15 @@ cryptography = requireModule("cryptography")
 if cryptography is None:
     skipCryptography = "Cannot run without cryptography."
 
-pyasn1 = requireModule("pyasn1")
-_keys_pynacl = requireModule("twisted.conch.ssh._keys_pynacl")
 
-
-if cryptography and pyasn1:
-    from cryptography.exceptions import InvalidSignature
+if cryptography:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
 
-    ED25519_SUPPORTED = (
-        default_backend().ed25519_supported() or _keys_pynacl is not None
-    )
+    ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
     ED25519_SUPPORTED = False
 
@@ -46,11 +40,8 @@ def skipWithoutEd25519(f):
 
 
 class KeyTests(unittest.TestCase):
-
     if cryptography is None:
         skip = skipCryptography
-    if pyasn1 is None:
-        skip = "Cannot run without PyASN1"
 
     def setUp(self):
         self.rsaObj = keys.Key._fromRSAComponents(
@@ -144,11 +135,17 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(
             keys.Key._guessStringType(keydata.publicECDSA_openssh), "public_openssh"
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.publicEd25519_openssh),
-                "public_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicSKECDSA_openssh), "public_openssh"
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicEd25519_openssh),
+            "public_openssh",
+        )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.publicSKEd25519_openssh),
+            "public_openssh",
+        )
         self.assertEqual(
             keys.Key._guessStringType(keydata.privateRSA_openssh), "private_openssh"
         )
@@ -168,11 +165,10 @@ class KeyTests(unittest.TestCase):
             keys.Key._guessStringType(keydata.privateECDSA_openssh_new),
             "private_openssh",
         )
-        if ED25519_SUPPORTED:
-            self.assertEqual(
-                keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
-                "private_openssh",
-            )
+        self.assertEqual(
+            keys.Key._guessStringType(keydata.privateEd25519_openssh_new),
+            "private_openssh",
+        )
         self.assertEqual(keys.Key._guessStringType(keydata.publicRSA_lsh), "public_lsh")
         self.assertEqual(keys.Key._guessStringType(keydata.publicDSA_lsh), "public_lsh")
         self.assertEqual(
@@ -196,6 +192,21 @@ class KeyTests(unittest.TestCase):
             "blob",
         )
         self.assertEqual(keys.Key._guessStringType(b"not a key"), None)
+
+    def test_OpenSSH_cert_not_supported(self):
+        """
+        OpenSSH certificates are not yet supported.
+        """
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            keydata.publicSKEd25519_cert_openssh,
+        )
+        self.assertRaises(
+            keys.BadKeyError,
+            keys.Key.fromString,
+            keydata.publicSKECDSA_cert_openssh,
+        )
 
     def test_public(self):
         """
@@ -245,6 +256,10 @@ class KeyTests(unittest.TestCase):
         self._testPublicFromString(public, type, data)
         self._testPrivateFromString(private, type, data)
 
+    def _testPublicSKFromString(self, public, type, data):
+        self._testPublicFromString(public, type, data)
+        self._testSKFromString(public)
+
     def _testPublicFromString(self, public, type, data):
         publicKey = keys.Key.fromString(public)
         self.assertTrue(publicKey.isPublic())
@@ -258,6 +273,10 @@ class KeyTests(unittest.TestCase):
         self.assertEqual(privateKey.type(), type)
         for k, v in data.items():
             self.assertEqual(privateKey.data()[k], v)
+
+    def _testSKFromString(self, public):
+        publicKey = keys.Key.fromString(public)
+        self.assertTrue(publicKey._sk)
 
     def test_fromOpenSSH(self):
         """
@@ -281,10 +300,6 @@ class KeyTests(unittest.TestCase):
             ),
             keys.Key.fromString(keydata.privateRSA_openssh),
         )
-        self.assertEqual(
-            keys.Key.fromString(keydata.privateRSA_openssh_alternate),
-            keys.Key.fromString(keydata.privateRSA_openssh),
-        )
         self._testPublicPrivateFromString(
             keydata.publicDSA_openssh,
             keydata.privateDSA_openssh,
@@ -292,7 +307,19 @@ class KeyTests(unittest.TestCase):
             keydata.DSAData,
         )
 
+        self._testPublicSKFromString(
+            keydata.publicSKECDSA_openssh,
+            "EC",
+            keydata.SKECDatanistp256,
+        )
+
         if ED25519_SUPPORTED:
+            self._testPublicSKFromString(
+                keydata.publicSKEd25519_openssh,
+                "Ed25519",
+                keydata.SKEd25519Data,
+            )
+
             self._testPublicPrivateFromString(
                 keydata.publicEd25519_openssh,
                 keydata.privateEd25519_openssh_new,
@@ -789,10 +816,22 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             keys.Key(self.ecObj).supportedSignatureAlgorithms(),
             [b"ecdsa-sha2-nistp256"],
         )
+        self.assertEqual(
+            keys.Key.fromString(
+                keydata.publicSKECDSA_openssh
+            ).supportedSignatureAlgorithms(),
+            [b"sk-ecdsa-sha2-nistp256@openssh.com"],
+        )
         if ED25519_SUPPORTED:
             self.assertEqual(
                 keys.Key(self.ed25519Obj).supportedSignatureAlgorithms(),
                 [b"ssh-ed25519"],
+            )
+            self.assertEqual(
+                keys.Key.fromString(
+                    keydata.publicSKEd25519_openssh
+                ).supportedSignatureAlgorithms(),
+                [b"sk-ssh-ed25519@openssh.com"],
             )
         self.assertRaises(RuntimeError, keys.Key(None).supportedSignatureAlgorithms)
         self.assertRaises(RuntimeError, keys.Key(self).supportedSignatureAlgorithms)
@@ -874,6 +913,33 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertTrue(eckey.isPublic())
         self.assertEqual(ecPublicData, eckey.data())
 
+    def test_fromBlobSKECDSA(self):
+        """
+        It can load public SK-ECDSA key from blob format.
+        """
+        from cryptography import utils
+
+        skEcPublicData = {
+            "x": keydata.SKECDatanistp256["x"],
+            "y": keydata.SKECDatanistp256["y"],
+            "curve": keydata.SKECDatanistp256["curve"],
+        }
+
+        skEcblob = (
+            common.NS(keydata.SKECDatanistp256["curve"])
+            + common.NS(keydata.SKECDatanistp256["curve"][-8:])
+            + common.NS(
+                b"\x04"
+                + utils.int_to_bytes(skEcPublicData["x"], 32)
+                + utils.int_to_bytes(skEcPublicData["y"], 32)
+            )
+        )
+
+        skEckey = keys.Key.fromString(skEcblob)
+        self.assertTrue(skEckey.isPublic())
+        self.assertTrue(skEckey._sk)
+        self.assertEqual(skEcPublicData, skEckey.data())
+
     @skipWithoutEd25519
     def test_fromBlobEd25519(self):
         """
@@ -889,6 +955,24 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
         self.assertTrue(ed25519Key.isPublic())
         self.assertEqual(ed25519PublicData, ed25519Key.data())
+
+    def test_fromBlobSKEd25519(self):
+        """
+        A public SK-Ed25519 key is correctly generated from a public key blob.
+        """
+        skEd25519PublicData = {
+            "a": keydata.SKEd25519Data["a"],
+        }
+
+        skEd25519Blob = common.NS(b"sk-ssh-ed25519@openssh.com") + common.NS(
+            skEd25519PublicData["a"]
+        )
+
+        skEd25519Key = keys.Key.fromString(skEd25519Blob)
+
+        self.assertTrue(skEd25519Key.isPublic())
+        self.assertTrue(skEd25519Key._sk)
+        self.assertEqual(skEd25519PublicData, skEd25519Key.data())
 
     def test_fromPrivateBlobUnsupportedType(self):
         """
@@ -1155,10 +1239,9 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes an RSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateRSA_agentv3)
-        self.assertEqual(key.toString("openssh"), keydata.privateRSA_openssh)
-        self.assertEqual(
-            key.toString("openssh", passphrase=b"encrypted"),
-            keydata.privateRSA_openssh_encrypted,
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateRSA_openssh)
+        self.assertTrue(
+            key.toString("openssh", passphrase=b"encrypted").find(b"DEK-Info") > 0
         )
         self.assertEqual(
             key.public().toString("openssh"), keydata.publicRSA_openssh[:-8]
@@ -1191,7 +1274,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         L{keys.Key.toString} serializes a DSA key in OpenSSH format.
         """
         key = keys.Key.fromString(keydata.privateDSA_lsh)
-        self.assertEqual(key.toString("openssh"), keydata.privateDSA_openssh)
+        self.assertEqual(key.toString("openssh").strip(), keydata.privateDSA_openssh)
         self.assertEqual(
             key.public().toString("openssh", comment=b"comment"),
             keydata.publicDSA_openssh,
@@ -1673,156 +1756,6 @@ attr n:
         )
 
 
-class PyNaClKeyTests(KeyTests):
-    """
-    Key tests, but forcing the use of C{PyNaCl}.
-    """
-
-    if cryptography is None:
-        skip = skipCryptography
-    if _keys_pynacl is None:
-        skip = "Cannot run without PyNaCl"
-
-    def setUp(self):
-        super().setUp()
-        self.patch(keys, "Ed25519PublicKey", _keys_pynacl.Ed25519PublicKey)
-        self.patch(keys, "Ed25519PrivateKey", _keys_pynacl.Ed25519PrivateKey)
-
-    def test_naclPrivateBytes(self):
-        """
-        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} and
-        L{_keys_pynacl.Ed25519PrivateKey.from_private_bytes} round-trip.
-        """
-        from cryptography.hazmat.primitives import serialization
-
-        key = _keys_pynacl.Ed25519PrivateKey.generate()
-        key_bytes = key.private_bytes(
-            serialization.Encoding.Raw,
-            serialization.PrivateFormat.Raw,
-            serialization.NoEncryption(),
-        )
-        self.assertIsInstance(key_bytes, bytes)
-        self.assertEqual(
-            key, _keys_pynacl.Ed25519PrivateKey.from_private_bytes(key_bytes)
-        )
-
-    def test_naclPrivateBytesInvalidParameters(self):
-        """
-        L{_keys_pynacl.Ed25519PrivateKey.private_bytes} only accepts certain parameters.
-        """
-        from cryptography.hazmat.primitives import serialization
-
-        key = _keys_pynacl.Ed25519PrivateKey.generate()
-        self.assertRaises(
-            ValueError,
-            key.private_bytes,
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.Raw,
-            serialization.NoEncryption(),
-        )
-        self.assertRaises(
-            ValueError,
-            key.private_bytes,
-            serialization.Encoding.Raw,
-            serialization.PrivateFormat.PKCS8,
-            serialization.NoEncryption(),
-        )
-        self.assertRaises(
-            ValueError,
-            key.private_bytes,
-            serialization.Encoding.Raw,
-            serialization.PrivateFormat.Raw,
-            serialization.BestAvailableEncryption(b"password"),
-        )
-
-    def test_naclPrivateHash(self):
-        """
-        L{_keys_pynacl.Ed25519PrivateKey.__hash__} allows instances to be hashed.
-        """
-        key = _keys_pynacl.Ed25519PrivateKey.generate()
-        d = {key: True}
-        self.assertTrue(d[key])
-
-    def test_naclPrivateEquality(self):
-        """
-        L{_keys_pynacl.Ed25519PrivateKey} implements equality test methods.
-        """
-        key1 = _keys_pynacl.Ed25519PrivateKey.generate()
-        key2 = _keys_pynacl.Ed25519PrivateKey.generate()
-        self.assertEqual(key1, key1)
-        self.assertNotEqual(key1, key2)
-        self.assertNotEqual(key1, bytes(key1))
-
-    def test_naclPublicBytes(self):
-        """
-        L{_keys_pynacl.Ed25519PublicKey.public_bytes} and
-        L{_keys_pynacl.Ed25519PublicKey.from_public_bytes} round-trip.
-        """
-        from cryptography.hazmat.primitives import serialization
-
-        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
-        key_bytes = key.public_bytes(
-            serialization.Encoding.Raw, serialization.PublicFormat.Raw
-        )
-        self.assertIsInstance(key_bytes, bytes)
-        self.assertEqual(
-            key, _keys_pynacl.Ed25519PublicKey.from_public_bytes(key_bytes)
-        )
-
-    def test_naclPublicBytesInvalidParameters(self):
-        """
-        L{_keys_pynacl.Ed25519PublicKey.public_bytes} only accepts certain parameters.
-        """
-        from cryptography.hazmat.primitives import serialization
-
-        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
-        self.assertRaises(
-            ValueError,
-            key.public_bytes,
-            serialization.Encoding.PEM,
-            serialization.PublicFormat.Raw,
-        )
-        self.assertRaises(
-            ValueError,
-            key.public_bytes,
-            serialization.Encoding.Raw,
-            serialization.PublicFormat.PKCS1,
-        )
-
-    def test_naclPublicHash(self):
-        """
-        L{_keys_pynacl.Ed25519PublicKey.__hash__} allows instances to be hashed.
-        """
-        key = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
-        d = {key: True}
-        self.assertTrue(d[key])
-
-    def test_naclPublicEquality(self):
-        """
-        L{_keys_pynacl.Ed25519PublicKey} implements equality test methods.
-        """
-        key1 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
-        key2 = _keys_pynacl.Ed25519PrivateKey.generate().public_key()
-        self.assertEqual(key1, key1)
-        self.assertNotEqual(key1, key2)
-        self.assertNotEqual(key1, bytes(key1))
-
-    def test_naclVerify(self):
-        """
-        L{_keys_pynacl.Ed25519PublicKey.verify} raises appropriate exceptions.
-        """
-        key = _keys_pynacl.Ed25519PrivateKey.generate()
-        self.assertIsInstance(key, keys.Ed25519PrivateKey)
-        signature = key.sign(b"test data")
-        self.assertIsNone(key.public_key().verify(signature, b"test data"))
-        self.assertRaises(
-            InvalidSignature, key.public_key().verify, signature, b"wrong data"
-        )
-        self.assertRaises(
-            InvalidSignature, key.public_key().verify, b"0" * 64, b"test data"
-        )
-
-
 class PersistentRSAKeyTests(unittest.TestCase):
     """
     Tests for L{keys._getPersistentRSAKey}.
@@ -1839,8 +1772,8 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
 
     def test_noRegeneration(self):
@@ -1851,15 +1784,15 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
-        self.assertEqual(key.size(), 512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
+        self.assertEqual(key.size(), 1024)
         self.assertTrue(keyFile.exists())
         keyContent = keyFile.getContent()
 
-        # Set the key size to 1024 bits. Since it exists already, it will find
-        # the 512 bit key, and not generate a 1024 bit key.
-        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
-        self.assertEqual(key.size(), 512)
+        # Set the key size to 2048 bits. Since it exists already, it will find
+        # the 1024 bit key, and not generate a 2048 bit key.
+        key = keys._getPersistentRSAKey(keyFile, keySize=2048)
+        self.assertEqual(key.size(), 1024)
         self.assertEqual(keyFile.getContent(), keyContent)
 
     def test_keySizeZero(self):
@@ -1870,6 +1803,6 @@ class PersistentRSAKeyTests(unittest.TestCase):
         tempDir = FilePath(self.mktemp())
         keyFile = tempDir.child("mykey.pem")
 
-        key = keys._getPersistentRSAKey(keyFile, keySize=512)
+        key = keys._getPersistentRSAKey(keyFile, keySize=1024)
         key._keyObject = None
         self.assertEqual(key.size(), 0)

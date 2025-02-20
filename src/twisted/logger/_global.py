@@ -173,7 +173,7 @@ class LogBeginner:
         else:
             streams = []
 
-        for (stream, level) in streams:
+        for stream, level in streams:
             oldStream = getattr(self._stdio, stream)
             loggingFile = LoggingFile(
                 logger=Logger(namespace=stream, observer=self._publisher),

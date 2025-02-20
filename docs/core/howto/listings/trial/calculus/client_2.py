@@ -9,7 +9,6 @@ class ClientTimeoutError(Exception):
 
 
 class RemoteCalculationClient(basic.LineReceiver):
-
     callLater = reactor.callLater
     timeOut = 60
 

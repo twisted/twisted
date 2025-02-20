@@ -146,7 +146,7 @@ class RootResolverTests(TestCase):
         @return: A new L{Message} initialized with the given values.
         """
         response = Message(rCode=rCode)
-        for (section, data) in [
+        for section, data in [
             (response.answers, answers),
             (response.authority, authority),
             (response.additional, additional),

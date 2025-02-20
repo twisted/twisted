@@ -4,10 +4,22 @@
 """
 Test cases for L{twisted.python.randbytes}.
 """
+from __future__ import annotations
 
+from typing import Callable
+
+from typing_extensions import NoReturn, Protocol
 
 from twisted.python import randbytes
 from twisted.trial import unittest
+
+
+class _SupportsAssertions(Protocol):
+    def assertEqual(self, a: object, b: object) -> object:
+        ...
+
+    def assertNotEqual(self, a: object, b: object) -> object:
+        ...
 
 
 class SecureRandomTestCaseBase:
@@ -15,7 +27,7 @@ class SecureRandomTestCaseBase:
     Base class for secureRandom test cases.
     """
 
-    def _check(self, source):
+    def _check(self: _SupportsAssertions, source: Callable[[int], bytes]) -> None:
         """
         The given random bytes source should return the number of bytes
         requested each time it is called and should probably not return the
@@ -37,7 +49,7 @@ class SecureRandomTests(SecureRandomTestCaseBase, unittest.TestCase):
     Test secureRandom under normal conditions.
     """
 
-    def test_normal(self):
+    def test_normal(self) -> None:
         """
         L{randbytes.secureRandom} should return a string of the requested
         length and make some effort to make its result otherwise unpredictable.
@@ -52,36 +64,36 @@ class ConditionalSecureRandomTests(
     Test random sources one by one, then remove it to.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a L{randbytes.RandomFactory} to use in the tests.
         """
         self.factory = randbytes.RandomFactory()
 
-    def errorFactory(self, nbytes):
+    def errorFactory(self, nbytes: object) -> NoReturn:
         """
         A factory raising an error when a source is not available.
         """
         raise randbytes.SourceNotAvailable()
 
-    def test_osUrandom(self):
+    def test_osUrandom(self) -> None:
         """
         L{RandomFactory._osUrandom} should work as a random source whenever
         L{os.urandom} is available.
         """
         self._check(self.factory._osUrandom)
 
-    def test_withoutAnything(self):
+    def test_withoutAnything(self) -> None:
         """
         Remove all secure sources and assert it raises a failure. Then try the
         fallback parameter.
         """
-        self.factory._osUrandom = self.errorFactory
+        self.factory._osUrandom = self.errorFactory  # type: ignore[method-assign]
         self.assertRaises(
             randbytes.SecureRandomNotAvailable, self.factory.secureRandom, 18
         )
 
-        def wrapper():
+        def wrapper() -> bytes:
             return self.factory.secureRandom(18, fallback=True)
 
         s = self.assertWarns(
@@ -99,13 +111,13 @@ class RandomBaseTests(SecureRandomTestCaseBase, unittest.SynchronousTestCase):
     'Normal' random test cases.
     """
 
-    def test_normal(self):
+    def test_normal(self) -> None:
         """
         Test basic case.
         """
         self._check(randbytes.insecureRandom)
 
-    def test_withoutGetrandbits(self):
+    def test_withoutGetrandbits(self) -> None:
         """
         Test C{insecureRandom} without C{random.getrandbits}.
         """

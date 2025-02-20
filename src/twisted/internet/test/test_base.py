@@ -7,10 +7,12 @@ Tests for L{twisted.internet.base}.
 
 import socket
 from queue import Queue
-from typing import Any, Callable
+from typing import Callable
 from unittest import skipIf
 
 from zope.interface import implementer
+
+from typing_extensions import ParamSpec
 
 from twisted.internet._resolver import FirstOneWins
 from twisted.internet.base import DelayedCall, ReactorBase, ThreadedResolver
@@ -27,6 +29,8 @@ except ImportError:
     signal = None
 else:
     signal = _signal
+
+_P = ParamSpec("_P")
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -46,7 +50,9 @@ class FakeReactor:
 
         self._threadCalls = Queue()
 
-    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+    def callFromThread(
+        self, callable: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         self._threadCalls.put((callable, args, kwargs))
 
     def _runThreadCalls(self):
@@ -60,11 +66,13 @@ class FakeReactor:
         # IReactorTime.getDelayedCalls
         pass
 
-    def seconds(self):
+    def seconds(self) -> float:  # type: ignore[empty-body]
         # IReactorTime.seconds
         pass
 
-    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
+    def callInThread(
+        self, callable: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         # IReactorInThreads.callInThread
         pass
 

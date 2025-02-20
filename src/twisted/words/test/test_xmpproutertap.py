@@ -12,7 +12,7 @@ from twisted.words.protocols.jabber import component
 
 
 class XMPPRouterTapTests(unittest.TestCase):
-    def test_port(self):
+    def test_port(self) -> None:
         """
         The port option is recognised as a parameter.
         """
@@ -20,7 +20,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions(["--port", "7001"])
         self.assertEqual(opt["port"], "7001")
 
-    def test_portDefault(self):
+    def test_portDefault(self) -> None:
         """
         The port option has '5347' as default value
         """
@@ -28,7 +28,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions([])
         self.assertEqual(opt["port"], "tcp:5347:interface=127.0.0.1")
 
-    def test_secret(self):
+    def test_secret(self) -> None:
         """
         The secret option is recognised as a parameter.
         """
@@ -36,7 +36,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions(["--secret", "hushhush"])
         self.assertEqual(opt["secret"], "hushhush")
 
-    def test_secretDefault(self):
+    def test_secretDefault(self) -> None:
         """
         The secret option has 'secret' as default value
         """
@@ -44,7 +44,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions([])
         self.assertEqual(opt["secret"], "secret")
 
-    def test_verbose(self):
+    def test_verbose(self) -> None:
         """
         The verbose option is recognised as a flag.
         """
@@ -52,7 +52,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         opt.parseOptions(["--verbose"])
         self.assertTrue(opt["verbose"])
 
-    def test_makeService(self):
+    def test_makeService(self) -> None:
         """
         The service gets set up with a router and factory.
         """
@@ -68,7 +68,7 @@ class XMPPRouterTapTests(unittest.TestCase):
         self.assertEqual("secret", factory.secret)
         self.assertFalse(factory.logTraffic)
 
-    def test_makeServiceVerbose(self):
+    def test_makeServiceVerbose(self) -> None:
         """
         The verbose flag enables traffic logging.
         """

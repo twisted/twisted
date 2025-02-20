@@ -87,9 +87,8 @@ print(json.dumps(vals))
 """
 
 URL_PARAMETER_CGI = """\
-import cgi
-fs = cgi.FieldStorage()
-param = fs.getvalue("param")
+import os
+param = str(os.environ['QUERY_STRING'])
 print("Header: OK")
 print("")
 print(param)
@@ -384,7 +383,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         return d
 
     def _test_urlParameters_1(self, res):
-        expected = f"1234{os.linesep}"
+        expected = f"param=1234{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 

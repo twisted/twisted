@@ -14,21 +14,21 @@ class CommandLineQuotingTests(unittest.TestCase):
     Tests for L{cmdLineQuote}.
     """
 
-    def test_argWithoutSpaces(self):
+    def test_argWithoutSpaces(self) -> None:
         """
         Calling C{cmdLineQuote} with an argument with no spaces returns
         the argument unchanged.
         """
         self.assertEqual(win32.cmdLineQuote("an_argument"), "an_argument")
 
-    def test_argWithSpaces(self):
+    def test_argWithSpaces(self) -> None:
         """
         Calling C{cmdLineQuote} with an argument containing spaces returns
         the argument surrounded by quotes.
         """
         self.assertEqual(win32.cmdLineQuote("An Argument"), '"An Argument"')
 
-    def test_emptyStringArg(self):
+    def test_emptyStringArg(self) -> None:
         """
         Calling C{cmdLineQuote} with an empty string returns a quoted empty
         string.
@@ -41,7 +41,7 @@ class DeprecationTests(unittest.TestCase):
     Tests for deprecated (Fake)WindowsError.
     """
 
-    def test_deprecation_FakeWindowsError(self):
+    def test_deprecation_FakeWindowsError(self) -> None:
         """Importing C{FakeWindowsError} triggers a L{DeprecationWarning}."""
 
         self.assertWarns(
@@ -52,7 +52,7 @@ class DeprecationTests(unittest.TestCase):
             lambda: reflect.namedAny("twisted.python.win32.FakeWindowsError"),
         )
 
-    def test_deprecation_WindowsError(self):
+    def test_deprecation_WindowsError(self) -> None:
         """Importing C{WindowsError} triggers a L{DeprecationWarning}."""
 
         self.assertWarns(

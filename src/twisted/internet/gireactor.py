@@ -23,7 +23,7 @@ On Python 3, pygobject v3.4 or later is required.
 
 from typing import Union
 
-from gi.repository import GLib  # type:ignore[import]
+from gi.repository import GLib
 
 from twisted.internet import _glibbase
 from twisted.internet.error import ReactorAlreadyRunning

@@ -72,7 +72,6 @@ class IAccount(Interface):
 
 
 class IClient(Interface):
-
     account = Attribute("The L{IAccount} I am a Client for")
 
     def __init__(account, chatui, logonDeferred):

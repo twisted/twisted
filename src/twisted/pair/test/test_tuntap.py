@@ -439,7 +439,7 @@ class TunnelDeviceTestsMixin:
         # Try sending the datagram a lot of times.  There are no delivery
         # guarantees for UDP - not even over localhost.
         for i in range(100):
-            key = randrange(2 ** 64)
+            key = randrange(2**64)
             message = b"hello world:%d" % (key,)
             source = self.system.sendUDP(message, (self._TUNNEL_REMOTE, 12345))
 
@@ -472,7 +472,7 @@ class TunnelDeviceTestsMixin:
         """
         # Construct a unique application payload so the receiving side can
         # unambiguously identify the datagram we sent.
-        key = randrange(2 ** 64)
+        key = randrange(2**64)
         message = b"hello world:%d" % (key,)
 
         # To avoid really inconvenient test failures where the test just hangs

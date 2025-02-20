@@ -4,7 +4,7 @@
 """
 Test ssh/channel.py.
 """
-
+from __future__ import annotations
 
 from unittest import skipIf
 
@@ -39,37 +39,43 @@ class MockConnection(SSHService):
         a close message.
     """
 
-    def __init__(self):
-        self.data = {}
-        self.extData = {}
-        self.closes = {}
+    def __init__(self) -> None:
+        self.data: dict[channel.SSHChannel, list[bytes]] = {}
+        self.extData: dict[channel.SSHChannel, list[tuple[int, bytes]]] = {}
+        self.closes: dict[channel.SSHChannel, bool] = {}
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """
         Return our logging prefix.
         """
         return "MockConnection"
 
-    def sendData(self, channel, data):
+    def sendData(self, channel: channel.SSHChannel, data: bytes) -> None:
         """
         Record the sent data.
         """
         self.data.setdefault(channel, []).append(data)
 
-    def sendExtendedData(self, channel, type, data):
+    def sendExtendedData(
+        self, channel: channel.SSHChannel, type: int, data: bytes
+    ) -> None:
         """
         Record the sent extended data.
         """
         self.extData.setdefault(channel, []).append((type, data))
 
-    def sendClose(self, channel):
+    def sendClose(self, channel: channel.SSHChannel) -> None:
         """
         Record that the channel sent a close message.
         """
         self.closes[channel] = True
 
 
-def connectSSHTransport(service, hostAddress=None, peerAddress=None):
+def connectSSHTransport(
+    service: SSHService,
+    hostAddress: interfaces.IAddress | None = None,
+    peerAddress: interfaces.IAddress | None = None,
+) -> None:
     """
     Connect a SSHTransport which is already connected to a remote peer to
     the channel under test.
@@ -96,7 +102,7 @@ class ChannelTests(TestCase):
     Tests for L{SSHChannel}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Initialize the channel.  remoteMaxPacket is 10 so that data is able
         to be sent (the default of 0 means no data is sent because no packets
@@ -106,13 +112,13 @@ class ChannelTests(TestCase):
         self.channel = channel.SSHChannel(conn=self.conn, remoteMaxPacket=10)
         self.channel.name = b"channel"
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{SSHChannel} instances provide L{interfaces.ITransport}.
         """
         self.assertTrue(verifyObject(interfaces.ITransport, self.channel))
 
-    def test_init(self):
+    def test_init(self) -> None:
         """
         Test that SSHChannel initializes correctly.  localWindowSize defaults
         to 131072 (2**17) and localMaxPacket to 32768 (2**15) as reasonable
@@ -142,7 +148,7 @@ class ChannelTests(TestCase):
         self.assertEqual(c2.data, 6)
         self.assertEqual(c2.avatar, 7)
 
-    def test_str(self):
+    def test_str(self) -> None:
         """
         Test that str(SSHChannel) works gives the channel name and local and
         remote windows at a glance..
@@ -152,7 +158,7 @@ class ChannelTests(TestCase):
             str(channel.SSHChannel(localWindow=1)), "<SSHChannel None (lw 1 rw 0)>"
         )
 
-    def test_bytes(self):
+    def test_bytes(self) -> None:
         """
         Test that bytes(SSHChannel) works, gives the channel name and
         local and remote windows at a glance..
@@ -166,7 +172,7 @@ class ChannelTests(TestCase):
             b"<SSHChannel None (lw 1 rw 0)>",
         )
 
-    def test_logPrefix(self):
+    def test_logPrefix(self) -> None:
         """
         Test that SSHChannel.logPrefix gives the name of the channel, the
         local channel ID and the underlying connection.
@@ -175,17 +181,17 @@ class ChannelTests(TestCase):
             self.channel.logPrefix(), "SSHChannel channel (unknown) on MockConnection"
         )
 
-    def test_addWindowBytes(self):
+    def test_addWindowBytes(self) -> None:
         """
         Test that addWindowBytes adds bytes to the window and resumes writing
         if it was paused.
         """
         cb = [False]
 
-        def stubStartWriting():
+        def stubStartWriting() -> None:
             cb[0] = True
 
-        self.channel.startWriting = stubStartWriting
+        self.channel.startWriting = stubStartWriting  # type: ignore[method-assign]
         self.channel.write(b"test")
         self.channel.writeExtended(1, b"test")
         self.channel.addWindowBytes(50)
@@ -206,17 +212,17 @@ class ChannelTests(TestCase):
         self.channel.addWindowBytes(20)
         self.assertFalse(cb[0])
 
-    def test_requestReceived(self):
+    def test_requestReceived(self) -> None:
         """
         Test that requestReceived handles requests by dispatching them to
         request_* methods.
         """
-        self.channel.request_test_method = lambda data: data == b""
+        self.channel.request_test_method = lambda data: data == b""  # type: ignore[attr-defined]
         self.assertTrue(self.channel.requestReceived(b"test-method", b""))
         self.assertFalse(self.channel.requestReceived(b"test-method", b"a"))
         self.assertFalse(self.channel.requestReceived(b"bad-method", b""))
 
-    def test_closeReceieved(self):
+    def test_closeReceieved(self) -> None:
         """
         Test that the default closeReceieved closes the connection.
         """
@@ -224,7 +230,7 @@ class ChannelTests(TestCase):
         self.channel.closeReceived()
         self.assertTrue(self.channel.closing)
 
-    def test_write(self):
+    def test_write(self) -> None:
         """
         Test that write handles data correctly.  Send data up to the size
         of the remote window, splitting the data into packets of length
@@ -232,11 +238,11 @@ class ChannelTests(TestCase):
         """
         cb = [False]
 
-        def stubStopWriting():
+        def stubStopWriting() -> None:
             cb[0] = True
 
         # no window to start with
-        self.channel.stopWriting = stubStopWriting
+        self.channel.stopWriting = stubStopWriting  # type: ignore[method-assign]
         self.channel.write(b"d")
         self.channel.write(b"a")
         self.assertFalse(self.channel.areWriting)
@@ -260,7 +266,7 @@ class ChannelTests(TestCase):
         self.assertEqual(self.channel.buf, b"6")
         self.assertEqual(self.channel.remoteWindowLeft, 0)
 
-    def test_writeExtended(self):
+    def test_writeExtended(self) -> None:
         """
         Test that writeExtended handles data correctly.  Send extended data
         up to the size of the window, splitting the extended data into packets
@@ -268,11 +274,11 @@ class ChannelTests(TestCase):
         """
         cb = [False]
 
-        def stubStopWriting():
+        def stubStopWriting() -> None:
             cb[0] = True
 
         # no window to start with
-        self.channel.stopWriting = stubStopWriting
+        self.channel.stopWriting = stubStopWriting  # type: ignore[method-assign]
         self.channel.writeExtended(1, b"d")
         self.channel.writeExtended(1, b"a")
         self.channel.writeExtended(2, b"t")
@@ -309,7 +315,7 @@ class ChannelTests(TestCase):
         self.assertEqual(self.channel.extBuf, [[4, b"6"]])
         self.assertEqual(self.channel.remoteWindowLeft, 0)
 
-    def test_writeSequence(self):
+    def test_writeSequence(self) -> None:
         """
         Test that writeSequence is equivalent to write(''.join(sequece)).
         """
@@ -317,7 +323,7 @@ class ChannelTests(TestCase):
         self.channel.writeSequence(b"%d" % (i,) for i in range(10))
         self.assertEqual(self.conn.data[self.channel], [b"0123456789"])
 
-    def test_loseConnection(self):
+    def test_loseConnection(self) -> None:
         """
         Tesyt that loseConnection() doesn't close the channel until all
         the data is sent.
@@ -331,7 +337,7 @@ class ChannelTests(TestCase):
         self.channel.addWindowBytes(8)  # send extended data
         self.assertTrue(self.conn.closes.get(self.channel))
 
-    def test_getPeer(self):
+    def test_getPeer(self) -> None:
         """
         L{SSHChannel.getPeer} returns the same object as the underlying
         transport's C{getPeer} method returns.
@@ -341,7 +347,7 @@ class ChannelTests(TestCase):
 
         self.assertEqual(SSHTransportAddress(peer), self.channel.getPeer())
 
-    def test_getHost(self):
+    def test_getHost(self) -> None:
         """
         L{SSHChannel.getHost} returns the same object as the underlying
         transport's C{getHost} method returns.

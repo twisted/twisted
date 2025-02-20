@@ -275,6 +275,6 @@ class ExpectedFailure(SynchronousTestCase):
         """
         Fail, but expectedly.
         """
-        raise RuntimeError("x" * (2 ** 16 + 1))
+        raise RuntimeError("x" * (2**16 + 1))
 
     test_expectedFailureGreaterThan64k.todo = "short todo string"  # type: ignore[attr-defined]

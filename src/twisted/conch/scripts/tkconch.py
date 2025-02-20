@@ -378,10 +378,10 @@ def run():
     for k, v in options.items():
         if v and hasattr(menu, k):
             getattr(menu, k).insert(Tkinter.END, v)
-    for (p, (rh, rp)) in options.localForwards:
+    for p, (rh, rp) in options.localForwards:
         menu.forwards.insert(Tkinter.END, f"L:{p}:{rh}:{rp}")
     options.localForwards = []
-    for (p, (rh, rp)) in options.remoteForwards:
+    for p, (rh, rp) in options.remoteForwards:
         menu.forwards.insert(Tkinter.END, f"R:{p}:{rh}:{rp}")
     options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
@@ -578,7 +578,6 @@ class SSHConnection(connection.SSHConnection):
 
 
 class SSHSession(channel.SSHChannel):
-
     name = b"session"
 
     def channelOpen(self, foo):

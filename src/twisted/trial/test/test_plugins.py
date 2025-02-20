@@ -34,7 +34,7 @@ class PluginsTests(unittest.SynchronousTestCase):
             )
         return plugins[0]
 
-    def test_subunitPlugin(self):
+    def test_subunitPlugin(self) -> None:
         """
         One of the reporter plugins is the subunit reporter plugin.
         """

@@ -638,9 +638,9 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(finished, [b""])
         self.assertEqual(protocol.response.length, 0)
 
-    def test_multipleContentLengthHeaders(self):
+    def test_multipleDistinctContentLengthHeaders(self):
         """
-        If a response includes multiple I{Content-Length} headers,
+        If a response includes multiple, distinct I{Content-Length} headers,
         L{HTTPClientParser.dataReceived} raises L{ValueError} to indicate that
         the response is invalid and the transport is now unusable.
         """
@@ -654,6 +654,85 @@ class HTTPClientParserTests(TestCase):
             b"Content-Length: 1\r\n"
             b"Content-Length: 2\r\n"
             b"\r\n",
+        )
+
+    def test_multipleEqualContentLengthHeaders(self):
+        """
+        If a response includes multiple, yet equal, I{Content-Length} headers,
+        L{HTTPClientParser.dataReceived} successfully handles and passes single
+        length for body processing
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Length: 1\r\n"
+            b"Content-Length: 1\r\n"
+            b"\r\n"
+        )
+        self.assertEqual(protocol.response.length, 1)
+        self.assertEqual(protocol.state, BODY)
+
+    def test_multipleDistinctContentLengthHeaderFieldValues(self):
+        """
+        If a response includes multiple, distinct I{Content-Length} header
+        field-values, L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 2\r\n" b"\r\n",
+        )
+
+    def test_multipleEqualContentLengthHeaderFieldValues(self):
+        """
+        If a response includes multiple, equal I{Content-Length} header
+        field-values, L{HTTPClientParser.dataReceived} successfully handles and
+        passes single content-length header for body processing. Field-values
+        are considered equal by parsed decimal value.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 001\r\n" b"\r\n"
+        )
+        self.assertEqual(protocol.response.length, 1)
+        self.assertEqual(protocol.state, BODY)
+
+    def test_contentLengthTooPositive(self):
+        """
+        If the I{Content-Length} header contains anything other than digits
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: +1\r\n\r\n",
+        )
+
+    def test_contentLengthNegative(self):
+        """
+        If the I{Content-Length} header has a negative value
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\n",
         )
 
     def test_extraBytesPassedBack(self):
@@ -1963,11 +2042,11 @@ class RequestTests(TestCase):
 
     def test_sanitizeLinearWhitespaceInRequestHeaders(self):
         """
-        Linear whitespace in request headers is replaced with a single
-        space.
+        Linear whitespace in request header values is replaced with a
+        single space.
         """
         for component in bytesLinearWhitespaceComponents:
-            headers = Headers({component: [component], b"host": [b"example.invalid"]})
+            headers = Headers({b"x-foo": [component], b"host": [b"example.invalid"]})
             transport = StringTransport()
             Request(b"GET", b"/foo", headers, None).writeTo(transport)
             lines = transport.value().split(b"\r\n")
@@ -1976,8 +2055,7 @@ class RequestTests(TestCase):
             del lines[0], lines[-2:]
             lines.remove(b"Connection: close")
             lines.remove(b"Host: example.invalid")
-            sanitizedHeaderLine = b": ".join([sanitizedBytes, sanitizedBytes])
-            self.assertEqual(lines, [sanitizedHeaderLine])
+            self.assertEqual(lines, [b"X-Foo: " + sanitizedBytes])
 
     def test_sendChunkedRequestBody(self):
         """

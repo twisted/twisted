@@ -17,7 +17,7 @@ class InstallReactorTests(unittest.SynchronousTestCase):
     Tests for L{installReactor}.
     """
 
-    def test_installReactor(self):
+    def test_installReactor(self) -> None:
         """
         L{installReactor} installs a new reactor if none is present.
         """
@@ -28,7 +28,7 @@ class InstallReactorTests(unittest.SynchronousTestCase):
 
             self.assertIs(newReactor, reactor)
 
-    def test_alreadyInstalled(self):
+    def test_alreadyInstalled(self) -> None:
         """
         If a reactor is already installed, L{installReactor} raises
         L{ReactorAlreadyInstalledError}.
@@ -37,7 +37,7 @@ class InstallReactorTests(unittest.SynchronousTestCase):
             installReactor(object())
             self.assertRaises(ReactorAlreadyInstalledError, installReactor, object())
 
-    def test_errorIsAnAssertionError(self):
+    def test_errorIsAnAssertionError(self) -> None:
         """
         For backwards compatibility, L{ReactorAlreadyInstalledError} is an
         L{AssertionError}.

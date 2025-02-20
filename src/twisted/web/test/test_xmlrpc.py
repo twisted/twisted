@@ -100,7 +100,6 @@ class TestValueError(ValueError):
 
 
 class Test(XMLRPC):
-
     # If you add xmlrpc_ methods to this class, go change test_listMethods
     # below.
 
@@ -465,7 +464,6 @@ class XMLRPCTests(unittest.TestCase):
         return d
 
     def test_datetimeRoundtrip(self):
-
         """
         If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
         call and then returned by the server unmodified, the result should

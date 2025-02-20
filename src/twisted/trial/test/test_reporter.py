@@ -136,7 +136,7 @@ class ReporterRealtimeTests(TestResultTests):
 class ErrorReportingTests(StringTest):
     doubleSeparator = re.compile(r"^=+$")
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.loader = runner.TestLoader()
         self.output = StringIO()
         self.result: reporter.Reporter = reporter.Reporter(self.output)
@@ -264,7 +264,7 @@ class UncleanWarningWrapperErrorReportingTests(ErrorReportingTests):
     IReporter failure and error reporting methods to a L{reporter.Reporter}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.loader = runner.TestLoader()
         self.output = StringIO()
         self.reporter: reporter.Reporter = reporter.Reporter(self.output)

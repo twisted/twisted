@@ -1,1 +1,0 @@
-Optional dependency "extras" names like `conch_nacl` now use hyphens rather than underscores to comply with PEP 685. The old names will be supported until the end of 2023.

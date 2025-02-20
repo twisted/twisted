@@ -21,7 +21,7 @@ from twisted.python.runtime import platform
 
 
 @implementer(IAddress)
-@attr.s(hash=True, auto_attribs=True)
+@attr.s(unsafe_hash=True, auto_attribs=True)
 class IPv4Address:
     """
     An L{IPv4Address} represents the address of an IPv4 socket endpoint.
@@ -45,7 +45,7 @@ class IPv4Address:
 
 
 @implementer(IAddress)
-@attr.s(hash=True, auto_attribs=True)
+@attr.s(unsafe_hash=True, auto_attribs=True)
 class IPv6Address:
     """
     An L{IPv6Address} represents the address of an IPv6 socket endpoint.
@@ -85,7 +85,7 @@ class _ProcessAddress:
     """
 
 
-@attr.s(hash=True, auto_attribs=True)
+@attr.s(unsafe_hash=True, auto_attribs=True)
 @implementer(IAddress)
 class HostnameAddress:
     """
@@ -102,7 +102,7 @@ class HostnameAddress:
     port: int
 
 
-@attr.s(hash=False, repr=False, eq=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, repr=False, eq=False, auto_attribs=True)
 @implementer(IAddress)
 class UNIXAddress:
     """
@@ -147,9 +147,8 @@ class UNIXAddress:
 
     def __repr__(self) -> str:
         name = self.name
-        if name:
-            name = _coerceToFilesystemEncoding("", self.name)
-        return f"UNIXAddress({name!r})"
+        show = _coerceToFilesystemEncoding("", name) if name is not None else None
+        return f"UNIXAddress({show!r})"
 
     def __hash__(self):
         if self.name is None:

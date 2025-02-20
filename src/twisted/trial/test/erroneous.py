@@ -131,7 +131,7 @@ class TestAsynchronousFail(unittest.TestCase):
         A test which fails in the callback of the returned L{defer.Deferred}
         with a very long string.
         """
-        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2 ** 16)  # type: ignore[arg-type]
+        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2**16)  # type: ignore[arg-type]
 
     def test_exception(self) -> None:
         """
@@ -144,7 +144,7 @@ class TestAsynchronousFail(unittest.TestCase):
         A test which raises an exception with a long string representation
         synchronously.
         """
-        raise LargeError(2 ** 16)
+        raise LargeError(2**16)
 
     def test_exceptionGreaterThan64kEncoded(self) -> None:
         """
@@ -155,7 +155,7 @@ class TestAsynchronousFail(unittest.TestCase):
         # encodes to 3 bytes with UTF-8 so the length of the UTF-8 encoding of
         # the string representation of this exception will be greater than 2
         # ** 16.
-        raise Exception("\N{SNOWMAN}" * 2 ** 15)
+        raise Exception("\N{SNOWMAN}" * 2**15)
 
 
 class ErrorTest(unittest.SynchronousTestCase):

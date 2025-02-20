@@ -100,7 +100,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         port.listen(1)
         self.addCleanup(port.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,
@@ -177,7 +177,7 @@ class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
         connection = socket.socket()
         self.addCleanup(connection.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,
@@ -230,7 +230,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
         port = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(port.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,

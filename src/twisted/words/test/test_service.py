@@ -189,7 +189,7 @@ class IRCProtocolTests(unittest.TestCase):
         # Make sure we get 1-4 at least
         response = self._response(user)
         expected = [irc.RPL_WELCOME, irc.RPL_YOURHOST, irc.RPL_CREATED, irc.RPL_MYINFO]
-        for (prefix, command, args) in response:
+        for prefix, command, args in response:
             if command in expected:
                 expected.remove(command)
         self.assertFalse(expected, f"Missing responses for {expected!r}")
@@ -212,8 +212,7 @@ class IRCProtocolTests(unittest.TestCase):
         If messageType is defined, only messages of that type will be returned.
         """
         response = user.transport.value()
-        if bytes != str and isinstance(response, bytes):
-            response = response.decode("utf-8")
+        response = response.decode("utf-8")
         response = response.splitlines()
         user.transport.clear()
         result = []
@@ -621,7 +620,7 @@ class IRCProtocolTests(unittest.TestCase):
         self.assertFalse(self._response(users[2]))
 
         wantusers = ["userone", "usertwo", "userthree"]
-        for (prefix, code, stuff) in r[:-1]:
+        for prefix, code, stuff in r[:-1]:
             self.assertEqual(prefix, "realmname")
             self.assertEqual(code, "352")
 

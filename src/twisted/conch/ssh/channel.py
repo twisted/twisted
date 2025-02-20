@@ -142,7 +142,7 @@ class SSHChannel(log.Logger):
         if self.extBuf:
             b = self.extBuf
             self.extBuf = []
-            for (type, data) in b:
+            for type, data in b:
                 self.writeExtended(type, data)
 
     def requestReceived(self, requestType, data):

@@ -296,8 +296,8 @@ class LogBeginnerTests(unittest.TestCase):
         self.assertEqual(stdout.encoding, "shift-JIS")
         self.assertEqual(stderr.encoding, "big5")
 
-        stdout.write(b"\x97\x9B\n")  # type: ignore[arg-type]
-        stderr.write(b"\xBC\xFC\n")  # type: ignore[arg-type]
+        stdout.write(b"\x97\x9B\n")  # type: ignore[call-overload]
+        stderr.write(b"\xBC\xFC\n")  # type: ignore[call-overload]
         compareEvents(self, events, [dict(log_io="\u674e"), dict(log_io="\u7469")])
 
     def test_warningsModule(self) -> None:

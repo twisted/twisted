@@ -16,7 +16,6 @@ twistedPath = here.child("src").child("twisted")
 
 
 def mv(fromPath):
-
     for fn in fromPath.walk():
         if fn.isfile():
             os.system(

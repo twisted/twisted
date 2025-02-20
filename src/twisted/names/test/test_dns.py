@@ -9,7 +9,6 @@ Tests for twisted.names.dns.
 
 import struct
 from io import BytesIO
-from typing import cast
 
 from zope.interface.verify import verifyClass
 
@@ -162,6 +161,12 @@ class Str2TimeTests(unittest.TestCase):
         If a non-integer prefix is given, L{dns.str2time} raises L{ValueError}.
         """
         self.assertRaises(ValueError, dns.str2time, "fooS")
+
+    def test_invalidSuffix(self) -> None:
+        """
+        If an invalid suffix is given, L{dns.str2time} raises L{ValueError}.
+        """
+        self.assertRaises(ValueError, dns.str2time, "1Q")
 
 
 class NameTests(unittest.TestCase):
@@ -614,7 +619,7 @@ class RoundtripDNSTests(unittest.TestCase):
             (100, 50, b"s", b"http+I2L+I2C+I2R", b"", b"_http._tcp.gatech.edu"),
         ]
 
-        for (order, preference, flags, service, regexp, replacement) in naptrs:
+        for order, preference, flags, service, regexp, replacement in naptrs:
             rin = dns.Record_NAPTR(
                 order, preference, flags, service, regexp, replacement
             )
@@ -4860,15 +4865,12 @@ class Foo:
         """
         Call L{dns._compactRepr} to generate a string representation.
         """
-        return cast(
-            str,
-            dns._compactRepr(
-                self,
-                alwaysShow="alwaysShowField".split(),
-                fieldNames="field1 field2 alwaysShowField".split(),
-                flagNames="flagTrue flagFalse".split(),
-                sectionNames="section1 section2".split(),
-            ),
+        return dns._compactRepr(
+            self,
+            alwaysShow="alwaysShowField".split(),
+            fieldNames="field1 field2 alwaysShowField".split(),
+            flagNames="flagTrue flagFalse".split(),
+            sectionNames="section1 section2".split(),
         )
 
 

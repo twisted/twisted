@@ -30,7 +30,7 @@ def fromOptional(default: _A, optional: Optional[_A]) -> _A:
 
 def takeWhile(condition: Callable[[_A], bool], xs: Iterable[_A]) -> Iterable[_A]:
     """
-    :return: An iterable over C{xs} that stops when C{condition} returns
+    @return: An iterable over C{xs} that stops when C{condition} returns
         ``False`` based on the value of iterated C{xs}.
     """
     for x in xs:
@@ -79,10 +79,7 @@ def compose(fx: Callable[[_B], _C], fy: Callable[[_A], _B]) -> Callable[[_A], _C
 
 
 # Discard the result of an awaitable and substitute None in its place.
-#
-# Ignore the `Cannot infer type argument 1 of "compose"`
-# https://github.com/python/mypy/issues/6220
-discardResult: Callable[[Awaitable[_A]], Deferred[None]] = compose(  # type: ignore[misc]
+discardResult: Callable[[Awaitable[_A]], Deferred[None]] = compose(
     Deferred.fromCoroutine,
     partial(flip(sequence), succeed(None)),
 )
@@ -114,7 +111,7 @@ def countingCalls(f: Callable[[int], _A]) -> Callable[[], _A]:
     """
     counter = 0
 
-    def g():
+    def g() -> _A:
         nonlocal counter
         try:
             result = f(counter)

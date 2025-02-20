@@ -18,13 +18,6 @@ else:
     cryptography = _cryptography
 
 try:
-    import pyasn1 as _pyasn1  # type: ignore[import]
-except ImportError:
-    pyasn1 = None
-else:
-    pyasn1 = _pyasn1
-
-try:
     from twisted.conch.ssh import agent as _agent, keys as _keys
 except ImportError:
     keys = agent = None
@@ -51,7 +44,7 @@ class AgentTestBase(unittest.TestCase):
     """
 
     if agent is None or keys is None:
-        skip = "Cannot run without cryptography or PyASN1"
+        skip = "Cannot run without cryptography"
 
     def setUp(self):
         # wire up our client <-> server

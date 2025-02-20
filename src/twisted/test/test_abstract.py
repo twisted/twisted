@@ -17,7 +17,7 @@ class AddressTests(TestCase):
     Tests for address-related functionality.
     """
 
-    def test_decimalDotted(self):
+    def test_decimalDotted(self) -> None:
         """
         L{isIPAddress} should return C{True} for any decimal dotted
         representation of an IPv4 address.
@@ -25,7 +25,7 @@ class AddressTests(TestCase):
         self.assertTrue(isIPAddress("0.1.2.3"))
         self.assertTrue(isIPAddress("252.253.254.255"))
 
-    def test_shortDecimalDotted(self):
+    def test_shortDecimalDotted(self) -> None:
         """
         L{isIPAddress} should return C{False} for a dotted decimal
         representation with fewer or more than four octets.
@@ -35,7 +35,7 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress("0.1.2"))
         self.assertFalse(isIPAddress("0.1.2.3.4"))
 
-    def test_invalidLetters(self):
+    def test_invalidLetters(self) -> None:
         """
         L{isIPAddress} should return C{False} for any non-decimal dotted
         representation including letters.
@@ -43,7 +43,7 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress("a.2.3.4"))
         self.assertFalse(isIPAddress("1.b.3.4"))
 
-    def test_invalidPunctuation(self):
+    def test_invalidPunctuation(self) -> None:
         """
         L{isIPAddress} should return C{False} for a string containing
         strange punctuation.
@@ -53,13 +53,13 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress("1,2,3"))
         self.assertFalse(isIPAddress("1.,.3,4"))
 
-    def test_emptyString(self):
+    def test_emptyString(self) -> None:
         """
         L{isIPAddress} should return C{False} for the empty string.
         """
         self.assertFalse(isIPAddress(""))
 
-    def test_invalidNegative(self):
+    def test_invalidNegative(self) -> None:
         """
         L{isIPAddress} should return C{False} for negative decimal values.
         """
@@ -68,7 +68,7 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress("1.2.-3"))
         self.assertFalse(isIPAddress("1.2.-3.4"))
 
-    def test_invalidPositive(self):
+    def test_invalidPositive(self) -> None:
         """
         L{isIPAddress} should return C{False} for a string containing
         positive decimal values greater than 255.
@@ -79,26 +79,28 @@ class AddressTests(TestCase):
         self.assertFalse(isIPAddress("0.0.0.256"))
         self.assertFalse(isIPAddress("256.256.256.256"))
 
-    def test_unicodeAndBytes(self):
+    def test_unicodeAndBytes(self) -> None:
         """
         L{isIPAddress} evaluates ASCII-encoded bytes as well as text.
         """
-        self.assertFalse(isIPAddress(b"256.0.0.0"))
+        # we test passing bytes but don't support bytes in the type annotation
+        self.assertFalse(isIPAddress(b"256.0.0.0"))  # type: ignore[arg-type]
         self.assertFalse(isIPAddress("256.0.0.0"))
-        self.assertTrue(isIPAddress(b"252.253.254.255"))
+        self.assertTrue(isIPAddress(b"252.253.254.255"))  # type: ignore[arg-type]
         self.assertTrue(isIPAddress("252.253.254.255"))
 
-    def test_nonIPAddressFamily(self):
+    def test_nonIPAddressFamily(self) -> None:
         """
         All address families other than C{AF_INET} and C{AF_INET6} result in a
         L{ValueError} being raised.
         """
         self.assertRaises(ValueError, isIPAddress, b"anything", AF_IPX)
 
-    def test_nonASCII(self):
+    def test_nonASCII(self) -> None:
         """
         All IP addresses must be encodable as ASCII; non-ASCII should result in
         a L{False} result.
         """
-        self.assertFalse(isIPAddress(b"\xff.notascii"))
+        # we test passing bytes but don't support bytes in the type annotation
+        self.assertFalse(isIPAddress(b"\xff.notascii"))  # type: ignore[arg-type]
         self.assertFalse(isIPAddress("\u4321.notascii"))

@@ -20,7 +20,7 @@ from incremental import Version
 
 from ._deprecate import deprecatedGnomeReactor
 
-deprecatedGnomeReactor("gtk2reactor", Version("Twisted", "NEXT", 0, 0))
+deprecatedGnomeReactor("gtk2reactor", Version("Twisted", 23, 8, 0))
 
 # System Imports
 import sys
@@ -43,13 +43,13 @@ from twisted.python import runtime
 try:
     if not hasattr(sys, "frozen"):
         # Don't want to check this for py2exe
-        import pygtk  # type: ignore[import]
+        import pygtk
 
         pygtk.require("2.0")
 except (ImportError, AttributeError):
     pass  # maybe we're using pygtk before this hack existed.
 
-import gobject  # type: ignore[import]
+import gobject
 
 if not hasattr(gobject, "IO_HUP"):
     # gi.repository's legacy compatibility helper raises an AttributeError with
@@ -74,7 +74,7 @@ class Gtk2Reactor(_glibbase.GlibReactorBase):
     def __init__(self, useGtk=True):
         _gtk = None
         if useGtk is True:
-            import gtk as _gtk  # type: ignore[import]
+            import gtk as _gtk
 
         _glibbase.GlibReactorBase.__init__(self, gobject, _gtk, useGtk=useGtk)
 

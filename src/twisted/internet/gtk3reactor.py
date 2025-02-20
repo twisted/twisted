@@ -10,7 +10,7 @@ from incremental import Version
 
 from ._deprecate import deprecatedGnomeReactor
 
-deprecatedGnomeReactor("gtk3reactor", Version("Twisted", "NEXT", 0, 0))
+deprecatedGnomeReactor("gtk3reactor", Version("Twisted", 23, 8, 0))
 
 from twisted.internet import gireactor
 

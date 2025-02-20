@@ -57,12 +57,10 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
 
 class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
-
     name = b"direct-tcpip"
 
 
 class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
-
     name = b"forwarded-tcpip"
 
 

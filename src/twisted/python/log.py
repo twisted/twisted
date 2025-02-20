@@ -11,7 +11,7 @@ import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, BinaryIO, Dict, Optional, cast
 
 from zope.interface import Interface
@@ -490,7 +490,9 @@ class FileLogObserver(_GlobalStartStopObserver):
         @return: The number of seconds offset from UTC.  West is positive,
         east is negative.
         """
-        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
+        offset = datetime.fromtimestamp(when, timezone.utc).replace(
+            tzinfo=None
+        ) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
 
     def formatTime(self, when):
@@ -512,7 +514,9 @@ class FileLogObserver(_GlobalStartStopObserver):
             return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
-        when = datetime.utcfromtimestamp(when + tzOffset)
+        when = datetime.fromtimestamp(when + tzOffset, timezone.utc).replace(
+            tzinfo=None
+        )
         tzHour = abs(int(tzOffset / 60 / 60))
         tzMin = abs(int(tzOffset / 60 % 60))
         if tzOffset < 0:

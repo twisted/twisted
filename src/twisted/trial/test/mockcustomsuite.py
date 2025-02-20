@@ -12,7 +12,7 @@ from twisted.trial import runner, unittest
 
 
 class Foo(unittest.SynchronousTestCase):
-    def test_foo(self):
+    def test_foo(self) -> None:
         pass
 
 

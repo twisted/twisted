@@ -203,7 +203,6 @@ class TestConnection(connection.SSHConnection):
 
 
 class ConnectionTests(unittest.TestCase):
-
     if not cryptography:
         skip = "Cannot run without cryptography"
 

@@ -19,7 +19,7 @@ class FTPOptionsTests(TestCase):
 
     usernamePassword = (b"iamuser", b"thisispassword")
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a file with two users.
         """
@@ -28,7 +28,7 @@ class FTPOptionsTests(TestCase):
         f.setContent(b":".join(self.usernamePassword))
         self.options = Options()
 
-    def test_passwordfileDeprecation(self):
+    def test_passwordfileDeprecation(self) -> None:
         """
         The C{--password-file} option will emit a warning stating that
         said option is deprecated.
@@ -39,7 +39,7 @@ class FTPOptionsTests(TestCase):
             self.filename,
         )
 
-    def test_authAdded(self):
+    def test_authAdded(self) -> None:
         """
         The C{--auth} command-line option will add a checker to the list of
         checkers

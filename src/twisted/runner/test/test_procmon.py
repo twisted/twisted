@@ -42,7 +42,6 @@ class DummyProcess:
         usePTY=0,
         childFDs=None,
     ):
-
         self.proto = proto
 
         self._reactor = reactor

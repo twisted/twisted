@@ -537,7 +537,6 @@ class ReactorSelectionMixin:
 
 
 class ServerOptions(usage.Options, ReactorSelectionMixin):
-
     longdesc = (
         "twistd reads a twisted.application.service.Application out "
         "of a file and runs it."

@@ -79,7 +79,6 @@ class ParseError(Exception):
 
 
 class XMLParser(Protocol):
-
     state = None
     encodings = None
     filename = "<xml />"

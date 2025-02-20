@@ -10,12 +10,12 @@ class WebHtmlTests(unittest.TestCase):
     Unit tests for L{twisted.web.html}.
     """
 
-    def test_deprecation(self):
+    def test_deprecation(self) -> None:
         """
         Calls to L{twisted.web.html} members emit a deprecation warning.
         """
 
-        def assertDeprecationWarningOf(method):
+        def assertDeprecationWarningOf(method: str) -> None:
             """
             Check that a deprecation warning is present.
             """

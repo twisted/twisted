@@ -1,31 +1,44 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 """
 Test cases for formmethod module.
 """
 
+from typing import Callable, Iterable
+
+from typing_extensions import Concatenate, ParamSpec
+
 from twisted.python import formmethod
 from twisted.trial import unittest
 
+_P = ParamSpec("_P")
+
 
 class ArgumentTests(unittest.TestCase):
-    def argTest(self, argKlass, testPairs, badValues, *args, **kwargs):
+    def argTest(
+        self,
+        argKlass: Callable[Concatenate[str, _P], formmethod.Argument],
+        testPairs: Iterable[tuple[object, object]],
+        badValues: Iterable[object],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> None:
         arg = argKlass("name", *args, **kwargs)
         for val, result in testPairs:
             self.assertEqual(arg.coerce(val), result)
         for val in badValues:
             self.assertRaises(formmethod.InputError, arg.coerce, val)
 
-    def test_argument(self):
+    def test_argument(self) -> None:
         """
         Test that corce correctly raises NotImplementedError.
         """
         arg = formmethod.Argument("name")
         self.assertRaises(NotImplementedError, arg.coerce, "")
 
-    def testString(self):
+    def testString(self) -> None:
         self.argTest(formmethod.String, [("a", "a"), (1, "1"), ("", "")], ())
         self.argTest(
             formmethod.String, [("ab", "ab"), ("abc", "abc")], ("2", ""), min=2
@@ -41,7 +54,7 @@ class ArgumentTests(unittest.TestCase):
             max=3,
         )
 
-    def testInt(self):
+    def testInt(self) -> None:
         self.argTest(
             formmethod.Integer, [("3", 3), ("-2", -2), ("", None)], ("q", "2.3")
         )
@@ -49,7 +62,7 @@ class ArgumentTests(unittest.TestCase):
             formmethod.Integer, [("3", 3), ("-2", -2)], ("q", "2.3", ""), allowNone=0
         )
 
-    def testFloat(self):
+    def testFloat(self) -> None:
         self.argTest(
             formmethod.Float, [("3", 3.0), ("-2.3", -2.3), ("", None)], ("q", "2.3z")
         )
@@ -60,7 +73,7 @@ class ArgumentTests(unittest.TestCase):
             allowNone=0,
         )
 
-    def testChoice(self):
+    def testChoice(self) -> None:
         choices = [("a", "apple", "an apple"), ("b", "banana", "ook")]
         self.argTest(
             formmethod.Choice,
@@ -69,7 +82,7 @@ class ArgumentTests(unittest.TestCase):
             choices=choices,
         )
 
-    def testFlags(self):
+    def testFlags(self) -> None:
         flags = [("a", "apple", "an apple"), ("b", "banana", "ook")]
         self.argTest(
             formmethod.Flags,
@@ -78,11 +91,11 @@ class ArgumentTests(unittest.TestCase):
             flags=flags,
         )
 
-    def testBoolean(self):
+    def testBoolean(self) -> None:
         tests = [("yes", 1), ("", 0), ("False", 0), ("no", 0)]
         self.argTest(formmethod.Boolean, tests, ())
 
-    def test_file(self):
+    def test_file(self) -> None:
         """
         Test the correctness of the coerce function.
         """
@@ -92,7 +105,7 @@ class ArgumentTests(unittest.TestCase):
         arg2 = formmethod.File("name")
         self.assertIsNone(arg2.coerce(None))
 
-    def testDate(self):
+    def testDate(self) -> None:
         goodTests = {
             ("2002", "12", "21"): (2002, 12, 21),
             ("1996", "2", "29"): (1996, 2, 29),
@@ -108,12 +121,12 @@ class ArgumentTests(unittest.TestCase):
         ]
         self.argTest(formmethod.Date, goodTests, badTests)
 
-    def testRangedInteger(self):
+    def testRangedInteger(self) -> None:
         goodTests = {"0": 0, "12": 12, "3": 3}.items()
         badTests = ["-1", "x", "13", "-2000", "3.4"]
         self.argTest(formmethod.IntegerRange, goodTests, badTests, 0, 12)
 
-    def testVerifiedPassword(self):
+    def testVerifiedPassword(self) -> None:
         goodTests = {("foo", "foo"): "foo", ("ab", "ab"): "ab"}.items()
         badTests = [
             ("ab", "a"),

@@ -5,7 +5,6 @@ from twisted.python import failure
 
 
 class FortuneQuoter(protocol.Protocol):
-
     fortune = "/usr/games/fortune"
 
     def connectionMade(self):

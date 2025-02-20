@@ -47,7 +47,7 @@ class TimeTestsBuilder(ReactorBuilder):
             )
 
         # Pick a pretty big delay.
-        delayedCall = reactor.callLater(2 ** 128 + 1, lambda: None)
+        delayedCall = reactor.callLater(2**128 + 1, lambda: None)
 
         def stop():
             msg("Stopping the reactor")
@@ -93,7 +93,7 @@ class GlibTimeTestsBuilder(ReactorBuilder):
         call scheduled from a C{gobject.timeout_add}
         call is run on time.
         """
-        from gi.repository import GObject  # type:ignore[import]
+        from gi.repository import GObject
 
         reactor = self.buildReactor()
 

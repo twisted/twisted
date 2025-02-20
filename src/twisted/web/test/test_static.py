@@ -807,7 +807,7 @@ class StaticMakeProducerTests(TestCase):
             contentType = contentHeaders[b"content-type"]
             self.assertNotIdentical(
                 None,
-                re.match(br'multipart/byteranges; boundary="[^"]*"\Z', contentType),
+                re.match(rb'multipart/byteranges; boundary="[^"]*"\Z', contentType),
             )
             # Content-encoding is not set in the response to a multiple range
             # response, which is a bit wussy but works well enough with the way

@@ -237,7 +237,7 @@ class FileAuthority(common.ResolverBase):
                     self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
                 )
             ]
-            for (k, r) in self.records.items():
+            for k, r in self.records.items():
                 for rec in r:
                     if rec.ttl is not None:
                         ttl = rec.ttl

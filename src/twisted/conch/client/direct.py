@@ -1,51 +1,83 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
 
 from twisted.conch import error
 from twisted.conch.ssh import transport
 from twisted.internet import defer, protocol, reactor
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.internet.interfaces import (
+    IAddress,
+    IConnector,
+    IListeningPort,
+    IReactorTCP,
+)
+from twisted.python.failure import Failure
+
+if TYPE_CHECKING:
+    from twisted.conch.client.options import ConchOptions
+    from twisted.conch.ssh.userauth import SSHUserAuthClient
 
 
 class SSHClientFactory(protocol.ClientFactory):
-    def __init__(self, d, options, verifyHostKey, userAuthObject):
-        self.d = d
+    def __init__(
+        self,
+        d: Deferred[None],
+        options: ConchOptions,
+        verifyHostKey: _VHK,
+        userAuthObject: SSHUserAuthClient,
+    ) -> None:
+        self.d: Deferred[None] | None = d
         self.options = options
         self.verifyHostKey = verifyHostKey
         self.userAuthObject = userAuthObject
 
-    def clientConnectionLost(self, connector, reason):
+    def clientConnectionLost(self, connector: IConnector, reason: Failure) -> None:
         if self.options["reconnect"]:
             connector.connect()
 
-    def clientConnectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector: IConnector, reason: Failure) -> None:
         if self.d is None:
             return
         d, self.d = self.d, None
         d.errback(reason)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress) -> SSHClientTransport:
         trans = SSHClientTransport(self)
         if self.options["ciphers"]:
             trans.supportedCiphers = self.options["ciphers"]
         if self.options["macs"]:
             trans.supportedMACs = self.options["macs"]
         if self.options["compress"]:
-            trans.supportedCompressions[0:1] = ["zlib"]
+            trans.supportedCompressions[0:1] = [b"zlib"]
         if self.options["host-key-algorithms"]:
             trans.supportedPublicKeys = self.options["host-key-algorithms"]
         return trans
 
 
 class SSHClientTransport(transport.SSHClientTransport):
-    def __init__(self, factory):
-        self.factory = factory
-        self.unixServer = None
+    # pre-mypy LSP violation
+    factory: SSHClientFactory  # type:ignore[assignment]
 
-    def connectionLost(self, reason):
+    def __init__(self, factory: SSHClientFactory) -> None:
+        self.factory = factory
+        self.unixServer: None | IListeningPort = None
+
+    def connectionLost(self, reason: Failure | None = None) -> None:
         if self.unixServer:
-            d = self.unixServer.stopListening()
-            self.unixServer = None
+            # The C{unixServer} attribute is untested, and it's not entirely
+            # clear that it does anything at all. It appears to be a vestigial
+            # attempt to support something like OpenSSH's ControlMaster client
+            # option; at some point we should either document and test it, or
+            # remove it.
+
+            # https://github.com/twisted/twisted/issues/12418
+            d = maybeDeferred(self.unixServer.stopListening)  # pragma: no cover
+            self.unixServer = None  # pragma: no cover
         else:
             d = defer.succeed(None)
         d.addCallback(
@@ -75,9 +107,15 @@ class SSHClientTransport(transport.SSHClientTransport):
         if alwaysDisplay:  # XXX what should happen here?
             print(message)
 
-    def verifyHostKey(self, pubKey, fingerprint):
+    def verifyHostKey(self, pubKey: bytes, fingerprint: str) -> Deferred[bool]:
+        transport = self.transport
+        assert transport is not None
+        peer = transport.getPeer()
+        assert isinstance(
+            peer, (IPv4Address, IPv6Address)
+        ), "Address must have a host to verify against."
         return self.factory.verifyHostKey(
-            self, self.transport.getPeer().host, pubKey, fingerprint
+            self, peer.host.encode("utf-8"), pubKey, fingerprint
         )
 
     def setService(self, service):
@@ -91,8 +129,17 @@ class SSHClientTransport(transport.SSHClientTransport):
         self.requestService(self.factory.userAuthObject)
 
 
-def connect(host, port, options, verifyHostKey, userAuthObject):
-    d = defer.Deferred()
+_VHK = Callable[[SSHClientTransport, bytes, bytes, str], Deferred[bool]]
+
+
+def connect(
+    host: str,
+    port: int,
+    options: ConchOptions,
+    verifyHostKey: _VHK,
+    userAuthObject: SSHUserAuthClient,
+) -> Deferred[None]:
+    d: Deferred[None] = defer.Deferred()
     factory = SSHClientFactory(d, options, verifyHostKey, userAuthObject)
-    reactor.connectTCP(host, port, factory)
+    IReactorTCP(reactor).connectTCP(host, port, factory)
     return d

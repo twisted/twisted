@@ -43,7 +43,6 @@ These have been copied from the Yapps runtime module.
 
 exec(
     r'''
-from __future__ import print_function
 import sys, re
 
 MIN_WINDOW=4096

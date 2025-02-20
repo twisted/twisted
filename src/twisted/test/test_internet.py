@@ -1033,7 +1033,6 @@ class ResolveTests(TestCase):
         # started, fail if it does not complete in a timely fashion.
         helperPath = os.path.abspath(self.mktemp())
         with open(helperPath, "w") as helperFile:
-
             # Eeueuuggg
             reactorName = reactor.__module__
 

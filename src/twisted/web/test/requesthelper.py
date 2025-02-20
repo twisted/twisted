@@ -118,6 +118,10 @@ class DummyChannel:
         pass
 
     def writeHeaders(self, version, code, reason, headers):
+        if isinstance(headers, Headers):
+            headers = [
+                (k, v) for (k, values) in headers.getAllRawHeaders() for v in values
+            ]
         response_line = version + b" " + code + b" " + reason + b"\r\n"
         headerSequence = [response_line]
         headerSequence.extend(name + b": " + value + b"\r\n" for name, value in headers)

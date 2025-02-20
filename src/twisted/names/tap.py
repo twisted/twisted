@@ -141,7 +141,7 @@ def makeService(config):
     p = dns.DNSDatagramProtocol(f)
     f.noisy = 0
     ret = service.MultiService()
-    for (klass, arg) in [(internet.TCPServer, f), (internet.UDPServer, p)]:
+    for klass, arg in [(internet.TCPServer, f), (internet.UDPServer, p)]:
         s = klass(config["port"], arg, interface=config["interface"])
         s.setServiceParent(ret)
     for svc in config.svcs:

@@ -147,7 +147,7 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     _writeScheduled = None
     _writeDisconnecting = False
     _writeDisconnected = False
-    writeBufferSize = 2 ** 2 ** 2 ** 2
+    writeBufferSize = 2**2**2**2
 
     def loseWriteConnection(self):
         self._writeDisconnecting = True

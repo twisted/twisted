@@ -11,7 +11,7 @@ __all__ = [
     "IsSequenceOf",
 ]
 
-from typing import List, Sequence, Tuple, TypeVar
+from typing import Any, List, Sequence, Tuple, TypeVar
 
 from hamcrest import (
     contains_exactly,
@@ -46,17 +46,17 @@ class Semigroup(Protocol[T]):
         """
 
 
-S = TypeVar("S", bound=Semigroup)
+S = TypeVar("S", bound=Semigroup[Any])
 
 
 def matches_result(
-    successes: Matcher = equal_to(0),
-    errors: Matcher = has_length(0),
-    failures: Matcher = has_length(0),
-    skips: Matcher = has_length(0),
-    expectedFailures: Matcher = has_length(0),
-    unexpectedSuccesses: Matcher = has_length(0),
-) -> Matcher:
+    successes: Matcher[Any] = equal_to(0),
+    errors: Matcher[Any] = has_length(0),
+    failures: Matcher[Any] = has_length(0),
+    skips: Matcher[Any] = has_length(0),
+    expectedFailures: Matcher[Any] = has_length(0),
+    unexpectedSuccesses: Matcher[Any] = has_length(0),
+) -> Matcher[Any]:
     """
     Match a L{TestCase} instances with matching attributes.
     """
@@ -77,8 +77,8 @@ class HasSum(BaseMatcher[Sequence[S]]):
     Match a sequence the elements of which sum to a value matched by
     another matcher.
 
-    :ivar sumMatcher: The matcher which must match the sum.
-    :ivar zero: The zero value for the matched type.
+    @ivar sumMatcher: The matcher which must match the sum.
+    @ivar zero: The zero value for the matched type.
     """
 
     def __init__(self, sumMatcher: Matcher[S], zero: S) -> None:
@@ -122,7 +122,7 @@ class IsSequenceOf(BaseMatcher[Sequence[T]]):
     """
     Match a sequence where every element is matched by another matcher.
 
-    :ivar elementMatcher: The matcher which must match every element of the
+    @ivar elementMatcher: The matcher which must match every element of the
         sequence.
     """
 

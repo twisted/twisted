@@ -3,7 +3,6 @@ from twisted.mail.smtp import sendmail
 
 
 def main(reactor):
-
     d = sendmail(
         "smtp.gmail.com",
         "alice@gmail.com",

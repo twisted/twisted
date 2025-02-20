@@ -23,7 +23,7 @@ from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
-from twisted.web import http
+from twisted.web import server
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.test.test_web import DummyChannel
@@ -715,7 +715,11 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to the
         application contains the address of the client making the request.
         """
-        d = self.render("GET", "1.1", [], [""])
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "192.168.1.1"))
 
         return d
@@ -732,6 +736,20 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "::1"))
+
+        return d
+
+    def test_remotePort(self):
+        """
+        The C{'REMOTE_PORT'} key of the C{environ} C{dict} passed to the
+        application contains the port of the client making the request.
+        """
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
+        d.addCallback(self.environKeyEqual("REMOTE_PORT", "12344"))
 
         return d
 
@@ -806,6 +824,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'wsgi.url_scheme'} key of the C{environ} C{dict} passed to the
         application has the request URL scheme.
         """
+
         # XXX Does this need to be different if the request is for an absolute
         # URL?
         def channelFactory():
@@ -1256,7 +1275,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         included in the response.
         """
         # Make the Date header value deterministic
-        self.patch(http, "datetimeToString", lambda: "Tuesday")
+        self.patch(server, "datetimeToString", lambda: "Tuesday")
 
         channel = DummyChannel()
 

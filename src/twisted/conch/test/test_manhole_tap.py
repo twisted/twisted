@@ -15,9 +15,8 @@ from twisted.python.reflect import requireModule
 from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
-pyasn1 = requireModule("pyasn1")
 
-if cryptography and pyasn1:
+if cryptography:
     from twisted.conch import manhole_ssh, manhole_tap
 
 
@@ -29,12 +28,9 @@ class MakeServiceTests(TestCase):
     if not cryptography:
         skip = "can't run without cryptography"
 
-    if not pyasn1:
-        skip = "Cannot run without PyASN1"
-
     usernamePassword = (b"iamuser", b"thisispassword")
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a passwd-like file with a user.
         """
@@ -43,7 +39,7 @@ class MakeServiceTests(TestCase):
             f.write(b":".join(self.usernamePassword))
         self.options = manhole_tap.Options()
 
-    def test_requiresPort(self):
+    def test_requiresPort(self) -> None:
         """
         L{manhole_tap.makeService} requires either 'telnetPort' or 'sshPort' to
         be given.
@@ -56,7 +52,7 @@ class MakeServiceTests(TestCase):
             ("At least one of --telnetPort " "and --sshPort must be specified"),
         )
 
-    def test_telnetPort(self):
+    def test_telnetPort(self) -> None:
         """
         L{manhole_tap.makeService} will make a telnet service on the port
         defined by C{--telnetPort}. It will not make a SSH service.
@@ -71,7 +67,7 @@ class MakeServiceTests(TestCase):
         )
         self.assertEqual(service.services[0].endpoint._port, 222)
 
-    def test_sshPort(self):
+    def test_sshPort(self) -> None:
         """
         L{manhole_tap.makeService} will make a SSH service on the port
         defined by C{--sshPort}. It will not make a telnet service.
@@ -84,7 +80,7 @@ class MakeServiceTests(TestCase):
                 "--sshKeyDir",
                 self.mktemp(),
                 "--sshKeySize",
-                "512",
+                "1024",
                 "--sshPort",
                 "tcp:223",
             ]
@@ -96,7 +92,7 @@ class MakeServiceTests(TestCase):
         self.assertIsInstance(service.services[0].factory, manhole_ssh.ConchFactory)
         self.assertEqual(service.services[0].endpoint._port, 223)
 
-    def test_passwd(self):
+    def test_passwd(self) -> None:
         """
         The C{--passwd} command-line option will load a passwd-like file.
         """

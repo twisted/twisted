@@ -5,15 +5,18 @@
 UDP support for IOCP reactor
 """
 
+from __future__ import annotations
+
 import errno
 import socket
 import struct
 import warnings
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from zope.interface import implementer
 
 from twisted.internet import address, defer, error, interfaces
+from twisted.internet._multicast import MulticastMixin
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
 from twisted.internet.iocpreactor.const import (
@@ -22,7 +25,11 @@ from twisted.internet.iocpreactor.const import (
     ERROR_PORT_UNREACHABLE,
 )
 from twisted.internet.iocpreactor.interfaces import IReadWriteHandle
-from twisted.python import failure, log
+from twisted.internet.protocol import AbstractDatagramProtocol
+from twisted.python import log
+
+if TYPE_CHECKING:
+    from twisted.internet.iocpreactor.reactor import IOCPReactor
 
 
 @implementer(
@@ -39,6 +46,7 @@ class Port(abstract.FileHandle):
         whether this port is listening on an IPv4 address or an IPv6 address.
     """
 
+    reactor: IOCPReactor
     addressFamily = socket.AF_INET
     socketType = socket.SOCK_DGRAM
     dynamicReadBuffers = False
@@ -47,7 +55,14 @@ class Port(abstract.FileHandle):
     # value when we are actually listening.
     _realPortNumber: Optional[int] = None
 
-    def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
+    def __init__(
+        self,
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IOCPReactor | None = None,
+    ) -> None:
         """
         Initialize with a numeric port to listen on.
         """
@@ -102,7 +117,7 @@ class Port(abstract.FileHandle):
         self._bindSocket()
         self._connectToProtocol()
 
-    def createSocket(self):
+    def createSocket(self) -> socket.socket:
         return self.reactor.createSocket(self.addressFamily, self.socketType)
 
     def _bindSocket(self):
@@ -339,68 +354,6 @@ class Port(abstract.FileHandle):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
-class MulticastMixin:
-    """
-    Implement multicast functionality.
-    """
-
-    def getOutgoingInterface(self):
-        i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-        return socket.inet_ntoa(struct.pack("@i", i))
-
-    def setOutgoingInterface(self, addr):
-        """
-        Returns Deferred of success.
-        """
-        return self.reactor.resolve(addr).addCallback(self._setInterface)
-
-    def _setInterface(self, addr):
-        i = socket.inet_aton(addr)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
-        return 1
-
-    def getLoopbackMode(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
-
-    def setLoopbackMode(self, mode):
-        mode = struct.pack("b", bool(mode))
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
-
-    def getTTL(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
-
-    def setTTL(self, ttl):
-        ttl = struct.pack("B", ttl)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-
-    def joinGroup(self, addr, interface=""):
-        """
-        Join a multicast group. Returns Deferred of success.
-        """
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
-
-    def _joinAddr1(self, addr, interface, join):
-        return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
-
-    def _joinAddr2(self, interface, addr, join):
-        addr = socket.inet_aton(addr)
-        interface = socket.inet_aton(interface)
-        if join:
-            cmd = socket.IP_ADD_MEMBERSHIP
-        else:
-            cmd = socket.IP_DROP_MEMBERSHIP
-        try:
-            self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except OSError as e:
-            return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
-
-    def leaveGroup(self, addr, interface=""):
-        """
-        Leave multicast group, return Deferred of success.
-        """
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
-
-
 @implementer(interfaces.IMulticastTransport)
 class MulticastPort(MulticastMixin, Port):
     """
@@ -409,17 +362,17 @@ class MulticastPort(MulticastMixin, Port):
 
     def __init__(
         self,
-        port,
-        proto,
-        interface="",
-        maxPacketSize=8192,
-        reactor=None,
-        listenMultiple=False,
-    ):
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IOCPReactor | None = None,
+        listenMultiple: bool = False,
+    ) -> None:
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 
-    def createSocket(self):
+    def createSocket(self) -> socket.socket:
         skt = Port.createSocket(self)
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

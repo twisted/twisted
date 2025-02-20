@@ -20,7 +20,7 @@ class UsernamePasswordTests(TestCase):
     Tests for L{UsernamePassword}.
     """
 
-    def test_initialisation(self):
+    def test_initialisation(self) -> None:
         """
         The initialisation of L{UsernamePassword} will set C{username} and
         C{password} on it.
@@ -29,7 +29,7 @@ class UsernamePasswordTests(TestCase):
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.password, b"bar")
 
-    def test_correctPassword(self):
+    def test_correctPassword(self) -> None:
         """
         Calling C{checkPassword} on a L{UsernamePassword} will return L{True}
         when the password given is the password on the object.
@@ -37,7 +37,7 @@ class UsernamePasswordTests(TestCase):
         creds = UsernamePassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
 
-    def test_wrongPassword(self):
+    def test_wrongPassword(self) -> None:
         """
         Calling C{checkPassword} on a L{UsernamePassword} will return L{False}
         when the password given is NOT the password on the object.
@@ -45,7 +45,7 @@ class UsernamePasswordTests(TestCase):
         creds = UsernamePassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{UsernamePassword} implements L{IUsernamePassword}.
         """
@@ -57,7 +57,7 @@ class UsernameHashedPasswordTests(TestCase):
     Tests for L{UsernameHashedPassword}.
     """
 
-    def test_initialisation(self):
+    def test_initialisation(self) -> None:
         """
         The initialisation of L{UsernameHashedPassword} will set C{username}
         and C{hashed} on it.
@@ -69,7 +69,7 @@ class UsernameHashedPasswordTests(TestCase):
         self.assertEqual(creds.username, b"foo")
         self.assertEqual(creds.hashed, b"bar")
 
-    def test_correctPassword(self):
+    def test_correctPassword(self) -> None:
         """
         Calling C{checkPassword} on a L{UsernameHashedPassword} will return
         L{True} when the password given is the password on the object.
@@ -80,7 +80,7 @@ class UsernameHashedPasswordTests(TestCase):
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertTrue(creds.checkPassword(b"pass"))
 
-    def test_wrongPassword(self):
+    def test_wrongPassword(self) -> None:
         """
         Calling C{checkPassword} on a L{UsernameHashedPassword} will return
         L{False} when the password given is NOT the password on the object.
@@ -91,7 +91,7 @@ class UsernameHashedPasswordTests(TestCase):
         creds = UsernameHashedPassword(b"user", b"pass")
         self.assertFalse(creds.checkPassword(b"someotherpass"))
 
-    def test_interface(self):
+    def test_interface(self) -> None:
         """
         L{UsernameHashedPassword} implements L{IUsernameHashedPassword}.
         """

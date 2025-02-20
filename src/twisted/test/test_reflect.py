@@ -360,7 +360,6 @@ class LookupsTests(TestCase):
 
 
 class Breakable:
-
     breakRepr = False
     breakStr = False
 

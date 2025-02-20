@@ -1,1 +1,0 @@
-Fixes deprecation warnings raised by importing deprecated code from twisted or stdlib.

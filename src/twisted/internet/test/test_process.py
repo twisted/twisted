@@ -10,6 +10,7 @@ Tests for implementations of L{IReactorProcess}.
 
 
 import io
+import json
 import os
 import signal
 import subprocess
@@ -29,7 +30,8 @@ from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath, _asFilesystemBytes
 from twisted.python.log import err, msg
 from twisted.python.runtime import platform
-from twisted.trial.unittest import TestCase
+from twisted.test.test_process import Accumulator
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable)._asBytesPath()
@@ -39,21 +41,35 @@ _uidgidSkipReason = ""
 properEnv = dict(os.environ)
 properEnv["PYTHONPATH"] = os.pathsep.join(sys.path)
 try:
-    import resource as _resource
-
     from twisted.internet import process as _process
 
     if os.getuid() != 0:
         _uidgidSkip = True
         _uidgidSkipReason = "Cannot change UID/GID except as root"
 except ImportError:
-    resource = None
     process = None
     _uidgidSkip = True
     _uidgidSkipReason = "Cannot change UID/GID on Windows"
 else:
-    resource = _resource
     process = _process
+    from twisted.internet.process import _getFileActions
+
+
+def _getRealMaxOpenFiles() -> int:
+    from resource import RLIMIT_NOFILE, getrlimit
+
+    potentialLimits = [getrlimit(RLIMIT_NOFILE)[0], os.sysconf("SC_OPEN_MAX")]
+    if platform.isMacOSX():
+        # The OPEN_MAX macro is still used on macOS.  Sometimes, you can open
+        # file descriptors that go all the way up to SC_OPEN_MAX or
+        # RLIMIT_NOFILE (which *should* be the same) but OPEN_MAX still trumps
+        # in some circumstances.  In particular, when using the posix_spawn
+        # family of functions, file_actions on files greater than OPEN_MAX
+        # return a EBADF errno.  Since this macro is deprecated on every other
+        # UNIX, it's not exposed by Python, since you're really supposed to get
+        # these values somewhere else...
+        potentialLimits.append(0x2800)
+    return min(potentialLimits)
 
 
 def onlyOnPOSIX(testMethod):
@@ -64,7 +80,7 @@ def onlyOnPOSIX(testMethod):
 
     @return: the C{testMethod} argument.
     """
-    if resource is None:
+    if os.name != "posix":
         testMethod.skip = "Test only applies to POSIX platforms."
     return testMethod
 
@@ -99,6 +115,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
     """
 
     requiredInterfaces = [IReactorProcess]
+    usePTY: bool
 
     def test_processTransportInterface(self):
         """
@@ -381,14 +398,6 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         self.assertEqual(result, [b"Foo" + os.linesep.encode("ascii")])
 
     @skipIf(platform.isWindows(), "Test only applies to POSIX platforms.")
-    # If you see this comment and are running on macOS, try to see if this pass on your environment.
-    # Only run this test on Linux and macOS local tests and Linux CI platforms.
-    # This should be used for POSIX tests that are expected to pass on macOS but which fail due to lack of macOS developers.
-    # We still want to run it on local development macOS environments to help developers discover and fix this issue.
-    @skipIf(
-        platform.isMacOSX() and os.environ.get("CI", "").lower() == "true",
-        "Skipped on macOS CI env.",
-    )
     def test_openFileDescriptors(self):
         """
         Processes spawned with spawnProcess() close all extraneous file
@@ -431,7 +440,8 @@ sys.stdout.flush()"""
         # might at least hypothetically select.)
 
         fudgeFactor = 17
-        unlikelyFD = resource.getrlimit(resource.RLIMIT_NOFILE)[0] - fudgeFactor
+        hardResourceLimit = _getRealMaxOpenFiles()
+        unlikelyFD = hardResourceLimit - fudgeFactor
 
         os.dup2(w, unlikelyFD)
         self.addCleanup(os.close, unlikelyFD)
@@ -487,17 +497,28 @@ sys.stdout.flush()"""
         self.patch(sys, "getfilesystemencoding", lambda: "ascii")
 
         reactor = self.buildReactor()
+
+        # execvpe() is not called unless posix_spawn is unavailable
+        reactor._neverUseSpawn = True
         output = io.BytesIO()
+
+        # if we're using a PTY, we want stdout (since they're the same in that
+        # specific case); normally it's stderr.
+        expectedFD = 1 if self.usePTY else 2
 
         @reactor.callWhenRunning
         def whenRunning():
             class TracebackCatcher(ProcessProtocol):
-                errReceived = output.write
+                def childDataReceived(self, child, data):
+                    if child == expectedFD:
+                        output.write(data)
 
                 def processEnded(self, reason):
                     reactor.stop()
 
-            reactor.spawnProcess(TracebackCatcher(), pyExe, [pyExe, b"-c", b""])
+            reactor.spawnProcess(
+                TracebackCatcher(), pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
 
         self.runReactor(reactor, timeout=30)
         self.assertIn("\N{SNOWMAN}".encode(), output.getvalue())
@@ -815,10 +836,13 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         evaluate the script.
         """
         shebangOutput = b"this is the shebang output"
-
+        # On Windows on Python 3.13, sys.executable seems to result in some
+        # weird output, so try the original executable, if any, a virtualenv is
+        # based on.
+        executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(pyExe.decode("ascii")),
+                "#!{}".format(executable),
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
@@ -875,7 +899,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         """
         us = b"twisted.internet.test.process_cli"
 
-        args = [b"hello", b'"', b" \t|<>^&", br'"\\"hello\\"', br'"foo\ bar baz\""']
+        args = [b"hello", b'"', b" \t|<>^&", rb'"\\"hello\\"', rb'"foo\ bar baz\""']
         # Ensure that all non-NUL characters can be passed too.
         allChars = "".join(map(chr, range(1, 255)))
         if isinstance(allChars, str):
@@ -980,6 +1004,136 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         hamcrest.assert_that(
             results,
             hamcrest.equal_to(["process already removed as desired"]),
+        )
+
+    def checkSpawnProcessEnvironment(self, spawnKwargs, expectedEnv, usePosixSpawnp):
+        """
+        Shared code for testing the environment variables
+        present in the spawned process.
+
+        The spawned process serializes its environ to stderr or stdout (depending on usePTY)
+        which is checked against os.environ of the calling process.
+        """
+        p = Accumulator()
+        d = p.endedDeferred = Deferred()
+
+        reactor = self.buildReactor()
+        reactor._neverUseSpawn = not usePosixSpawnp
+
+        reactor.callWhenRunning(
+            reactor.spawnProcess,
+            p,
+            pyExe,
+            [
+                pyExe,
+                b"-c",
+                networkString(
+                    "import os, sys, json; "
+                    "env = dict(os.environ); "
+                    "sys.stderr.write(json.dumps(env))"
+                ),
+            ],
+            usePTY=self.usePTY,
+            **spawnKwargs,
+        )
+
+        def shutdown(ign):
+            reactor.stop()
+
+        d.addBoth(shutdown)
+
+        self.runReactor(reactor)
+
+        # Subprocess might get COLUMNS and LINES added for some reason in 3.13
+        # or later. LC_CTYPE is set by python, see
+        # https://peps.python.org/pep-0538/.
+        expectedExcess = {"COLUMNS", "LINES", "LC_CTYPE", "__CF_USER_TEXT_ENCODING"}
+        for var in expectedExcess:
+            expectedEnv.pop(var, None)
+
+        resultEnv = json.loads(
+            p.outF.getvalue() if self.usePTY else p.errF.getvalue()
+        ).items()
+        self.assertGreaterEqual(resultEnv, expectedEnv.items())
+        resultExcess = {pair[0] for pair in resultEnv - expectedEnv.items()}
+        self.assertGreaterEqual(expectedExcess, resultExcess)
+
+    def checkSpawnProcessEnvironmentWithPosixSpawnp(self, spawnKwargs, expectedEnv):
+        return self.checkSpawnProcessEnvironment(
+            spawnKwargs, expectedEnv, usePosixSpawnp=True
+        )
+
+    def checkSpawnProcessEnvironmentWithFork(self, spawnKwargs, expectedEnv):
+        return self.checkSpawnProcessEnvironment(
+            spawnKwargs, expectedEnv, usePosixSpawnp=False
+        )
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvNotSet(self):
+        """
+        An empty environment is passed to the spawned process, when the default value of the C{env}
+        is used. That is, when the C{env} argument is not explicitly set.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp({}, {})
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvNotSet(self):
+        """
+        An empty environment is passed to the spawned process, when the default value of the C{env}
+        is used. That is, when the C{env} argument is not explicitly set.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork({}, {})
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvNone(self):
+        """
+        The parent process environment is passed to the spawned process, when C{env} is set to
+        C{None}.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp(
+            {"env": None}, os.environ
+        )
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvNone(self):
+        """
+        The parent process environment is passed to the spawned process, when C{env} is set to
+        C{None}.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork({"env": None}, os.environ)
+
+    @onlyOnPOSIX
+    def test_environmentPosixSpawnpEnvCustom(self):
+        """
+        The user-specified environment without extra variables from parent process is passed to the
+        spawned process, when C{env} is set to a dictionary.
+
+        In this case posix_spawnp is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithPosixSpawnp(
+            {"env": {"MYENV1": "myvalue1"}},
+            {"MYENV1": "myvalue1"},
+        )
+
+    @onlyOnPOSIX
+    def test_environmentForkEnvCustom(self):
+        """
+        The user-specified environment without extra variables from parent process is passed to the
+        spawned process, when C{env} is set to a dictionary.
+
+        In this case fork+execvpe is used as the backend for spawning processes.
+        """
+        return self.checkSpawnProcessEnvironmentWithFork(
+            {"env": {"MYENV1": "myvalue1"}},
+            {"MYENV1": "myvalue1"},
         )
 
 
@@ -1090,4 +1244,98 @@ class ReapingNonePidsLogsProperly(TestCase):
             str(error.value),
             self.expected_message,
             "Wrong error message logged",
+        )
+
+
+CLOSE = 9999
+DUP2 = 10101
+
+
+@onlyOnPOSIX
+class GetFileActionsTests(SynchronousTestCase):
+    """
+    Tests to make sure that the file actions computed for posix_spawn are
+    correct.
+    """
+
+    def test_nothing(self) -> None:
+        """
+        If there are no open FDs and no requested child FDs, there's nothing to
+        do.
+        """
+        self.assertEqual(_getFileActions([], {}, CLOSE, DUP2), [])
+
+    def test_closeNoCloexec(self) -> None:
+        """
+        If a file descriptor is not requested but it is not close-on-exec, it
+        should be closed.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {}, CLOSE, DUP2), [(CLOSE, 0)])
+
+    def test_closeWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is not requested, no
+        action should be taken.
+        """
+        self.assertEqual(_getFileActions([(0, True)], {}, CLOSE, DUP2), [])
+
+    def test_moveWithCloexec(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it is moved, then there should be a dup2 but no close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {3: 0}, CLOSE, DUP2), [(DUP2, 0, 3)]
+        )
+
+    def test_moveNoCloexec(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it is moved, then there
+        should be a dup2 followed by a close.
+        """
+        self.assertEqual(
+            _getFileActions([(0, False)], {3: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 3), (CLOSE, 0)],
+        )
+
+    def test_stayPut(self) -> None:
+        """
+        If a file descriptor is not close-on-exec and it's left in the same
+        place, then there should be no actions taken.
+        """
+        self.assertEqual(_getFileActions([(0, False)], {0: 0}, CLOSE, DUP2), [])
+
+    def test_cloexecStayPut(self) -> None:
+        """
+        If a file descriptor is close-on-exec and it's left in the same place,
+        then we need to DUP2 it elsewhere, close the original, then DUP2 it
+        back so it doesn't get closed by the implicit exec at the end of
+        posix_spawn's file actions.
+        """
+        self.assertEqual(
+            _getFileActions([(0, True)], {0: 0}, CLOSE, DUP2),
+            [(DUP2, 0, 1), (DUP2, 1, 0), (CLOSE, 1)],
+        )
+
+    def test_inheritableConflict(self) -> None:
+        """
+        If our file descriptor mapping requests that file descriptors change
+        places, we must DUP2 them to a new location before DUP2ing them back.
+        """
+        self.assertEqual(
+            _getFileActions(
+                [(0, False), (1, False)],
+                {
+                    0: 1,
+                    1: 0,
+                },
+                CLOSE,
+                DUP2,
+            ),
+            [
+                (DUP2, 0, 2),  # we're working on the desired fd 0 for the
+                # child, so we are about to overwrite 0.
+                (DUP2, 1, 0),  # move 1 to 0, also closing 0
+                (DUP2, 2, 1),  # move 2 to 1, closing previous 1
+                (CLOSE, 2),  # done with 2
+            ],
         )

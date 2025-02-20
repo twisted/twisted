@@ -8,6 +8,628 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 24.11.0 (2024-12-02)
+============================
+
+There are no changes since 24.11.0rc2.
+
+In comparison to 24.11.0rc1, this release includes and update to do the PyPI release using the trusted publisher functionality of PyPI.
+
+
+Features
+--------
+
+- Twisted's implementations of twisted.internet.interfaces.IReactorMulticast now accept IPv6 literals and allow for IPv6 multicast. (#6597)
+- TCP throughput when sending data is slightly faster. (#12334)
+
+
+Bugfixes
+--------
+
+- twisted.internet.endpoints.clientFromString can handle "tls:" endpoints with default `bindAddress`.
+  This was a regression introduced in 24.10.0. (#12350)
+- HTTP server can handle listening on filesystem UNIX sockets.
+  This was a regression introduced in 24.10.0. (#12365)
+- twisted.internet.tcp.Connection.setTcpNoDelay was updated to fix a potential failure when setting TCP_NODELAY on macOS. (#12372)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.python.constants, deprecated since 16.5.0, has been removed. (#12361)
+
+
+Misc
+----
+
+- #12354, #12355, #12356, #12357, #12367, #11869, #12377
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+No significant changes.
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.imap.IMAPServer.arg_fetchatt can now detect that a IMAP partial request has been made that is longer than the original message and alter the output of the response in order to match the IMAPRev4 spec. (#12345)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
+Twisted 24.10.0 (2024-10-28)
+============================
+
+No changes since 24.10.0.rc1.
+
+Features
+--------
+
+- Python 3.13 is now supported. (#11750)
+- twisted.internet.defer.succeed() is significantly faster, and awaiting Deferred has also been sped up. (#12225)
+- twisted.python.failure.Failure creation no longer records the place where it was created. This reduces creation time by 60% at least, thereby speeding up Deferred error handling. (#12230)
+- twisted.internet.defer.Deferred no longer removes the traceback object from Failures. This may result in more objects staying in memory if you don't clean up failed Deferreds, but it speeds up error handling and enables improvements to traceback reporting. (#12234)
+- twisted.internet.defer APIs are 2%-4% faster in many cases. (#12237)
+- twisted.internet.defer.Deferred runs callbacks with chained Deferreds a little faster. (#12284)
+- The reactor now will use a little less CPU when events have been scheduled with callLater(). (#12286)
+- Creation of twisted.python.failure.Failure is now faster. (#12288)
+
+
+Bugfixes
+--------
+
+- Fixed unreleased regression caused by PR 12109. (#12279)
+- twisted.logger.eventAsText can now format the output having types/classes as input.
+  This was a regression introduced in Twisted 24.3.0. (#12323)
+- twisted.internet.endpoints.clientFromString for TLS endpoints with "bindAddress="  no longer crashes during connect. twisted.internet.endpoints.HostnameEndpoint() no longer crashes when given a bindAddress= argument that is just a string, and that argument now accepts either address strings or (address, port) tuples. (#12325)
+- The URLs from README and pyproject.toml were updated. (#12327)
+
+
+Misc
+----
+
+- #11236, #12060, #12062, #12099, #12219, #12290, #12296, #12305, #12329, #12331, #12339
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh.keys.Key can now load public blob keys of type sk-ssh-ed25519@openssh.com and sk-ecdsa-sha2-nistp256@openssh.com. (#12211)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch tests no longer rely on OpenSSH supporting DSA keys, fixing compatibility with OpenSSH >= 9.8. (#12273)
+- twisted.conch.ssh.SSHCiphers no longer supports the cast128-ctr, cast128-cbc, blowfish-ctr, and blowfish-cbc ciphers.
+  The Blowfish and CAST5 ciphers were removed as they were deprecated by the Python cryptography library. (#12308)
+
+
+Misc
+~~~~
+
+- #12313
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- The twisted.web HTTP server and client now reject HTTP header names containing whitespace or other invalid characters by raising twisted.web.http_headers.InvalidHeaderName, improving compliance with RFC 9110. As a side effect, the server is slightly faster. (#12191)
+- twisted.web.client and twisted.web.server now disable the Nagle algorithm (enable TCP_NODELAY), reducing the latency of small HTTP queries. (#12311)
+- twisted.web.server is 1-2% faster in some cases. (#12318)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web's HTTP/1.1 server now rejects header values containing a NUL byte with a 400 error, in compliance with RFC 9110. (#12228)
+- twisted.internet.address no longer raises DeprecationWarning when used with attrs>=24.1.0. (#12277)
+- twisted.web's HTTP/1.1 server now accepts '&' within tokens (methods, header field names, etc.), in compliance with RFC 9110. (#12301)
+
+
+Misc
+~~~~
+
+- #9743, #12276
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Features
+~~~~~~~~
+
+- Trial's ``-j`` flag now accepts an ``auto`` keyword to spawn a number of workers based on the available CPUs. (#5824)
+
+
+Twisted 24.7.0 (2024-08-08)
+===========================
+
+24.7.0.rc2 fixed an unreleased regression caused by PR 12109. (#12279)
+No other changes since 24.7.0.rc2
+
+
+Security Advisories
+-------------------
+
+- twisted.web.util.redirectTo now HTML-escapes the provided URL in the fallback response body it returns (GHSA-cf56-g6w6-pqq2, CVE-2024-41810). (#9839)
+- The HTTP 1.0 and 1.1 server provided by twisted.web could process pipelined HTTP requests out-of-order, possibly resulting in information disclosure (CVE-2024-41671/GHSA-c8m8-j448-xjx7) (#12248)
+
+
+Features
+--------
+
+- twisted.protocols.ftp now supports the IPv6 extensions defined in RFC 2428. (#9645)
+- twisted.internet.defer.inlineCallbacks can now yield a coroutine. (#9972)
+- twisted.python._shellcomp.ZshArgumentsGenerator was updated for Python 3.13. (#12065)
+- twisted.web.wsgi request environment now contains the peer port number as `REMOTE_PORT`. (#12096)
+- twisted.internet.defer.Deferred.callback() and twisted.internet.defer.Deferred.addCallbacks() no longer use `assert` to check the type of the arguments. You should now use type checking to validate your code. These changes were done to reduce the CPU usage. (#12122)
+- Added two new methods, twisted.logger.Logger.failuresHandled and twisted.logger.Logger.failureHandler, which allow for more concise and convenient handling of exceptions when dispatching out to application code.  The former can arbitrarily customize failure handling at the call site, and the latter can be used for performance-sensitive cases where no additional information needs to be logged. (#12188)
+- twisted.internet.defer.Deferred.addCallback now runs about 10% faster. (#12223)
+- twisted.internet.defer.Deferred error handling is now faster, taking 40% less time to run. (#12227)
+
+
+Bugfixes
+--------
+
+- twisted.internet.ssl.Certificate.__repr__ can now handle certificates without a common name (CN) in the certificate itself or the signing CA. (#5851)
+- Type annotations have been added to twisted.conch.interfaces.IKnownHostEntry and its implementations, twisted.conch.client.knownhosts.PlainHost and twisted.conch.client.knownhosts.HashedHost, correcting a variety of type confusion issues throughout the conch client code. (#9713)
+- twisted.python.failure.Failure once again utilizes the custom pickling logic it used to in the past. (#12112)
+- twisted.conch.client.knownhosts.KnownHostsFile.verifyHostKey no longer logs an exception when automatically adding an IP address host key, which means the interactive `conch` command-line no longer will either. (#12141)
+
+
+Improved Documentation
+----------------------
+
+- The IRC server example found in the documentation was updated for readability. (#12097)
+- Remove contextvars from list of optional dependencies. (#12128)
+- The documentation for installing Twisted was moved into a single page. (#12145)
+- The project's compatibility policy now clearly indicates that the GitHub Actions test matrix defines the supported platforms. (#12167)
+- Updated imap4client.py example, it no longer references Python 2. (#12252)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.internet.defer.returnValue has been deprecated. You can replace it with the standard `return` statement. (#9930)
+- The `twisted-iocpsupport` is no longer a hard dependency on Windows.
+  The IOCP support is now installed together with the other Windows soft
+  dependencies via `twisted[windows-platform]`. (#11893)
+- twisted.python.deprecate helper function will now always strip whitespaces from the docstrings.
+  This is done to have the same behaviour as with Python 3.13. (#12063)
+- twisted.conch.manhole.ManholeInterpreter.write, twisted.conch.manhole.ManholeInterpreter.addOutput, twisted.mail.imap4.IMAP4Server.sendUntaggedResponse `async` argument, deprecated since 18.9.0, has been removed. (#12130)
+- twisted.web.soap was removed.
+  The SOAP support was already broken, for at least the last 4 years.
+  The SOAP support in Twisted has no active maintainer. (#12146)
+
+
+Misc
+----
+
+- #11744, #11771, #12113, #12154, #12169, #12179, #12193, #12195, #12197, #12215, #12221, #12243, #12249, #12254, #12259, #12669
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.insults.window.Widget.functionKeyReceived now dispatches functional key events to corresponding `func_KEYNAME` methods, where `KEYNAME` can be `F1`, `F2`, `HOME`, `UP_ARROW` etc. This is a regression introduced with #8214 in Twisted 16.5.0, where events changed from `const` objects to bytestrings in square brackets like `[F1]`. (#12046)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.agent.Agent now allows duplicate Content-Length headers having the same value, per RFC 9110 section 8.6. It is otherwise more strict when parsing Content-Length header values. (#9064)
+- twisted.web.client.HTTPConnectionPool used by HTTP clients now runs faster by using a little less CPU. (#12108)
+- twisted.web.http_headers now uses less CPU, making a small HTTP client request 10% faster or so. (#12116)
+- twisted.web's HTTP/1.1 server now runs a little faster, with about 10% lower CPU overhead. (#12133)
+- twisted.web's HTTP 1.1 server is an additional 5% faster. (#12155)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.http.IM_A_TEAPOT was added and returns `I'm a teapot`
+  as default message for the status code 418,
+  as defined in RFC 2324 section 2.3.2. (#12104)
+- The HTTP 1.0/1.1 server provided by twisted.web is now more picky about the first line of a request, improving compliance with RFC 9112. (#12233)
+- The HTTP 1.0/1.1 server provided by twisted.web now constraints the character set of HTTP header names, improving compliance with RFC 9110. (#12235)
+
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- Fix ReverseProxyResource example in developer guide. (#12152)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.util.ChildRedirector, which has never worked on Python 3, has been removed. (#9591)
+- ``twisted.web.http.Request.setResponseCode()`` no longer validates the types of inputs; we encourage you to use a type checker like mypy to catch these sort of errors. The long-deprecated ``twisted.web.server.string_date_time()`` and ``twisted.web.server.date_time_string()`` APIs were removed altogether. (#12133)
+- twisted.web.http.HTTPClient is now deprecated in favor of twisted.web.client.Agent (#12158)
+
+
+Misc
+~~~~
+
+- #12098, #12194, #12200, #12241, #12257
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
+Twisted 24.3.0 (2024-03-01)
+===========================
+
+This release supports PyPy v7.3.14.
+
+Bugfixes
+--------
+
+- twisted.logger.formatEvent now honors dotted method names, not just flat
+  function names, in format strings, as it has long been explicitly documented to
+  do.  So, you will now get the expected result from `formatEvent("here's the
+  result of calling a method at log-format time: {obj.method()}", obj=...)` (#9347)
+- twisted.web.http.HTTPChannel now ignores the trailer headers provided in the last chunk of a chunked encoded response, rather than raising an exception. (#11997)
+- twisted.protocols.tls.BufferingTLSTransport, used by default by twisted.protocols.tls.TLSMemoryBIOFactory, was refactored for improved performance when doing a high number of small writes. (#12011)
+- twisted.python.failure.Failure now throws exception for generators without triggering a deprecation warnings on Python 3.12. (#12026)
+- twisted.internet.process.Process, used by ``reactor.spawnProcess``, now copies the parent environment when the `env=None` argument is passed on Posix systems and ``os.posix_spawnp`` is used internally. (#12068)
+- twisted.internet.defer.inlineCallbacks.returnValue's stack introspection was adjusted for the latest PyPy 7.3.14 release, allowing legacy @inlineCallbacks to run on new PyPY versions. (#12084)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.reporter.TestRun.startTest() is no longer called for tests
+  with skip annotation or skip attribute for Python 3.12.1 or newer.
+  This is the result of upstream Python gh-106584 change.
+  The behavior is not change in 3.12.0 or older. (#12052)
+
+
+Misc
+----
+
+- #11902, #12018, #12023, #12031, #12032, #12052, #12056, #12067, #12076, #12078, #12087, #12095
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- The documentation for twisted.web.client.CookieAgent no longer references
+  long-deprecated ``cookielib`` and ``urllib2`` standard library modules. (#12044)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.web.http.Request now parses the `multipart/form-data` using `email.message_from_bytes`.
+  The usage of `cgi.parse_multipart` was removed as the `cgi` module will be removed in Python 3.13. (#11848)
+
+
+Misc
+~~~~
+
+- #12015
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- The documented IRC example was updated for Python3 usage. (#12070)
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
+Twisted 23.10.0 (2023-10-31)
+============================
+
+No changes since 23.10.0.rc1.
+
+
+Features
+--------
+
+- twisted.python.filepath.FilePath and related classes (twisted.python.filepath.IFilepath, twisted.python.filepath.AbstractFilePath, twisted.python.zippath.ZipPath, and twisted.python.zippath.ZipArchive) now have type annotations.  Additionally, FilePath is now generic, describing its mode, so you can annotate variables as FilePath[str] or FilePath[bytes] depending on the types that you wish to get back from the 'path' attribute and related methods like 'basename'. (#11822)
+- When using `CPython`, functions wrapped by `twisted.internet.defer.inlineCallbacks` can have their arguments and return values freed immediately after completion (due to there no longer being circular references). (#11885)
+
+
+Bugfixes
+--------
+
+- Fix TypeError on t.i.cfreactor due to 3.10 type annotation syntax (#11965)
+- Fix the type annotations of DeferredLock.run, DeferredSemaphore.run, maybeDeferred, ensureDeferred, inlineCallbacks and fromCoroutine that used to return Deferred[Any] to return the result of the passed Coroutine/Coroutine function (#11985)
+- Fixed significant performance overhead (CPU and bandwidth) when doing small writes to a TLS transport. Specifically, small writes to a TLS transport are now buffered until the next reactor iteration. (#11989)
+- fix mypy due to hypothesis 6.85 (#11995)
+
+
+Improved Documentation
+----------------------
+
+- The search and version navigation for the documentation hosted on
+  Read The Docs was fixed.
+  This was a regression introduced with 23.8.0. (#12012)
+
+
+Deprecations and Removals
+-------------------------
+
+- Drop support for Python 3.7. Remove twisted[contextvars] extra (contextvars are always available in Python 3.7+) (#11913)
+
+
+Misc
+----
+
+- #5206, #11583, #11787, #11871, #11912, #11921, #11922, #11926, #11932, #11934, #11936, #11938, #11940, #11942, #11945, #11948, #11952, #11953, #11955, #11957, #11959, #11961, #11964, #11973, #11977, #11980, #11982, #11993, #11999, #12004, #12005, #12009
+
+
+Conch
+-----
+
+No significant changes.
+
+
+Web
+---
+
+Bugfixes
+~~~~~~~~
+
+- In Twisted 16.3.0, we changed twisted.web to stop dispatching HTTP/1.1
+  pipelined requests to application code.  There was a bug in this change which
+  still allowed clients which could send multiple full HTTP requests in a single
+  TCP segment to trigger asynchronous processing of later requests, which could
+  lead to out-of-order responses.  This has now been corrected and twisted.web
+  should never process a pipelined request over HTTP/1.1 until the previous
+  request has fully completed. (CVE-2023-46137, GHSA-cq7q-gv5w-rwx2) (#11976)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- twisted.dom.microdom and twisted.web.domhelpers are now deprecated. (#3651)
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Misc
+~~~~
+
+- #10115
+
+
+Twisted 23.8.0. (2023-08-28)
+============================
+
+This is the last release with support for Python 3.7.
+
+No changes since 23.8.0.rc1.
+
+
+Features
+--------
+
+- reactor.spawnProcess() now uses posix_spawnp when possible, making it much more efficient (#5710)
+- Twisted now officially supports Python 3.11. (#10343)
+- twisted.internet.defer.Deferred.fromFuture now has a more precise type annotation. (#11753)
+- twisted.internet.defer._ConcurrencyPrimitive.__aexit__ now has a more precise type annotation. (#11795)
+- `twisted.internet.defer.race` has been added as a way to get the first available result from a list of Deferreds. (#11817)
+- The CI suite was updated to execute the tests using a Python 3.12 pre-release (#11857)
+
+
+Bugfixes
+--------
+
+- twisted.conch.scripts.ckeygen now substitutes a default of "~/.ssh/id_rsa" if no keyfile is specified. (#6607)
+- Correct type hints for `IHostnameResolver.resolveHostName` and `IResolverSimple.getHostByName`. (#10276)
+- `twist conch --auth=sshkey` can now authenticate users without a traceback again, thanks to twisted.conch.unix.UnixConchUser no longer being incorrectly instantiated with `bytes`.  In the course of this fix, some type hinting has also been applied to `twisted.cred.portal`. (#11626)
+- twisted.internet.gireactor now works with Gtk4, and is tested and supported in CI again. (#11705)
+- When interrupted with control-C, `trial -j` no longer obscures tracebacks for
+  any errors caused by that interruption with an `UnboundLocalError` due to a bug
+  in its own implementation.  Note that there are still several internal
+  tracebacks that will be emitted upon exiting, because tearing down the test
+  runner mid-suite is still not an entirely clean operation, but it should at
+  least be possible to see errors reported from, for example, a test that is
+  hanging more clearly. (#11707)
+- PortableGIReactor and PortableGtkReactor are no longer necessary and are now aliases of GIReactor and Gtk2Reactor respectively, improving the performance of any applications using them. (#11738)
+- The Twisted package dependencies were updated to minimum versions that
+  will work with latest Twisted codebase. (#11740)
+- Deferred's type annotations have been made more comprehensive, precise, correct, and strict.  You may notice new type errors in your applications; be sure to check on those because they may represent real type errors! (#11772)
+- To prevent parsing errors and ensure validity when serializing HTML comments, twisted.web.template.flattenString has been updated to escape the --> sequence within comments. (#11804)
+- BadZipfile (with a small f) has been deprecated since Python 3.2,
+  use BadZipFile (big F) instead, added in 3.2. (#11821)
+- `twisted.web.template` now avoids unnecessary copying and is faster, particularly for templates with deep nesting. (#11834)
+- `twisted.web.template` now avoids some unecessary evaluation of type annotations and is faster. (#11835)
+- utcfromtimestamp has been deprecated since Python 3.12,
+  use fromtimestamp(x, timezone.utc).replace(tzinfo=None) instead. (#11908)
+
+
+Deprecations and Removals
+-------------------------
+
+- Optional dependency "extras" names like `conch_nacl` now use hyphens rather than underscores to comply with PEP 685. The old names will be supported until the end of 2023. (#11655)
+- twisted.internet.gtk2reactor, twisted.internet.gtk3reactor, and twisted.internet.glib2reactor are now deprecated in favor of twisted.internet.gireactor. (#11705)
+- The minimum supported version of PyPy has been updated to 3.9. (#11836)
+
+
+Misc
+----
+
+- #10149, #10310, #10345, #11708, #11723, #11742, #11746, #11748, #11751, #11764, #11766, #11768, #11776, #11788, #11799, #11806, #11824, #11828, #11830, #11856, #11859, #11877, #11894
+
+
+Conch
+-----
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- PyAsn1 has been removed as a conch dependency.
+
+  twisted.conch.ssh.keys.Key no longer supports loading "alternate" OpenSSH private keys.
+  These are some private keys that at some point were handled by OpenSSH but for which no specification exists.
+  For more info about these OpenSSH keys see https://github.com/twisted/twisted/issues/3008. (#11843)
+- Due to changes in the way raw private key byte serialization are handled in Cryptography, and widespread support for Ed25519 in current versions of OpenSSL, we no longer support PyNaCl as a fallback for Ed25519 keys in Conch. (#11871)
+
+
+Web
+---
+
+Misc
+~~~~
+
+- #11815, #11879
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 22.10.0 (2022-10-30)
 ============================
 

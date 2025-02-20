@@ -103,7 +103,7 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
     """
 
     # Copies much from abstract.FileDescriptor
-    bufferSize = 2 ** 2 ** 2 ** 2
+    bufferSize = 2**2**2**2
 
     producerPaused = False
     unregistered = False
@@ -183,7 +183,6 @@ class ProducerConsumerProxy(BasicProducerConsumerProxy):
         if (self.producer is not None) and self.producerIsStreaming:
             bytesBuffered = sum(len(s) for s in self._buffer)
             if bytesBuffered >= self.bufferSize:
-
                 self.producer.pauseProducing()
                 self.producerPaused = True
 

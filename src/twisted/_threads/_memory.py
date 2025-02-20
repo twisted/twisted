@@ -6,16 +6,25 @@
 Implementation of an in-memory worker that defers execution.
 """
 
+from __future__ import annotations
+
+from enum import Enum, auto
+from typing import Callable, Literal
 
 from zope.interface import implementer
 
-from . import IWorker
 from ._convenience import Quit
+from ._ithreads import IExclusiveWorker
 
-NoMoreWork = object()
+
+class NoMore(Enum):
+    Work = auto()
 
 
-@implementer(IWorker)
+NoMoreWork = NoMore.Work
+
+
+@implementer(IExclusiveWorker)
 class MemoryWorker:
     """
     An L{IWorker} that queues work for later performance.
@@ -24,14 +33,17 @@ class MemoryWorker:
     @type _quit: L{Quit}
     """
 
-    def __init__(self, pending=list):
+    def __init__(
+        self,
+        pending: Callable[[], list[Callable[[], object] | Literal[NoMore.Work]]] = list,
+    ) -> None:
         """
         Create a L{MemoryWorker}.
         """
         self._quit = Quit()
         self._pending = pending()
 
-    def do(self, work):
+    def do(self, work: Callable[[], object]) -> None:
         """
         Queue some work for to perform later; see L{createMemoryWorker}.
 
@@ -40,7 +52,7 @@ class MemoryWorker:
         self._quit.check()
         self._pending.append(work)
 
-    def quit(self):
+    def quit(self) -> None:
         """
         Quit this worker.
         """
@@ -48,22 +60,23 @@ class MemoryWorker:
         self._pending.append(NoMoreWork)
 
 
-def createMemoryWorker():
+def createMemoryWorker() -> tuple[MemoryWorker, Callable[[], bool]]:
     """
     Create an L{IWorker} that does nothing but defer work, to be performed
     later.
 
     @return: a worker that will enqueue work to perform later, and a callable
         that will perform one element of that work.
-    @rtype: 2-L{tuple} of (L{IWorker}, L{callable})
     """
 
-    def perform():
+    def perform() -> bool:
         if not worker._pending:
             return False
-        if worker._pending[0] is NoMoreWork:
+        peek = worker._pending[0]
+        if peek is NoMoreWork:
             return False
-        worker._pending.pop(0)()
+        worker._pending.pop(0)
+        peek()
         return True
 
     worker = MemoryWorker()

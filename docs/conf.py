@@ -20,6 +20,8 @@ from pprint import pprint
 
 import sphinx_rtd_theme
 
+from twisted import version as twisted_version_object
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -37,17 +39,9 @@ sys.path.insert(0, os.path.abspath(".."))
 # ones.
 extensions = [
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.jquery",
     "pydoctor.sphinx_ext.build_apidocs",
 ]
-
-try:
-    import rst2pdf.pdfbuilder
-
-    extensions.append("rst2pdf.pdfbuilder")
-except ImportError:
-    pass
-
-from twisted import version as twisted_version_object
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -105,14 +99,6 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 
-
-# These paths are either relative to html_static_path
-# or fully qualified paths (eg. https://...)
-html_js_files = [
-    "js/custom.js",
-    # Here we have a Sphinx HTML injection hack to make the JS script load without blocking.
-    'https://sidecar.gitter.im/dist/sidecar.v1.js" defer hack="',
-]
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = "Twisteddoc"

@@ -6,7 +6,6 @@
 Utilities and helpers for simulating a network
 """
 
-
 import itertools
 
 try:
@@ -284,22 +283,25 @@ class IOPump:
     Perhaps this is a utility worthy of being in protocol.py?
     """
 
-    def __init__(self, client, server, clientIO, serverIO, debug):
+    def __init__(self, client, server, clientIO, serverIO, debug, clock=None):
         self.client = client
         self.server = server
         self.clientIO = clientIO
         self.serverIO = serverIO
         self.debug = debug
+        if clock is None:
+            clock = MemoryReactorClock()
+        self.clock = clock
 
-    def flush(self, debug=False):
+    def flush(self, debug=False, advanceClock=True):
         """
         Pump until there is no more input or output.
 
         Returns whether any data was moved.
         """
         result = False
-        for x in range(1000):
-            if self.pump(debug):
+        for _ in range(1000):
+            if self.pump(debug, advanceClock):
                 result = True
             else:
                 break
@@ -307,12 +309,15 @@ class IOPump:
             assert 0, "Too long"
         return result
 
-    def pump(self, debug=False):
+    def pump(self, debug=False, advanceClock=True):
         """
-        Move data back and forth.
+        Move data back and forth, while also triggering any currently pending
+        scheduled calls (i.e. C{callLater(0, f)}).
 
         Returns whether any data was moved.
         """
+        if advanceClock:
+            self.clock.advance(0)
         if self.debug or debug:
             print("-- GLUG --")
         sData = self.serverIO.getOutBuffer()
@@ -356,6 +361,7 @@ def connect(
     clientTransport,
     debug=False,
     greet=True,
+    clock=None,
 ):
     """
     Create a new L{IOPump} connecting two protocols.
@@ -383,6 +389,9 @@ def connect(
         post-server-greeting state?
     @type greet: L{bool}
 
+    @param clock: An optional L{Clock}. Pumping the resulting L{IOPump} will
+        also increase clock time by a small increment.
+
     @return: An L{IOPump} which connects C{serverProtocol} and
         C{clientProtocol} and delivers bytes between them when it is pumped.
     @rtype: L{IOPump}
@@ -390,7 +399,12 @@ def connect(
     serverProtocol.makeConnection(serverTransport)
     clientProtocol.makeConnection(clientTransport)
     pump = IOPump(
-        clientProtocol, serverProtocol, clientTransport, serverTransport, debug
+        clientProtocol,
+        serverProtocol,
+        clientTransport,
+        serverTransport,
+        debug,
+        clock=clock,
     )
     if greet:
         # Kick off server greeting, etc
@@ -405,6 +419,7 @@ def connectedServerAndClient(
     serverTransportFactory=makeFakeServer,
     debug=False,
     greet=True,
+    clock=None,
 ):
     """
     Connect a given server and client class to each other.
@@ -435,6 +450,9 @@ def connectedServerAndClient(
         post-server-greeting state?
     @type greet: L{bool}
 
+    @param clock: An optional L{Clock}. Pumping the resulting L{IOPump} will
+        also increase clock time by a small increment.
+
     @return: the client protocol, the server protocol, and an L{IOPump} which,
         when its C{pump} and C{flush} methods are called, will move data
         between the created client and server protocol instances.
@@ -444,7 +462,7 @@ def connectedServerAndClient(
     s = ServerClass()
     cio = clientTransportFactory(c)
     sio = serverTransportFactory(s)
-    return c, s, connect(s, sio, c, cio, debug, greet)
+    return c, s, connect(s, sio, c, cio, debug, greet, clock=clock)
 
 
 def _factoriesShouldConnect(clientInfo, serverInfo):

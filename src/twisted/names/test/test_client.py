@@ -1185,7 +1185,7 @@ class RetryLogicTests(unittest.TestCase):
             expected = list(self.testServers)
             expected.sort()
 
-            for ((addr, query, timeout, id), expectedAddr) in zip(tries, expected):
+            for (addr, query, timeout, id), expectedAddr in zip(tries, expected):
                 self.assertEqual(addr, (expectedAddr, 53))
                 self.assertEqual(timeout, t)
 

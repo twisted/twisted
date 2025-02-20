@@ -26,7 +26,7 @@ __all__ = [
 ]
 
 # all of them require pyserial at the moment, so check that first
-import serial  # type: ignore[import]
+import serial
 from serial import (
     EIGHTBITS,
     FIVEBITS,
@@ -97,4 +97,4 @@ class BaseSerialPort:
 if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
 else:
-    from twisted.internet._posixserialport import SerialPort  # type: ignore[misc]
+    from twisted.internet._posixserialport import SerialPort  # type: ignore[assignment]

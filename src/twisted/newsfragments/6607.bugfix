@@ -1,1 +1,0 @@
-twisted.conch.scripts.ckeygen now substitutes a default of "~/.ssh/id_rsa" if no keyfile is specified.

@@ -359,7 +359,6 @@ class SpewingFactory(WrappingFactory):
 
 
 class LimitConnectionsByPeer(WrappingFactory):
-
     maxConnectionsPerPeer = 5
 
     def startFactory(self):

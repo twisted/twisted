@@ -4,35 +4,50 @@
 """
 Test cases for the L{twisted.python.failure} module.
 """
-
+from __future__ import annotations
 
 import linecache
 import pdb
+import pickle
 import re
 import sys
 import traceback
 from dis import distb
 from io import StringIO
 from traceback import FrameSummary
+from types import TracebackType
+from typing import Any, Generator, cast
 from unittest import skipIf
 
-from cython_test_exception_raiser import raiser  # type: ignore[import]
+from cython_test_exception_raiser import raiser
 
 from twisted.python import failure, reflect
 from twisted.trial.unittest import SynchronousTestCase
 
 
-def getDivisionFailure(*args, **kwargs):
+class ComparableException(Exception):
+    """An exception that can be compared by value."""
+
+    def __eq__(self, other: object) -> bool:
+        return (self.__class__ == other.__class__) and (
+            self.args == cast(ComparableException, other).args
+        )
+
+
+def getDivisionFailure(*, captureVars: bool = False) -> failure.Failure:
     """
     Make a C{Failure} of a divide-by-zero error.
-
-    @param args: Any C{*args} are passed to Failure's constructor.
-    @param kwargs: Any C{**kwargs} are passed to Failure's constructor.
     """
+    if captureVars:
+        exampleLocalVar = "xyz"
+        # Silence the linter as this variable is checked via
+        # the traceback.
+        exampleLocalVar
+
     try:
         1 / 0
     except BaseException:
-        f = failure.Failure(*args, **kwargs)
+        f = failure.Failure(captureVars=captureVars)
     return f
 
 
@@ -41,7 +56,7 @@ class FailureTests(SynchronousTestCase):
     Tests for L{failure.Failure}.
     """
 
-    def test_failAndTrap(self):
+    def test_failAndTrap(self) -> None:
         """
         Trapping a L{Failure}.
         """
@@ -53,7 +68,7 @@ class FailureTests(SynchronousTestCase):
         self.assertEqual(error, RuntimeError)
         self.assertEqual(f.type, NotImplementedError)
 
-    def test_trapRaisesWrappedException(self):
+    def test_trapRaisesWrappedException(self) -> None:
         """
         If the wrapped C{Exception} is not a subclass of one of the
         expected types, L{failure.Failure.trap} raises the wrapped
@@ -68,7 +83,7 @@ class FailureTests(SynchronousTestCase):
         untrapped = self.assertRaises(ValueError, f.trap, OverflowError)
         self.assertIs(exception, untrapped)
 
-    def test_failureValueFromFailure(self):
+    def test_failureValueFromFailure(self) -> None:
         """
         A L{failure.Failure} constructed from another
         L{failure.Failure} instance, has its C{value} property set to
@@ -79,7 +94,7 @@ class FailureTests(SynchronousTestCase):
         f2 = failure.Failure(f1)
         self.assertIs(f2.value, exception)
 
-    def test_failureValueFromFoundFailure(self):
+    def test_failureValueFromFoundFailure(self) -> None:
         """
         A L{failure.Failure} constructed without a C{exc_value}
         argument, will search for an "original" C{Failure}, and if
@@ -95,7 +110,7 @@ class FailureTests(SynchronousTestCase):
 
         self.assertIs(f2.value, exception)
 
-    def assertStartsWith(self, s, prefix):
+    def assertStartsWith(self, s: str, prefix: str) -> None:
         """
         Assert that C{s} starts with a particular C{prefix}.
 
@@ -106,7 +121,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertTrue(s.startswith(prefix), f"{prefix!r} is not the start of {s!r}")
 
-    def assertEndsWith(self, s, suffix):
+    def assertEndsWith(self, s: str, suffix: str) -> None:
         """
         Assert that C{s} end with a particular C{suffix}.
 
@@ -117,7 +132,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertTrue(s.endswith(suffix), f"{suffix!r} is not the end of {s!r}")
 
-    def assertTracebackFormat(self, tb, prefix, suffix):
+    def assertTracebackFormat(self, tb: str, prefix: str, suffix: str) -> None:
         """
         Assert that the C{tb} traceback contains a particular C{prefix} and
         C{suffix}.
@@ -132,7 +147,9 @@ class FailureTests(SynchronousTestCase):
         self.assertStartsWith(tb, prefix)
         self.assertEndsWith(tb, suffix)
 
-    def assertDetailedTraceback(self, captureVars=False, cleanFailure=False):
+    def assertDetailedTraceback(
+        self, captureVars: bool = False, cleanFailure: bool = False
+    ) -> None:
         """
         Assert that L{printDetailedTraceback} produces and prints a detailed
         traceback.
@@ -143,9 +160,6 @@ class FailureTests(SynchronousTestCase):
 
         The body contains the stacktrace::
 
-          /twisted/trial/_synctest.py:1180: _run(...)
-          /twisted/python/util.py:1076: runWithWarningsSuppressed(...)
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39: getDivisionFailure(...)
 
         If C{captureVars} is enabled the body also includes a list of
@@ -174,12 +188,6 @@ class FailureTests(SynchronousTestCase):
         @param cleanFailure: Enables L{Failure.cleanFailure}.
         @type cleanFailure: C{bool}
         """
-        if captureVars:
-            exampleLocalVar = "xyz"
-            # Silence the linter as this variable is checked via
-            # the traceback.
-            exampleLocalVar
-
         f = getDivisionFailure(captureVars=captureVars)
         out = StringIO()
         if cleanFailure:
@@ -215,7 +223,7 @@ class FailureTests(SynchronousTestCase):
                 tb,
             )
 
-    def assertBriefTraceback(self, captureVars=False):
+    def assertBriefTraceback(self, captureVars: bool = False) -> None:
         """
         Assert that L{printBriefTraceback} produces and prints a brief
         traceback.
@@ -224,14 +232,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback: <type 'exceptions.ZeroDivisionError'>: float division
 
-        The body with the stacktrace::
-
-          /twisted/trial/_synctest.py:1180:_run
-          /twisted/python/util.py:1076:runWithWarningsSuppressed
-
         And the footer::
 
-          --- <exception caught here> ---
           /twisted/test/test_failure.py:39:getDivisionFailure
 
         @param captureVars: Enables L{Failure.captureVars}.
@@ -255,13 +257,13 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             f"Traceback: {zde}: ",
-            f"{failure.EXCEPTION_CAUGHT_HERE}\n{stack}",
+            f"{stack}",
         )
 
         if captureVars:
             self.assertIsNone(re.search("exampleLocalVar.*abcde", tb))
 
-    def assertDefaultTraceback(self, captureVars=False):
+    def assertDefaultTraceback(self, captureVars: bool = False) -> None:
         """
         Assert that L{printTraceback} produces and prints a default traceback.
 
@@ -269,14 +271,8 @@ class FailureTests(SynchronousTestCase):
 
           Traceback (most recent call last):
 
-        The body with traceback::
-
-          File "/twisted/trial/_synctest.py", line 1180, in _run
-             runWithWarningsSuppressed(suppress, method)
-
         And the footer::
 
-          --- <exception caught here> ---
             File "twisted/test/test_failure.py", line 39, in getDivisionFailure
               1 / 0
             exceptions.ZeroDivisionError: float division
@@ -302,9 +298,8 @@ class FailureTests(SynchronousTestCase):
         self.assertTracebackFormat(
             tb,
             "Traceback (most recent call last):",
-            "%s\n%s%s: %s\n"
+            "%s%s: %s\n"
             % (
-                failure.EXCEPTION_CAUGHT_HERE,
                 stack,
                 reflect.qual(f.type),
                 reflect.safe_str(f.value),
@@ -314,26 +309,26 @@ class FailureTests(SynchronousTestCase):
         if captureVars:
             self.assertIsNone(re.search("exampleLocalVar.*xyzzy", tb))
 
-    def test_printDetailedTraceback(self):
+    def test_printDetailedTraceback(self) -> None:
         """
         L{printDetailedTraceback} returns a detailed traceback including the
         L{Failure}'s count.
         """
         self.assertDetailedTraceback()
 
-    def test_printBriefTraceback(self):
+    def test_printBriefTraceback(self) -> None:
         """
         L{printBriefTraceback} returns a brief traceback.
         """
         self.assertBriefTraceback()
 
-    def test_printTraceback(self):
+    def test_printTraceback(self) -> None:
         """
         L{printTraceback} returns a traceback.
         """
         self.assertDefaultTraceback()
 
-    def test_printDetailedTracebackCapturedVars(self):
+    def test_printDetailedTracebackCapturedVars(self) -> None:
         """
         L{printDetailedTraceback} captures the locals and globals for its
         stack frames and adds them to the traceback, when called on a
@@ -341,7 +336,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertDetailedTraceback(captureVars=True)
 
-    def test_printBriefTracebackCapturedVars(self):
+    def test_printBriefTracebackCapturedVars(self) -> None:
         """
         L{printBriefTraceback} returns a brief traceback when called on a
         L{Failure} constructed with C{captureVars=True}.
@@ -351,7 +346,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertBriefTraceback(captureVars=True)
 
-    def test_printTracebackCapturedVars(self):
+    def test_printTracebackCapturedVars(self) -> None:
         """
         L{printTraceback} returns a traceback when called on a L{Failure}
         constructed with C{captureVars=True}.
@@ -361,14 +356,14 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertDefaultTraceback(captureVars=True)
 
-    def test_printDetailedTracebackCapturedVarsCleaned(self):
+    def test_printDetailedTracebackCapturedVarsCleaned(self) -> None:
         """
         C{printDetailedTraceback} includes information about local variables on
         the stack after C{cleanFailure} has been called.
         """
         self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
 
-    def test_invalidFormatFramesDetail(self):
+    def test_invalidFormatFramesDetail(self) -> None:
         """
         L{failure.format_frames} raises a L{ValueError} if the supplied
         C{detail} level is unknown.
@@ -377,35 +372,27 @@ class FailureTests(SynchronousTestCase):
             ValueError, failure.format_frames, None, None, detail="noisia"
         )
 
-    def test_ExplictPass(self):
+    def test_ExplictPass(self) -> None:
         e = RuntimeError()
         f = failure.Failure(e)
         f.trap(RuntimeError)
         self.assertEqual(f.value, e)
 
-    def _getInnermostFrameLine(self, f):
+    def _getInnermostFrameLine(self, f: failure.Failure) -> str | None:
         try:
             f.raiseException()
         except ZeroDivisionError:
             tb = traceback.extract_tb(sys.exc_info()[2])
-            return tb[-1][-1]
+            return tb[-1].line
         else:
             raise Exception("f.raiseException() didn't raise ZeroDivisionError!?")
 
-    def test_RaiseExceptionWithTB(self):
+    def test_RaiseExceptionWithTB(self) -> None:
         f = getDivisionFailure()
         innerline = self._getInnermostFrameLine(f)
         self.assertEqual(innerline, "1 / 0")
 
-    def test_stringExceptionConstruction(self):
-        """
-        Constructing a C{Failure} with a string as its exception value raises
-        a C{TypeError}, as this is no longer supported as of Python 2.6.
-        """
-        exc = self.assertRaises(TypeError, failure.Failure, "ono!")
-        self.assertIn("Strings are not supported by Failure", str(exc))
-
-    def test_ConstructionFails(self):
+    def test_ConstructionFails(self) -> None:
         """
         Creating a Failure with no arguments causes it to try to discover the
         current interpreter exception state.  If no such state exists, creating
@@ -413,7 +400,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertRaises(failure.NoCurrentExceptionError, failure.Failure)
 
-    def test_getTracebackObject(self):
+    def test_getTracebackObject(self) -> None:
         """
         If the C{Failure} has not been cleaned, then C{getTracebackObject}
         returns the traceback object that captured in its constructor.
@@ -421,7 +408,7 @@ class FailureTests(SynchronousTestCase):
         f = getDivisionFailure()
         self.assertEqual(f.getTracebackObject(), f.tb)
 
-    def test_getTracebackObjectFromCaptureVars(self):
+    def test_getTracebackObjectFromCaptureVars(self) -> None:
         """
         C{captureVars=True} has no effect on the result of
         C{getTracebackObject}.
@@ -433,7 +420,7 @@ class FailureTests(SynchronousTestCase):
             varsFailure = failure.Failure(captureVars=True)
         self.assertEqual(noVarsFailure.getTracebackObject(), varsFailure.tb)
 
-    def test_getTracebackObjectFromClean(self):
+    def test_getTracebackObjectFromClean(self) -> None:
         """
         If the Failure has been cleaned, then C{getTracebackObject} returns an
         object that looks the same to L{traceback.extract_tb}.
@@ -445,7 +432,7 @@ class FailureTests(SynchronousTestCase):
         self.assertIsNotNone(expected)
         self.assertEqual(expected, observed)
 
-    def test_getTracebackObjectFromCaptureVarsAndClean(self):
+    def test_getTracebackObjectFromCaptureVarsAndClean(self) -> None:
         """
         If the Failure was created with captureVars, then C{getTracebackObject}
         returns an object that looks the same to L{traceback.extract_tb}.
@@ -456,7 +443,7 @@ class FailureTests(SynchronousTestCase):
         observed = traceback.extract_tb(f.getTracebackObject())
         self.assertEqual(expected, observed)
 
-    def test_getTracebackObjectWithoutTraceback(self):
+    def test_getTracebackObjectWithoutTraceback(self) -> None:
         """
         L{failure.Failure}s need not be constructed with traceback objects. If
         a C{Failure} has no traceback information at all, C{getTracebackObject}
@@ -467,7 +454,7 @@ class FailureTests(SynchronousTestCase):
         f = failure.Failure(Exception("some error"))
         self.assertIsNone(f.getTracebackObject())
 
-    def test_tracebackFromExceptionInPython3(self):
+    def test_tracebackFromExceptionInPython3(self) -> None:
         """
         If a L{failure.Failure} is constructed with an exception but no
         traceback in Python 3, the traceback will be extracted from the
@@ -480,7 +467,7 @@ class FailureTests(SynchronousTestCase):
         f = failure.Failure(exception)
         self.assertIs(f.tb, tb)
 
-    def test_cleanFailureRemovesTracebackInPython3(self):
+    def test_cleanFailureRemovesTracebackInPython3(self) -> None:
         """
         L{failure.Failure.cleanFailure} sets the C{__traceback__} attribute of
         the exception to L{None} in Python 3.
@@ -491,7 +478,7 @@ class FailureTests(SynchronousTestCase):
         f.cleanFailure()
         self.assertIsNone(f.value.__traceback__)
 
-    def test_distb(self):
+    def test_distb(self) -> None:
         """
         The traceback captured by a L{Failure} is compatible with the stdlib
         L{dis.distb} function as used in post-mortem debuggers. Specifically,
@@ -504,7 +491,7 @@ class FailureTests(SynchronousTestCase):
         # that the arrow pointing at the source of the exception is present.
         self.assertIn(" --> ", buf.getvalue())
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         The C{repr} of a L{failure.Failure} shows the type and string
         representation of the underlying exception.
@@ -515,6 +502,100 @@ class FailureTests(SynchronousTestCase):
             repr(f),
             "<twisted.python.failure.Failure " "%s: division by zero>" % (typeName,),
         )
+
+    def test_stackDeprecation(self) -> None:
+        """
+        C{Failure.stack} is gettable and settable, but depreacted.
+        """
+        f = getDivisionFailure()
+        f.stack = f.stack  # type: ignore[method-assign]
+        warnings = self.flushWarnings()
+        self.assertTrue(len(warnings) >= 1)
+        for w in warnings[-2:]:
+            self.assertEqual(
+                "twisted.python.failure.Failure.stack was deprecated in Twisted 24.10.0",
+                w["message"],
+            )
+
+    def test_failureWithoutTraceback(self) -> None:
+        """
+        C{Failure._withoutTraceback(exc)} gives the same result as
+        C{Failure(exc)}.
+        """
+        exc = ZeroDivisionError("hello")
+        dict1 = failure.Failure(exc).__dict__.copy()
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertIsInstance(failure2, failure.Failure)
+        dict2 = failure2.__dict__.copy()
+
+        # count increments with each new Failure constructed:
+        self.assertEqual(dict1.pop("count") + 1, dict2.pop("count"))
+
+        # The rest of the attributes should be identical:
+        self.assertEqual(dict1, dict2)
+
+    def test_failurePickling(self) -> None:
+        """
+        C{Failure(exc)} and C{Failure._withoutTraceback(exc)} can be pickled
+        and unpickled.
+        """
+        exc = ComparableException("hello")
+        failure1 = failure.Failure(exc)
+        self.assertPicklingRoundtrips(failure1)
+
+        # You would think this test is unnecessary, since it's just a
+        # C{Failure}, but actually the behavior of pickling can sometimes be
+        # different because of the way the constructor works!
+        failure2 = failure.Failure._withoutTraceback(exc)
+        self.assertPicklingRoundtrips(failure2)
+
+        # Here we test a Failure with a traceback:
+        try:
+            raise ComparableException("boo")
+        except BaseException:
+            failure3 = failure.Failure()
+        self.assertPicklingRoundtrips(failure3)
+
+    def assertPicklingRoundtrips(self, original_failure: failure.Failure) -> None:
+        """
+        The failure can be pickled and unpickled, and the C{parents} attribute
+        is included in the pickle.
+        """
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        expected = original_failure.__dict__.copy()
+        expected["pickled"] = 1
+        expected["tb"] = None
+        result = failure2.__dict__.copy()
+        self.assertEqual(expected, result)
+        self.assertEqual(failure2.frames, original_failure.frames)
+
+    def test_failurePicklingIncludesParents(self) -> None:
+        """
+        C{Failure.parents} is included in the pickle.
+        """
+        f = failure.Failure(ComparableException("hello"))
+        self.assertEqual(f.__getstate__()["parents"], f.parents)
+
+    def test_settableFrames(self) -> None:
+        """
+        C{Failure.frames} can be set, both before and after pickling.
+        """
+        original_failure = failure.Failure(getDivisionFailure())
+        original_failure.frames = original_failure.frames[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.frames = failure2.frames[:-1]
+        self.assertEqual(failure2.frames, original_failure.frames[:-1])
+
+    def test_settableParents(self) -> None:
+        """
+        C{Failure.parents} can be set, both before and after pickling.
+
+        This is used by Foolscap.
+        """
+        original_failure = failure.Failure(ComparableException("hello"))
+        original_failure.parents = original_failure.parents[:]
+        failure2 = pickle.loads(pickle.dumps(original_failure))
+        failure2.parents = failure2.parents[:]
 
 
 class BrokenStr(Exception):
@@ -551,7 +632,7 @@ class GetTracebackTests(SynchronousTestCase):
     Tests for L{Failure.getTraceback}.
     """
 
-    def _brokenValueTest(self, detail):
+    def _brokenValueTest(self, detail: str) -> None:
         """
         Construct a L{Failure} with an exception that raises an exception from
         its C{__str__} method and then call C{getTraceback} with the specified
@@ -562,7 +643,7 @@ class GetTracebackTests(SynchronousTestCase):
         traceback = f.getTraceback(detail=detail)
         self.assertIsInstance(traceback, str)
 
-    def test_brokenValueBriefDetail(self):
+    def test_brokenValueBriefDetail(self) -> None:
         """
         A L{Failure} might wrap an exception with a C{__str__} method which
         raises an exception.  In this case, calling C{getTraceback} on the
@@ -570,19 +651,19 @@ class GetTracebackTests(SynchronousTestCase):
         """
         self._brokenValueTest("brief")
 
-    def test_brokenValueDefaultDetail(self):
+    def test_brokenValueDefaultDetail(self) -> None:
         """
         Like test_brokenValueBriefDetail, but for the C{"default"} detail case.
         """
         self._brokenValueTest("default")
 
-    def test_brokenValueVerboseDetail(self):
+    def test_brokenValueVerboseDetail(self) -> None:
         """
         Like test_brokenValueBriefDetail, but for the C{"default"} detail case.
         """
         self._brokenValueTest("verbose")
 
-    def _brokenTypeTest(self, detail):
+    def _brokenTypeTest(self, detail: str) -> None:
         """
         Construct a L{Failure} with an exception type that raises an exception
         from its C{__str__} method and then call C{getTraceback} with the
@@ -592,22 +673,24 @@ class GetTracebackTests(SynchronousTestCase):
         traceback = f.getTraceback(detail=detail)
         self.assertIsInstance(traceback, str)
 
-    def test_brokenTypeBriefDetail(self):
+    def test_brokenTypeBriefDetail(self) -> None:
         """
-        A L{Failure} might wrap an exception the type object of which has a
-        C{__str__} method which raises an exception.  In this case, calling
-        C{getTraceback} on the failure with the C{"brief"} detail does not raise
-        an exception.
+                A L{Failure} might wrap an
+                newPublisher(evt)
+        xception the type object of which has a
+                C{__str__} method which raises an exception.  In this case, calling
+                C{getTraceback} on the failure with the C{"brief"} detail does not raise
+                an exception.
         """
         self._brokenTypeTest("brief")
 
-    def test_brokenTypeDefaultDetail(self):
+    def test_brokenTypeDefaultDetail(self) -> None:
         """
         Like test_brokenTypeBriefDetail, but for the C{"default"} detail case.
         """
         self._brokenTypeTest("default")
 
-    def test_brokenTypeVerboseDetail(self):
+    def test_brokenTypeVerboseDetail(self) -> None:
         """
         Like test_brokenTypeBriefDetail, but for the C{"verbose"} detail case.
         """
@@ -616,68 +699,11 @@ class GetTracebackTests(SynchronousTestCase):
 
 class FindFailureTests(SynchronousTestCase):
     """
-    Tests for functionality related to L{Failure._findFailure}.
+    Tests for functionality related to identifying the C{Failure}.
     """
 
-    def test_findNoFailureInExceptionHandler(self):
-        """
-        Within an exception handler, _findFailure should return
-        L{None} in case no Failure is associated with the current
-        exception.
-        """
-        try:
-            1 / 0
-        except BaseException:
-            self.assertIsNone(failure.Failure._findFailure())
-        else:
-            self.fail("No exception raised from 1/0!?")
-
-    def test_findNoFailure(self):
-        """
-        Outside of an exception handler, _findFailure should return None.
-        """
-        self.assertIsNone(sys.exc_info()[-1])  # environment sanity check
-        self.assertIsNone(failure.Failure._findFailure())
-
-    def test_findFailure(self):
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by raiseException).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            self.assertEqual(failure.Failure._findFailure(), f)
-        else:
-            self.fail("No exception raised from raiseException!?")
-
-    def test_failureConstructionFindsOriginalFailure(self):
-        """
-        When a Failure is constructed in the context of an exception
-        handler that is handling an exception raised by
-        raiseException, the new Failure should be chained to that
-        original Failure.
-        Means the new failure should still show the same origin frame,
-        but with different complete stack trace (as not thrown at same place).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        try:
-            f.raiseException()
-        except BaseException:
-            newF = failure.Failure()
-            tb = f.getTraceback().splitlines()
-            new_tb = newF.getTraceback().splitlines()
-            self.assertNotEqual(tb, new_tb)
-            self.assertEqual(tb[-3:], new_tb[-3:])
-        else:
-            self.fail("No exception raised from raiseException!?")
-
     @skipIf(raiser is None, "raiser extension not available")
-    def test_failureConstructionWithMungedStackSucceeds(self):
+    def test_failureConstructionWithMungedStackSucceeds(self) -> None:
         """
         Pyrex and Cython are known to insert fake stack frames so as to give
         more Python-like tracebacks. These stack frames with empty code objects
@@ -696,7 +722,7 @@ class FindFailureTests(SynchronousTestCase):
 # like the old tuples. This being different does not affect the actual tests
 # as we are testing that the input works, and that extract_tb returns something
 # reasonable.
-def _tb(fn, lineno, name, text):
+def _tb(fn: str, lineno: int, name: str, text: None) -> FrameSummary:
     return FrameSummary(fn, lineno, name)
 
 
@@ -709,13 +735,13 @@ class FormattableTracebackTests(SynchronousTestCase):
     formatted using L{traceback.format_tb} and friends.
     """
 
-    def test_singleFrame(self):
+    def test_singleFrame(self) -> None:
         """
         A C{_Traceback} object constructed with a single frame should be able
         to be passed to L{traceback.extract_tb}, and we should get a singleton
         list containing a (filename, lineno, methodname, line) tuple.
         """
-        tb = failure._Traceback([], [["method", "filename.py", 123, {}, {}]])
+        tb = failure._Traceback([["method", "filename.py", 123, {}, {}]])
         # Note that we don't need to test that extract_tb correctly extracts
         # the line's contents. In this case, since filename.py doesn't exist,
         # it will just use None.
@@ -723,17 +749,13 @@ class FormattableTracebackTests(SynchronousTestCase):
             traceback.extract_tb(tb), [_tb("filename.py", 123, "method", None)]
         )
 
-    def test_manyFrames(self):
+    def test_manyFrames(self) -> None:
         """
         A C{_Traceback} object constructed with multiple frames should be able
         to be passed to L{traceback.extract_tb}, and we should get a list
         containing a tuple for each frame.
         """
         tb = failure._Traceback(
-            [
-                ["caller1", "filename.py", 7, {}, {}],
-                ["caller2", "filename.py", 8, {}, {}],
-            ],
             [
                 ["method1", "filename.py", 123, {}, {}],
                 ["method2", "filename.py", 235, {}, {}],
@@ -751,8 +773,6 @@ class FormattableTracebackTests(SynchronousTestCase):
         self.assertEqual(
             traceback.extract_stack(tb.tb_frame),
             [
-                _tb("filename.py", 7, "caller1", None),
-                _tb("filename.py", 8, "caller2", None),
                 _tb("filename.py", 123, "method1", None),
             ],
         )
@@ -767,7 +787,7 @@ class FakeAttributesTests(SynchronousTestCase):
     mortem debuggers).
     """
 
-    def test_fakeFrameAttributes(self):
+    def test_fakeFrameAttributes(self) -> None:
         """
         L{_Frame} instances have the C{f_globals} and C{f_locals} attributes
         bound to C{dict} instance.  They also have the C{f_code} attribute
@@ -804,7 +824,7 @@ class FakeAttributesTests(SynchronousTestCase):
         self.assertEqual(frame.f_lineno, 42)
         self.assertIsInstance(frame.f_trace, type(None))
 
-    def test_fakeCodeAttributes(self):
+    def test_fakeCodeAttributes(self) -> None:
         """
         See L{FakeAttributesTests} for more details about this test.
         """
@@ -827,7 +847,7 @@ class FakeAttributesTests(SynchronousTestCase):
         self.assertIsInstance(code.co_varnames, list)
         self.assertIsInstance(code.co_positions(), tuple)
 
-    def test_fakeTracebackFrame(self):
+    def test_fakeTracebackFrame(self) -> None:
         """
         See L{FakeAttributesTests} for more details about this test.
         """
@@ -847,7 +867,7 @@ class DebugModeTests(SynchronousTestCase):
     Failure's debug mode should allow jumping into the debugger.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Override pdb.post_mortem so we can make sure it's called.
         """
@@ -855,17 +875,21 @@ class DebugModeTests(SynchronousTestCase):
         post_mortem = pdb.post_mortem
         origInit = failure.Failure.__init__
 
-        def restore():
+        def restore() -> None:
             pdb.post_mortem = post_mortem
-            failure.Failure.__init__ = origInit
+            failure.Failure.__init__ = origInit  # type: ignore[method-assign]
 
         self.addCleanup(restore)
 
-        self.result = []
-        pdb.post_mortem = self.result.append
+        self.result: list[TracebackType | None] = []
+
+        def logging_post_mortem(t: TracebackType | None = None) -> None:
+            self.result.append(t)
+
+        pdb.post_mortem = logging_post_mortem
         failure.startDebugMode()
 
-    def test_regularFailure(self):
+    def test_regularFailure(self) -> None:
         """
         If startDebugMode() is called, calling Failure() will first call
         pdb.post_mortem with the traceback.
@@ -878,7 +902,7 @@ class DebugModeTests(SynchronousTestCase):
         self.assertEqual(self.result, [tb])
         self.assertFalse(f.captureVars)
 
-    def test_captureVars(self):
+    def test_captureVars(self) -> None:
         """
         If startDebugMode() is called, passing captureVars to Failure() will
         not blow up.
@@ -897,7 +921,9 @@ class ExtendedGeneratorTests(SynchronousTestCase):
     Tests C{failure.Failure} support for generator features added in Python 2.5
     """
 
-    def _throwIntoGenerator(self, f, g):
+    def _throwIntoGenerator(
+        self, f: failure.Failure, g: Generator[Any, Any, Any]
+    ) -> None:
         try:
             f.throwExceptionIntoGenerator(g)
         except StopIteration:
@@ -905,14 +931,14 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         else:
             self.fail("throwExceptionIntoGenerator should have raised " "StopIteration")
 
-    def test_throwExceptionIntoGenerator(self):
+    def test_throwExceptionIntoGenerator(self) -> None:
         """
         It should be possible to throw the exception that a Failure
         represents into a generator.
         """
         stuff = []
 
-        def generator():
+        def generator() -> Generator[None, None, None]:
             try:
                 yield
             except BaseException:
@@ -930,31 +956,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         self.assertEqual(traceback.extract_tb(stuff[0][2])[-1][-1], "1 / 0")
 
-    def test_findFailureInGenerator(self):
-        """
-        Within an exception handler, it should be possible to find the
-        original Failure that caused the current exception (if it was
-        caused by throwExceptionIntoGenerator).
-        """
-        f = getDivisionFailure()
-        f.cleanFailure()
-        foundFailures = []
-
-        def generator():
-            try:
-                yield
-            except BaseException:
-                foundFailures.append(failure.Failure._findFailure())
-            else:
-                self.fail("No exception sent to generator")
-
-        g = generator()
-        next(g)
-        self._throwIntoGenerator(f, g)
-
-        self.assertEqual(foundFailures, [f])
-
-    def test_failureConstructionFindsOriginalFailure(self):
+    def test_failureConstructionFindsOriginalFailure(self) -> None:
         """
         When a Failure is constructed in the context of an exception
         handler that is handling an exception raised by
@@ -967,7 +969,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         newFailures = []
 
-        def generator():
+        def generator() -> Generator[None, None, None]:
             try:
                 yield
             except BaseException:
@@ -990,14 +992,14 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         self.assertIn("generator", newFailures[0].getTraceback())
         self.assertNotIn("generator", f.getTraceback())
 
-    def test_ambiguousFailureInGenerator(self):
+    def test_ambiguousFailureInGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} inside the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        inside the generator should find the reraised exception rather than
+        original one.
         """
 
-        def generator():
+        def generator() -> Generator[None, None, None]:
             try:
                 try:
                     yield
@@ -1011,14 +1013,14 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         f = getDivisionFailure()
         self._throwIntoGenerator(f, g)
 
-    def test_ambiguousFailureFromGenerator(self):
+    def test_ambiguousFailureFromGenerator(self) -> None:
         """
-        When a generator reraises a different exception,
-        L{Failure._findFailure} above the generator should find the reraised
-        exception rather than original one.
+        When a generator reraises a different exception, creating a L{Failure}
+        above the generator should find the reraised exception rather than
+        original one.
         """
 
-        def generator():
+        def generator() -> Generator[None, None, None]:
             try:
                 yield
             except BaseException:

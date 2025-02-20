@@ -84,9 +84,9 @@ class SimpleUserAuth(userauth.SSHUserAuthClient):
 
 class SimpleConnection(connection.SSHConnection):
     def serviceStarted(self):
-        self.openChannel(TrueChannel(2 ** 16, 2 ** 15, self))
-        self.openChannel(FalseChannel(2 ** 16, 2 ** 15, self))
-        self.openChannel(CatChannel(2 ** 16, 2 ** 15, self))
+        self.openChannel(TrueChannel(2**16, 2**15, self))
+        self.openChannel(FalseChannel(2**16, 2**15, self))
+        self.openChannel(CatChannel(2**16, 2**15, self))
 
 
 class TrueChannel(channel.SSHChannel):

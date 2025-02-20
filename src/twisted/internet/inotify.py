@@ -251,7 +251,6 @@ class INotify(FileDescriptor):
         """
         self._buffer += in_
         while len(self._buffer) >= 16:
-
             wd, mask, cookie, size = struct.unpack("=LLLL", self._buffer[0:16])
 
             if size:

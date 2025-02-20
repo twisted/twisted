@@ -4,7 +4,7 @@
 
 from io import BytesIO
 
-from twisted.internet import abstract, protocol
+from twisted.internet import abstract, defer, protocol
 from twisted.protocols import basic, loopback
 from twisted.trial import unittest
 
@@ -12,31 +12,35 @@ from twisted.trial import unittest
 class BufferingServer(protocol.Protocol):
     buffer = b""
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.buffer += data
 
 
 class FileSendingClient(protocol.Protocol):
-    def __init__(self, f):
+    def __init__(self, f: BytesIO) -> None:
         self.f = f
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
+        assert self.transport is not None
         s = basic.FileSender()
         d = s.beginFileTransfer(self.f, self.transport, lambda x: x)
         d.addCallback(lambda r: self.transport.loseConnection())
 
 
 class FileSenderTests(unittest.TestCase):
-    def testSendingFile(self):
+    def testSendingFile(self) -> defer.Deferred[None]:
         testStr = b"xyz" * 100 + b"abc" * 100 + b"123" * 100
         s = BufferingServer()
         c = FileSendingClient(BytesIO(testStr))
 
-        d = loopback.loopbackTCP(s, c)
-        d.addCallback(lambda x: self.assertEqual(s.buffer, testStr))
-        return d
+        d: defer.Deferred[None] = loopback.loopbackTCP(s, c)
 
-    def testSendingEmptyFile(self):
+        def callback(x: object) -> None:
+            self.assertEqual(s.buffer, testStr)
+
+        return d.addCallback(callback)
+
+    def testSendingEmptyFile(self) -> None:
         fileSender = basic.FileSender()
         consumer = abstract.FileDescriptor()
         consumer.connected = 1

@@ -14,19 +14,18 @@ This API is currently considered private because it's in early draft form. When
 it has stabilised, it'll be made public.
 """
 
-
 import io
 from collections import deque
 from typing import List
 
 from zope.interface import implementer
 
-import h2.config  # type: ignore[import]
-import h2.connection  # type: ignore[import]
-import h2.errors  # type: ignore[import]
-import h2.events  # type: ignore[import]
-import h2.exceptions  # type: ignore[import]
-import priority  # type: ignore[import]
+import h2.config
+import h2.connection
+import h2.errors
+import h2.events
+import h2.exceptions
+import priority
 
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
@@ -36,6 +35,7 @@ from twisted.internet.interfaces import (
     IProtocol,
     IPushProducer,
     ISSLTransport,
+    ITCPTransport,
     ITransport,
 )
 from twisted.internet.protocol import Protocol
@@ -144,6 +144,8 @@ class H2Connection(Protocol, TimeoutMixin):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
@@ -972,7 +974,7 @@ class H2Stream:
                 self._request.gotLength(None)
 
         self._request.parseCookies()
-        expectContinue = self._request.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = self._request.requestHeaders.getRawHeaders(b"Expect")
         if expectContinue and expectContinue[0].lower() == b"100-continue":
             self._send100Continue()
 
@@ -1073,10 +1075,15 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type headers: Any iterable of two-tuples of L{bytes}, representing header
-            names and header values.
+        @type headers: L{twisted.web.http_headers.Headers}
         """
-        self._conn.writeHeaders(version, code, reason, headers, self.streamID)
+        self._conn.writeHeaders(
+            version,
+            code,
+            reason,
+            [(k, v) for (k, values) in headers.getAllRawHeaders() for v in values],
+            self.streamID,
+        )
 
     def requestDone(self, request):
         """

@@ -1,6 +1,4 @@
 # Do everything properly, and componentize
-import cgi
-
 from zope.interface import Interface, implementer
 
 from twisted.application import internet, service, strports
@@ -60,7 +58,6 @@ class IFingerFactory(Interface):
 
 @implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerProtocol
 
     def __init__(self, service):
@@ -99,7 +96,6 @@ class IFingerSetterFactory(Interface):
 
 @implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerSetterProtocol
 
     def __init__(self, service):
@@ -147,7 +143,6 @@ class IIRCClientFactory(Interface):
 
 @implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
     protocol = IRCReplyBot
     nickname = None
 

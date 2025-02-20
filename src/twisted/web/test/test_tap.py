@@ -4,14 +4,15 @@
 """
 Tests for L{twisted.web.tap}.
 """
-
+from __future__ import annotations
 
 import os
 import stat
+from typing import cast
 from unittest import skipIf
 
 from twisted.internet import endpoints, reactor
-from twisted.internet.interfaces import IReactorUNIX
+from twisted.internet.interfaces import IReactorCore, IReactorUNIX
 from twisted.python.filepath import FilePath
 from twisted.python.reflect import requireModule
 from twisted.python.threadpool import ThreadPool
@@ -41,7 +42,7 @@ class ServiceTests(TestCase):
     Tests for the service creation APIs in L{twisted.web.tap}.
     """
 
-    def _pathOption(self):
+    def _pathOption(self) -> tuple[FilePath[str], File]:
         """
         Helper for the I{--path} tests which creates a directory and creates
         an L{Options} object which uses that directory as its static
@@ -58,7 +59,7 @@ class ServiceTests(TestCase):
         root = options["root"]
         return path, root
 
-    def test_path(self):
+    def test_path(self) -> None:
         """
         The I{--path} option causes L{Options} to create a root resource
         which serves responses from the specified path.
@@ -71,7 +72,7 @@ class ServiceTests(TestCase):
         not IReactorUNIX.providedBy(reactor),
         "The reactor does not support UNIX domain sockets",
     )
-    def test_pathServer(self):
+    def test_pathServer(self) -> None:
         """
         The I{--path} option to L{makeService} causes it to return a service
         which will listen on the server address given by the I{--port} option.
@@ -89,7 +90,7 @@ class ServiceTests(TestCase):
         self.assertTrue(os.path.exists(port))
         self.assertTrue(stat.S_ISSOCK(os.stat(port).st_mode))
 
-    def test_cgiProcessor(self):
+    def test_cgiProcessor(self) -> None:
         """
         The I{--path} option creates a root resource which serves a
         L{CGIScript} instance for any child with the C{".cgi"} extension.
@@ -98,7 +99,7 @@ class ServiceTests(TestCase):
         path.child("foo.cgi").setContent(b"")
         self.assertIsInstance(root.getChild("foo.cgi", None), CGIScript)
 
-    def test_epyProcessor(self):
+    def test_epyProcessor(self) -> None:
         """
         The I{--path} option creates a root resource which serves a
         L{PythonScript} instance for any child with the C{".epy"} extension.
@@ -107,7 +108,7 @@ class ServiceTests(TestCase):
         path.child("foo.epy").setContent(b"")
         self.assertIsInstance(root.getChild("foo.epy", None), PythonScript)
 
-    def test_rpyProcessor(self):
+    def test_rpyProcessor(self) -> None:
         """
         The I{--path} option creates a root resource which serves the
         C{resource} global defined by the Python source in any child with
@@ -123,7 +124,7 @@ class ServiceTests(TestCase):
         self.assertEqual(child.data, "content")
         self.assertEqual(child.type, "major/minor")
 
-    def test_makePersonalServerFactory(self):
+    def test_makePersonalServerFactory(self) -> None:
         """
         L{makePersonalServerFactory} returns a PB server factory which has
         as its root object a L{ResourcePublisher}.
@@ -140,7 +141,7 @@ class ServiceTests(TestCase):
         not IReactorUNIX.providedBy(reactor),
         "The reactor does not support UNIX domain sockets",
     )
-    def test_personalServer(self):
+    def test_personalServer(self) -> None:
         """
         The I{--personal} option to L{makeService} causes it to return a
         service which will listen on the server address given by the I{--port}
@@ -159,7 +160,7 @@ class ServiceTests(TestCase):
         not IReactorUNIX.providedBy(reactor),
         "The reactor does not support UNIX domain sockets",
     )
-    def test_defaultPersonalPath(self):
+    def test_defaultPersonalPath(self) -> None:
         """
         If the I{--port} option not specified but the I{--personal} option is,
         L{Options} defaults the port to C{UserDirectory.userSocketName} in the
@@ -170,7 +171,7 @@ class ServiceTests(TestCase):
         path = os.path.expanduser(os.path.join("~", UserDirectory.userSocketName))
         self.assertEqual(options["ports"][0], f"unix:{path}")
 
-    def test_defaultPort(self):
+    def test_defaultPort(self) -> None:
         """
         If the I{--port} option is not specified, L{Options} defaults the port
         to C{8080}.
@@ -181,7 +182,7 @@ class ServiceTests(TestCase):
             endpoints._parseServer(options["ports"][0], None)[:2], ("TCP", (8080, None))
         )
 
-    def test_twoPorts(self):
+    def test_twoPorts(self) -> None:
         """
         If the I{--http} option is given twice, there are two listeners
         """
@@ -190,7 +191,7 @@ class ServiceTests(TestCase):
         self.assertIn("8001", options["ports"][0])
         self.assertIn("8002", options["ports"][1])
 
-    def test_wsgi(self):
+    def test_wsgi(self) -> None:
         """
         The I{--wsgi} option takes the fully-qualifed Python name of a WSGI
         application object and creates a L{WSGIResource} at the root which
@@ -206,13 +207,13 @@ class ServiceTests(TestCase):
 
         # The threadpool should start and stop with the reactor.
         self.assertFalse(root._threadpool.started)
-        reactor.fireSystemEvent("startup")
+        cast(IReactorCore, reactor).fireSystemEvent("startup")
         self.assertTrue(root._threadpool.started)
         self.assertFalse(root._threadpool.joined)
-        reactor.fireSystemEvent("shutdown")
+        cast(IReactorCore, reactor).fireSystemEvent("shutdown")
         self.assertTrue(root._threadpool.joined)
 
-    def test_invalidApplication(self):
+    def test_invalidApplication(self) -> None:
         """
         If I{--wsgi} is given an invalid name, L{Options.parseOptions}
         raises L{UsageError}.
@@ -223,7 +224,7 @@ class ServiceTests(TestCase):
             self.assertEqual(str(exc), f"No such WSGI application: {name!r}")
 
     @skipIf(requireModule("OpenSSL.SSL") is not None, "SSL module is available.")
-    def test_HTTPSFailureOnMissingSSL(self):
+    def test_HTTPSFailureOnMissingSSL(self) -> None:
         """
         An L{UsageError} is raised when C{https} is requested but there is no
         support for SSL.
@@ -235,7 +236,7 @@ class ServiceTests(TestCase):
         self.assertEqual("SSL support not installed", exception.args[0])
 
     @skipIf(requireModule("OpenSSL.SSL") is None, "SSL module is not available.")
-    def test_HTTPSAcceptedOnAvailableSSL(self):
+    def test_HTTPSAcceptedOnAvailableSSL(self) -> None:
         """
         When SSL support is present, it accepts the --https option.
         """
@@ -246,7 +247,7 @@ class ServiceTests(TestCase):
         self.assertIn("ssl", options["ports"][0])
         self.assertIn("443", options["ports"][0])
 
-    def test_add_header_parsing(self):
+    def test_add_header_parsing(self) -> None:
         """
         When --add-header is specific, the value is parsed.
         """
@@ -254,7 +255,7 @@ class ServiceTests(TestCase):
         options.parseOptions(["--add-header", "K1: V1", "--add-header", "K2: V2"])
         self.assertEqual(options["extraHeaders"], [("K1", "V1"), ("K2", "V2")])
 
-    def test_add_header_resource(self):
+    def test_add_header_resource(self) -> None:
         """
         When --add-header is specified, the resource is a composition that adds
         headers.
@@ -267,7 +268,7 @@ class ServiceTests(TestCase):
         self.assertEqual(resource._headers, [("K1", "V1"), ("K2", "V2")])
         self.assertIsInstance(resource._originalResource, demo.Test)
 
-    def test_noTracebacksDeprecation(self):
+    def test_noTracebacksDeprecation(self) -> None:
         """
         Passing --notracebacks is deprecated.
         """
@@ -282,7 +283,7 @@ class ServiceTests(TestCase):
         )
         self.assertEqual(len(warnings), 1)
 
-    def test_displayTracebacks(self):
+    def test_displayTracebacks(self) -> None:
         """
         Passing --display-tracebacks will enable traceback rendering on the
         generated Site.
@@ -292,7 +293,7 @@ class ServiceTests(TestCase):
         service = makeService(options)
         self.assertTrue(service.services[0].factory.displayTracebacks)
 
-    def test_displayTracebacksNotGiven(self):
+    def test_displayTracebacksNotGiven(self) -> None:
         """
         Not passing --display-tracebacks will leave traceback rendering on the
         generated Site off.
@@ -304,7 +305,7 @@ class ServiceTests(TestCase):
 
 
 class AddHeadersResourceTests(TestCase):
-    def test_getChildWithDefault(self):
+    def test_getChildWithDefault(self) -> None:
         """
         When getChildWithDefault is invoked, it adds the headers to the
         response.

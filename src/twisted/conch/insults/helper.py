@@ -450,7 +450,7 @@ class TerminalBuffer(protocol.Protocol):
         for L in self.lines:
             buf = []
             length = 0
-            for (ch, attr) in L:
+            for ch, attr in L:
                 if ch is not self.void:
                     buf.append(ch)
                     length = len(buf)

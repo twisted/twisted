@@ -6,7 +6,7 @@
 L{twisted.python.fakepwd} provides a fake implementation of the L{pwd} API.
 """
 
-from typing import List
+from typing import List, Optional
 
 __all__ = ["UserDatabase", "ShadowDatabase"]
 
@@ -61,6 +61,8 @@ class UserDatabase:
     """
 
     _users: List[_UserRecord]
+    _lastUID: int = 10101
+    _lastGID: int = 20202
 
     def __init__(self) -> None:
         self._users = []
@@ -68,12 +70,12 @@ class UserDatabase:
     def addUser(
         self,
         username: str,
-        password: str,
-        uid: int,
-        gid: int,
-        gecos: str,
-        home: str,
-        shell: str,
+        password: str = "password",
+        uid: Optional[int] = None,
+        gid: Optional[int] = None,
+        gecos: str = "",
+        home: str = "",
+        shell: str = "/bin/sh",
     ) -> None:
         """
         Add a new user record to this database.
@@ -99,9 +101,14 @@ class UserDatabase:
         @param shell: The value for the C{pw_shell} field of the user record to
             add.
         """
-        self._users.append(
-            _UserRecord(username, password, uid, gid, gecos, home, shell)
-        )
+        if uid is None:
+            uid = self._lastUID
+            self._lastUID += 1
+        if gid is None:
+            gid = self._lastGID
+            self._lastGID += 1
+        newUser = _UserRecord(username, password, uid, gid, gecos, home, shell)
+        self._users.append(newUser)
 
     def getpwuid(self, uid: int) -> _UserRecord:
         """

@@ -17,12 +17,15 @@ import io
 import os
 import sys
 from base64 import decodebytes
+from typing import TYPE_CHECKING
 
 from twisted.conch.client import agent
 from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import common, keys, userauth
+from twisted.conch.ssh.transport import SSHClientTransport
 from twisted.internet import defer, protocol, reactor
+from twisted.internet.defer import Deferred
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
@@ -36,7 +39,9 @@ _open = open
 _input = input
 
 
-def verifyHostKey(transport, host, pubKey, fingerprint):
+def verifyHostKey(
+    transport: SSHClientTransport, host: bytes, pubKey: bytes, fingerprint: str
+) -> Deferred[bool]:
     """
     Verify a host's key.
 
@@ -56,26 +61,29 @@ def verifyHostKey(transport, host, pubKey, fingerprint):
     equivalent that could be used.
 
     @param host: Due to a bug in L{SSHClientTransport.verifyHostKey}, this is
-    always the dotted-quad IP address of the host being connected to.
-    @type host: L{str}
+        always the dotted-quad IP address of the host being connected to.
 
     @param transport: the client transport which is attempting to connect to
-    the given host.
-    @type transport: L{SSHClientTransport}
+        the given host.
 
     @param fingerprint: the fingerprint of the given public key, in
-    xx:xx:xx:... format.  This is ignored in favor of getting the fingerprint
-    from the key itself.
-    @type fingerprint: L{str}
+        xx:xx:xx:...  format.  This is ignored in favor of getting the
+        fingerprint from the key itself.
 
     @param pubKey: The public key of the server being connected to.
-    @type pubKey: L{str}
 
-    @return: a L{Deferred} which fires with C{1} if the key was successfully
-    verified, or fails if the key could not be successfully verified.  Failure
-    types may include L{HostKeyChanged}, L{UserRejectedKey}, L{IOError} or
-    L{KeyboardInterrupt}.
+    @return: a L{Deferred} which fires with C{True} if the key was successfully
+        verified, or fails if the key could not be successfully verified.
+        Failure types may include L{HostKeyChanged}, L{UserRejectedKey},
+        L{IOError} or L{KeyboardInterrupt}.
     """
+    if TYPE_CHECKING:
+        # this is just a structured assumption that we are making about the
+        # transport's factory; behind a TYPE_CHECKING flag because we use some
+        # test fakes and don't want to nail down the type that much.
+        from twisted.conch.client.direct import SSHClientFactory
+
+        assert isinstance(transport.factory, SSHClientFactory)
     actualHost = transport.factory.options["host"]
     actualKey = keys.Key.fromString(pubKey)
     kh = KnownHostsFile.fromPath(

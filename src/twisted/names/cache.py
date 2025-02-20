@@ -39,7 +39,7 @@ class CacheResolver(common.ResolverBase):
         self.__dict__ = state
 
         now = self._reactor.seconds()
-        for (k, (when, (ans, add, ns))) in self.cache.items():
+        for k, (when, (ans, add, ns)) in self.cache.items():
             diff = now - when
             for rec in ans + add + ns:
                 if rec.ttl < diff:

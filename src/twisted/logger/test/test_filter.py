@@ -11,7 +11,7 @@ from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 
 from twisted.trial import unittest
 from .._filter import (

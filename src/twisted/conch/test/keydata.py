@@ -105,6 +105,18 @@ ECDatanistp256 = {
     "curve": b"ecdsa-sha2-nistp256",
 }
 
+SKECDatanistp256 = {
+    "x": int(
+        "239399367768747020111880335553299826848360860410053166887934464"
+        "83115637049597"
+    ),
+    "y": int(
+        "114119006635761413192818806701564910719235784173643448381780025"
+        "223832906554748"
+    ),
+    "curve": b"sk-ecdsa-sha2-nistp256@openssh.com",
+}
+
 ECDatanistp384 = {
     "privateValue": int(
         "280814107134858470598753916394807521398239633534281"
@@ -146,6 +158,17 @@ Ed25519Data = {
     "a": (
         b"\xf1\x16\xd1\x15J\x1e\x15\x0e\x19^\x19F\xb5\xf2D\r\xb2R\xa0\xae*k"
         b"#\x13sE\xfd@\xd9W{\x8b"
+    ),
+    "k": (
+        b"7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U"
+        b"\xbb\xc9DX"
+    ),
+}
+
+SKEd25519Data = {
+    "a": (
+        b"\x08}'U\xd2i\x04\x11\xea\x01~+\x165iRM\xdd\xe6R\x7f\xd3\xaf\\\xa8p"
+        b"\xa0LL\xe5\x8a\xa0"
     ),
     "k": (
         b"7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U"
@@ -215,6 +238,30 @@ publicECDSA_openssh = (
     b"gkN/34n42F4vpeA= comment"
 )
 
+publicSKECDSA_openssh = (
+    b"sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3"
+    b"BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBDTthidmBSzlQiO8aZPfLmUDOS2TSRevW8IrHPK"
+    b"IhYj9/E0RnTyvPIB1eWQx4rQl5iO1mihuBz+u4LkjwVEU3XwAAAAUc3NoOmVjZHNhLWZpZG8y"
+    b"LXRlc3Q= comment"
+)
+
+publicSKEd25519_openssh = (
+    b"sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
+    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+)
+
+publicSKECDSA_cert_openssh = (
+    b"sk-ecdsa-sha2-nistp256-cert-v01@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3"
+    b"BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBDTthidmBSzlQiO8aZPfLmUDOS2TSRevW8IrHPK"
+    b"IhYj9/E0RnTyvPIB1eWQx4rQl5iO1mihuBz+u4LkjwVEU3XwAAAAUc3NoOmVjZHNhLWZpZG8y"
+    b"LXRlc3Q= comment"
+)
+
+publicSKEd25519_cert_openssh = (
+    b"sk-ssh-ed25519-cert-v01@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
+    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+)
+
 privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIEyU1YOT2JxxofwbJXIjGftdNcJK55aQdNrhIt2xYQz0oAoGCCqGSM49
 AwEHoUQDQgAEqKZfUNnv5CPRKl948xujWlvrIaQBvmXt24LWXznnIPu0R9B+qTtt
@@ -281,38 +328,6 @@ Qpfz6Bakxu7s1EkQUDgE7jvN19DMzDJpkAegG1qf/jHNHjp+cR4ZlBpOTwzfX1LV
 v7YnAoGAZhb5IDTQVCW8YTGsgvvvnDUefkpVAmiVDQqTvh6/4UD6kKdUcDHpePzg
 Zrcid5rr3dXSMEbK4tdeQZvPtUg1Uaol3N7bNClIIdvWdPx+5S9T95wJcLnkoHam
 rXp0IjScTxfLP+Cq5V6lJ94/pX8Ppoj1FdZfNxeS4NYFSRA7kvY=
------END RSA PRIVATE KEY-----"""
-
-# Some versions of OpenSSH generate these (slightly different keys): the PKCS#1
-# structure is wrapped in an extra ASN.1 SEQUENCE and there's an empty SEQUENCE
-# following it. It is not any standard key format and was probably a bug in
-# OpenSSH at some point.
-privateRSA_openssh_alternate = b"""-----BEGIN RSA PRIVATE KEY-----
-MIIEqDCCBKICAQACggEBANVqrHgj1tYb7CWhUMR3Y1CERQFVQhQqKuDQYO7U6aOt
-Svo5Bl6EVXVfADa/b6oqP4MmN8FpLlv98PPSfdaYzTpAeNXKqBjAEZMkCQyBTI/3
-nO0TFmqkBOlJd8PkVWSzeWieLAjrrOgELSF3BaeO71MwDaXluz1q4gk2b/00031v
-Rv+H2qkpJ6r/rfWF5j4auHodSrHqwFr3MN8fwqTk7z+RSZZA1Rl3LTfDXuydpjpE
-pcKkKd3Vupw9RbPGLBhk1bo936t/zUKsp/EYC6BYFWILpCpuQ8PkBJ81o0eORu0z
-pWW9vDspbgILV9906BO0NzV+g18gJmCm3K2Lxmx5mPcCAwEAAQKCAQAhTAhmoijV
-tPuOD3IbhQkAufJON/AcV0vjUX+eI6fkOphVG+qLepgevNi6sfmJEhhgrOjMC04J
-WkBqui+Z+LMkYIS5zmmVmvni/B9RTScV2ysnre+0aay+fRDrhkdwc7QAh5UVOzf5
-5xTngLtoHhvm3btzY7ln5rInf8/PMJvCmP3ZGDYvNi7xPYF6n+EDLUfbNFFiOd1P
-6ayoi9nW84TEF7lxnQYIQnhNu8Uq9MNYzVUr7b4zXwTqe+YEJGPyLdc9G2zVnGND
-L5KIjT5u2hg32A8lZ4kduUY0XsnOxIvtklozBw/fhgj5kunb6zgINsnNzQoBSFs5
-PnrKxoCp3NQ5AoGBANlwBtjivNR4kVCU1MEbiThsRmRaUaCaBz1IjwNRzGsSjn0a
-sWXncXU54DIFdY0YTK+TsUmxZl94YnrRDMrmTUOznPRrfeYMmNzPIWKO1S4S3gSu
-1yRugzGiFaJEPSKpYiYiubLtVAqdCIOnBw3/GRiO2Ksd2kicMWgRoWZt49gdAoGB
-APtEF4ukNr4eNx2n9mFsBMSq3Xg+B4weMwKuAxSHg3rlnn0IZ6jyqr8ScM9yqafH
-Cx2I1SD9nGPKRzBVTovEz/R/FqSSEnShCcLEbpyMM++l5ffgK61PXBGqGoQ3W/16
-6sPNfLDI5B9UY7XHr9/0Caf8xyX8XOmR15LFmB5W07EjAoGAUa/pkp+UC0qEZT6U
-szuSELV0uIzJ78kOATL6L2gSoQMmrs9RaBRMJpsopAIzCF/hp3CYATR5XlKOxM82
-vB9LVazrwVOEx+FhqErUov9ADYAfEqlQwCoYdZQMBpsWUKhL7EHNe+/3S8l1AmjE
-mLiGiBhaQ+cCM5ciZJODDEUqfO0CgYBpZjfGQN0hxQTzsLg+R5R8dvwt6z85PJXD
-QwFRxEKX8+gWpMbu7NRJEFA4BO47zdfQzMwyaZAHoBtan/4xzR46fnEeGZQaTk8M
-319S1dEXbuzXnLZVnduOIV+8JIi2/K+r8O+kLLDcn4awAxK4i+LdD8DuIz1KUP4v
-uClGWL+2JwKBgGYW+SA00FQlvGExrIL775w1Hn5KVQJolQ0Kk74ev+FA+pCnVHAx
-6Xj84Ga3Inea693V0jBGyuLXXkGbz7VINVGqJdze2zQpSCHb1nT8fuUvU/ecCXC5
-5KB2pq16dCI0nE8Xyz/gquVepSfeP6V/D6aI9RXWXzcXkuDWBUkQO5L2MAA=
 -----END RSA PRIVATE KEY-----"""
 
 # New format introduced in OpenSSH 6.5
@@ -653,5 +668,4 @@ __all__ = [
     "publicDSA_openssh",
     "publicRSA_lsh",
     "publicRSA_openssh",
-    "privateRSA_openssh_alternate",
 ]

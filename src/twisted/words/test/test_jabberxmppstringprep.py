@@ -14,7 +14,7 @@ class DeprecationTests(unittest.TestCase):
     Deprecations in L{twisted.words.protocols.jabber.xmpp_stringprep}.
     """
 
-    def test_crippled(self):
+    def test_crippled(self) -> None:
         """
         L{xmpp_stringprep.crippled} is deprecated and always returns C{False}.
         """
@@ -46,7 +46,7 @@ class XMPPStringPrepTests(unittest.TestCase):
     differences.
     """
 
-    def testResourcePrep(self):
+    def testResourcePrep(self) -> None:
         self.assertEqual(resourceprep.prepare("resource"), "resource")
         self.assertNotEqual(resourceprep.prepare("Resource"), "resource")
         self.assertEqual(resourceprep.prepare(" "), " ")
@@ -89,18 +89,18 @@ class XMPPStringPrepTests(unittest.TestCase):
         self.assertEqual(resourceprep.prepare("\u06271\u0628"), "\u06271\u0628")
         self.assertRaises(UnicodeError, resourceprep.prepare, "\U000e0002")
 
-    def testNodePrep(self):
+    def testNodePrep(self) -> None:
         self.assertEqual(nodeprep.prepare("user"), "user")
         self.assertEqual(nodeprep.prepare("User"), "user")
         self.assertRaises(UnicodeError, nodeprep.prepare, "us&er")
 
-    def test_nodeprepUnassignedInUnicode32(self):
+    def test_nodeprepUnassignedInUnicode32(self) -> None:
         """
         Make sure unassigned code points from Unicode 3.2 are rejected.
         """
         self.assertRaises(UnicodeError, nodeprep.prepare, "\u1d39")
 
-    def testNamePrep(self):
+    def testNamePrep(self) -> None:
         self.assertEqual(nameprep.prepare("example.com"), "example.com")
         self.assertEqual(nameprep.prepare("Example.com"), "example.com")
         self.assertRaises(UnicodeError, nameprep.prepare, "ex@mple.com")
@@ -111,7 +111,7 @@ class XMPPStringPrepTests(unittest.TestCase):
             nameprep.prepare("stra\u00dfe.example.com"), "strasse.example.com"
         )
 
-    def test_nameprepTrailingDot(self):
+    def test_nameprepTrailingDot(self) -> None:
         """
         A trailing dot in domain names is preserved.
         """

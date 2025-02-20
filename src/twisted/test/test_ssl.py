@@ -429,7 +429,6 @@ class SpammyTLSTests(TLSTests):
 
 
 class BufferingTests(TestCase):
-
     if interfaces.IReactorSSL(reactor, None) is None:
         skip = "Reactor does not support SSL, cannot run SSL tests"
 

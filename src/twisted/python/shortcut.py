@@ -10,8 +10,8 @@ Requires win32all.
 
 import os
 
-import pythoncom  # type: ignore[import]
-from win32com.shell import shell  # type: ignore[import]
+import pythoncom  # type: ignore[import-untyped]
+from win32com.shell import shell
 
 
 def open(filename):

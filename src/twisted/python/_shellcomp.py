@@ -111,7 +111,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
 
         if args:
             # yes, we have a subcommand. Try to find it.
-            for (cmd, short, parser, doc) in config.subCommands:
+            for cmd, short, parser, doc in config.subCommands:
                 if args[0] == cmd or args[0] == short:
                     subOptions = parser()
                     subOptions.parent = config
@@ -185,7 +185,7 @@ class ZshBuilder:
             gen.extraActions.insert(0, SubcommandAction())
             gen.write()
             self.file.write(b"local _zsh_subcmds_array\n_zsh_subcmds_array=(\n")
-            for (cmd, short, parser, desc) in self.options.subCommands:
+            for cmd, short, parser, desc in self.options.subCommands:
                 self.file.write(
                     b'"' + cmd.encode("utf-8") + b":" + desc.encode("utf-8") + b'"\n'
                 )
@@ -603,7 +603,9 @@ class ZshArgumentsGenerator:
         obj = getattr(self.options, "opt_%s" % longMangled, None)
         if obj is not None:
             descr = descrFromDoc(obj)
-            if descr is not None:
+            # On Python3.13 we have an empty string instead of None,
+            # for missing description.
+            if descr:
                 return descr
 
         return longname  # we really ought to have a good description to use

@@ -17,14 +17,14 @@ class ProcessMonitorTapTests(unittest.TestCase):
     method.
     """
 
-    def test_commandLineRequired(self):
+    def test_commandLineRequired(self) -> None:
         """
         The command line arguments must be provided.
         """
         opt = tap.Options()
         self.assertRaises(UsageError, opt.parseOptions, [])
 
-    def test_threshold(self):
+    def test_threshold(self) -> None:
         """
         The threshold option is recognised as a parameter and coerced to
         float.
@@ -33,7 +33,7 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(["--threshold", "7.5", "foo"])
         self.assertEqual(opt["threshold"], 7.5)
 
-    def test_killTime(self):
+    def test_killTime(self) -> None:
         """
         The killtime option is recognised as a parameter and coerced to float.
         """
@@ -41,7 +41,7 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(["--killtime", "7.5", "foo"])
         self.assertEqual(opt["killtime"], 7.5)
 
-    def test_minRestartDelay(self):
+    def test_minRestartDelay(self) -> None:
         """
         The minrestartdelay option is recognised as a parameter and coerced to
         float.
@@ -50,7 +50,7 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(["--minrestartdelay", "7.5", "foo"])
         self.assertEqual(opt["minrestartdelay"], 7.5)
 
-    def test_maxRestartDelay(self):
+    def test_maxRestartDelay(self) -> None:
         """
         The maxrestartdelay option is recognised as a parameter and coerced to
         float.
@@ -59,7 +59,7 @@ class ProcessMonitorTapTests(unittest.TestCase):
         opt.parseOptions(["--maxrestartdelay", "7.5", "foo"])
         self.assertEqual(opt["maxrestartdelay"], 7.5)
 
-    def test_parameterDefaults(self):
+    def test_parameterDefaults(self) -> None:
         """
         The parameters all have default values
         """
@@ -70,7 +70,7 @@ class ProcessMonitorTapTests(unittest.TestCase):
         self.assertEqual(opt["minrestartdelay"], 1)
         self.assertEqual(opt["maxrestartdelay"], 3600)
 
-    def test_makeService(self):
+    def test_makeService(self) -> None:
         """
         The command line gets added as a process to the ProcessMontor.
         """

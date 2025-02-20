@@ -1080,7 +1080,7 @@ class NoticingClient(IRCClientWithoutLogin):
                     "TypeError: %s() takes %d arguments "
                     "(%d given)" % (fname, len(args), len(a))
                 )
-            for (name, value) in zip(args, a):
+            for name, value in zip(args, a):
                 if name in kw:
                     raise TypeError(
                         "TypeError: %s() got multiple values "
@@ -2158,8 +2158,7 @@ class ClientTests(IRCTestCase):
         Return the last IRC message in the transport buffer.
         """
         line = transport.value()
-        if bytes != str and isinstance(line, bytes):
-            line = line.decode("utf-8")
+        line = line.decode("utf-8")
         return line.split("\r\n")[-2]
 
     def test_away(self):

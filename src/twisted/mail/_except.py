@@ -119,7 +119,7 @@ class SMTPClientError(SMTPError):
         if isinstance(resp, str):  # type: ignore[unreachable]
             resp = resp.encode("utf-8")  # type: ignore[unreachable]
 
-        if isinstance(log, str):  # type: ignore[unreachable]
+        if isinstance(log, str):
             log = log.encode("utf-8")  # type: ignore[unreachable]
 
         self.code = code

@@ -115,7 +115,7 @@ class MemoryReactor(Clock):
         """
         if port == 0:
             while True:
-                port = randrange(1, 2 ** 16)
+                port = randrange(1, 2**16)
                 if port not in self.udpPorts:
                     break
         if port in self.udpPorts:

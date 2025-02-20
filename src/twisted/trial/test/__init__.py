@@ -8,7 +8,7 @@ Unit tests for the Trial unit-testing framework.
 from hypothesis import HealthCheck, settings
 
 
-def _activateHypothesisProfile():
+def _activateHypothesisProfile() -> None:
     """
     Load a Hypothesis profile appropriate for a Twisted test suite.
     """

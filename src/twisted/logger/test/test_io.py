@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from zope.interface import implementer
 
-from constantly import NamedConstant  # type: ignore[import]
+from constantly import NamedConstant
 
 from twisted.trial import unittest
 from .._interfaces import ILogObserver, LogEvent

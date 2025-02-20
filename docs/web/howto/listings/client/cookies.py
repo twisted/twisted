@@ -1,5 +1,7 @@
+from http.cookiejar import CookieJar
+
 from twisted.internet import reactor
-from twisted.python import compat, log
+from twisted.python import log
 from twisted.web.client import Agent, CookieAgent
 
 
@@ -12,7 +14,7 @@ def displayCookies(response, cookieJar):
 
 
 def main():
-    cookieJar = compat.cookielib.CookieJar()
+    cookieJar = CookieJar()
     agent = CookieAgent(Agent(reactor), cookieJar)
 
     d = agent.request(b"GET", b"http://httpbin.org/cookies/set?some=data")

@@ -19,7 +19,6 @@ from twisted.internet.error import ConnectionLost
 from twisted.internet.testing import StringTransport
 from twisted.protocols import loopback
 from twisted.python import components
-from twisted.python.compat import _PY37PLUS
 from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
@@ -531,48 +530,6 @@ class OurServerOurClientTests(SFTPTestBase):
         d = self.client.extendedRequest(b"testBadRequest", b"")
         self._emptyBuffers()
         return self.assertFailure(d, NotImplementedError)
-
-    @defer.inlineCallbacks
-    @skipIf(_PY37PLUS, "Broken by PEP 479 and deprecated.")
-    def test_openDirectoryIterator(self):
-        """
-        Check that the object returned by
-        L{filetransfer.FileTransferClient.openDirectory} can be used
-        as an iterator.
-        """
-
-        # This function is a little more complicated than it would be
-        # normally, since we need to call _emptyBuffers() after
-        # creating any SSH-related Deferreds, but before waiting on
-        # them via yield.
-
-        d = self.client.openDirectory(b"")
-        self._emptyBuffers()
-        openDir = yield d
-
-        filenames = set()
-        try:
-            for f in openDir:
-                self._emptyBuffers()
-                (filename, _, fileattrs) = yield f
-                filenames.add(filename)
-        finally:
-            d = openDir.close()
-            self._emptyBuffers()
-            yield d
-
-        self._emptyBuffers()
-
-        self.assertEqual(
-            filenames,
-            {
-                b".testHiddenFile",
-                b"testDirectory",
-                b"testRemoveFile",
-                b"testRenameFile",
-                b"testfile1",
-            },
-        )
 
     @defer.inlineCallbacks
     def test_openDirectoryIteratorDeprecated(self):

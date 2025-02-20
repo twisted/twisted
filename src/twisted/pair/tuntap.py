@@ -19,7 +19,7 @@ from typing import Tuple
 
 from zope.interface import Attribute, Interface, implementer
 
-from constantly import FlagConstant, Flags  # type: ignore[import]
+from constantly import FlagConstant, Flags
 from incremental import Version
 
 from twisted.internet import abstract, defer, error, interfaces, task

@@ -68,7 +68,6 @@ class _Process:
 
 
 class DummyTransport:
-
     disconnecting = 0
 
 
@@ -76,7 +75,6 @@ transport = DummyTransport()
 
 
 class LineLogger(basic.LineReceiver):
-
     tag = None
     stream = None
     delimiter = b"\n"
@@ -94,7 +92,6 @@ class LineLogger(basic.LineReceiver):
 
 
 class LoggingProtocol(protocol.ProcessProtocol):
-
     service = None
     name = None
 

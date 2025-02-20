@@ -36,7 +36,7 @@ directly:
     ...
         def render_POST(self, request):
             content = request.content.read().decode("utf-8")
-            escapedContent = cgi.escape(content)
+            escapedContent = html.escape(content)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
                     b"<title></title></head><body>"
                     b"You submitted: " +
@@ -68,7 +68,7 @@ only ``render_POST`` changed:
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
 
-    import cgi
+    import html
 
     class FormPage(Resource):
         def render_GET(self, request):
@@ -78,7 +78,7 @@ only ``render_POST`` changed:
 
         def render_POST(self, request):
             content = request.content.read().decode("utf-8")
-            escapedContent = cgi.escape(content)
+            escapedContent = html.escape(content)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
                     b"<title></title></head><body>"
                     b"You submitted: " +

@@ -5,20 +5,32 @@
 """
 Assorted functionality which is commonly useful when writing unit tests.
 """
+from __future__ import annotations
 
-
-from collections.abc import Sequence
 from io import BytesIO
 from socket import AF_INET, AF_INET6
-from typing import Any, Callable
+from time import time
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generator,
+    Iterator,
+    Sequence,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
 
+from typing_extensions import ParamSpec, Self
+
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, ensureDeferred, succeed
 from twisted.internet.error import UnsupportedAddressFamily
 from twisted.internet.interfaces import (
     IConnector,
@@ -35,9 +47,10 @@ from twisted.internet.interfaces import (
     ITransport,
 )
 from twisted.internet.task import Clock
-from twisted.logger import ILogObserver
+from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
 from twisted.python import failure
+from twisted.trial.unittest import TestCase
 
 __all__ = [
     "AccumulatingProtocol",
@@ -55,6 +68,8 @@ __all__ = [
     "waitUntilAllDisconnected",
     "EventLoggingObserver",
 ]
+
+_P = ParamSpec("_P")
 
 
 class AccumulatingProtocol(protocol.Protocol):
@@ -547,8 +562,13 @@ class MemoryReactor:
         raise NotImplementedError()
 
     def addSystemEventTrigger(
-        self, phase: str, eventType: str, callable: Callable[..., Any], *args, **kw
-    ):
+        self,
+        phase: str,
+        eventType: str,
+        callable: Callable[_P, object],
+        *args: _P.args,
+        **kw: _P.kwargs,
+    ) -> None:
         """
         Fake L{IReactorCore.run}.
         Keep track of trigger by appending it to
@@ -564,7 +584,9 @@ class MemoryReactor:
         """
         raise NotImplementedError()
 
-    def callWhenRunning(self, callable: Callable[..., Any], *args, **kw):
+    def callWhenRunning(
+        self, callable: Callable[_P, object], *args: _P.args, **kw: _P.kwargs
+    ) -> None:
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
@@ -899,7 +921,7 @@ def waitUntilAllDisconnected(reactor, protocols):
 
 
 @implementer(ILogObserver)
-class EventLoggingObserver(Sequence):
+class EventLoggingObserver(Sequence[LogEvent]):
     """
     L{ILogObserver} That stores its events in a list for later inspection.
     This class is similar to L{LimitedHistoryLogObserver} save that the
@@ -910,26 +932,34 @@ class EventLoggingObserver(Sequence):
     @type _events: L{list}
     """
 
-    def __init__(self):
-        self._events = []
+    def __init__(self) -> None:
+        self._events: list[LogEvent] = []
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._events)
 
-    def __getitem__(self, index):
+    @overload
+    def __getitem__(self, index: int) -> LogEvent:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Sequence[LogEvent]:
+        ...
+
+    def __getitem__(self, index: int | slice) -> LogEvent | Sequence[LogEvent]:
         return self._events[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[LogEvent]:
         return iter(self._events)
 
-    def __call__(self, event):
+    def __call__(self, event: LogEvent) -> None:
         """
         @see: L{ILogObserver}
         """
         self._events.append(event)
 
     @classmethod
-    def createWithCleanup(cls, testInstance, publisher):
+    def createWithCleanup(cls, testInstance: TestCase, publisher: LogPublisher) -> Self:
         """
         Create an L{EventLoggingObserver} instance that observes the provided
         publisher and will be cleaned up with addCleanup().
@@ -948,3 +978,95 @@ class EventLoggingObserver(Sequence):
         publisher.addObserver(obs)
         testInstance.addCleanup(lambda: publisher.removeObserver(obs))
         return obs
+
+
+_T = TypeVar("_T")
+
+
+def _benchmarkWithReactor(
+    test_target: Callable[
+        [],
+        Union[
+            Coroutine[Deferred[Any], Any, _T],
+            Generator[Deferred[Any], Any, _T],
+            Deferred[_T],
+        ],
+    ]
+) -> Callable[[Any], None]:  # pragma: no cover
+    """
+    Decorator for running a benchmark tests that loops the reactor.
+
+    This is designed to decorate test method executed using pytest and
+    pytest-benchmark.
+    """
+
+    def deferredWrapper():
+        return ensureDeferred(test_target())
+
+    def benchmark_test(benchmark: Any) -> None:
+        # Spinning up and spinning down the reactor adds quite a lot of
+        # overhead to the benchmarked function. So, make sure that the overhead
+        # isn't making the benchmark meaningless before we bother with any real
+        # benchmarking.
+        start = time()
+        _runReactor(lambda: succeed(None))
+        justReactorElapsed = time() - start
+
+        start = time()
+        _runReactor(deferredWrapper)
+        benchmarkElapsed = time() - start
+
+        if benchmarkElapsed / justReactorElapsed < 5:
+            raise RuntimeError(  # pragma: no cover
+                "The function you are benchmarking is fast enough that its "
+                "run time is being swamped by the startup/shutdown of the "
+                "reactor. Consider adding a for loop to the benchmark "
+                "function so it does the work a number of times."
+            )
+
+        benchmark(_runReactor, deferredWrapper)
+
+    return benchmark_test
+
+
+def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:  # pragma: no cover
+    """
+    (re)Start a reactor that might have been previously started.
+    """
+    # Delay to import to prevent side-effect in normal tests that are
+    # expecting to import twisted.internet.testing while no reactor is
+    # installed.
+    from twisted.internet import reactor
+
+    errors: list[failure.Failure] = []
+
+    deferred = callback()
+    deferred.addErrback(errors.append)
+    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))  # type: ignore[attr-defined]
+    reactor.run(installSignalHandlers=False)  # type: ignore[attr-defined]
+
+    if errors:  # pragma: no cover
+        # Make sure the test fails in a visible way:
+        errors[0].raiseException()
+
+
+def _stopReactor(reactor):  # pragma: no cover
+    """
+    Stop the reactor and allow it to be re-started later.
+    """
+    reactor.stop()
+    # Allow for on shutdown hooks to execute.
+    reactor.iterate()
+    # Since we're going to be poking the reactor's guts, let's make sure what
+    # we're doing is vaguely reasonable:
+    assert hasattr(reactor, "_startedBefore")
+    assert hasattr(reactor, "_started")
+    assert hasattr(reactor, "_justStopped")
+    assert hasattr(reactor, "running")
+    reactor._startedBefore = False
+    reactor._started = False
+    reactor._justStopped = False
+    reactor.running = False
+    # Start running has consumed the startup events, so we need
+    # to restore them.
+    reactor.addSystemEventTrigger("during", "startup", reactor._reallyStartRunning)

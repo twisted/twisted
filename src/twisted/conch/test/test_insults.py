@@ -5,6 +5,8 @@
 import textwrap
 from typing import Optional, Type
 
+from constantly import ValueConstant, Values
+
 from twisted.conch.insults.insults import (
     BLINK,
     CS_ALTERNATE,
@@ -23,7 +25,6 @@ from twisted.conch.insults.insults import (
 from twisted.internet.protocol import Protocol
 from twisted.internet.testing import StringTransport
 from twisted.python.compat import iterbytes
-from twisted.python.constants import ValueConstant, Values
 from twisted.trial import unittest
 
 
@@ -337,7 +338,7 @@ class ClientCursorMovementTests(ByteGroupingsMixin, unittest.TestCase):
     def verifyResults(self, transport, proto, parser):
         ByteGroupingsMixin.verifyResults(self, transport, proto, parser)
 
-        for (method, count) in [
+        for method, count in [
             ("Down", 2),
             ("Forward", 4),
             ("Up", 1),

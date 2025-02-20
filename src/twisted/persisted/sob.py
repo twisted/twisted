@@ -41,7 +41,6 @@ class IPersistable(Interface):
 
 @implementer(IPersistable)
 class Persistent:
-
     style = "pickle"
 
     def __init__(self, original, name):
@@ -108,7 +107,6 @@ Persistant = Persistent
 
 
 class _EverythingEphemeral(styles.Ephemeral):
-
     initRun = 0
 
     def __init__(self, mainMod):

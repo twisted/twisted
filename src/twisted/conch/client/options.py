@@ -10,7 +10,6 @@ from twisted.python import usage
 
 
 class ConchOptions(usage.Options):
-
     optParameters: List[List[Optional[Union[str, int]]]] = [
         ["user", "l", None, "Log in using this user name."],
         ["identity", "i", None],

@@ -1,1 +1,0 @@
-twisted.internet.gireactor now works with Gtk4, and is tested and supported in CI again.

@@ -4,10 +4,11 @@
 """
 Tests for L{twisted.internet.default}.
 """
-
+from __future__ import annotations
 
 import select
 import sys
+from typing import Callable
 
 from twisted.internet import default
 from twisted.internet.default import _getInstallFunction, install
@@ -29,7 +30,7 @@ class PollReactorTests(SynchronousTestCase):
     in which it picks the poll(2) or epoll(7)-based reactors.
     """
 
-    def assertIsPoll(self, install):
+    def assertIsPoll(self, install: Callable[..., object]) -> None:
         """
         Assert the given function will install the poll() reactor, or select()
         if poll() is unavailable.
@@ -39,7 +40,7 @@ class PollReactorTests(SynchronousTestCase):
         else:
             self.assertEqual(install.__module__, "twisted.internet.selectreactor")
 
-    def test_unix(self):
+    def test_unix(self) -> None:
         """
         L{_getInstallFunction} chooses the poll reactor on arbitrary Unix
         platforms, falling back to select(2) if it is unavailable.
@@ -47,7 +48,7 @@ class PollReactorTests(SynchronousTestCase):
         install = _getInstallFunction(unix)
         self.assertIsPoll(install)
 
-    def test_linux(self):
+    def test_linux(self) -> None:
         """
         L{_getInstallFunction} chooses the epoll reactor on Linux, or poll if
         epoll is unavailable.
@@ -65,14 +66,14 @@ class SelectReactorTests(SynchronousTestCase):
     in which it picks the select(2)-based reactor.
     """
 
-    def test_osx(self):
+    def test_osx(self) -> None:
         """
         L{_getInstallFunction} chooses the select reactor on macOS.
         """
         install = _getInstallFunction(osx)
         self.assertEqual(install.__module__, "twisted.internet.selectreactor")
 
-    def test_windows(self):
+    def test_windows(self) -> None:
         """
         L{_getInstallFunction} chooses the select reactor on Windows.
         """
@@ -85,7 +86,7 @@ class InstallationTests(SynchronousTestCase):
     Tests for actual installation of the reactor.
     """
 
-    def test_install(self):
+    def test_install(self) -> None:
         """
         L{install} installs a reactor.
         """
@@ -93,14 +94,14 @@ class InstallationTests(SynchronousTestCase):
             install()
             self.assertIn("twisted.internet.reactor", sys.modules)
 
-    def test_reactor(self):
+    def test_reactor(self) -> None:
         """
         Importing L{twisted.internet.reactor} installs the default reactor if
         none is installed.
         """
-        installed = []
+        installed: list[bool] = []
 
-        def installer():
+        def installer() -> object:
             installed.append(True)
             return install()
 

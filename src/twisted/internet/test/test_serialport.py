@@ -45,6 +45,7 @@ class SerialPortTests(unittest.TestCase):
         C{connectionMade} and C{connectionLost} are called on the protocol by
         the C{SerialPort}.
         """
+
         # Serial port that doesn't actually connect to anything:
         class DummySerialPort(serialport.SerialPort):
             _serialFactory = DoNothing

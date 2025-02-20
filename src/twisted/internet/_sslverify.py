@@ -2,20 +2,21 @@
 # Copyright (c) 2005 Divmod, Inc.
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
+from typing import Dict
 
 from zope.interface import Interface, implementer
 
 from OpenSSL import SSL, crypto
-from OpenSSL._util import lib as pyOpenSSLlib  # type: ignore[import]
+from OpenSSL._util import lib as pyOpenSSLlib
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names  # type: ignore[import]
+from constantly import FlagConstant, Flags, NamedConstant, Names
 from incremental import Version
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -27,12 +28,15 @@ from twisted.internet.interfaces import (
     IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
 )
-from twisted.python import log, util
+from twisted.logger import Logger
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
+from twisted.python.util import nameToLabel
 from ._idna import _idnaBytes
+
+_log = Logger()
 
 
 class TLSVersion(Names):
@@ -159,11 +163,8 @@ def _selectVerifyImplementation():
     )
 
     try:
-        from service_identity import VerificationError  # type: ignore[import]
-        from service_identity.pyopenssl import (  # type: ignore[import]
-            verify_hostname,
-            verify_ip_address,
-        )
+        from service_identity import VerificationError
+        from service_identity.pyopenssl import verify_hostname, verify_ip_address
 
         return verify_hostname, verify_ip_address, VerificationError
     except ImportError as e:
@@ -257,7 +258,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(dict):
+class DistinguishedName(Dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -346,7 +347,7 @@ class DistinguishedName(dict):
             return set(mapping.values())
 
         for k in sorted(uniqueValues(_x509names)):
-            label = util.nameToLabel(k)
+            label = nameToLabel(k)
             lablen = max(len(label), lablen)
             v = getattr(self, k, None)
             if v is not None:
@@ -433,8 +434,8 @@ class Certificate(CertBase):
     def __repr__(self) -> str:
         return "<{} Subject={} Issuer={}>".format(
             self.__class__.__name__,
-            self.getSubject().commonName,
-            self.getIssuer().commonName,
+            self.getSubject().get("commonName", ""),
+            self.getIssuer().get("commonName", ""),
         )
 
     def __eq__(self, other: object) -> bool:
@@ -508,7 +509,7 @@ class Certificate(CertBase):
         """
         return PublicKey(self.original.get_pubkey())
 
-    def dump(self, format=crypto.FILETYPE_ASN1):
+    def dump(self, format: int = crypto.FILETYPE_ASN1) -> bytes:
         return crypto.dump_certificate(format, self.original)
 
     def serialNumber(self):
@@ -1059,13 +1060,13 @@ def _tolerateErrors(wrapped):
     @rtype: L{callable}
     """
 
-    def infoCallback(connection, where, ret):
-        try:
-            return wrapped(connection, where, ret)
-        except BaseException:
-            f = Failure()
-            log.err(f, "Error during info_callback")
+    def infoCallback(connection: SSL.Connection, where: int, ret: int) -> object:
+        result = None
+        with _log.failuresHandled("Error during info_callback") as op:
+            result = wrapped(connection, where, ret)
+        if (f := op.failure) is not None:
             connection.get_app_data().failVerification(f)
+        return result
 
     return infoCallback
 

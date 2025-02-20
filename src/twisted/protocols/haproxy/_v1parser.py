@@ -114,7 +114,6 @@ class V1Parser:
             raise InvalidNetworkProtocol()
 
         if networkProtocol == cls.UNKNOWN_PROTO:
-
             return _info.ProxyInfo(originalLine, None, None)
 
         with convertError(ValueError, MissingAddressData):
@@ -130,7 +129,6 @@ class V1Parser:
             destPort = line.split(b" ")[0]
 
         if networkProtocol == cls.TCP4_PROTO:
-
             return _info.ProxyInfo(
                 originalLine,
                 address.IPv4Address("TCP", sourceAddr.decode(), int(sourcePort)),

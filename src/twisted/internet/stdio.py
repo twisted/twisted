@@ -29,7 +29,7 @@ if platform.isWindows():
     from twisted.internet._win32stdio import StandardIO, Win32PipeAddress as PipeAddress
 
 else:
-    from twisted.internet._posixstdio import (  # type: ignore[misc]
+    from twisted.internet._posixstdio import (  # type: ignore[assignment]
         PipeAddress,
         StandardIO,
     )

@@ -186,7 +186,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
             raise
 
     def removeReader(self, reader):
-
         # First, see if they're trying to remove a reader that we don't have.
         if not (
             reader in self._readers.keys() or self._continuousPolling.isReading(reader)
@@ -210,7 +209,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop.remove_reader(fd)
 
     def removeWriter(self, writer):
-
         # First, see if they're trying to remove a writer that we don't have.
         if not (
             writer in self._writers.keys() or self._continuousPolling.isWriting(writer)

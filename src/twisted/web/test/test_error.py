@@ -5,6 +5,7 @@
 HTTP errors.
 """
 
+from __future__ import annotations
 
 import re
 import sys
@@ -21,15 +22,15 @@ class CodeToMessageTests(unittest.TestCase):
     L{_codeToMessages} inverts L{_responses.RESPONSES}
     """
 
-    def test_validCode(self):
+    def test_validCode(self) -> None:
         m = error._codeToMessage(b"302")
         self.assertEqual(m, b"Found")
 
-    def test_invalidCode(self):
+    def test_invalidCode(self) -> None:
         m = error._codeToMessage(b"987")
         self.assertEqual(m, None)
 
-    def test_nonintegerCode(self):
+    def test_nonintegerCode(self) -> None:
         m = error._codeToMessage(b"InvalidCode")
         self.assertEqual(m, None)
 
@@ -39,7 +40,7 @@ class ErrorTests(unittest.TestCase):
     Tests for how L{Error} attributes are initialized.
     """
 
-    def test_noMessageValidStatus(self):
+    def test_noMessageValidStatus(self) -> None:
         """
         If no C{message} argument is passed to the L{Error} constructor and the
         C{code} argument is a valid HTTP status code, C{message} is set to the
@@ -49,7 +50,7 @@ class ErrorTests(unittest.TestCase):
         self.assertEqual(e.message, b"OK")
         self.assertEqual(str(e), "200 OK")
 
-    def test_noMessageForStatus(self):
+    def test_noMessageForStatus(self) -> None:
         """
         If no C{message} argument is passed to the L{Error} constructor and
         C{code} isn't a known HTTP status code, C{message} stays L{None}.
@@ -58,7 +59,7 @@ class ErrorTests(unittest.TestCase):
         self.assertEqual(e.message, None)
         self.assertEqual(str(e), "999")
 
-    def test_invalidStatus(self):
+    def test_invalidStatus(self) -> None:
         """
         If C{code} isn't plausibly an HTTP status code (i.e., composed of
         digits) it is rejected with L{ValueError}.
@@ -66,7 +67,7 @@ class ErrorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             error.Error(b"InvalidStatus")
 
-    def test_messageExists(self):
+    def test_messageExists(self) -> None:
         """
         If a C{message} argument is passed to the L{Error} constructor, the
         C{message} isn't affected by the value of C{status}.
@@ -75,7 +76,7 @@ class ErrorTests(unittest.TestCase):
         self.assertEqual(e.message, b"My own message")
         self.assertEqual(str(e), "200 My own message")
 
-    def test_str(self):
+    def test_str(self) -> None:
         """
         C{str()} on an L{Error} returns the code and message it was
         instantiated with.
@@ -94,7 +95,7 @@ class PageRedirectTests(unittest.TestCase):
     Tests for how L{PageRedirect} attributes are initialized.
     """
 
-    def test_noMessageValidStatus(self):
+    def test_noMessageValidStatus(self) -> None:
         """
         If no C{message} argument is passed to the L{PageRedirect} constructor
         and the C{code} argument is a valid HTTP status code, C{code} is mapped
@@ -103,7 +104,7 @@ class PageRedirectTests(unittest.TestCase):
         e = error.PageRedirect(b"200", location=b"/foo")
         self.assertEqual(e.message, b"OK to /foo")
 
-    def test_noMessageValidStatusNoLocation(self):
+    def test_noMessageValidStatusNoLocation(self) -> None:
         """
         If no C{message} argument is passed to the L{PageRedirect} constructor
         and C{location} is also empty and the C{code} argument is a valid HTTP
@@ -113,7 +114,7 @@ class PageRedirectTests(unittest.TestCase):
         e = error.PageRedirect(b"200")
         self.assertEqual(e.message, b"OK")
 
-    def test_noMessageInvalidStatusLocationExists(self):
+    def test_noMessageInvalidStatusLocationExists(self) -> None:
         """
         If no C{message} argument is passed to the L{PageRedirect} constructor
         and C{code} isn't a valid HTTP status code, C{message} stays L{None}.
@@ -121,7 +122,7 @@ class PageRedirectTests(unittest.TestCase):
         e = error.PageRedirect(b"999", location=b"/foo")
         self.assertEqual(e.message, None)
 
-    def test_messageExistsLocationExists(self):
+    def test_messageExistsLocationExists(self) -> None:
         """
         If a C{message} argument is passed to the L{PageRedirect} constructor,
         the C{message} isn't affected by the value of C{status}.
@@ -129,7 +130,7 @@ class PageRedirectTests(unittest.TestCase):
         e = error.PageRedirect(b"200", b"My own message", location=b"/foo")
         self.assertEqual(e.message, b"My own message to /foo")
 
-    def test_messageExistsNoLocation(self):
+    def test_messageExistsNoLocation(self) -> None:
         """
         If a C{message} argument is passed to the L{PageRedirect} constructor
         and no location is provided, C{message} doesn't try to include the
@@ -144,7 +145,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
     Tests for how L{InfiniteRedirection} attributes are initialized.
     """
 
-    def test_noMessageValidStatus(self):
+    def test_noMessageValidStatus(self) -> None:
         """
         If no C{message} argument is passed to the L{InfiniteRedirection}
         constructor and the C{code} argument is a valid HTTP status code,
@@ -154,7 +155,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         e = error.InfiniteRedirection(b"200", location=b"/foo")
         self.assertEqual(e.message, b"OK to /foo")
 
-    def test_noMessageValidStatusNoLocation(self):
+    def test_noMessageValidStatusNoLocation(self) -> None:
         """
         If no C{message} argument is passed to the L{InfiniteRedirection}
         constructor and C{location} is also empty and the C{code} argument is a
@@ -165,7 +166,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         e = error.InfiniteRedirection(b"200")
         self.assertEqual(e.message, b"OK")
 
-    def test_noMessageInvalidStatusLocationExists(self):
+    def test_noMessageInvalidStatusLocationExists(self) -> None:
         """
         If no C{message} argument is passed to the L{InfiniteRedirection}
         constructor and C{code} isn't a valid HTTP status code, C{message} stays
@@ -175,7 +176,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         self.assertEqual(e.message, None)
         self.assertEqual(str(e), "999")
 
-    def test_messageExistsLocationExists(self):
+    def test_messageExistsLocationExists(self) -> None:
         """
         If a C{message} argument is passed to the L{InfiniteRedirection}
         constructor, the C{message} isn't affected by the value of C{status}.
@@ -183,7 +184,7 @@ class InfiniteRedirectionTests(unittest.TestCase):
         e = error.InfiniteRedirection(b"200", b"My own message", location=b"/foo")
         self.assertEqual(e.message, b"My own message to /foo")
 
-    def test_messageExistsNoLocation(self):
+    def test_messageExistsNoLocation(self) -> None:
         """
         If a C{message} argument is passed to the L{InfiniteRedirection}
         constructor and no location is provided, C{message} doesn't try to
@@ -199,7 +200,7 @@ class RedirectWithNoLocationTests(unittest.TestCase):
     a custom message in the constructor.
     """
 
-    def test_validMessage(self):
+    def test_validMessage(self) -> None:
         """
         When C{code}, C{message}, and C{uri} are passed to the
         L{RedirectWithNoLocation} constructor, the C{message} and C{uri}
@@ -216,7 +217,7 @@ class MissingRenderMethodTests(unittest.TestCase):
     displayed.
     """
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         """
         Given C{element} and C{renderName} arguments, the
         L{MissingRenderMethod} constructor assigns the values to the
@@ -227,7 +228,7 @@ class MissingRenderMethodTests(unittest.TestCase):
         self.assertIs(e.element, elt)
         self.assertIs(e.renderName, "renderThing")
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         A L{MissingRenderMethod} is represented using a custom string
         containing the element's representation and the method name.
@@ -247,7 +248,7 @@ class MissingTemplateLoaderTests(unittest.TestCase):
     displayed.
     """
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         """
         Given an C{element} argument, the L{MissingTemplateLoader} constructor
         assigns the value to the corresponding attribute.
@@ -256,7 +257,7 @@ class MissingTemplateLoaderTests(unittest.TestCase):
         e = error.MissingTemplateLoader(elt)
         self.assertIs(e.element, elt)
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """
         A L{MissingTemplateLoader} is represented using a custom string
         containing the element's representation and the method name.
@@ -271,17 +272,17 @@ class FlattenerErrorTests(unittest.TestCase):
     Tests for L{FlattenerError}.
     """
 
-    def makeFlattenerError(self, roots=[]):
+    def makeFlattenerError(self, roots: list[object] = []) -> error.FlattenerError:
         try:
             raise RuntimeError("oh noes")
         except Exception as e:
             tb = traceback.extract_tb(sys.exc_info()[2])
             return error.FlattenerError(e, roots, tb)
 
-    def fakeFormatRoot(self, obj):
+    def fakeFormatRoot(self, obj: object) -> str:
         return "R(%s)" % obj
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         """
         Given C{exception}, C{roots}, and C{traceback} arguments, the
         L{FlattenerError} constructor assigns the roots to the C{_roots}
@@ -290,7 +291,7 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError(roots=["a", "b"])
         self.assertEqual(e._roots, ["a", "b"])
 
-    def test_str(self):
+    def test_str(self) -> None:
         """
         The string form of a L{FlattenerError} is identical to its
         representation.
@@ -298,14 +299,14 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError()
         self.assertEqual(str(e), repr(e))
 
-    def test_reprWithRootsAndWithTraceback(self):
+    def test_reprWithRootsAndWithTraceback(self) -> None:
         """
         The representation of a L{FlattenerError} initialized with roots and a
         traceback contains a formatted representation of those roots (using
         C{_formatRoot}) and a formatted traceback.
         """
         e = self.makeFlattenerError(["a", "b"])
-        e._formatRoot = self.fakeFormatRoot
+        e._formatRoot = self.fakeFormatRoot  # type: ignore[method-assign]
         self.assertTrue(
             re.match(
                 "Exception while flattening:\n"
@@ -320,7 +321,7 @@ class FlattenerErrorTests(unittest.TestCase):
             repr(e),
         )
 
-    def test_reprWithoutRootsAndWithTraceback(self):
+    def test_reprWithoutRootsAndWithTraceback(self) -> None:
         """
         The representation of a L{FlattenerError} initialized without roots but
         with a traceback contains a formatted traceback but no roots.
@@ -338,7 +339,7 @@ class FlattenerErrorTests(unittest.TestCase):
             repr(e),
         )
 
-    def test_reprWithoutRootsAndWithoutTraceback(self):
+    def test_reprWithoutRootsAndWithoutTraceback(self) -> None:
         """
         The representation of a L{FlattenerError} initialized without roots but
         with a traceback contains a formatted traceback but no roots.
@@ -353,7 +354,7 @@ class FlattenerErrorTests(unittest.TestCase):
             repr(e),
         )
 
-    def test_formatRootShortUnicodeString(self):
+    def test_formatRootShortUnicodeString(self) -> None:
         """
         The C{_formatRoot} method formats a short unicode string using the
         built-in repr.
@@ -361,7 +362,7 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(nativeString("abcd")), repr("abcd"))
 
-    def test_formatRootLongUnicodeString(self):
+    def test_formatRootLongUnicodeString(self) -> None:
         """
         The C{_formatRoot} method formats a long unicode string using the
         built-in repr with an ellipsis.
@@ -373,7 +374,7 @@ class FlattenerErrorTests(unittest.TestCase):
             repr("abcde-abcde-abcde-ab<...>e-abcde-abcde-abcde-"),
         )
 
-    def test_formatRootShortByteString(self):
+    def test_formatRootShortByteString(self) -> None:
         """
         The C{_formatRoot} method formats a short byte string using the
         built-in repr.
@@ -381,7 +382,7 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(b"abcd"), repr(b"abcd"))
 
-    def test_formatRootLongByteString(self):
+    def test_formatRootLongByteString(self) -> None:
         """
         The C{_formatRoot} method formats a long byte string using the
         built-in repr with an ellipsis.
@@ -393,7 +394,7 @@ class FlattenerErrorTests(unittest.TestCase):
             repr(b"abcde-abcde-abcde-ab<...>e-abcde-abcde-abcde-"),
         )
 
-    def test_formatRootTagNoFilename(self):
+    def test_formatRootTagNoFilename(self) -> None:
         """
         The C{_formatRoot} method formats a C{Tag} with no filename information
         as 'Tag <tagName>'.
@@ -401,7 +402,7 @@ class FlattenerErrorTests(unittest.TestCase):
         e = self.makeFlattenerError()
         self.assertEqual(e._formatRoot(Tag("a-tag")), "Tag <a-tag>")
 
-    def test_formatRootTagWithFilename(self):
+    def test_formatRootTagWithFilename(self) -> None:
         """
         The C{_formatRoot} method formats a C{Tag} with filename information
         using the filename, line, column, and tag information
@@ -412,7 +413,7 @@ class FlattenerErrorTests(unittest.TestCase):
             e._formatRoot(t), 'File "tpl.py", line 10, column 20, in "a-tag"'
         )
 
-    def test_string(self):
+    def test_string(self) -> None:
         """
         If a L{FlattenerError} is created with a string root, up to around 40
         bytes from that string are included in the string representation of the
@@ -430,7 +431,7 @@ class FlattenerErrorTests(unittest.TestCase):
             "RuntimeError: reason\n",
         )
 
-    def test_unicode(self):
+    def test_unicode(self) -> None:
         """
         If a L{FlattenerError} is created with a unicode root, up to around 40
         characters from that string are included in the string representation
@@ -463,7 +464,7 @@ class UnsupportedMethodTests(unittest.SynchronousTestCase):
     Tests for L{UnsupportedMethod}.
     """
 
-    def test_str(self):
+    def test_str(self) -> None:
         """
         The C{__str__} for L{UnsupportedMethod} makes it clear that what it
         shows is a list of the supported methods, not the method that was

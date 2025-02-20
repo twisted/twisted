@@ -1,5 +1,5 @@
 # Do everything properly, and componentize
-import cgi
+import html
 import os
 import pwd
 
@@ -69,7 +69,6 @@ class IFingerFactory(Interface):
 
 @implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerProtocol
 
     def __init__(self, service):
@@ -108,7 +107,6 @@ class IFingerSetterFactory(Interface):
 
 @implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerSetterProtocol
 
     def __init__(self, service):
@@ -156,7 +154,6 @@ class IIRCClientFactory(Interface):
 
 @implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
     protocol = IRCReplyBot
     nickname = None
 
@@ -209,7 +206,7 @@ class UserStatus(resource.Resource):
 
     def render_GET(self, request):
         d = self.service.getUser(self.user)
-        d.addCallback(cgi.escape)
+        d.addCallback(html.escape)
         d.addCallback(lambda m: "<h1>%s</h1>" % self.user + "<p>%s</p>" % m)
         d.addCallback(request.write)
         d.addCallback(lambda _: request.finish())

@@ -449,7 +449,7 @@ class PyPgSQLConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            from pyPgSQL import PgSQL  # type: ignore[import]
+            from pyPgSQL import PgSQL
         except BaseException:
             return False
         try:
@@ -477,7 +477,7 @@ class PsycopgConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            import psycopg  # type: ignore[import]
+            import psycopg
         except BaseException:
             return False
         try:
@@ -509,7 +509,7 @@ class MySQLConnector(DBTestConnector):
 
     def can_connect(self):
         try:
-            import MySQLdb  # type: ignore[import]
+            import MySQLdb
         except BaseException:
             return False
         try:
@@ -548,7 +548,7 @@ class FirebirdConnector(DBTestConnector):
             return False
 
     def startDB(self):
-        import kinterbasdb  # type: ignore[import]
+        import kinterbasdb
 
         self.DB_NAME = os.path.join(self.DB_DIR, DBTestConnector.DB_NAME)
         os.chmod(self.DB_DIR, stat.S_IRWXU + stat.S_IRWXG + stat.S_IRWXO)

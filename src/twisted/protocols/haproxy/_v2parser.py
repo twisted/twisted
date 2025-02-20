@@ -13,7 +13,7 @@ from typing import Callable, Tuple, Type, Union
 
 from zope.interface import implementer
 
-from constantly import ValueConstant, Values  # type: ignore[import]
+from constantly import ValueConstant, Values
 from typing_extensions import Literal
 
 from twisted.internet import address

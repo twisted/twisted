@@ -117,7 +117,7 @@ class ErrorFormatingTests(TestCase):
             formatter.winError = None
 
         if formatter.formatMessage is not None:
-            from win32api import FormatMessage  # type: ignore[import]
+            from win32api import FormatMessage
 
             self.assertEqual(
                 formatter.formatError(self.probeErrorCode),

@@ -76,14 +76,14 @@ class _ErrorPage(Resource):
         return self
 
 
-def errorPage(code: int, brief: str, detail: str) -> IResource:
+def errorPage(code: int, brief: str, detail: str) -> _ErrorPage:
     """
     Build a resource that responds to all requests with a particular HTTP
     status code and an HTML body containing some descriptive text. This is
     useful for rendering simple error pages.
 
     The resource dynamically handles all paths below it. Use
-    L{IResource.putChild()} override specific path.
+    L{IResource.putChild()} to override a specific path.
 
     @param code: An integer HTTP status code which will be used for the
         response.
@@ -110,7 +110,7 @@ def notFound(
 
     @param brief: A short string displayed as the page title.
 
-    @param brief: A longer string displayed in the page body.
+    @param message: A longer string displayed in the page body.
 
     @returns: An L{IResource}
     """
@@ -127,7 +127,7 @@ def forbidden(
 
     @param brief: A short string displayed as the page title.
 
-    @param brief: A longer string displayed in the page body.
+    @param message: A longer string displayed in the page body.
 
     @returns: An L{IResource}
     """

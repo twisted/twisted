@@ -37,7 +37,6 @@ from twisted.python.log import startLogging
 
 @implementer(IFileDescriptorReceiver)
 class ReceiveFDProtocol(LineOnlyReceiver):
-
     descriptor = None
 
     def __init__(self):

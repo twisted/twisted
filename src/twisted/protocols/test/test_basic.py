@@ -555,7 +555,6 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 
 class LPTestCaseMixin:
-
     illegalStrings: Optional[List[bytes]] = []
     protocol: "Optional[Type[protocol.Protocol]]" = None
 

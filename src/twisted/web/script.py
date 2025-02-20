@@ -77,7 +77,7 @@ def ResourceScript(path, registry):
 
 
 def ResourceTemplate(path, registry):
-    from quixote import ptl_compile  # type: ignore[import]
+    from quixote import ptl_compile
 
     glob = {
         "__file__": _coerceToFilesystemEncoding("", path),

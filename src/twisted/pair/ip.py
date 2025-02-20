@@ -18,7 +18,6 @@ from twisted.pair import raw
 
 class IPHeader:
     def __init__(self, data):
-
         (
             ihlversion,
             self.tos,
@@ -40,7 +39,7 @@ class IPHeader:
         self.more_fragments = frag_off & 0x2000 != 0
 
 
-MAX_SIZE = 2 ** 32
+MAX_SIZE = 2**32
 
 
 @implementer(raw.IRawPacketProtocol)

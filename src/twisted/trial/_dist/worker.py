@@ -10,7 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
+from typing import Any, Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
 from unittest import TestCase
 
 from zope.interface import implementer
@@ -97,7 +97,7 @@ class WorkerProtocol(AMP):
             suite.run(self._result)
 
         allSucceeded = True
-        for (success, result) in await DeferredList(results, consumeErrors=True):
+        for success, result in await DeferredList(results, consumeErrors=True):
             if success:
                 # Nothing to do here, proceed to the next result.
                 continue
@@ -111,11 +111,16 @@ class WorkerProtocol(AMP):
             # to our local log.
             self.logger.failure(
                 "Result reporting for {id} failed",
-                failure=result,
+                # The DeferredList type annotation assumes all results succeed
+                failure=result,  # type: ignore[arg-type]
                 id=testCase,
             )
             try:
-                await self._result.addErrorFallible(testCase, result)
+                await self._result.addErrorFallible(
+                    testCase,
+                    # The DeferredList type annotation assumes all results succeed
+                    result,  # type: ignore[arg-type]
+                )
             except BaseException:
                 # We failed to report the failure to the peer.  It doesn't
                 # seem very likely that reporting this new failure to the peer
@@ -380,13 +385,13 @@ class LocalWorker(ProcessProtocol):
     def __init__(
         self,
         ampProtocol: LocalWorkerAMP,
-        logDirectory: FilePath,
+        logDirectory: FilePath[Any],
         logFile: TextIO,
     ):
         self._ampProtocol = ampProtocol
         self._logDirectory = logDirectory
         self._logFile = logFile
-        self.endDeferred: Deferred = Deferred()
+        self.endDeferred: Deferred[None] = Deferred()
 
     async def exit(self) -> None:
         """
@@ -428,7 +433,7 @@ class LocalWorker(ProcessProtocol):
         self._errLog.close()
         self.transport = None
 
-    def processEnded(self, reason):
+    def processEnded(self, reason: Failure) -> None:
         """
         When the process closes, call C{connectionLost} for cleanup purposes
         and forward the information to the C{_ampProtocol}.
