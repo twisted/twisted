@@ -9,9 +9,8 @@ Support for creating mail servers with twistd.
 
 import os
 
-from twisted.application import internet
+from twisted.application import internet, strports
 from twisted.cred import checkers, strcred
-from twisted.internet import endpoints
 from twisted.mail import alias, mail, maildir, relay, relaymanager
 from twisted.python import usage
 
@@ -33,9 +32,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         L{None}, (2) L{bytes}
     @ivar optFlags: Information about supported flags.  See
         L{Options <twisted.python.usage.Options>} for details.
-
-    @type _protoDefaults: L{dict} mapping L{bytes} to L{int}
-    @ivar _protoDefaults: A mapping of default service to port.
 
     @type compData: L{Completions <usage.Completions>}
     @ivar compData: Metadata for the shell tab completion system.
@@ -70,11 +66,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         ["no-pop3", None, "Disable the default POP3 server."],
         ["no-smtp", None, "Disable the default SMTP server."],
     ]
-
-    _protoDefaults = {
-        "pop3": 8110,
-        "smtp": 8025,
-    }
 
     compData = usage.Completions(optActions={"hostname": usage.CompleteHostnames()})
 
@@ -111,41 +102,28 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         usage.Options.__init__(self)
         self.service = mail.MailService()
         self.last_domain = None
-        for service in self._protoDefaults:
-            self[service] = []
-
-    def addEndpoint(self, service, description):
-        """
-        Add an endpoint to a service.
-
-        @type service: L{bytes}
-        @param service: A service, either C{b'smtp'} or C{b'pop3'}.
-
-        @type description: L{bytes}
-        @param description: An endpoint description string or a TCP port
-            number.
-        """
-        from twisted.internet import reactor
-
-        self[service].append(endpoints.serverFromString(reactor, description))
+        self["smtp"] = []
+        self["pop3"] = []
 
     def opt_pop3(self, description):
         """
-        Add a POP3 port listener on the specified endpoint.
+        Add a POP3 port listener on the specified strports description.
 
         You can listen on multiple ports by specifying multiple --pop3 options.
+        [default: tcp:8110]
         """
-        self.addEndpoint("pop3", description)
+        self["pop3"].append(description)
 
     opt_p = opt_pop3
 
     def opt_smtp(self, description):
         """
-        Add an SMTP port listener on the specified endpoint.
+        Add an SMTP port listener on the specified strports.
 
         You can listen on multiple ports by specifying multiple --smtp options.
+        [default: tcp:8025]
         """
-        self.addEndpoint("smtp", description)
+        self["smtp"].append(description)
 
     opt_s = opt_smtp
 
@@ -170,7 +148,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         [Example: 'example.com=/tmp/example.com']
         """
         try:
-            name, path = domain.split("=")
+            name, path = domain.encode("iso_8859_1").split(b"=")
         except ValueError:
             raise usage.UsageError(
                 "Argument to --maildirdbmdomain must be of the form 'name=path'"
@@ -188,7 +166,7 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         Add a user and password to the last specified domain.
         """
         try:
-            user, password = user_pass.split("=", 1)
+            user, password = user_pass.encode("iso_8859_1").split(b"=", 1)
         except ValueError:
             raise usage.UsageError(
                 "Argument to --user must be of the form 'user=password'"
@@ -229,40 +207,6 @@ class Options(usage.Options, strcred.AuthOptionMixin):
 
     opt_A = opt_aliases
 
-    def _getEndpoints(self, reactor, service):
-        """
-        Return a list of endpoints for the specified service, constructing
-        defaults if necessary.
-
-        If no endpoints were configured for the service and the protocol
-        was not explicitly disabled with a I{--no-*} option, a default
-        endpoint for the service is created.
-
-        @type reactor: L{IReactorTCP <twisted.internet.interfaces.IReactorTCP>}
-            provider
-        @param reactor: If any endpoints are created, the reactor with
-            which they are created.
-
-        @type service: L{bytes}
-        @param service: The type of service for which to retrieve endpoints,
-            either C{b'pop3'} or C{b'smtp'}.
-
-        @rtype: L{list} of L{IStreamServerEndpoint
-            <twisted.internet.interfaces.IStreamServerEndpoint>} provider
-        @return: The endpoints for the specified service as configured by the
-            command line parameters.
-        """
-        if self[service]:
-            # If there are any services set up, just return those.
-            return self[service]
-        elif self["no-" + service]:
-            # If there are no services, but the service was explicitly disabled,
-            # return nothing.
-            return []
-        else:
-            # Otherwise, return the old default service.
-            return [endpoints.TCP4ServerEndpoint(reactor, self._protoDefaults[service])]
-
     def postOptions(self):
         """
         Check the validity of the specified set of options and
@@ -284,14 +228,13 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         if not self["disable-anonymous"]:
             self.service.smtpPortal.registerChecker(checkers.AllowAnonymousAccess())
 
-        anything = False
-        for service in self._protoDefaults:
-            self[service] = self._getEndpoints(reactor, service)
-            if self[service]:
-                anything = True
-
-        if not anything:
+        if self["no-smtp"] and self["no-pop3"]:
             raise usage.UsageError("You cannot disable all protocols")
+
+        if not self["no-smtp"] and len(self["smtp"]) == 0:
+            self["smtp"].append("tcp:8025")
+        if not self["no-pop3"] and len(self["pop3"]) == 0:
+            self["pop3"].append("tcp:8110")
 
 
 class AliasUpdater:
@@ -366,8 +309,8 @@ def makeService(config):
 
     if config["pop3"]:
         f = config.service.getPOP3Factory()
-        for endpoint in config["pop3"]:
-            svc = internet.StreamServerEndpointService(endpoint, f)
+        for port in config["pop3"]:
+            svc = strports.service(port, f)
             svc.setServiceParent(config.service)
 
     if config["smtp"]:
@@ -377,8 +320,8 @@ def makeService(config):
             f.fArgs = (f.domain,)
         if config["esmtp"]:
             f.fArgs = (None, None) + f.fArgs
-        for endpoint in config["smtp"]:
-            svc = internet.StreamServerEndpointService(endpoint, f)
+        for port in config["smtp"]:
+            svc = strports.service(port, f)
             svc.setServiceParent(config.service)
 
     return config.service
