@@ -29,7 +29,7 @@ class LogPublisher:
     """
 
     def __init__(self, *observers: ILogObserver) -> None:
-        self._observers = list(observers)
+        self._observers = set(observers)
         self.log = Logger(observer=self)
 
     def addObserver(self, observer: ILogObserver) -> None:
@@ -41,7 +41,7 @@ class LogPublisher:
         if not callable(observer):
             raise TypeError(f"Observer is not callable: {observer!r}")
         if observer not in self._observers:
-            self._observers.append(observer)
+            self._observers.add(observer)
 
     def removeObserver(self, observer: ILogObserver) -> None:
         """
@@ -51,7 +51,7 @@ class LogPublisher:
         """
         try:
             self._observers.remove(observer)
-        except ValueError:
+        except KeyError:
             pass
 
     def __call__(self, event: LogEvent) -> None:
