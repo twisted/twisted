@@ -41,7 +41,7 @@ class LogPublisher:
         """
         if not callable(observer):
             raise TypeError(f"Observer is not callable: {observer!r}")
-        if observer not in self._observers:
+        if observer not in self._observers_set:
             self._observers_set.add(observer)
             self._observers.append(observer)
 
@@ -54,7 +54,7 @@ class LogPublisher:
         try:
             self._observers_set.remove(observer)
             self._observers.remove(observer)
-        except KeyError:
+        except (KeyError, ValueError):
             pass
 
     def __call__(self, event: LogEvent) -> None:
