@@ -51,7 +51,7 @@ class LogPublisher:
         """
         try:
             self._observers.remove(observer)
-        except (KeyError, ValueError):
+        except KeyError:
             pass
 
     def __call__(self, event: LogEvent) -> None:
