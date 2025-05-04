@@ -28,7 +28,6 @@ def test_log_publisher_call_dispatch(benchmark):
     observers: List[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
     publisher = LogPublisher()
 
-
     event = {
         "log_level": LogLevel.info,
         "log_namespace": "benchmark",
