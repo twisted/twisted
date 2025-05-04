@@ -13,10 +13,10 @@ class DummyObserver:
     """
 
     def __init__(self):
-        self.last_event = None
+        pass
 
     def __call__(self, event: LogEvent):
-        self.last_event = event
+        pass
 
 
 def test_log_publisher_call_dispatch(benchmark):
