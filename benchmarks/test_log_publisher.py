@@ -26,7 +26,8 @@ def test_log_publisher_call_dispatch(benchmark):
     num_observers = 2000
 
     observers: List[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
-    publisher = LogPublisher(*observers)
+    publisher = LogPublisher()
+
 
     event = {
         "log_level": LogLevel.info,
@@ -35,6 +36,8 @@ def test_log_publisher_call_dispatch(benchmark):
     }
 
     def go():
+        for obs in observers:
+            publisher.addObserver(obs)
         publisher(event)
 
     benchmark(go)
