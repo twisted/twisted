@@ -455,33 +455,42 @@ Use the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecated
 Modules
 ^^^^^^^
 
-To deprecate an entire module there are two options:
+To deprecate an entire module place a :func:`warnings.warn()` call at the top-level code of the module, passing ``stacklevel=3``.
+Document the deprecation in the module docstring using a `deprecated <https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#directive-deprecated>`_ directive.
 
-* Put a `warnings.warn()` call into the top-level code of the module, with `stacklevel=3`.
-* Deprecate all of the attributes of the module and sub-modules using :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>`.
-
-Using a single `deprecatedModuleAttribute` on the parent module will not work.
-For example if we have `twisted.old_code.sub.module.SomeClass` and you add the deprecation to `twisted` for the name `old_code`,
-a warning is raised for `from twisted import old_code`,
-but is not raised from `from twisted.old_code.sub.module import SomeClass`.
-
-This is why it's recommended to just use `warnings.warn()` at the top level of the module.
+For example, in ``twisted/old_code.py``:
 
 .. code-block:: python
 
     """
     The normal docstring of the top-level package.
 
-    This package was deprecated in Twisted NEXT
+    .. deprecated:: Twisted NEXT in favor of `twisted.new_code`
     """
     import warnings
 
     from incremental import Version, getVersionString
 
-    warningString = "twisted.old_code was deprecated at {}".format(
-        getVersionString(Version("Twisted", "NEXT", 0, 0))
+    warnings.warn(
+        (
+            f'{__name__} was deprecated in {getVersionString(Version("Twisted", "NEXT", 0, 0))};'
+            " please use twisted.new_code instead."
+        ),
+        DeprecationWarning,
+        stacklevel=3,
     )
-    warnings.warn(warningString, DeprecationWarning, stacklevel=3)
+
+
+
+.. note::
+
+    Using a single `deprecatedModuleAttribute` on the parent module doesn't work.
+    For example if we have ``twisted.old_code.sub.module.SomeClass`` and you add the deprecation to ``twisted`` for the name ``old_code``,
+    a warning is raised when a user writes ``from twisted import old_code``,
+    but is not raised from ``from twisted.old_code.sub.module import SomeClass``.
+
+    This is why it's recommended to just use `warnings.warn()` at the top level of the module.
+    The only other alternative is deprecating all of the attributes of the module and sub-modules using :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>`, but this has a performance cost.
 
 
 Testing Deprecation Code
