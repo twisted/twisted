@@ -1,1 +1,0 @@
-twisted.web's HTTP/1.1 server now runs a little faster, with about 10% lower CPU overhead.

@@ -222,8 +222,9 @@ from twisted.internet.error import ConnectionClosed, ConnectionLost, PeerVerifyE
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python import filepath, log
+from twisted.python import filepath
 from twisted.python._tzhelper import (
     UTC as utc,
     FixedOffsetTimeZone as _FixedOffsetTZInfo,
@@ -301,7 +302,7 @@ __all__ = [
     "parseString",
 ]
 
-
+_log = Logger()
 _T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 
@@ -997,7 +998,8 @@ class BoxDispatcher:
             answerBox[ANSWER] = box[ASK]
             return answerBox
 
-        def formatError(error):
+        def formatError(error: Failure) -> AmpBox:
+            errorBox: AmpBox
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
@@ -1009,7 +1011,7 @@ class BoxDispatcher:
                     errorBox = AmpBox()
             else:
                 errorBox = QuitBox()
-                log.err(error)  # here is where server-side logging happens
+                _log.failure("while receiving response to command", error)
                 # if the error isn't handled
                 code = UNKNOWN_ERROR_CODE
                 desc = b"Unknown Error"
@@ -2512,16 +2514,16 @@ class BinaryBoxProtocol(
             return None
         return Certificate.peerFromTransport(self.transport)
 
-    def unhandledError(self, failure):
+    def unhandledError(self, failure: Failure) -> None:
         """
         The buck stops here.  This error was completely unhandled, time to
         terminate the connection.
         """
-        log.err(
-            failure,
+        _log.failure(
             "Amp server or network failure unhandled by client application.  "
             "Dropping connection!  To avoid, add errbacks to ALL remote "
             "commands!",
+            failure,
         )
         if self.transport is not None:
             self.transport.loseConnection()
@@ -2600,9 +2602,11 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         # Save these so we can emit a similar log message in L{connectionLost}.
         self._transportPeer = transport.getPeer()
         self._transportHost = transport.getHost()
-        log.msg(
-            "%s connection established (HOST:%s PEER:%s)"
-            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        _log.info(
+            "{cls} connection established (HOST:{host} PEER:{peer})",
+            cls=self.__class__.__name__,
+            host=self._transportHost,
+            peer=self._transportPeer,
         )
         BinaryBoxProtocol.makeConnection(self, transport)
 
@@ -2610,9 +2614,11 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         """
         Emit a helpful log message when the connection is lost.
         """
-        log.msg(
-            "%s connection lost (HOST:%s PEER:%s)"
-            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        _log.info(
+            "{cls} connection lost (HOST:{host} PEER:{peer})",
+            cls=self.__class__.__name__,
+            host=self._transportHost,
+            peer=self._transportPeer,
         )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None

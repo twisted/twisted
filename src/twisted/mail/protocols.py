@@ -5,7 +5,9 @@
 """
 Mail protocol support.
 """
+from __future__ import annotations
 
+from typing import TYPE_CHECKING, Callable
 
 from zope.interface import implementer
 
@@ -15,6 +17,9 @@ from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, protocol
 from twisted.mail import pop3, relay, smtp
 from twisted.python import log
+
+if TYPE_CHECKING:
+    from twisted.mail.mail import MailService
 
 
 @implementer(smtp.IMessageDelivery)
@@ -250,18 +255,16 @@ class VirtualPOP3(pop3.POP3):
     """
     A virtual hosting POP3 server.
 
-    @type service: L{MailService}
     @ivar service: The email service that created this server.  This must be
         set by the service.
 
-    @type domainSpecifier: L{bytes}
     @ivar domainSpecifier: The character to use to split an email address into
         local-part and domain. The default is '@'.
     """
 
-    service = None
+    service: MailService | None = None
 
-    domainSpecifier = b"@"  # Gaagh! I hate POP3. No standardized way
+    domainSpecifier: bytes = b"@"  # Gaagh! I hate POP3. No standardized way
     # to indicate user@host. '@' doesn't work
     # with NS, e.g.
 
@@ -296,21 +299,18 @@ class VirtualPOP3(pop3.POP3):
                 pop3.APOPCredentials(self.magic, user, digest), None, pop3.IMailbox
             )
 
-    def authenticateUserPASS(self, user, password):
+    def authenticateUserPASS(
+        self, user: bytes, password: bytes
+    ) -> defer.Deferred[tuple[type[pop3.IMailbox], pop3.IMailbox, Callable[[], None]]]:
         """
         Perform authentication for a username/password login.
 
         Override the default lookup scheme to allow virtual domains.
 
-        @type user: L{bytes}
         @param user: The name of the user attempting to log in.
 
-        @type password: L{bytes}
         @param password: The password to authenticate with.
 
-        @rtype: L{Deferred} which successfully results in 3-L{tuple} of
-            (L{IMailbox <pop3.IMailbox>}, L{IMailbox <pop3.IMailbox>}
-            provider, no-argument callable)
         @return: A deferred which fires when authentication is complete.
             If successful, it returns an L{IMailbox <pop3.IMailbox>} interface,
             a mailbox and a logout function. If authentication fails, the
@@ -318,24 +318,28 @@ class VirtualPOP3(pop3.POP3):
             <twisted.cred.error.UnauthorizedLogin>} error.
         """
         user, domain = self.lookupDomain(user)
+        assert (
+            self.service is not None
+        ), "must have a service to be able to authenticate"
         try:
             portal = self.service.lookupPortal(domain)
         except KeyError:
             return defer.fail(UnauthorizedLogin())
         else:
-            return portal.login(UsernamePassword(user, password), None, pop3.IMailbox)
+            result: defer.Deferred[
+                tuple[type[pop3.IMailbox], pop3.IMailbox, Callable[[], None]]
+            ] = portal.login(UsernamePassword(user, password), None, pop3.IMailbox)
+            return result
 
-    def lookupDomain(self, user):
+    def lookupDomain(self, user: bytes) -> tuple[bytes, bytes]:
         """
-        Check whether a domain is among the virtual domains supported by the
-        mail service.
+        Check whether a domain part of the given email address is among the
+        virtual domains supported by the mail service.
 
-        @type user: L{bytes}
         @param user: An email address.
 
-        @rtype: 2-L{tuple} of (L{bytes}, L{bytes})
-        @return: The local part and the domain part of the email address if the
-            domain is supported.
+        @return: a 2-tuple of (local part, domain part) of the email address if
+            the domain is supported.
 
         @raise POP3Error: When the domain is not supported by the mail service.
         """
@@ -343,6 +347,7 @@ class VirtualPOP3(pop3.POP3):
             user, domain = user.split(self.domainSpecifier, 1)
         except ValueError:
             domain = b""
+        assert self.service is not None, "cannot look up domain if service not set"
         if domain not in self.service.domains:
             raise pop3.POP3Error("no such domain {}".format(domain.decode("utf-8")))
         return user, domain

@@ -1,0 +1,1 @@
+twisted.internet.runner.procmon.ProcessMonitor: startProcess() catches exceptions raised by reactor.spawnProcess() and attempts to restart the failed process.

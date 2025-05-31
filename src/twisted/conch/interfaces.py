@@ -370,6 +370,12 @@ class IKnownHostEntry(Interface):
     @since: 8.2
     """
 
+    keyType: bytes | None = Attribute(
+        """
+        The SSH key type identifier for this key.
+        """
+    )
+
     def matchesKey(key: Key) -> bool:
         """
         Return True if this entry matches the given Key object, False

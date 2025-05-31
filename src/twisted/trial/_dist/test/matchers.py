@@ -77,8 +77,8 @@ class HasSum(BaseMatcher[Sequence[S]]):
     Match a sequence the elements of which sum to a value matched by
     another matcher.
 
-    :ivar sumMatcher: The matcher which must match the sum.
-    :ivar zero: The zero value for the matched type.
+    @ivar sumMatcher: The matcher which must match the sum.
+    @ivar zero: The zero value for the matched type.
     """
 
     def __init__(self, sumMatcher: Matcher[S], zero: S) -> None:
@@ -122,7 +122,7 @@ class IsSequenceOf(BaseMatcher[Sequence[T]]):
     """
     Match a sequence where every element is matched by another matcher.
 
-    :ivar elementMatcher: The matcher which must match every element of the
+    @ivar elementMatcher: The matcher which must match every element of the
         sequence.
     """
 

@@ -9,10 +9,21 @@ Twisted
 For information on changes in this release, see the `NEWS <NEWS.rst>`_ file.
 
 
+Sponsors
+--------
+
+Twisted is an MIT-licensed open source project with its ongoing development made possible entirely by the support of community and these awesome sponsors.
+If you'd like to join them, please consider `sponsoring Twisted's <https://docs.twisted.org/en/latest/development/sponsorship.html>`_ development.
+
+|thinkst|_
+
+|sftpplus|_
+
+
 What is this?
 -------------
 
-Twisted is an event-based framework for internet applications, supporting Python 3.6+.
+Twisted is a Python event-based framework for internet applications.
 It includes modules for many different purposes, including the following:
 
 - ``twisted.web``: HTTP clients and servers, HTML templating, and a WSGI server
@@ -34,13 +45,13 @@ To install the latest version of Twisted using pip::
 
   $ pip install twisted
 
-Additional instructions for installing this software are in `the installation instructions <INSTALL.rst>`_.
+Additional instructions for installing this software are in `the installation instructions <https://docs.twisted.org/en/latest/installation.html>`_.
 
 
 Documentation and Support
 -------------------------
 
-Twisted's documentation is available from the `Twisted Matrix website <https://twistedmatrix.com/documents/current/>`_.
+Twisted's documentation is available from the `Twisted Matrix Read The Docs website <https://docs.twisted.org/>`_.
 This documentation contains how-tos, code examples, and an API reference.
 
 Help is also available on the `Twisted mailing list <https://mail.python.org/mailman3/lists/twisted.python.org/>`_.
@@ -75,7 +86,7 @@ Some of these tests may fail if you:
 Static Code Checkers
 --------------------
 
-You can ensure that code complies to Twisted `coding standards <https://twistedmatrix.com/documents/current/core/development/policy/coding-standard.html>`_::
+You can ensure that code complies to Twisted `coding standards <https://docs.twisted.org/en/latest/development/coding-standard.html>`_::
 
   $ tox -e lint   # run pre-commit to check coding stanards
   $ tox -e mypy   # run MyPy static type checker to check for type errors
@@ -121,3 +132,11 @@ Again, see the included `LICENSE <LICENSE>`_ file for specific legal details.
 
 .. |rtd| image:: https://readthedocs.org/projects/twisted/badge/?version=latest&style=flat
 .. _rtd: https://docs.twistedmatrix.com
+
+.. |thinkst| image:: https://github.com/user-attachments/assets/a5b52432-2d18-4d91-a3c9-772fb2e02781
+    :alt: Thinkst Canary
+.. _thinkst: https://thinkst.com/
+
+.. |sftpplus| image:: https://github.com/user-attachments/assets/5f585316-c7e8-4ef1-8fbb-923f0756ceed
+    :alt: SFTPPlus
+.. _sftpplus: https://www.sftpplus.com/

@@ -1,0 +1,1 @@
+twisted.web.http.Request.requestReceived now handles multiple files in multipart/form-data with the same "name" parameter. This was a regression introduced in Twisted 24.3.0. (#12423)

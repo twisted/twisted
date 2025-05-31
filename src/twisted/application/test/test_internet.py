@@ -513,7 +513,12 @@ class ClientServiceTests(SynchronousTestCase):
     """
 
     def makeReconnector(
-        self, fireImmediately=True, startService=True, protocolType=Protocol, **kw
+        self,
+        fireImmediately=True,
+        startService=True,
+        protocolType=Protocol,
+        refuseConnections=False,
+        **kw,
     ):
         """
         Create a L{ClientService} along with a L{ConnectInformation} indicating
@@ -558,6 +563,8 @@ class ClientServiceTests(SynchronousTestCase):
             protocol = protocolType
 
             def buildProtocol(self, addr):
+                if refuseConnections:
+                    return None
                 result = super().buildProtocol(addr)
                 applicationProtocols.append(result)
                 return result
@@ -627,7 +634,7 @@ class ClientServiceTests(SynchronousTestCase):
         service.startService()
         self.assertNoResult(d)
         self.assertEqual(len(cq.constructedProtocols), 1)
-        protocol.connectionLost(Failure(Exception()))
+        protocol.connectionLost(Failure(Exception("synthetic connectionLost")))
         self.assertEqual(len(cq.constructedProtocols), 2)
 
     def test_startServiceWhileStopping(self):
@@ -648,7 +655,7 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertNoResult(nextProtocol)
         self.assertNoResult(stopped)
         self.assertEqual(first.transport.disconnecting, True)
-        first.connectionLost(Failure(Exception()))
+        first.connectionLost(Failure(Exception("synthetic connection lost")))
         self.successResultOf(stopped)
         cq.connectQueue[1].callback(None)
         self.assertEqual(len(cq.constructedProtocols), 2)
@@ -732,6 +739,17 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(
             self.successResultOf(awaitingProtocol), cq.applicationProtocols[0]
         )
+        self.assertIdentical(
+            cq.constructedProtocols[0]._protocol, cq.applicationProtocols[0]
+        )
+        self.assertIn(
+            str(cq.applicationProtocols[0]),
+            str(cq.constructedProtocols[0]),
+        )
+        self.assertIn(
+            "RememberingFactory",
+            str(cq.passedFactories[0]),
+        )
 
     def test_clientConnectionFailed(self):
         """
@@ -770,6 +788,44 @@ class ClientServiceTests(SynchronousTestCase):
         self.assertIdentical(
             self.successResultOf(service.whenConnected()), cq.applicationProtocols[1]
         )
+
+    def test_clientConnectionRefused(self) -> None:
+        """
+        When the client factory refuses connections by returning None from
+        buildProtocol, the factory keeps attempting new connections.
+        """
+        clock = Clock()
+        # This `whenConnected` request will be cancelled during stopService,
+        # since our local buildProtocol is going to return None again.  Since
+        # cleanups are LIFO, and we want this to run *after* stopService, we
+        # add it before.
+        self.addCleanup(lambda: self.failureResultOf(whenConnected, CancelledError))
+        cq, service = self.makeReconnector(
+            clock=clock,
+            fireImmediately=False,
+            # tell buildProtocol to return None.
+            refuseConnections=True,
+        )
+        # The service should begin by attempting a connection.
+        self.assertEqual(len(cq.connectQueue), 1)
+        # That connection attempt succeeds.
+        cq.connectQueue.pop(0).callback(None)
+        # That connection success does *not* initiate a new connection.
+        self.assertEqual(len(cq.connectQueue), 0)
+        # We ask the service to tell us when a connection has completed.
+        whenConnected = service.whenConnected()
+        # No connection has been completed so that Deferred does not fire.
+        self.assertNoResult(whenConnected)
+        # Let enough time pass that a second connect attempt will be made; a
+        # None return from buildProtocol doesn't stop us, as it might return
+        # not-None in the future.
+        clock.advance(AT_LEAST_ONE_ATTEMPT)
+        # It tries again.
+        self.assertEqual(len(cq.connectQueue), 1)
+        # It succeeds again.
+        cq.connectQueue.pop(0).callback(None)
+        # See comment at top of test.
+        self.assertNoResult(whenConnected)
 
     def test_clientConnectionLostWhileStopping(self):
         """
@@ -905,7 +961,7 @@ class ClientServiceTests(SynchronousTestCase):
         """
         clock = Clock()
         cq, service = self.makeReconnector(fireImmediately=False, clock=clock)
-        cq.connectQueue[0].errback(Exception("no connection"))
+        cq.connectQueue.pop(0).errback(Exception("no connection"))
         d = service.stopService()
         self.assertEqual(clock.getDelayedCalls(), [])
         self.successResultOf(d)

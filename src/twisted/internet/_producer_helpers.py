@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.test.test_producer_helpers -*-
+# -*- test-case-name: twisted.protocols.test.test_tls,twisted.web.test.test_http2 -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -12,8 +12,9 @@ from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
 from twisted.internet.task import cooperate
-from twisted.python import log
-from twisted.python.reflect import safe_str
+from twisted.logger import Logger
+
+_log = Logger()
 
 # This module exports nothing public, it's for internal Twisted use only.
 __all__: List[str] = []
@@ -60,26 +61,19 @@ class _PullToPush:
         unregistered, which should result in streaming stopping.
         """
         while True:
-            try:
+            with _log.failuresHandled(
+                "while calling resumeProducing on {producer}", producer=self._producer
+            ) as op:
                 self._producer.resumeProducing()
-            except BaseException:
-                log.err(
-                    None,
-                    "%s failed, producing will be stopped:"
-                    % (safe_str(self._producer),),
-                )
-                try:
+            if op.failed:
+                with _log.failuresHandled(
+                    "while calling unregisterProducer on {consumer}",
+                    consumer=self._consumer,
+                ) as handlingop:
                     self._consumer.unregisterProducer()
+                if handlingop.failed:
                     # The consumer should now call stopStreaming() on us,
                     # thus stopping the streaming.
-                except BaseException:
-                    # Since the consumer blew up, we may not have had
-                    # stopStreaming() called, so we just stop on our own:
-                    log.err(
-                        None,
-                        "%s failed to unregister producer:"
-                        % (safe_str(self._consumer),),
-                    )
                     self._finished = True
                     return
             yield None

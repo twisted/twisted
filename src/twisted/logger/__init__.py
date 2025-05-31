@@ -56,6 +56,7 @@ __all__ = [
     "LogEvent",
     # From ._logger
     "Logger",
+    "Operation",
     "_loggerFor",
     # From ._observer
     "LogPublisher",
@@ -102,7 +103,7 @@ from ._format import (
 
 from ._interfaces import ILogObserver, LogEvent
 
-from ._logger import Logger, _loggerFor
+from ._logger import Logger, _loggerFor, Operation
 
 from ._observer import LogPublisher
 

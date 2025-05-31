@@ -343,7 +343,7 @@ class DistribTests(TestCase):
         request = DummyRequest([b""])
         issue = distrib.Issue(request)
         issue.failed(f)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         self.assertIn("Failure instance", logObserver[0]["log_format"])
 
     def test_requestFail(self):
@@ -359,7 +359,7 @@ class DistribTests(TestCase):
         req = distrib.Request(DummyChannel())
         req.fail(f)
         self.flushLoggedErrors(ArbitraryError)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         self.assertIs(logObserver[0]["log_failure"], f)
 
 

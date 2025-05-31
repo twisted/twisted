@@ -28,6 +28,7 @@ Twisted Web In 60 Seconds
    session-basics
    session-store
    session-endings
+   websockets
 
 
 This set of examples contains short, complete applications of :py:mod:`twisted.web`.
@@ -52,3 +53,4 @@ For subjects not covered here, see the :doc:`Twisted Web tutorial <../using-twis
 #. :doc:`Session basics <session-basics>`
 #. :doc:`Storing objects in the session <session-store>`
 #. :doc:`Session endings <session-endings>`
+#. :doc:`WebSockets <websockets>`

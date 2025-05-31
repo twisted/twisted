@@ -3,34 +3,30 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
-DBM-style interface to a directory.
+A L{DirDBM} is a L{dbm}-style interface to a directory.
 
 Each key is stored as a single file.  This is not expected to be very fast or
 efficient, but it's good for easy debugging.
 
-DirDBMs are *not* thread-safe, they should only be accessed by one thread at
+L{DirDBM}s are *not* thread-safe, they should only be accessed by one thread at
 a time.
 
 No files should be placed in the working directory of a DirDBM save those
 created by the DirDBM itself!
-
-Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import annotations
 
 import base64
 import glob
 import os
 import pickle
+from typing import AnyStr, Iterable, Mapping, TypeVar, overload
 
 from twisted.python.filepath import FilePath
 
-try:
-    _open  # type: ignore[has-type, used-before-def]
-except NameError:
-    _open = open
+_T = TypeVar("_T", bound=None)
 
 
 class DirDBM:
@@ -41,9 +37,8 @@ class DirDBM:
     flat files. It can only use strings as keys or values.
     """
 
-    def __init__(self, name):
+    def __init__(self, name: bytes) -> None:
         """
-        @type name: str
         @param name: Base path to use for the directory storage.
         """
         self.dname = os.path.abspath(name)
@@ -69,46 +64,46 @@ class DirDBM:
                 else:
                     os.rename(f, old)
 
-    def _encode(self, k):
+    def _encode(self, k: bytes) -> bytes:
         """
         Encode a key so it can be used as a filename.
         """
         # NOTE: '_' is NOT in the base64 alphabet!
         return base64.encodebytes(k).replace(b"\n", b"_").replace(b"/", b"-")
 
-    def _decode(self, k):
+    def _decode(self, k: bytes) -> bytes:
         """
         Decode a filename to get the key.
         """
         return base64.decodebytes(k.replace(b"_", b"\n").replace(b"-", b"/"))
 
-    def _readFile(self, path):
+    def _readFile(self, path: FilePath[AnyStr]) -> bytes:
         """
         Read in the contents of a file.
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path.path, "rb") as f:
+        with path.open() as f:
             s = f.read()
         return s
 
-    def _writeFile(self, path, data):
+    def _writeFile(self, path: FilePath[AnyStr], data: bytes) -> None:
         """
         Write data to a file.
 
         Override in subclasses to e.g. provide transparently encrypted dirdbm.
         """
-        with _open(path.path, "wb") as f:
+        with path.open("w") as f:
             f.write(data)
             f.flush()
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         @return: The number of key/value pairs in this Shelf
         """
         return len(self._dnamePath.listdir())
 
-    def __setitem__(self, k, v):
+    def __setitem__(self, k: bytes, v: bytes) -> None:
         """
         C{dirdbm[k] = v}
         Create or modify a textfile in this directory
@@ -142,15 +137,14 @@ class DirDBM:
                 old.remove()
             new.moveTo(old)
 
-    def __getitem__(self, k):
+    def __getitem__(self, k: bytes) -> bytes:
         """
-        C{dirdbm[k]}
-        Get the contents of a file in this directory as a string.
+        C{dirdbm[k]} Get the contents of a file in this directory as a string.
 
-        @type k: bytes
         @param k: key to lookup
 
         @return: The value associated with C{k}
+
         @raise KeyError: Raised when there is no such key
         """
         if not type(k) == bytes:
@@ -161,7 +155,7 @@ class DirDBM:
         except OSError:
             raise KeyError(k)
 
-    def __delitem__(self, k):
+    def __delitem__(self, k: bytes) -> None:
         """
         C{del dirdbm[foo]}
         Delete a file in this directory.
@@ -179,13 +173,13 @@ class DirDBM:
         except OSError:
             raise KeyError(self._decode(k))
 
-    def keys(self):
+    def keys(self) -> Iterable[bytes]:
         """
         @return: a L{list} of filenames (keys).
         """
         return list(map(self._decode, self._dnamePath.asBytesMode().listdir()))
 
-    def values(self):
+    def values(self) -> Iterable[bytes]:
         """
         @return: a L{list} of file-contents (values).
         """
@@ -195,7 +189,7 @@ class DirDBM:
             vals.append(self[key])
         return vals
 
-    def items(self):
+    def items(self) -> Iterable[tuple[bytes, bytes]]:
         """
         @return: a L{list} of 2-tuples containing key/value pairs.
         """
@@ -205,7 +199,7 @@ class DirDBM:
             items.append((key, self[key]))
         return items
 
-    def has_key(self, key):
+    def has_key(self, key: bytes) -> bool:
         """
         @type key: bytes
         @param key: The key to test
@@ -218,7 +212,7 @@ class DirDBM:
         key = self._encode(key)
         return self._dnamePath.child(key).isfile()
 
-    def setdefault(self, key, value):
+    def setdefault(self, key: bytes, value: bytes) -> bytes:
         """
         @type key: bytes
         @param key: The key to lookup
@@ -231,71 +225,76 @@ class DirDBM:
             return value
         return self[key]
 
-    def get(self, key, default=None):
+    @overload
+    def get(self, key: bytes) -> bytes:
+        ...
+
+    @overload
+    def get(self, key: bytes, default: _T) -> bytes | _T:
+        ...
+
+    def get(self, key: bytes, default: _T | None = None) -> bytes | _T | None:
         """
-        @type key: bytes
         @param key: The key to lookup
 
         @param default: The value to return if the given key does not exist
 
         @return: The value associated with C{key} or C{default} if not
-        L{DirDBM.has_key(key)}
+            L{DirDBM.has_key(key)}
         """
         if key in self:
             return self[key]
         else:
             return default
 
-    def __contains__(self, key):
+    def __contains__(self, key: bytes) -> bool:
         """
         @see: L{DirDBM.has_key}
         """
         return self.has_key(key)
 
-    def update(self, dict):
+    def update(self, other: Mapping[bytes, bytes]) -> None:
         """
         Add all the key/value pairs in L{dict} to this dirdbm.  Any conflicting
         keys will be overwritten with the values from L{dict}.
 
-        @type dict: mapping
         @param dict: A mapping of key/value pairs to add to this dirdbm.
         """
-        for key, val in dict.items():
+        for key, val in other.items():
             self[key] = val
 
-    def copyTo(self, path):
+    def copyTo(self, path: bytes) -> DirDBM:
         """
         Copy the contents of this dirdbm to the dirdbm at C{path}.
 
-        @type path: L{str}
         @param path: The path of the dirdbm to copy to.  If a dirdbm
         exists at the destination path, it is cleared first.
 
         @rtype: C{DirDBM}
         @return: The dirdbm this dirdbm was copied to.
         """
-        path = FilePath(path)
-        assert path != self._dnamePath
+        fpath = FilePath(path)
+        assert fpath != self._dnamePath
 
-        d = self.__class__(path.path)
+        d = self.__class__(fpath.path)
         d.clear()
         for k in self.keys():
             d[k] = self[k]
         return d
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Delete all key/value pairs in this dirdbm.
         """
         for k in self.keys():
             del self[k]
 
-    def close(self):
+    def close(self) -> None:
         """
         Close this dbm: no-op, for dbm-style interface compliance.
         """
 
-    def getModificationTime(self, key):
+    def getModificationTime(self, key: bytes) -> float:
         """
         Returns modification time of an entry.
 

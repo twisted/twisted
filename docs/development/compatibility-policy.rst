@@ -1,5 +1,5 @@
-Twisted Compatibility Policy
-============================
+Compatibility Policy
+====================
 
 Motivation
 ----------
@@ -34,7 +34,8 @@ Although a change may be broadly considered backward compatible, as long as it d
 The compatibility policy described here is 99% about changes to **interface**,
 not changes to functionality.
 
-..  note::
+.. note::
+
     Ultimately we want to make the user happy but we cannot put every possible thing that will make every possible user happy into this policy.
 
 
@@ -46,16 +47,14 @@ This is not an exhaustive read and beside this list you should continue reading 
 
 * Do not change the function's behavior as part of the deprecation process.
 
-* Cause imports or usage of the class/function/method to emit a :exc:`DeprecationWarning`:
-  call :func:`warnings.warn` or use one of the helper APIs.
+* Cause imports or usage of the class/function/method to emit a :py:exc:`DeprecationWarning`: either call :py:func:`warnings.warn()` or (preferably) use one of the helper APIs described below.
 
 * The warning text must include the version of Twisted in which the function is first deprecated.
   Use the `indeterminate version placeholder string <https://github.com/twisted/incremental?tab=readme-ov-file#indeterminate-versions>`_ ``Twisted NEXT``.
 
 * The warning text should recommend a replacement, if one exists.
 
-* The warning must "point to" the code which called the function.
-  Normally this means passing ``stacklevel=2`` to :func:`warnings.warn`.
+* The warning must "point to" the code which called the function. For example, in the normal case, this means ``stacklevel=2`` passed to :py:func:`warnings.warn()`.
 
 * There must be a unit test which verifies the deprecation warning.
 
@@ -84,7 +83,7 @@ Incompatible Changes
 Any change which is not specifically described as **compatible** must be made in 2 phases.
 If a change is made in release R, the timeline is:
 
-1. Release R: New functionality is added and old functionality is deprecated with a DeprecationWarning.
+1. Release R: New functionality is added and old functionality is deprecated with a :py:exc:`DeprecationWarning`.
 
 2. At the earliest, release R+2 and one year after release R, but often much later: Old functionality is completely removed.
 
@@ -116,7 +115,8 @@ Since some codebases that use Twisted are presumably proprietary and confidentia
 
 The branch must be available for one week's time.
 
-..  note::
+.. note::
+
     The announcement forum for incompatible changes and the waiting period required are subject to change as we discover how effective this method is; the important aspect of this policy is that users have some way of finding out in advance about changes which might affect them.
 
 
@@ -152,7 +152,8 @@ If Twisted documents an object as complying with a published specification, and 
 If application code must support multiple versions of Twisted, and work around violations of such specifications, then it must test for the presence of such a bug before compensating for it.
 
 For example, Twisted supplies a DOM implementation in twisted.web.microdom.
-If an issue were discovered where parsing the string `<xml>Hello</xml>` and then serializing it again resulted in `>xml<Hello>/xml<`, that would grossly violate the XML specification for well-formedness.
+If an issue were discovered where parsing the string ``<xml>Hello</xml>`` and then serializing it again resulted in ``>xml<Hello>/xml<``,
+that would grossly violate the XML specification for well-formedness.
 Such code could be fixed with no warning other than release notes detailing that this error is now fixed.
 
 
@@ -186,6 +187,7 @@ Representations
 
 The printable representations of objects, as returned by ``repr(<object>)`` and defined by ``def __repr__(self):`` are for debugging and informational purposes.
 Because of this, applications must not depend on any object defined by Twisted to provide repr compatibility between any release.
+
 Attribute Access
 ^^^^^^^^^^^^^^^^
 How an object's attributes are defined and accessed is considered an implementation detail.
@@ -207,8 +209,9 @@ Interface Changes
 
 Although methods may be added to implementations, adding those methods to interfaces may introduce an unexpected requirement in user code.
 
-..  note::
-    There is currently no way to express, in zope.interface, that an interface may optionally provide certain features which need to be tested for. Although we can add new code, we can't add new requirements on user code to implement new methods.
+.. note::
+
+    There is currently no way to express, in :py:mod:`zope.interface`, that an interface may optionally provide certain features which need to be tested for. Although we can add new code, we can't add new requirements on user code to implement new methods.
 
     This is easier to deal with in a system which uses abstract base classes because new requirements can provide default implementations which provide warnings.
     Something could also be put in place to do the same with interfaces, since they already install a metaclass, but this is tricky territory. The only example I'm aware of here is the Microsoft tradition of ISomeInterfaceN where N is a monotonically ascending number for each release.
@@ -244,7 +247,6 @@ For example:
             return False
 
 
-
     def get_users_database():
         """
         A method guarding the initialization of the private class.
@@ -275,6 +277,7 @@ The **private**  is still protected against direct instantiation.
         def getExpiredusers(self):
             return []
 
+
     class Users(_Base):
         """
         Public class inheriting from a private class.
@@ -301,26 +304,26 @@ When an application wants to be upgraded to a new version of Twisted, it can do 
 However, if the application wants to get the same **for free** behavior for the next upgrade, the application's tests should be run treating warnings as errors, and fixed.
 
 
-Supporting and de-supporting Python versions
+Supporting and De-supporting Python Versions
 --------------------------------------------
 
 Twisted does not have a formal policy around supporting new versions of Python or de-supporting old versions of Python.
 We strive to support Twisted on any version of Python that is the default Python for a vendor-supported release from a major platform, namely Debian, Ubuntu, the latest release of Windows, or the latest release of macOS.
-The versions of Python currently supported are listed in the ​INSTALL file for each release.
 
-A distribution release + Python version is only considered supported when a `buildbot builder <http://buildbot.twistedmatrix.com>`_ exists for it.
+A distribution release + Python version is only considered supported when a `GitHub Actions test workflow <https://github.com/twisted/twisted/blob/trunk/.github/workflows/test.yaml>`_ exists for it.
 
 Removing support for a Python version will be announced at least 1 release prior to the removal.
 
 
-How to deprecate APIs
+How to Deprecate APIs
 ---------------------
 
 
 Classes
 ^^^^^^^
 
-Classes are deprecated by raising a warning when they are access from within their module, using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
+Deprecate a class by raising a warning when it is accessed within its module,
+using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper after the class definition:
 
 .. code-block:: python
 
@@ -328,72 +331,79 @@ Classes are deprecated by raising a warning when they are access from within the
         """
         An SSL context factory.
         """
-        deprecatedModuleAttribute(
-            Version("Twisted", 12, 2, 0),
-            "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
-            "twisted.mail.protocols", "SSLContextFactory")
 
+    deprecatedModuleAttribute(
+        Version("Twisted", "NEXT", 0, 0),
+        "Use twisted.internet.ssl.DefaultOpenSSLContextFactory instead.",
+        __name__,
+        SSLContextFactory.__name__,
+    )
 
-Functions and methods
+Pass ``Version("Twisted", "NEXT", 0, 0)`` `incremental placeholder <https://github.com/twisted/incremental#updating>`_ to the to indicate the upcoming release.
+In strings, ``Twisted NEXT`` works the same way.
+
+Functions and Methods
 ^^^^^^^^^^^^^^^^^^^^^
 
-To deprecate a function or a method, add a call to warnings.warn to the beginning of the implementation of that method.
-The warning should be of type ``DeprecationWarning`` and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
-The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
-If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
-
-There is also a :py:func:`deprecated <twisted.python.deprecate.deprecated>` decorator which works for new-style classes.
+Use the :py:func:`deprecated <twisted.python.deprecate.deprecated>` decorator to deprecate methods.
 
 For example:
 
 .. code-block:: python
 
-    import warnings
-
+    from incremental import Version
     from twisted.python.deprecate import deprecated
-    from twisted.python.versions import Version
 
 
-    @deprecated(Version("Twisted", 1, 2, 0), "twisted.baz")
+    @deprecated(Version("Twisted", "NEXT", 0, 0), "twisted.baz")
     def some_function(bar):
         """
-        Function deprecated using a decorator.
+        Function deprecated using a decorator, replaced by twisted.baz.
         """
         return bar * 3
 
 
-
-    @deprecated(Version("Twisted", 1, 2, 0))
+    @deprecated(Version("Twisted", "NEXT", 0, 0))
     def some_function(bar):
         """
-        Function deprecated using a decorator and which has no replacement.
+        Function deprecated using a decorator which has no replacement.
         """
         return bar * 3
 
+If you can't use the decorator add a call to :py:func:`warnings.warn()` at the beginning of the implementation.
+The warning should be of type :py:exc:`DeprecationWarning` and the stack level should be set so that the warning refers to the code which is invoking the deprecated function or method.
+The deprecation message must include the name of the function which is deprecated, the version of Twisted in which it was first deprecated, and a suggestion for a replacement.
 
+If the API provides functionality which it is determined is beyond the scope of Twisted or it has no replacement, then it may be deprecated without a replacement.
+
+.. code-block:: python
+
+    import warnings
 
     def some_function(bar):
         """
         Function with a direct call to warnings.
         """
         warnings.warn(
-            'some_function is deprecated since Twisted 1.2.0. '
+            'some_function is deprecated since Twisted NEXT. '
             'Use twisted.baz instead.',
             category=DeprecationWarning,
-            stacklevel=2)
+            stacklevel=2,
+        )
         return bar * 3
 
 
-Instance attributes
+Instance Attributes
 ^^^^^^^^^^^^^^^^^^^
 
-To deprecate an attribute on instances of a new-type class, make the attribute into a property and call ``warnings.warn`` from the getter and/or setter function for that property.
+To deprecate an instance attribute of a class,
+make the attribute into a property and call :py:func:`warnings.warn` from the getter and/or setter function for that property.
 You can also use the :py:func:`deprecatedProperty <twisted.python.deprecate.deprecatedProperty>` decorator which works for new-style classes.
 
 .. code-block:: python
 
+    from incremental import Version
     from twisted.python.deprecate import deprecated
-    from twisted.python.versions import Version
 
 
     class SomeThing(object):
@@ -405,7 +415,6 @@ You can also use the :py:func:`deprecatedProperty <twisted.python.deprecate.depr
             self.user = user
 
 
-
     class SomeThingWithDeprecation(object):
         """
         A class for which the C{user} ivar is now deprecated.
@@ -414,35 +423,33 @@ You can also use the :py:func:`deprecatedProperty <twisted.python.deprecate.depr
         def __init__(self, user=None):
             self._user = user
 
-
-        @deprecatedProperty(Version("Twisted", 1, 2, 0))
+        @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
         def user(self):
             return self._user
-
 
         @user.setter
         def user(self, value):
             self._user = value
 
 
-Module attributes
+Module Attributes
 ^^^^^^^^^^^^^^^^^
 
-Modules cannot have properties, so module attributes should be deprecated using the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
+Use the :py:func:`deprecatedModuleAttribute <twisted.python.deprecate.deprecatedModuleAttribute>` helper.
 
 .. code-block:: python
 
+    from incremental import Version
     from twisted.python import _textattributes
     from twisted.python.deprecate import deprecatedModuleAttribute
-    from twisted.python.versions import Version
 
     flatten = _textattributes.flatten
-
     deprecatedModuleAttribute(
-        Version('Twisted', 13, 1, 0),
-        'Use twisted.conch.insults.text.assembleFormattedText instead.',
-        'twisted.conch.insults.text',
-        'flatten')
+        Version("Twisted", "NEXT", 0, 0),
+        "Use twisted.conch.insults.text.assembleFormattedText instead.",
+        __name__,
+        "flatten",
+    )
 
 
 Modules
@@ -490,7 +497,7 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
     python -Werror::DeprecationWarning ./bin/trial twisted.conch
 
-There are several options for checking that a code is deprecated and that using it raises a ``DeprecationWarning``.
+There are several options for checking that a code is deprecated and that using it raises a :py:exc:`DeprecationWarning`.
 
 There are helper methods available for handling deprecated callables (:py:meth:`callDeprecated <twisted.trial.unittest.SynchronousTestCase.callDeprecated>`) and deprecated classes or module attributes (:py:meth:`getDeprecatedModuleAttribute <twisted.trial.unittest.SynchronousTestCase.getDeprecatedModuleAttribute>`).
 
@@ -502,6 +509,7 @@ This is the most precise, but also the most verbose, way to assert that you've r
 
 .. code-block:: python
 
+    from incremental import Version
     from twisted.trial import unittest
 
 
@@ -518,23 +526,27 @@ This is the most precise, but also the most verbose, way to assert that you've r
             db.getUser('some-user')
 
             message = (
-                'twisted.Identity.getUser was deprecated in Twisted 15.0.0: '
-                'Use twisted.get_user instead.'
-                )
+                "twisted.Identity.getUser was deprecated in Twisted NEXT: "
+                "Use twisted.get_user instead."
+            )
             warnings = self.flushWarnings(
-                [self.test_deprecationUsingFlushWarnings])
+                [self.test_deprecationUsingFlushWarnings]
+            )
             self.assertEqual(1, len(warnings))
-            self.assertEqual(DeprecationWarning, warnings[0]['category'])
-            self.assertEqual(message, warnings[0]['message'])
+            self.assertEqual(DeprecationWarning, warnings[0]["category"])
+            self.assertEqual(message, warnings[0]["message"])
 
 
-	def test_deprecationUsingCallDeprecated(self):
+        def test_deprecationUsingCallDeprecated(self):
             """
             callDeprecated() assumes that the DeprecationWarning message
             follows Twisted's standard format.
             """
             self.callDeprecated(
-                Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
+                Version("Twisted", "NEXT", 0, 0),
+                db.getUser,
+                "some-user",
+            )
 
 
         def test_deprecationUsingAssertWarns(self):
@@ -544,11 +556,12 @@ This is the most precise, but also the most verbose, way to assert that you've r
             """
             self.assertWarns(
                 DeprecationWarning,
-                'twisted.Identity.getUser was deprecated in Twisted 15.0.0 '
-                'Use twisted.get_user instead.',
+                "twisted.Identity.getUser was deprecated in Twisted NEXT "
+                "Use twisted.get_user instead.",
                 __file__,
-                db.getUser, 'some-user')
-
+                db.getUser,
+                "some-user",
+            )
 
 
 When code is deprecated, all previous tests in which the code is called and tested will now raise ``DeprecationWarning``\ s.
@@ -556,6 +569,7 @@ Making calls to the deprecated code without raising these warnings can be done u
 
 .. code-block:: python
 
+    from incremental import Version
     from twisted.trial import unittest
 
 
@@ -571,7 +585,10 @@ Making calls to the deprecated code without raising these warnings can be done u
             during its execution.
             """
             user = self.callDeprecated(
-                Version("Twisted", 1, 2, 0), db.getUser, 'some-user')
+                Version("Twisted", "NEXT", 0, 0),
+                db.getUser,
+                "some-user",
+            )
 
             self.assertEqual('some-value', user.homePath)
 
@@ -594,6 +611,7 @@ Tests which need to use deprecated classes should use the :py:meth:`getDeprecate
 
 .. code-block:: python
 
+    from incremental import Version
     from twisted.trial import unittest
 
 
@@ -607,7 +625,10 @@ Tests which need to use deprecated classes should use the :py:meth:`getDeprecate
             and C{hashed} on it.
             """
             UsernameHashedPassword = self.getDeprecatedModuleAttribute(
-                'twisted.cred.credentials', 'UsernameHashedPassword', Version('Twisted', 20, 3, 0))
+                "twisted.cred.credentials",
+                "UsernameHashedPassword",
+                Version("Twisted", "NEXT", 3, 0),
+            )
             creds = UsernameHashedPassword(b"foo", b"bar")
             self.assertEqual(creds.username, b"foo")
             self.assertEqual(creds.hashed, b"bar")

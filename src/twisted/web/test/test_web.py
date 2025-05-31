@@ -612,12 +612,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -640,12 +640,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -670,7 +670,7 @@ class RequestTests(unittest.TestCase):
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -957,6 +957,28 @@ class RequestTests(unittest.TestCase):
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
 
+    def test_parsePOSTFormSubmissionSetFromSite(self) -> None:
+        """
+        C{Request._parsePOSTFormSubmission} is set to match C{Site._parsePOSTFormSubmission}.
+        """
+        site = server.Site(resource.Resource())
+        self.assertEqual(site._parsePOSTFormSubmission, True)
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
+
+        site = server.Site(resource.Resource(), parsePOSTFormSubmission=False)
+        self.assertEqual(site._parsePOSTFormSubmission, False)
+        channel.site = site
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, False)
+
+        # Can also set it directly:
+        request = server.Request(channel, parsePOSTFormSubmission=True)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
+
 
 class GzipEncoderTests(unittest.TestCase):
     def setUp(self):
@@ -1157,9 +1179,10 @@ class NewRenderResource(resource.Resource):
 
 
 @implementer(resource.IResource)
-class HeadlessResource:
+class HeadlessWriter:
     """
-    A resource that implements GET but not HEAD.
+    A resource that implements GET but not HEAD, and
+    calls C{request.write()} when rendering GET.
     """
 
     allowedMethods = [b"GET"]
@@ -1175,21 +1198,46 @@ class HeadlessResource:
         return server.NOT_DONE_YET
 
     def isLeaf(self):
-        """
         # IResource.isLeaf
-        """
         raise NotImplementedError()
 
     def getChildWithDefault(self, name, request):
-        """
         # IResource.getChildWithDefault
-        """
         raise NotImplementedError()
 
     def putChild(self, path, child):
-        """
         # IResource.putChild
+        raise NotImplementedError()
+
+
+@implementer(resource.IResource)
+class HeadlessReturner:
+    """
+    A resource that implements GET but not HEAD, and
+    returns C{bytes} when rendering GET.
+    """
+
+    allowedMethods = [b"GET"]
+
+    def render(self, request):
         """
+        Leave the request open for future writes.
+        """
+        self.request = request
+        if request.method not in self.allowedMethods:
+            raise error.UnsupportedMethod(self.allowedMethods)
+        return b"some data"
+
+    def isLeaf(self):
+        # IResource.isLeaf
+        raise NotImplementedError()
+
+    def getChildWithDefault(self, name, request):
+        # IResource.getChildWithDefault
+        raise NotImplementedError()
+
+    def putChild(self, path, child):
+        # IResource.putChild
         raise NotImplementedError()
 
 
@@ -1253,25 +1301,48 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 200)
         self.assertEqual(-1, req.transport.written.getvalue().find(b"hi hi"))
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_level"], LogLevel.info)
+        self.assertEqual(event["log_level"], LogLevel.info)
 
-    def test_unsupportedHead(self):
+    def test_unsupportedHeadWrite(self):
+        """
+        HEAD requests against resource that only claim support for GET
+        should not include a body in the response. When the resource
+        returns C{NOT_DONE_YET} a cryptic message is logged and no
+        Content-Length header is synthesized.
+        """
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+
+        resource = HeadlessWriter()
+        req = self._getReq(resource)
+        req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
+        headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
+        self.assertEqual(req.code, 200)
+        self.assertEqual(body, b"")
+        self.assertNotIn(b"Content-Length:", headers)
+        [faking, cryptic] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
+        self.assertIn("it got away from me", cryptic["log_format"])
+
+    def test_unsupportedHeadReturn(self):
         """
         HEAD requests against resource that only claim support for GET
         should not include a body in the response.
         """
-        logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
 
-        resource = HeadlessResource()
+        resource = HeadlessReturner()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
         headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b"")
-
-        self.assertEquals(2, len(logObserver))
+        self.assertIn(b"Content-Length:", headers)
+        [faking] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
 
     def test_noBytesResult(self):
         """

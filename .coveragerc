@@ -9,8 +9,9 @@ omit =
 [paths]
 source=
    src/twisted
+   */src/twisted
    */site-packages/twisted
-   *\site-packages\twisted
+   benchmarks
 
 [report]
 precision = 2

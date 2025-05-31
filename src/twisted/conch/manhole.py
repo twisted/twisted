@@ -124,7 +124,14 @@ class ManholeInterpreter(code.InteractiveInterpreter):
         """
         Format exception tracebacks and write them to the output handler.
         """
-        lines = format_exception(excType, excValue, excTraceback.tb_next)
+        code_obj = excTraceback.tb_frame.f_code
+        if code_obj.co_filename == code.__file__ and code_obj.co_name == "runcode":
+            traceback = excTraceback.tb_next
+        else:
+            # Workaround for https://github.com/python/cpython/issues/122478,
+            # present e.g. in Python 3.12.6:
+            traceback = excTraceback
+        lines = format_exception(excType, excValue, traceback)
         self.write("".join(lines))
 
     def displayhook(self, obj):
@@ -305,10 +312,6 @@ class VT102Writer:
     def __bytes__(self):
         s = b"".join(self.written)
         return s.strip(b"\n").splitlines()[-1]
-
-    if bytes == str:
-        # Compat with Python 2.7
-        __str__ = __bytes__
 
 
 def lastColorizedLine(source):

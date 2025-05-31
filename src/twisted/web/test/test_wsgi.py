@@ -23,7 +23,7 @@ from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
 from twisted.trial.unittest import TestCase
-from twisted.web import http
+from twisted.web import server
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
 from twisted.web.test.test_web import DummyChannel
@@ -180,7 +180,7 @@ class WSGIResourceTests(TestCase):
         )
 
         self.resource.render(FinishThrowingRequest(DummyChannel(), False))
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         f = logObserver[0]["log_failure"]
         self.assertIsInstance(f.value, ArbitraryError)
         self.flushLoggedErrors(ArbitraryError)
@@ -1275,7 +1275,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         included in the response.
         """
         # Make the Date header value deterministic
-        self.patch(http, "datetimeToString", lambda: "Tuesday")
+        self.patch(server, "datetimeToString", lambda: "Tuesday")
 
         channel = DummyChannel()
 
@@ -2165,7 +2165,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             event = logObserver[0]
             f = event["log_failure"]
             self.assertIsInstance(f.value, RuntimeError)

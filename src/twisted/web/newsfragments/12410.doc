@@ -1,0 +1,3 @@
+An error in the example for using a Resource object in th documentation on Configuring and Using the Twisted Web Server has been correctd.
+
+Furthermore, a number of references to "strings" where "bytes" where expected has been adjusted.

@@ -307,12 +307,11 @@ class BindAuthority(FileAuthority):
         Load records from C{filename}.
 
         @param filename: file to read from
-        @type filename: L{bytes}
         """
         fp = FilePath(filename)
         # Not the best way to set an origin. It can be set using $ORIGIN
         # though.
-        self.origin = nativeString(fp.basename() + b".")
+        self.origin = fp.asTextMode().basename() + "."
 
         lines = fp.getContent().splitlines(True)
         lines = self.stripComments(lines)

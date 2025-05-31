@@ -5,22 +5,20 @@
 """
 Mail service support.
 """
+from __future__ import annotations
 
 # System imports
 import os
 import warnings
+from typing import NoReturn
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from twisted.application import internet, service
-from twisted.cred.portal import Portal
-
-# Twisted imports
+from twisted.cred.portal import IRealm, Portal
 from twisted.internet import defer
-
-# Sibling imports
 from twisted.mail import protocols, smtp
-from twisted.mail.interfaces import IAliasableDomain, IDomain
+from twisted.mail.interfaces import IAlias, IAliasableDomain, IDomain
 from twisted.python import log, util
 
 
@@ -396,6 +394,14 @@ class BounceDomain:
         """
         return []
 
+    def requestAvatar(
+        self, avatarId: bytes | tuple[()], mind: object, *interfaces: type[Interface]
+    ) -> NoReturn:
+        """
+        Bounce domains cannot authenticate users.
+        """
+        raise NotImplementedError()
+
 
 @implementer(smtp.IMessage)
 class FileMessage:
@@ -453,6 +459,7 @@ class FileMessage:
         os.remove(self.name)
 
 
+@implementer(IRealm)
 class MailService(service.MultiService):
     """
     An email service.
@@ -466,11 +473,8 @@ class MailService(service.MultiService):
     @type portals: L{dict} of L{bytes} -> L{Portal}
     @ivar portals: A mapping of domain name to authentication portal.
 
-    @type aliases: L{None} or L{dict} of
-        L{bytes} -> L{IAlias} provider
     @ivar aliases: A mapping of domain name to alias.
 
-    @type smtpPortal: L{Portal}
     @ivar smtpPortal: A portal for authentication for the SMTP server.
 
     @type monitor: L{FileMonitoringService}
@@ -478,19 +482,17 @@ class MailService(service.MultiService):
     """
 
     queue = None
-    domains = None
-    portals = None
-    aliases = None
-    smtpPortal = None
+    aliases: dict[bytes, IAlias] | None = None
+    smtpPortal: Portal
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the mail service.
         """
         service.MultiService.__init__(self)
         # Domains and portals for "client" protocols - POP3, IMAP4, etc
         self.domains = DomainWithDefaultDict({}, BounceDomain())
-        self.portals = {}
+        self.portals: dict[bytes, Portal] = {}
 
         self.monitor = FileMonitoringService()
         self.monitor.setServiceParent(self)
@@ -523,18 +525,17 @@ class MailService(service.MultiService):
         """
         return protocols.ESMTPFactory(self, self.smtpPortal)
 
-    def addDomain(self, name, domain):
+    def addDomain(self, name: bytes, domain: IDomain) -> None:
         """
         Add a domain for which the service will accept email.
 
-        @type name: L{bytes}
         @param name: A domain name.
 
-        @type domain: L{IDomain} provider
         @param domain: A domain object.
         """
         portal = Portal(domain)
-        map(portal.registerChecker, domain.getCredentialsCheckers())
+        for checker in domain.getCredentialsCheckers():
+            portal.registerChecker(checker)
         self.domains[name] = domain
         self.portals[name] = portal
         if self.aliases and IAliasableDomain.providedBy(domain):

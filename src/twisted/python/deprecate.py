@@ -259,8 +259,13 @@ def _appendToDocstring(thingWithDoc, textToAppend):
     elif len(docstringLines) == 1:
         docstringLines.extend(["", textToAppend, ""])
     else:
-        spaces = docstringLines.pop()
+        trailer = docstringLines[-1]
+        spaces = ""
+        if not trailer.strip():
+            # Deal with differences between Python 3.13 and older versions.
+            spaces = docstringLines.pop()
         docstringLines.extend(["", spaces + textToAppend, spaces])
+        docstringLines = [l.lstrip(" ") for l in docstringLines]
     thingWithDoc.__doc__ = "\n".join(docstringLines)
 
 
@@ -305,7 +310,9 @@ def deprecated(
     return deprecationDecorator
 
 
-def deprecatedProperty(version, replacement=None):
+def deprecatedProperty(
+    version: Version, replacement: str | Callable[..., object] | None = None
+) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """
     Return a decorator that marks a property as deprecated. To deprecate a
     regular callable or class, see L{deprecated}.
