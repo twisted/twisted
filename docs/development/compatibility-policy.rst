@@ -46,17 +46,20 @@ This is not an exhaustive read and beside this list you should continue reading 
 
 * Do not change the function's behavior as part of the deprecation process.
 
-* Cause imports or usage of the class/function/method to emit a DeprecationWarning either call warnings.warn or use one of the helper APIs
+* Cause imports or usage of the class/function/method to emit a :exc:`DeprecationWarning`:
+  call :func:`warnings.warn` or use one of the helper APIs.
 
-* The warning text must include the version of Twisted in which the function is first deprecated (which will always be a version in the future)
+* The warning text must include the version of Twisted in which the function is first deprecated.
+  Use the `indeterminate version placeholder string <https://github.com/twisted/incremental?tab=readme-ov-file#indeterminate-versions>`_ ``Twisted NEXT``.
 
 * The warning text should recommend a replacement, if one exists.
 
-* The warning must "point to" the code which called the function. For example, in the normal case, this means stacklevel=2 passed to warnings.warn.
+* The warning must "point to" the code which called the function.
+  Normally this means passing ``stacklevel=2`` to :func:`warnings.warn`.
 
 * There must be a unit test which verifies the deprecation warning.
 
-* A .removal news fragment must be added to announce the deprecation.
+* A ``.removal`` news fragment must be added to announce the deprecation.
 
 
 Procedure for Incompatible Changes
