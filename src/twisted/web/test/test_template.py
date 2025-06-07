@@ -848,7 +848,7 @@ class RenderElementTests(TestCase):
         d = self.request.notifyFinish()
 
         def check(_: object) -> None:
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             f = logObserver[0]["log_failure"]
             self.assertIsInstance(f.value, FlattenerError)
             flushed = self.flushLoggedErrors(FlattenerError)

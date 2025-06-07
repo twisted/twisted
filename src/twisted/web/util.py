@@ -9,7 +9,6 @@ An assortment of web server-related utilities.
 __all__ = [
     "redirectTo",
     "Redirect",
-    "ChildRedirector",
     "ParentRedirect",
     "DeferredResource",
     "FailureElement",
@@ -24,7 +23,6 @@ __all__ = [
 
 from ._template_util import (
     _PRE,
-    ChildRedirector,
     DeferredResource,
     FailureElement,
     ParentRedirect,

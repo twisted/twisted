@@ -18,6 +18,7 @@ from twisted.cred.credentials import IAnonymous, ISSHPrivateKey, IUsernamePasswo
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import defer, task
+from twisted.internet.defer import Deferred
 from twisted.protocols import loopback
 from twisted.python.reflect import requireModule
 from twisted.trial import unittest
@@ -237,7 +238,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
     if keys is None:
         skip = "cannot run without cryptography"
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.realm = Realm()
         self.portal = Portal(self.realm)
         self.portal.registerChecker(PasswordChecker())
@@ -252,12 +253,14 @@ class SSHUserAuthServerTests(unittest.TestCase):
         self.authServer.serviceStopped()
         self.authServer = None
 
-    def _checkFailed(self, ignored):
+    def _checkFailed(self, ignored: object) -> None:
         """
         Check that the authentication has failed.
         """
+        assert isinstance(self.authServer.transport, FakeTransport)
+        lastPacket = self.authServer.transport.packets[-1]
         self.assertEqual(
-            self.authServer.transport.packets[-1],
+            lastPacket,
             (userauth.MSG_USERAUTH_FAILURE, NS(b"password,publickey") + b"\x00"),
         )
 
@@ -572,7 +575,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
 
         return d.addCallback(check)
 
-    def test_failIfUnknownService(self):
+    def test_failIfUnknownService(self) -> Deferred[None]:
         """
         If the user requests a service that we don't support, the
         authentication should fail.
@@ -580,6 +583,7 @@ class SSHUserAuthServerTests(unittest.TestCase):
         packet = NS(b"foo") + NS(b"") + NS(b"password") + b"\0" + NS(b"foo")
         self.authServer.clock = task.Clock()
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+        assert d is not None
         return d.addCallback(self._checkFailed)
 
     def test_tryAuthEdgeCases(self):

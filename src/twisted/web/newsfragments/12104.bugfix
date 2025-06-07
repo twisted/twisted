@@ -1,3 +1,0 @@
-twisted.web.http.IM_A_TEAPOT was added and returns `I'm a teapot`
-as default message for the status code 418,
-as defined in RFC 2324 section 2.3.2.

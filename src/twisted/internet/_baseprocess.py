@@ -9,10 +9,12 @@ L{IReactorProcess} implementations.
 
 from typing import Optional
 
+from twisted.logger import Logger
 from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
-from twisted.python.log import err
 from twisted.python.reflect import qual
+
+_log = Logger()
 
 _missingProcessExited = (
     "Since Twisted 8.2, IProcessProtocol.processExited "
@@ -39,10 +41,8 @@ class BaseProcess:
                 stacklevel=0,
             )
         else:
-            try:
+            with _log.failuresHandled("while calling processExited:"):
                 processExited(Failure(reason))
-            except BaseException:
-                err(None, "unexpected error in processExited")
 
     def processEnded(self, status):
         """
@@ -62,7 +62,5 @@ class BaseProcess:
             reason = self._getReason(self.status)
             proto = self.proto
             self.proto = None
-            try:
+            with _log.failuresHandled("while calling processEnded:"):
                 proto.processEnded(Failure(reason))
-            except BaseException:
-                err(None, "unexpected error in processEnded")

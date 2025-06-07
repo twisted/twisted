@@ -898,7 +898,7 @@ class HTTPClientParserTests(TestCase):
         response._bodyDataFinished = fakeBodyDataFinished
 
         protocol.connectionLost(None)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, ArbitraryException)
@@ -1036,10 +1036,10 @@ class HTTPClientParserTests(TestCase):
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(sample103Response)
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_format"], "Ignoring unexpected {code} response")
-        self.assertEquals(event["code"], 103)
+        self.assertEqual(event["log_format"], "Ignoring unexpected {code} response")
+        self.assertEqual(event["code"], 103)
 
 
 class SlowRequest:
@@ -1233,7 +1233,7 @@ class HTTP11ClientProtocolTests(TestCase):
         logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
 
         def check(ignore):
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             event = logObserver[0]
             self.assertIn("log_failure", event)
             self.assertEqual(
@@ -1863,7 +1863,7 @@ class HTTP11ClientProtocolTests(TestCase):
         response.deliverBody(bodyProtocol)
         bodyProtocol.closedReason.trap(ResponseDone)
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, ZeroDivisionError)
@@ -2042,11 +2042,11 @@ class RequestTests(TestCase):
 
     def test_sanitizeLinearWhitespaceInRequestHeaders(self):
         """
-        Linear whitespace in request headers is replaced with a single
-        space.
+        Linear whitespace in request header values is replaced with a
+        single space.
         """
         for component in bytesLinearWhitespaceComponents:
-            headers = Headers({component: [component], b"host": [b"example.invalid"]})
+            headers = Headers({b"x-foo": [component], b"host": [b"example.invalid"]})
             transport = StringTransport()
             Request(b"GET", b"/foo", headers, None).writeTo(transport)
             lines = transport.value().split(b"\r\n")
@@ -2055,8 +2055,7 @@ class RequestTests(TestCase):
             del lines[0], lines[-2:]
             lines.remove(b"Connection: close")
             lines.remove(b"Host: example.invalid")
-            sanitizedHeaderLine = b": ".join([sanitizedBytes, sanitizedBytes])
-            self.assertEqual(lines, [sanitizedHeaderLine])
+            self.assertEqual(lines, [b"X-Foo: " + sanitizedBytes])
 
     def test_sendChunkedRequestBody(self):
         """
@@ -2483,7 +2482,7 @@ class RequestTests(TestCase):
         request.writeTo(self.transport)
         request.stopWriting()
         self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         self.assertIn("log_failure", event)
         f = event["log_failure"]

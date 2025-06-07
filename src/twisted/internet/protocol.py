@@ -8,7 +8,7 @@ Standard implementations of Twisted protocol-related interfaces.
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
-
+from __future__ import annotations
 
 import random
 from typing import Any, Callable, Optional
@@ -16,7 +16,12 @@ from typing import Any, Callable, Optional
 from zope.interface import implementer
 
 from twisted.internet import defer, error, interfaces
-from twisted.internet.interfaces import IAddress, ITransport
+from twisted.internet.interfaces import (
+    IAddress,
+    IMulticastTransport,
+    ITransport,
+    IUDPTransport,
+)
 from twisted.logger import _loggerFor
 from twisted.python import components, failure, log
 
@@ -686,7 +691,7 @@ class AbstractDatagramProtocol:
     UDP.
     """
 
-    transport = None
+    transport: IUDPTransport | IMulticastTransport | None = None
     numPorts = 0
     noisy = True
 
@@ -735,7 +740,7 @@ class AbstractDatagramProtocol:
         Will only be called once, after all ports are disconnected.
         """
 
-    def makeConnection(self, transport):
+    def makeConnection(self, transport: IUDPTransport) -> None:
         """
         Make a connection to a transport and a server.
 

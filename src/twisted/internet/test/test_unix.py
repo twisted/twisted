@@ -13,7 +13,7 @@ from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from stat import S_IMODE
 from struct import pack
 from tempfile import mkstemp, mktemp
-from typing import Optional, Sequence, Type
+from typing import Any, Callable, Optional, Sequence, Type
 from unittest import skipIf
 
 try:
@@ -25,7 +25,7 @@ else:
 
 from zope.interface import Interface, implementer
 
-from twisted.internet import base, interfaces
+from twisted.internet import base, error, interfaces, reactor, tcp
 from twisted.internet.address import UNIXAddress
 from twisted.internet.defer import Deferred, fail, gatherResults
 from twisted.internet.endpoints import UNIXClientEndpoint, UNIXServerEndpoint
@@ -51,6 +51,7 @@ from twisted.internet.test.connectionmixins import (
 )
 from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.test.test_tcp import (
+    ClosingFactory,
     MyClientFactory,
     MyServerFactory,
     StreamTransportTestsMixin,
@@ -61,7 +62,9 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.log import addObserver, err, removeObserver
 from twisted.python.reflect import requireModule
-from twisted.python.runtime import platform
+from twisted.python.runtime import platform, platformType
+from twisted.test.test_tcp import AccumulatingProtocol
+from twisted.trial.unittest import TestCase
 
 sendmsg = requireModule("twisted.python.sendmsg")
 sendmsgSkipReason = ""
@@ -1014,3 +1017,119 @@ class UnixClientTestsBuilder(ReactorBuilder, StreamClientTestsMixin):
 
 
 globals().update(UnixClientTestsBuilder.makeTestCaseClasses())
+
+
+@skipIf(platformType != "posix", "UNIX sockets only supported on POSIX.")
+class RealSocketTests(TestCase):
+    """
+    Test real UNIX socket connections.
+    """
+
+    path = "unixpath"
+
+    async def test_closePortInProtocolFactory(self):
+        """
+        A port created with L{IReactorTCP.listenUNIX} can be connected to with
+        L{IReactorTCP.connectUNIX}.
+        """
+        assert interfaces.IReactorUNIX.providedBy(reactor)
+
+        f = ClosingFactory()
+        port = reactor.listenUNIX(self.path, f)
+        assert isinstance(port, tcp.Port)
+        f.port = port
+        self.addCleanup(f.cleanUp)
+        clientF = MyClientFactory()
+        reactor.connectUNIX(self.path, clientF)
+
+        await clientF.deferred
+
+        assert clientF.lastProtocol
+        self.assertTrue(clientF.lastProtocol.made)
+        self.assertTrue(port.disconnected)
+        clientF.lostReason.trap(error.ConnectionDone)
+
+    async def _connectedClientAndServerTest(
+        self, callback: Callable[[AccumulatingProtocol, AccumulatingProtocol], None]
+    ) -> None:
+        """
+        Invoke the given callback with a client protocol and a server protocol
+        which have been connected to each other.
+        """
+        assert interfaces.IReactorUNIX.providedBy(reactor)
+
+        serverFactory = MyServerFactory()
+        serverConnMade: Deferred[AccumulatingProtocol] = Deferred()
+        serverFactory.protocolConnectionMade = serverConnMade
+        port = reactor.listenUNIX(self.path, serverFactory)
+        self.addCleanup(port.stopListening)
+
+        clientF = MyClientFactory()
+        clientConnMade: Deferred[Any] = Deferred()
+        clientF.protocolConnectionMade = clientConnMade
+        reactor.connectUNIX(self.path, clientF)
+
+        serverProtocol, clientProtocol = await gatherResults(
+            [serverConnMade, clientConnMade]
+        )
+
+        callback(serverProtocol, clientProtocol)
+        assert serverProtocol.transport
+        assert clientProtocol.transport
+        serverProtocol.transport.loseConnection()
+        clientProtocol.transport.loseConnection()
+
+    async def test_tcpNoDelay(self):
+        """
+        The transport of a protocol connected with L{IReactorTCP.connectUNIX} or
+        L{IReactor.TCP.listenUNIX} can have L{ITCPTransport.getTcpNoDelay} or
+        L{ITCPTransport.setTcpNoDelay} called without error.
+        """
+
+        def check(
+            serverProtocol: AccumulatingProtocol, clientProtocol: AccumulatingProtocol
+        ) -> None:
+            for p in [serverProtocol, clientProtocol]:
+                assert interfaces.ITCPTransport.providedBy(p.transport)
+                transport = p.transport
+                self.assertEqual(transport.getTcpNoDelay(), 0)
+                transport.setTcpNoDelay(True)
+                self.assertEqual(transport.getTcpNoDelay(), 0)
+                transport.setTcpNoDelay(False)
+                self.assertEqual(transport.getTcpNoDelay(), 0)
+
+        await self._connectedClientAndServerTest(check)
+
+    async def test_tcpKeepAlive(self):
+        """
+        The transport of a protocol connected with L{IReactorTCP.connectUNIX} or
+        L{IReactor.TCP.listenUNIX} can have its I{SO_KEEPALIVE} state inspected
+        and manipulated with L{ITCPTransport.getTcpKeepAlive} and
+        L{ITCPTransport.setTcpKeepAlive}.
+        """
+
+        def check(
+            serverProtocol: AccumulatingProtocol, clientProtocol: AccumulatingProtocol
+        ) -> None:
+            for p in [serverProtocol, clientProtocol]:
+                assert interfaces.ITCPTransport.providedBy(p.transport)
+                transport = p.transport
+                self.assertEqual(transport.getTcpKeepAlive(), False)
+                transport.setTcpKeepAlive(True)
+                self.assertEqual(transport.getTcpKeepAlive(), True)
+                transport.setTcpKeepAlive(False)
+                self.assertEqual(transport.getTcpKeepAlive(), False)
+
+        await self._connectedClientAndServerTest(check)
+
+    async def test_Failing(self):
+        """
+        Tests whether attempting to establish connection to non-existing UNIX path fails
+        """
+        assert interfaces.IReactorUNIX.providedBy(reactor)
+
+        clientF = MyClientFactory()
+        reactor.connectUNIX("non-existing", clientF, timeout=5)
+
+        await clientF.failDeferred
+        clientF.reason.trap(error.ConnectError)

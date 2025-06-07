@@ -8,19 +8,27 @@ Currently implemented authentication types are public-key and password.
 
 Maintainer: Paul Swartz
 """
-
+from __future__ import annotations
 
 import struct
+from typing import Callable, Tuple, Type
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
 from twisted.conch.ssh.common import NS, getNS
+from twisted.conch.ssh.keys import Key
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IReactorTime
 from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString
+
+_ConchPortalTuple = Tuple[
+    Type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
+]
 
 
 class SSHUserAuthServer(service.SSHService):
@@ -72,7 +80,7 @@ class SSHUserAuthServer(service.SSHService):
     attemptsBeforeDisconnect = 20
     # 20 login attempts before a disconnect
     passwordDelay = 1  # number of seconds to delay on a failed password
-    clock = reactor
+    clock: IReactorTime = IReactorTime(reactor)
     interfaceToMethod = {
         credentials.ISSHPrivateKey: b"publickey",
         credentials.IUsernamePassword: b"password",
@@ -124,37 +132,40 @@ class SSHUserAuthServer(service.SSHService):
             transport.DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE, b"you took too long"
         )
 
-    def tryAuth(self, kind, user, data):
+    def tryAuth(
+        self, kind: bytes, user: bytes, data: bytes
+    ) -> Deferred[_ConchPortalTuple]:
         """
         Try to authenticate the user with the given method.  Dispatches to a
         auth_* method.
 
         @param kind: the authentication method to try.
-        @type kind: L{bytes}
+
         @param user: the username the client is authenticating with.
-        @type user: L{bytes}
+
         @param data: authentication specific data sent by the client.
-        @type data: L{bytes}
+
         @return: A Deferred called back if the method succeeded, or erred back
             if it failed.
-        @rtype: C{defer.Deferred}
         """
         self._log.debug("{user!r} trying auth {kind!r}", user=user, kind=kind)
         if kind not in self.supportedAuthentications:
             return defer.fail(error.ConchError("unsupported authentication, failing"))
-        kind = nativeString(kind.replace(b"-", b"_"))
-        f = getattr(self, f"auth_{kind}", None)
-        if f:
+        strkind = kind.replace(b"-", b"_").decode("ascii")
+        f: Callable[[bytes], Deferred[_ConchPortalTuple] | None] | None = getattr(
+            self, f"auth_{strkind}", None
+        )
+        if f is not None:
             ret = f(data)
-            if not ret:
+            if ret is None:
                 return defer.fail(
-                    error.ConchError(f"{kind} return None instead of a Deferred")
+                    error.ConchError(f"{strkind} return None instead of a Deferred")
                 )
             else:
                 return ret
-        return defer.fail(error.ConchError(f"bad auth type: {kind}"))
+        return defer.fail(error.ConchError(f"bad auth type: {strkind}"))
 
-    def ssh_USERAUTH_REQUEST(self, packet):
+    def ssh_USERAUTH_REQUEST(self, packet: bytes) -> Deferred[_ConchPortalTuple] | None:
         """
         The client has requested authentication.  Payload::
             string user
@@ -173,19 +184,21 @@ class SSHUserAuthServer(service.SSHService):
         d = self.tryAuth(method, user, rest)
         if not d:
             self._ebBadAuth(failure.Failure(error.ConchError("auth returned none")))
-            return
-        d.addCallback(self._cbFinishedAuth)
-        d.addErrback(self._ebMaybeBadAuth)
-        d.addErrback(self._ebBadAuth)
-        return d
+            return None
+        return (
+            d.addCallback(self._cbFinishedAuth)
+            .addErrback(self._ebMaybeBadAuth)
+            .addErrback(self._ebBadAuth)
+        )
 
-    def _cbFinishedAuth(self, result):
+    def _cbFinishedAuth(self, result: _ConchPortalTuple) -> None:
         """
         The callback when user has successfully been authenticated.  For a
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
         """
         (interface, avatar, logout) = result
+        assert self.transport is not None
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout
         service = self.transport.factory.getService(self.transport, self.nextService)
@@ -249,7 +262,7 @@ class SSHUserAuthServer(service.SSHService):
             MSG_USERAUTH_FAILURE, NS(b",".join(self.supportedAuthentications)) + b"\x00"
         )
 
-    def auth_publickey(self, packet):
+    def auth_publickey(self, packet: bytes) -> Deferred[_ConchPortalTuple]:
         """
         Public key authentication.  Payload::
             byte has signature
@@ -262,6 +275,7 @@ class SSHUserAuthServer(service.SSHService):
         hasSig = ord(packet[0:1])
         algName, blob, rest = getNS(packet[1:], 2)
 
+        result: Deferred[_ConchPortalTuple]
         try:
             keys.Key.fromString(blob)
         except keys.BadKeyError:
@@ -271,6 +285,8 @@ class SSHUserAuthServer(service.SSHService):
 
         signature = hasSig and getNS(rest)[0] or None
         if hasSig:
+            assert self.transport is not None, "must have transport for auth"
+            assert self.transport.sessionID is not None, "must have session for auth"
             b = (
                 NS(self.transport.sessionID)
                 + bytes((MSG_USERAUTH_REQUEST,))
@@ -282,19 +298,21 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(blob)
             )
             c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
-            return self.portal.login(c, None, interfaces.IConchUser)
+            result = self.portal.login(c, None, interfaces.IConchUser)
         else:
             c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
-            return self.portal.login(c, None, interfaces.IConchUser).addErrback(
+            result = self.portal.login(c, None, interfaces.IConchUser).addErrback(
                 self._ebCheckKey, packet[1:]
             )
+        return result
 
-    def _ebCheckKey(self, reason, packet):
+    def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """
         Called back if the user did not sent a signature.  If reason is
         error.ValidPublicKey then this key is valid for the user to
         authenticate with.  Send MSG_USERAUTH_PK_OK.
         """
+        assert self.transport is not None
         reason.trap(error.ValidPublicKey)
         # if we make it here, it means that the publickey is valid
         self.transport.sendPacket(MSG_USERAUTH_PK_OK, packet)
@@ -331,64 +349,67 @@ class SSHUserAuthClient(service.SSHService):
     making callbacks for more information when necessary.
 
     @ivar name: the name of this service: 'ssh-userauth'
-    @type name: L{str}
+
     @ivar preferredOrder: a list of authentication methods that should be used
         first, in order of preference, if supported by the server
-    @type preferredOrder: L{list}
+
     @ivar user: the name of the user to authenticate as
-    @type user: L{bytes}
+
     @ivar instance: the service to start after authentication has finished
-    @type instance: L{service.SSHService}
-    @ivar authenticatedWith: a list of strings of authentication methods we've tried
-    @type authenticatedWith: L{list} of L{bytes}
+
+    @ivar authenticatedWith: a list of strings of authentication methods we've
+        tried
+
     @ivar triedPublicKeys: a list of public key objects that we've tried to
         authenticate with
-    @type triedPublicKeys: L{list} of L{Key}
+
     @ivar lastPublicKey: the last public key object we've tried to authenticate
         with
-    @type lastPublicKey: L{Key}
     """
 
-    name = b"ssh-userauth"
-    preferredOrder = [b"publickey", b"password", b"keyboard-interactive"]
+    name: bytes = b"ssh-userauth"
+    preferredOrder: list[bytes] = [
+        b"publickey",
+        b"password",
+        b"keyboard-interactive",
+    ]
 
-    def __init__(self, user, instance):
+    def __init__(self, user: bytes, instance: service.SSHService):
         self.user = user
         self.instance = instance
 
-    def serviceStarted(self):
-        self.authenticatedWith = []
-        self.triedPublicKeys = []
-        self.lastPublicKey = None
+    def serviceStarted(self) -> None:
+        self.authenticatedWith: list[bytes] = []
+        self.triedPublicKeys: list[Key] = []
+        self.lastPublicKey: Key | None = None
         self.askForAuth(b"none", b"")
 
-    def askForAuth(self, kind, extraData):
+    def askForAuth(self, kind: bytes, extraData: bytes) -> None:
         """
-        Send a MSG_USERAUTH_REQUEST.
+        Send a C{MSG_USERAUTH_REQUEST}.
 
         @param kind: the authentication method to try.
-        @type kind: L{bytes}
+
         @param extraData: method-specific data to go in the packet
-        @type extraData: L{bytes}
         """
+        assert self.transport is not None
         self.lastAuth = kind
         self.transport.sendPacket(
             MSG_USERAUTH_REQUEST,
             NS(self.user) + NS(self.instance.name) + NS(kind) + extraData,
         )
 
-    def tryAuth(self, kind):
+    def tryAuth(self, kind: bytes) -> None | Deferred[bool]:
         """
         Dispatch to an authentication method.
 
         @param kind: the authentication method
         @type kind: L{bytes}
         """
-        kind = nativeString(kind.replace(b"-", b"_"))
+        strkind = kind.replace(b"-", b"_").decode("ascii")
         self._log.debug("trying to auth with {kind}", kind=kind)
-        f = getattr(self, "auth_" + kind, None)
-        if f:
-            return f()
+        f: Callable[[], Deferred[bool]] | None = getattr(self, "auth_" + strkind, None)
+        return f() if f is not None else None
 
     def _ebAuth(self, ignored, *args):
         """
@@ -597,19 +618,15 @@ class SSHUserAuthClient(service.SSHService):
             data += NS(r.encode("UTF8"))
         self.transport.sendPacket(MSG_USERAUTH_INFO_RESPONSE, data)
 
-    def auth_publickey(self):
+    def auth_publickey(self) -> Deferred[bool]:
         """
         Try to authenticate with a public key.  Ask the user for a public key;
         if the user has one, send the request to the server and return True.
         Otherwise, return False.
-
-        @rtype: L{bool}
         """
-        d = defer.maybeDeferred(self.getPublicKey)
-        d.addBoth(self._cbGetPublicKey)
-        return d
+        return defer.maybeDeferred(self.getPublicKey).addBoth(self._cbGetPublicKey)
 
-    def _cbGetPublicKey(self, publicKey):
+    def _cbGetPublicKey(self, publicKey: Key | failure.Failure | None) -> bool:
         if not isinstance(publicKey, keys.Key):  # failure or None
             publicKey = None
         if publicKey is not None:
@@ -623,13 +640,15 @@ class SSHUserAuthClient(service.SSHService):
         else:
             return False
 
-    def auth_password(self):
+    # Section defining C{auth_}-prefixed methods begins here: they must each be
+    # defined with the signature (() -> bool), as described by
+    # L{SSHUserAuthClient.tryAuth}.
+
+    def auth_password(self) -> bool:
         """
         Try to authenticate with a password.  Ask the user for a password.
         If the user will return a password, return True.  Otherwise, return
         False.
-
-        @rtype: L{bool}
         """
         d = self.getPassword()
         if d:
@@ -638,83 +657,75 @@ class SSHUserAuthClient(service.SSHService):
         else:  # returned None, don't do password auth
             return False
 
-    def auth_keyboard_interactive(self):
+    def auth_keyboard_interactive(self) -> bool:
         """
         Try to authenticate with keyboard-interactive authentication.  Send
         the request to the server and return True.
-
-        @rtype: L{bool}
         """
         self._log.debug("authing with keyboard-interactive")
         self.askForAuth(b"keyboard-interactive", NS(b"") + NS(b""))
         return True
 
-    def _cbPassword(self, password):
+    # Section defining C{auth_}-prefixed methods ends here.
+
+    def _cbPassword(self, password: bytes) -> None:
         """
         Called back when the user gives a password.  Send the request to the
         server.
 
         @param password: the password the user entered
-        @type password: L{bytes}
         """
         self.askForAuth(b"password", b"\x00" + NS(password))
 
-    def signData(self, publicKey, signData):
+    def signData(self, publicKey: keys.Key, signData: bytes) -> Deferred[bytes] | None:
         """
         Sign the given data with the given public key.
 
-        By default, this will call getPrivateKey to get the private key,
-        then sign the data using Key.sign().
+        By default, this will call getPrivateKey to get the private key, then
+        sign the data using Key.sign().
 
         This method is factored out so that it can be overridden to use
         alternate methods, such as a key agent.
 
         @param publicKey: The public key object returned from L{getPublicKey}
-        @type publicKey: L{keys.Key}
 
         @param signData: the data to be signed by the private key.
-        @type signData: L{bytes}
+
         @return: a Deferred that's called back with the signature
-        @rtype: L{defer.Deferred}
         """
         key = self.getPrivateKey()
         if not key:
-            return
+            return None
         return key.addCallback(self._cbSignData, signData)
 
-    def _cbSignData(self, privateKey, signData):
+    def _cbSignData(self, privateKey: keys.Key, signData: bytes) -> bytes:
         """
-        Called back when the private key is returned.  Sign the data and
-        return the signature.
+        Called back when the private key is returned.  Sign the data and return
+        the signature.
 
         @param privateKey: the private key object
-        @type privateKey: L{keys.Key}
+
         @param signData: the data to be signed by the private key.
-        @type signData: L{bytes}
+
         @return: the signature
-        @rtype: L{bytes}
         """
         return privateKey.sign(signData)
 
-    def getPublicKey(self):
+    def getPublicKey(self) -> Key | None:
         """
         Return a public key for the user.  If no more public keys are
         available, return L{None}.
 
         This implementation always returns L{None}.  Override it in a
         subclass to actually find and return a public key object.
-
-        @rtype: L{Key} or L{None}
         """
         return None
 
-    def getPrivateKey(self):
+    def getPrivateKey(self) -> Deferred[Key]:
         """
         Return a L{Deferred} that will be called back with the private key
         object corresponding to the last public key from getPublicKey().
         If the private key is not available, errback on the Deferred.
-
-        @rtype: L{Deferred} called back with L{Key}
         """
         return defer.fail(NotImplementedError())
 

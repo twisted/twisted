@@ -6,20 +6,26 @@
 """
 Maildir-style mailbox support.
 """
+from __future__ import annotations
 
 import io
 import os
 import socket
 import stat
 from hashlib import md5
-from typing import IO
+from typing import IO, Callable, overload
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
 from twisted.cred import checkers, credentials, portal
+from twisted.cred.credentials import IUsernameHashedPassword, IUsernamePassword
 from twisted.cred.error import UnauthorizedLogin
 from twisted.internet import defer, interfaces, reactor
+from twisted.internet.defer import Deferred, succeed
+from twisted.internet.interfaces import IProducer
 from twisted.mail import mail, pop3, smtp
+from twisted.mail.alias import AliasBase
+from twisted.mail.mail import MailService
 from twisted.persisted import dirdbm
 from twisted.protocols import basic
 from twisted.python import failure, log
@@ -60,7 +66,7 @@ class _MaildirNameGenerator:
         """
         self._clock = clock
 
-    def generate(self):
+    def generate(self) -> bytes:
         """
         Generate a string which is intended to be unique across all calls to
         this function (across all processes, reboots, etc).
@@ -76,28 +82,31 @@ class _MaildirNameGenerator:
         t = self._clock.seconds()
         seconds = str(int(t))
         microseconds = "%07d" % (int((t - int(t)) * 10e6),)
-        return f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}"
+        return os.fsencode(f"{seconds}.M{microseconds}P{self.p}Q{self.n}.{self.s}")
 
 
 _generateMaildirName = _MaildirNameGenerator(reactor).generate
 
 
-def initializeMaildir(dir):
+def initializeMaildir(dir: bytes | str) -> None:
     """
     Create a maildir user directory if it doesn't already exist.
 
-    @type dir: L{bytes}
     @param dir: The path name for a user directory.
     """
-    dir = os.fsdecode(dir)
-    if not os.path.isdir(dir):
-        os.mkdir(dir, 0o700)
-        for subdir in ["new", "cur", "tmp", ".Trash"]:
-            os.mkdir(os.path.join(dir, subdir), 0o700)
-        for subdir in ["new", "cur", "tmp"]:
-            os.mkdir(os.path.join(dir, ".Trash", subdir), 0o700)
+    bdir: bytes
+    if isinstance(dir, bytes):
+        bdir = dir
+    else:
+        bdir = os.fsencode(dir)
+    if not os.path.isdir(bdir):
+        os.mkdir(bdir, 0o700)
+        for subdir in [b"new", b"cur", b"tmp", b".Trash"]:
+            os.mkdir(os.path.join(bdir, subdir), 0o700)
+        for subdir in [b"new", b"cur", b"tmp"]:
+            os.mkdir(os.path.join(bdir, b".Trash", subdir), 0o700)
         # touch
-        open(os.path.join(dir, ".Trash", "maildirfolder"), "w").close()
+        open(os.path.join(bdir, b".Trash", b"maildirfolder"), "w").close()
 
 
 class MaildirMessage(mail.FileMessage):
@@ -160,22 +169,17 @@ class AbstractMaildirDomain:
     """
     An abstract maildir-backed domain.
 
-    @type alias: L{None} or L{dict} mapping
-        L{bytes} to L{AliasBase}
     @ivar alias: A mapping of username to alias.
 
     @ivar root: See L{__init__}.
     """
 
-    alias = None
-    root = None
+    alias: None | dict[bytes, AliasBase] = None
 
-    def __init__(self, service, root):
+    def __init__(self, service: MailService, root: bytes) -> None:
         """
-        @type service: L{MailService}
         @param service: An email service.
 
-        @type root: L{bytes}
         @param root: The maildir root directory.
         """
         self.root = root
@@ -274,16 +278,14 @@ class AbstractMaildirDomain:
         """
         return False
 
-    def addUser(self, user, password):
+    def addUser(self, user: bytes, password: bytes) -> None:
         """
         Add a user to this domain.
 
         Subclasses should override this method.
 
-        @type user: L{bytes}
         @param user: A username.
 
-        @type password: L{bytes}
         @param password: A password.
         """
         raise NotImplementedError
@@ -299,6 +301,14 @@ class AbstractMaildirDomain:
         @return: Credentials checkers for this domain.
         """
         raise NotImplementedError
+
+    def requestAvatar(
+        self, avatarId: bytes | tuple[()], mind: object, *interfaces: type[Interface]
+    ) -> tuple[type[Interface], object, Callable[[], None]]:
+        """
+        Abstract domains cannot authenticate users.
+        """
+        raise NotImplementedError()
 
 
 @implementer(interfaces.IConsumer)
@@ -342,7 +352,7 @@ class _MaildirMailboxAppendMessageTask:
     osclose = staticmethod(os.close)
     osrename = staticmethod(os.rename)
 
-    def __init__(self, mbox, msg):
+    def __init__(self, mbox: MaildirMailbox, msg: bytes | IO[bytes]) -> None:
         """
         @type mbox: L{MaildirMailbox}
         @param mbox: A maildir mailbox.
@@ -351,13 +361,13 @@ class _MaildirMailboxAppendMessageTask:
         @param msg: The message to add.
         """
         self.mbox = mbox
-        self.defer = defer.Deferred()
+        self.defer: defer.Deferred[None] = defer.Deferred()
         self.openCall = None
         if not hasattr(msg, "read"):
             msg = io.BytesIO(msg)
         self.msg = msg
 
-    def startUp(self):
+    def startUp(self) -> None:
         """
         Start transferring the message to the mailbox.
         """
@@ -366,15 +376,13 @@ class _MaildirMailboxAppendMessageTask:
             self.filesender = basic.FileSender()
             self.filesender.beginFileTransfer(self.msg, self)
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(self, producer: IProducer, streaming: bool) -> None:
         """
         Register a producer and start asking it for data if it is
         non-streaming.
 
-        @type producer: L{IProducer <interfaces.IProducer>}
         @param producer: A producer.
 
-        @type streaming: L{bool}
         @param streaming: A flag indicating whether the producer provides a
             streaming interface.
         """
@@ -401,11 +409,10 @@ class _MaildirMailboxAppendMessageTask:
         self.osclose(self.fh)
         self.moveFileToNew()
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Write data to the maildir file.
 
-        @type data: L{bytes}
         @param data: Data to be written to the file.
         """
         try:
@@ -434,7 +441,7 @@ class _MaildirMailboxAppendMessageTask:
         successfully.
         """
         while True:
-            newname = os.path.join(self.mbox.path, "new", _generateMaildirName())
+            newname = os.path.join(self.mbox.path, b"new", _generateMaildirName())
             try:
                 self.osrename(self.tmpname, newname)
                 break
@@ -466,7 +473,7 @@ class _MaildirMailboxAppendMessageTask:
         tries = 0
         self.fh = -1
         while True:
-            self.tmpname = os.path.join(self.mbox.path, "tmp", _generateMaildirName())
+            self.tmpname = os.path.join(self.mbox.path, b"tmp", _generateMaildirName())
             try:
                 self.fh = self.osopen(self.tmpname, attr, 0o600)
                 return None
@@ -488,38 +495,40 @@ class MaildirMailbox(pop3.Mailbox):
 
     @ivar path: See L{__init__}.
 
-    @type list: L{list} of L{int} or 2-L{tuple} of (0) file-like object,
-        (1) L{bytes}
-    @ivar list: Information about the messages in the mailbox. For undeleted
-        messages, the file containing the message and the
-        full path name of the file are stored.  Deleted messages are indicated
-        by 0.
+    @ivar list: Information about the messages in the mailbox.  For undeleted
+        messages, the full path name of the message storing the file is stored.
+        Deleted messages are indicated by 0.
 
-    @type deleted: L{dict} mapping 2-L{tuple} of (0) file-like object,
-        (1) L{bytes} to L{bytes}
-    @type deleted: A mapping of the information about a file before it was
+    @type deleted: A mapping of the path to a deleted file before it was
         deleted to the full path name of the deleted file in the I{.Trash/}
         subfolder.
     """
 
     AppendFactory = _MaildirMailboxAppendMessageTask
 
-    def __init__(self, path):
+    def __init__(self, path: bytes) -> None:
         """
-        @type path: L{bytes}
         @param path: The directory name for a maildir mailbox.
         """
         self.path = path
-        self.list = []
-        self.deleted = {}
+        self.deleted: dict[bytes, bytes] = {}
         initializeMaildir(path)
-        for name in ("cur", "new"):
+        computing = []
+        for name in (b"cur", b"new"):
             for file in os.listdir(os.path.join(path, name)):
-                self.list.append((file, os.path.join(path, name, file)))
-        self.list.sort()
-        self.list = [e[1] for e in self.list]
+                computing.append((file, os.path.join(path, name, file)))
+        computing.sort()
+        self.list: list[int | bytes] = [el[1] for el in computing]
 
-    def listMessages(self, i=None):
+    @overload
+    def listMessages(self) -> list[int]:
+        ...
+
+    @overload
+    def listMessages(self, i: int) -> int:
+        ...
+
+    def listMessages(self, i: int | None = None) -> int | list[int]:
         """
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
@@ -546,7 +555,7 @@ class MaildirMailbox(pop3.Mailbox):
             return ret
         return self.list[i] and os.stat(self.list[i])[stat.ST_SIZE] or 0
 
-    def getMessage(self, i):
+    def getMessage(self, i: int) -> IO[str]:
         """
         Retrieve a file-like object with the contents of a message.
 
@@ -624,16 +633,14 @@ class MaildirMailbox(pop3.Mailbox):
                     self.list.append(real)
         self.deleted.clear()
 
-    def appendMessage(self, txt):
+    def appendMessage(self, txt: bytes | IO[bytes]) -> Deferred[None]:
         """
         Add a message to the mailbox.
 
-        @type txt: L{bytes} or file-like object
         @param txt: A message to add.
 
-        @rtype: L{Deferred <defer.Deferred>}
-        @return: A deferred which fires when the message has been added to
-            the mailbox.
+        @return: A deferred which fires when the message has been added to the
+            mailbox.
         """
         task = self.AppendFactory(self, txt)
         result = task.defer
@@ -759,18 +766,17 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     portal = None
     _credcheckers = None
 
-    def __init__(self, service, root, postmaster=0):
+    def __init__(
+        self, service: MailService, root: bytes, postmaster: bool = False
+    ) -> None:
         """
-        @type service: L{MailService}
         @param service: An email service.
 
-        @type root: L{bytes}
         @param root: The maildir root directory.
 
-        @type postmaster: L{bool}
         @param postmaster: A flag indicating whether non-existent addresses
-            should be forwarded to the postmaster (C{True}) or
-            bounced (C{False}).
+            should be forwarded to the postmaster (C{True}) or bounced
+            (C{False}).
         """
         root = os.fsencode(root)
         AbstractMaildirDomain.__init__(self, service, root)
@@ -780,14 +786,12 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         self.dbm = dirdbm.open(dbm)
         self.postmaster = postmaster
 
-    def userDirectory(self, name):
+    def userDirectory(self, name: bytes) -> bytes | None:
         """
         Return the path to a user's mail directory.
 
-        @type name: L{bytes}
         @param name: A username.
 
-        @rtype: L{bytes} or L{None}
         @return: The path to the user's mail directory for a valid user. For
             an invalid user, the path to the postmaster's mailbox if bounces
             are redirected there. Otherwise, L{None}.
@@ -795,13 +799,13 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         if name not in self.dbm:
             if not self.postmaster:
                 return None
-            name = "postmaster"
+            name = b"postmaster"
         dir = os.path.join(self.root, name)
         if not os.path.exists(dir):
             initializeMaildir(dir)
         return dir
 
-    def addUser(self, user, password):
+    def addUser(self, user: bytes, password: bytes) -> None:
         """
         Add a user to this domain by adding an entry in the authentication
         database and initializing the user's mail directory.
@@ -828,7 +832,12 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
             self._credcheckers = [DirdbmDatabase(self.dbm)]
         return self._credcheckers
 
-    def requestAvatar(self, avatarId, mind, *interfaces):
+    def requestAvatar(
+        self,
+        avatarId: bytes | tuple[()],
+        mind: object,
+        *interfaces: type[Interface],
+    ) -> tuple[type[Interface], object, Callable[[], None]]:
         """
         Get the mailbox for an authenticated user.
 
@@ -859,11 +868,15 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
         """
         if pop3.IMailbox not in interfaces:
             raise NotImplementedError("No interface")
+        mbox: pop3.IMailbox
         if avatarId == checkers.ANONYMOUS:
             mbox = StringListMailbox([INTERNAL_ERROR])
         else:
-            mbox = MaildirMailbox(os.path.join(self.root, avatarId))
-
+            assert isinstance(
+                avatarId, bytes
+            ), "avatar ID must be bytes, already checked ANONYMOUS"
+            mboxroot = os.path.join(self.root, avatarId)
+            mbox = MaildirMailbox(mboxroot)
         return (pop3.IMailbox, mbox, lambda: None)
 
 
@@ -873,7 +886,6 @@ class DirdbmDatabase:
     A credentials checker which authenticates users out of a
     L{DirDBM <dirdbm.DirDBM>} database.
 
-    @type dirdbm: L{DirDBM <dirdbm.DirDBM>}
     @ivar dirdbm: An authentication database.
     """
 
@@ -883,14 +895,15 @@ class DirdbmDatabase:
         credentials.IUsernameHashedPassword,
     )
 
-    def __init__(self, dbm):
+    def __init__(self, dbm: dirdbm.DirDBM) -> None:
         """
-        @type dbm: L{DirDBM <dirdbm.DirDBM>}
         @param dbm: An authentication database.
         """
         self.dirdbm = dbm
 
-    def requestAvatarId(self, c):
+    def requestAvatarId(
+        self, c: IUsernamePassword | IUsernameHashedPassword
+    ) -> Deferred[bytes | tuple[()]]:
         """
         Authenticate a user and, if successful, return their username.
 
@@ -905,6 +918,7 @@ class DirdbmDatabase:
         @raise UnauthorizedLogin: When the credentials check fails.
         """
         if c.username in self.dirdbm:
-            if c.checkPassword(self.dirdbm[c.username]):
-                return c.username
+            password = self.dirdbm[c.username]
+            if c.checkPassword(password):
+                return succeed(c.username)
         raise UnauthorizedLogin()

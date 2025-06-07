@@ -5,6 +5,7 @@
 """
 Utilities and helpers for simulating a network
 """
+from __future__ import annotations
 
 import itertools
 
@@ -19,7 +20,7 @@ from twisted.internet import error, interfaces
 from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
 from twisted.internet.error import ConnectionRefusedError
 from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.testing import MemoryReactorClock
+from twisted.internet.testing import MemoryReactor, MemoryReactorClock
 from twisted.python.failure import Failure
 
 
@@ -50,7 +51,7 @@ class FakeAddress:
     """
 
 
-@implementer(interfaces.ITransport, interfaces.ITLSTransport)
+@implementer(interfaces.ITransport, interfaces.ITLSTransport, interfaces.IConsumer)
 class FakeTransport:
     """
     A wrapper around a file-like object to make it behave as a Transport.
@@ -503,27 +504,24 @@ class ConnectionCompleter:
     fail.
     """
 
-    def __init__(self, memoryReactor):
+    def __init__(self, memoryReactor: MemoryReactor) -> None:
         """
         Create a L{ConnectionCompleter} from a L{MemoryReactor}.
 
         @param memoryReactor: The reactor to attach to.
-        @type memoryReactor: L{MemoryReactor}
         """
         self._reactor = memoryReactor
 
-    def succeedOnce(self, debug=False):
+    def succeedOnce(self, debug: bool = False, greet: bool = True) -> IOPump | None:
         """
         Complete a single TCP connection established on this
         L{ConnectionCompleter}'s L{MemoryReactor}.
 
         @param debug: A flag; whether to dump output from the established
             connection to stdout.
-        @type debug: L{bool}
 
         @return: a pump for the connection, or L{None} if no connection could
             be established.
-        @rtype: L{IOPump} or L{None}
         """
         memoryReactor = self._reactor
         for clientIdx, clientInfo in enumerate(memoryReactor.tcpClients):
@@ -537,21 +535,23 @@ class ConnectionCompleter:
                     serverProtocol = serverFactory.buildProtocol(None)
                     serverTransport = makeFakeServer(serverProtocol)
                     clientTransport = makeFakeClient(clientProtocol)
-                    return connect(
+                    result: IOPump = connect(
                         serverProtocol,
                         serverTransport,
                         clientProtocol,
                         clientTransport,
                         debug,
+                        greet=greet,
                     )
+                    return result
+        return None
 
-    def failOnce(self, reason=Failure(ConnectionRefusedError())):
+    def failOnce(self, reason: Failure = Failure(ConnectionRefusedError())) -> None:
         """
         Fail a single TCP connection established on this
         L{ConnectionCompleter}'s L{MemoryReactor}.
 
         @param reason: the reason to provide that the connection failed.
-        @type reason: L{Failure}
         """
         self._reactor.tcpClients.pop(0)[2].clientConnectionFailed(
             self._reactor.connectors.pop(0), reason

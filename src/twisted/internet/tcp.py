@@ -14,7 +14,7 @@ import os
 import socket
 import struct
 import sys
-from typing import Callable, ClassVar, List, Optional, Union
+from typing import Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -29,9 +29,9 @@ from twisted.internet.interfaces import (
     ISystemHandle,
     ITCPTransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python import deprecate, versions
-from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
 
 try:
@@ -275,7 +275,7 @@ class Connection(
         """
         # Limit length of buffer to try to send, because some OSes are too
         # stupid to do so themselves (ahem windows)
-        limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
+        limitedData = memoryview(data)[: self.SEND_LIMIT]
 
         try:
             return untilConcludes(self.socket.send, limitedData)
@@ -337,7 +337,18 @@ class Connection(
         return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        try:
+            # There are bug reports about failures when setting TCP_NODELAY under certain conditions
+            # on macOS: https://github.com/thespianpy/Thespian/issues/70,
+            # https://github.com/envoyproxy/envoy/issues/1446.
+            #
+            # It is reasonable to simply eat errors coming from setting TCP_NODELAY because
+            # TCP_NODELAY is relatively small performance optimization. In almost all cases the
+            # caller will not be able to do anything to remedy the situation and will simply
+            # continue.
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        except OSError as e:  # pragma: no cover
+            log.err(e, "got error when setting TCP_NODELAY on TCP socket")
 
     def getTcpKeepAlive(self):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
@@ -727,6 +738,7 @@ class _BaseTCPClient:
             whenDone = None
         if whenDone and bindAddress is not None:
             try:
+                assert type(bindAddress) == tuple
                 if abstract.isIPv6Address(bindAddress[0]):
                     bindinfo = _resolveIPv6(*bindAddress)
                 else:
@@ -1505,9 +1517,17 @@ class Connector(base.BaseConnector):
     @type _addressType: C{type}
     """
 
-    _addressType = address.IPv4Address
+    _addressType: type[address.IPv4Address | address.IPv6Address] = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
+    def __init__(
+        self,
+        host: str,
+        port: int | str,
+        factory: ClientFactory,
+        timeout: float,
+        bindAddress: str | tuple[str, int] | None,
+        reactor: Any = None,
+    ) -> None:
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
@@ -1519,7 +1539,7 @@ class Connector(base.BaseConnector):
         self.bindAddress = bindAddress
         base.BaseConnector.__init__(self, factory, timeout, reactor)
 
-    def _makeTransport(self):
+    def _makeTransport(self) -> Client:
         """
         Create a L{Client} bound to this L{Connector}.
 

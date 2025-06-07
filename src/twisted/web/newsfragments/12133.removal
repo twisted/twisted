@@ -1,1 +1,0 @@
-``twisted.web.http.Request.setResponseCode()`` no longer validates the types of inputs; we encourage you to use a type checker like mypy to catch these sort of errors. The long-deprecated ``twisted.web.server.string_date_time()`` and ``twisted.web.server.date_time_string()`` APIs were removed altogether.
