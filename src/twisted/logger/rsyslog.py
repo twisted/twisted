@@ -1,10 +1,21 @@
 import os
-import socket
+import platform
 from datetime import datetime
+from typing import Optional
 
 from zope.interface import implementer
 
-from twisted.logger import ILogObserver, LogLevel, LogEvent
+from twisted.internet import protocol, reactor
+from twisted.logger import ILogObserver, LogEvent, LogLevel
+
+
+class UDPSyslog(protocol.DatagramProtocol):
+    def __init__(self, address: tuple[str, int]):
+        self.address = address
+        reactor.listenUDP(0, self)
+
+    def send(self, data: bytes) -> None:
+        self.transport.write(data, self.address)
 
 
 @implementer(ILogObserver)
@@ -32,9 +43,9 @@ class RemoteSyslogObserver:
         facility: int = 8,
         *,
         port: int = 514,
-        protocol: int = socket.SOCK_DGRAM,
-        pid: int|None = None,
-        client_name: str|None = None,
+        handler: type[UDPSyslog] = UDPSyslog,
+        pid: Optional[int] = None,
+        client_name: Optional[str] = None,
         encoding: str = "ASCII",
     ):
         """
@@ -46,8 +57,7 @@ class RemoteSyslogObserver:
         @param port: Port the remote syslog server is listening on. Defaults to
             514.
 
-        @param protocol: Protocol to use (TCP or UDP). Use C{socket.SOCK_DGRAM}
-            or C{socket.SOCK_STREAM}. Defaults to UDP.
+        @param handler: Class implementing C{UDPSyslog}.
 
         @param pid: Optionally overwrite the process ID sent in syslog messages.
             Defaults to the actual PID.
@@ -59,10 +69,7 @@ class RemoteSyslogObserver:
             characters are dropped from the message.
         """
         # NOTE: facility=8 is LOG_USER.
-        self.socket = None
-        self.server = server
-        self.port = port
-        self.protocol = protocol
+        self.handler = handler((server, port))
         self.facility = facility  # syslog.LOG_* (already is n * 8)
         if self.facility & 0b111 != 0:
             raise ValueError("syslog facility must have lowest three bits cleared")
@@ -70,9 +77,7 @@ class RemoteSyslogObserver:
             pid = os.getpid()
         self.pid = pid
         if client_name is None:
-            client_name, _, _ = (socket.getfqdn() or socket.gethostname()).partition(
-                "."
-            )
+            client_name, _, _ = platform.node().partition(".")
         self.client_name = client_name
         self.encoding = encoding
 
@@ -82,30 +87,20 @@ class RemoteSyslogObserver:
 
         @param event: An event.
         """
+        severity = self.severities[event["log_level"]]
+        program = event["log_namespace"]
+        timestamp = datetime.fromtimestamp(event["log_time"]).strftime("%b %d %H:%M:%S")
+
         # message is broken up into lines, sent separately (as in twisted.python.syslog)
         for i, message in enumerate(event["log_format"].splitlines()):
             leader = "\t" if i else ""
-            self._send(leader + message, event)
+            d = "<%d>%s %s %s[%d]: %s\n" % (
+                self.facility + severity,
+                timestamp,
+                self.client_name,
+                program,
+                self.pid,
+                leader + message,
+            )
 
-    def _send(self, message: str, event: LogEvent) -> None:
-        severity = self.severities[event["log_level"]]
-        program = event["log_namespace"]
-
-        d = "<%d>%s %s %s[%d]: %s\n" % (
-            self.facility + severity,
-            datetime.fromtimestamp(event["log_time"]).strftime("%b %d %H:%M:%S"),
-            self.client_name,
-            program,
-            self.pid,
-            message,
-        )
-
-        try:
-            if not self.socket:
-                self.socket = socket.socket(socket.AF_INET, self.protocol)
-                self.socket.connect((self.server, self.port))
-            self.socket.sendall(d.encode(self.encoding, "ignore")[:1024])
-        except socket.error:
-            if self.socket is not None:
-                self.socket.close()
-                self.socket = None
+            self.handler.send(d.encode(self.encoding, "ignore")[:1024])
