@@ -113,7 +113,7 @@ jobs:
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use. 
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-          - python-version: '3.8.12'
+          - python-version: '3.9.12'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
             runs-on: 'ubuntu-22.04'
@@ -124,13 +124,10 @@ jobs:
           # We go with latest micro release for the smallest minor release
           # that we support.
           # This is also used to run tests with minimum dependency versions.
-          - python-version: '3.8'
+          - python-version: '3.9'
             noipv6: '-noipv6'
             tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
-
-          # Just Python 3.8 with default settings.
-          - python-version: '3.8'
 
           # Just Python 3.9 with default settings.
           - python-version: '3.9'
@@ -145,7 +142,7 @@ jobs:
           - python-version: '3.13'
 
           # Newest Intel macOS and oldest Python (major) supported versions.
-          - python-version: '3.8'
+          - python-version: '3.9'
             runs-on: 'macos-13'
             job-name: 'macos-13-default-tests'
             tox-env: 'macos-withcov-alldeps'
@@ -157,7 +154,7 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.8'
+          - python-version: '3.9'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -192,7 +189,7 @@ jobs:
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          - python-version: '3.8'
+          - python-version: '3.9'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
@@ -550,7 +547,7 @@ jobs:
         path: dist
 
     - name: Publish to PyPI - on tag
-      uses: pypa/gh-action-pypi-publish@v1.12.2
+      uses: pypa/gh-action-pypi-publish@release/v1
 
 
   # We have this job so that the PR can be blocked on a single job.

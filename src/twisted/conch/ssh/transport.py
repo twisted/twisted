@@ -24,6 +24,13 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+try:
+    from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
+except ImportError:
+    # Deprecated path, will be removed in cryptography 48.0.0
+    from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
+
 from typing_extensions import Literal
 
 from twisted import __version__ as twisted_version
@@ -107,14 +114,14 @@ class SSHCiphers:
     """
 
     cipherMap = {
-        b"3des-cbc": (algorithms.TripleDES, 24, modes.CBC),
+        b"3des-cbc": (TripleDES, 24, modes.CBC),
         b"aes256-cbc": (algorithms.AES, 32, modes.CBC),
         b"aes192-cbc": (algorithms.AES, 24, modes.CBC),
         b"aes128-cbc": (algorithms.AES, 16, modes.CBC),
         b"aes128-ctr": (algorithms.AES, 16, modes.CTR),
         b"aes192-ctr": (algorithms.AES, 24, modes.CTR),
         b"aes256-ctr": (algorithms.AES, 32, modes.CTR),
-        b"3des-ctr": (algorithms.TripleDES, 24, modes.CTR),
+        b"3des-ctr": (TripleDES, 24, modes.CTR),
         b"none": (None, 0, modes.CBC),
     }
     macMap = {

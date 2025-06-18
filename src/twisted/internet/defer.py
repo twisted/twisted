@@ -475,7 +475,7 @@ class Deferred(Awaitable[_SelfResultT]):
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
 
-    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    @deprecatedProperty(Version("Twisted", 25, 5, 0))
     def callbacks(self) -> List[_CallbackChain]:
         return self._callbacks
 
