@@ -285,11 +285,11 @@ Note the following important directives and changes:
 
 ExecStart
 
-  The ``domain=INET`` endpoint argument makes ``twistd`` treat the inherited file descriptor as an IPv4 socket.
+  The ``domain=INET`` endpoint argument makes ``twistd`` treat the inherited file descriptor as an IPv4 TCP socket.
 
   The ``name=my-web-port`` endpoint argument makes ``twistd`` adopt the file descriptor inherited from ``systemd`` named ``my-web-port``.
 
-  Socket activation is also technically possible with other socket families and types, but Twisted currently only accepts IPv4 and IPv6 TCP sockets. See :ref:`limitations` below.
+  Use ``domain=INET6`` instead for an IPv6 TCP socket or ``domain=UNIX`` for a UNIX socket. Datagram sockets are not suported. See :ref:`limitations` below.
 
 Requires
 
