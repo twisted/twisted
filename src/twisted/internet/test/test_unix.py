@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorUNIX}.
 
 
 from hashlib import md5
-from os import close, fstat, stat, unlink, urandom
+from os import chmod, close, fstat, stat, unlink, urandom
 from pprint import pformat
 from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from stat import S_IMODE
@@ -235,6 +235,23 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         the mode specified.
         """
         self._modeTest("listenUNIX", self.mktemp(), ServerFactory())
+
+    @skipIf(platformType != "posix", "UNIX sockets only supported on POSIX.")
+    def test_preexistingSocketMode(self):
+        "startListening must not change mode of preexisting socket."
+        sock = socket(AF_UNIX)
+        # self.mktemp() often returns a path which is too long to be used.
+        path = mktemp(suffix=".sock", dir=".")
+        sock.bind(path)
+        self.addCleanup(unlink, path)
+        self.addCleanup(sock.close)
+        mode = 0o600
+        chmod(path, mode)
+
+        reactor = self.buildReactor()
+        unixPort = reactor.adoptStreamPort(sock.fileno(), sock.family, ServerFactory())
+        unixPort.stopListening()
+        self.assertEqual(S_IMODE(stat(path).st_mode), mode)
 
     @skipIf(
         not platform.isLinux(),

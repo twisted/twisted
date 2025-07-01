@@ -349,6 +349,7 @@ class Port(_UNIXPort, tcp.Port):
         self.mode = mode
         self.wantPID = wantPID
         self._preexistingSocket = None
+        self._socketIsOurFile = False
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, factory):
@@ -367,6 +368,7 @@ class Port(_UNIXPort, tcp.Port):
         port = socket.fromfd(fd, cls.addressFamily, cls.socketType)
         self = cls(port.getsockname(), factory, reactor=reactor)
         self._preexistingSocket = port
+        self._socketIsOurFile = _inFilesystemNamespace(self.port)
         return self
 
     def __repr__(self) -> str:
@@ -426,7 +428,7 @@ class Port(_UNIXPort, tcp.Port):
         except OSError as le:
             raise error.CannotListenError(None, self.port, le)
         else:
-            if _inFilesystemNamespace(self.port):
+            if self._socketIsOurFile:
                 # Make the socket readable and writable to the world.
                 os.chmod(self.port, self.mode)
             skt.listen(self.backlog)
@@ -451,7 +453,7 @@ class Port(_UNIXPort, tcp.Port):
         )
 
     def connectionLost(self, reason):
-        if _inFilesystemNamespace(self.port):
+        if self._socketIsOurFile:
             os.unlink(self.port)
         if self.lockFile is not None:
             self.lockFile.unlock()
