@@ -2310,7 +2310,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def _cbCopySelectedMailbox(self, mbox, tag, messages, mailbox, uid):
         if not mbox:
-            self.sendNegativeResponse(tag, "No such mailbox: " + mailbox)
+            self.sendNegativeResponse(tag, b"No such mailbox: " + mailbox)
         else:
             maybeDeferred(self.mbox.fetch, messages, uid).addCallback(
                 self.__cbCopy, tag, mbox
@@ -2368,7 +2368,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             else:
                 failures.append(result.value)
         if failures:
-            self.sendNegativeResponse(tag, "[ALERT] Some messages were not copied")
+            self.sendNegativeResponse(tag, b"[ALERT] Some messages were not copied")
         else:
             self.sendPositiveResponse(tag, b"COPY completed")
 
