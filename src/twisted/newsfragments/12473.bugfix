@@ -1,0 +1,1 @@
+twisted.application.strports.listen() now supports endpoint types provided by plugins.
