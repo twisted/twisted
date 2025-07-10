@@ -2308,7 +2308,9 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     select_COPY = (do_COPY, arg_seqset, arg_finalastring)
 
-    def _cbCopySelectedMailbox(self, mbox, tag, messages, mailbox, uid):
+    def _cbCopySelectedMailbox(
+        self, mbox: bytes, tag: bytes, messages: List, mailbox: bytes, uid: int
+    ) -> None:
         if not mbox:
             self.sendNegativeResponse(tag, b"No such mailbox: " + mailbox)
         else:
@@ -2359,7 +2361,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             addedDeferreds.append(d)
         return defer.DeferredList(addedDeferreds)
 
-    def __cbCopied(self, deferredIds, tag, mbox):
+    def __cbCopied(self, deferredIds: dict, tag: bytes, mbox: bytes) -> None:
         ids = []
         failures = []
         for status, result in deferredIds:
