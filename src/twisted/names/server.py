@@ -283,9 +283,14 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        ans, auth, add = response
+        rcode, ans, auth, add = (
+            response.response_code,
+            response.answer,
+            response.authority,
+            response.additional,
+        )
         response = self._responseFromMessage(
-            message=message, rCode=dns.OK, answers=ans, authority=auth, additional=add
+            message=message, rCode=rcode, answers=ans, authority=auth, additional=add
         )
         self.sendReply(protocol, response, address)
 

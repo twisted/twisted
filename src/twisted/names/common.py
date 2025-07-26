@@ -8,6 +8,7 @@ Base functionality useful to various parts of Twisted Names.
 
 
 import socket
+from dataclasses import dataclass, field
 
 from zope.interface import implementer
 
@@ -168,6 +169,19 @@ class ResolverBase:
         if not result:
             raise error.DNSLookupError(name)
         return result
+
+
+@dataclass(slots=True)
+class ResolverResponse:
+    """
+    DNS message data that can be written by a resolver. This can be seen
+    as a selective view of a DNS message.
+    """
+
+    response_code: int = 0
+    answer: list[dns.RRHeader] = field(default_factory=list)
+    authority: list[dns.RRHeader] = field(default_factory=list)
+    additional: list[dns.RRHeader] = field(default_factory=list)
 
 
 def extractRecord(resolver, name, answers, level=10):
