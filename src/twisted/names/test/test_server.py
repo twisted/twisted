@@ -9,7 +9,7 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet import defer
 from twisted.internet.interfaces import IProtocolFactory
-from twisted.names import dns, error, resolve, server
+from twisted.names import common, dns, error, resolve, server
 from twisted.python import failure, log
 from twisted.trial import unittest
 
@@ -708,10 +708,15 @@ class DNSServerFactoryTests(unittest.TestCase):
         answers = []
         authority = []
         additional = []
+        resp = common.ResolverResponse(
+            answer=answers,
+            authority=authority,
+            additional=additional,
+        )
         e = self.assertRaises(
             RaisingProtocol.WriteMessageArguments,
             f.gotResolverResponse,
-            (answers, authority, additional),
+            resp,
             protocol=RaisingProtocol(),
             message=dns.Message(),
             address=None,
@@ -736,7 +741,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         e = self.assertRaises(
             RaisedArguments,
             factory.gotResolverResponse,
-            ([], [], []),
+            common.ResolverResponse(),
             protocol=None,
             message=request,
             address=None,
@@ -864,15 +869,18 @@ class DNSServerFactoryTests(unittest.TestCase):
         records in the response if C{verbose > 0}.
         """
         f = NoResponseDNSServerFactory(verbose=1)
-        answers = [dns.RRHeader()]
-        authority = [dns.RRHeader()]
-        additional = [dns.RRHeader()]
+
+        resp = common.ResolverResponse(
+            answer=[dns.RRHeader()],
+            authority=[dns.RRHeader()],
+            additional=[dns.RRHeader()],
+        )
 
         assertLogMessage(
             self,
             ["Lookup found 3 records"],
             f.gotResolverResponse,
-            (answers, authority, additional),
+            resp,
             protocol=NoopProtocol(),
             message=dns.Message(),
             address=None,
@@ -887,14 +895,17 @@ class DNSServerFactoryTests(unittest.TestCase):
 
         m = dns.Message()
         m.addQuery(b"example.com")
-        expectedAnswers = [dns.RRHeader()]
-        expectedAuthority = []
-        expectedAdditional = []
+
+        expectedResponse = common.ResolverResponse(
+            answer=[dns.RRHeader()],
+            authority=[],
+            additional=[],
+        )
 
         e = self.assertRaises(
             RaisingCache.CacheResultArguments,
             f.gotResolverResponse,
-            (expectedAnswers, expectedAuthority, expectedAdditional),
+            expectedResponse,
             protocol=NoopProtocol(),
             message=m,
             address=None,
@@ -902,9 +913,9 @@ class DNSServerFactoryTests(unittest.TestCase):
         (query, (answers, authority, additional)), kwargs = e.args
 
         self.assertEqual(query.name.name, b"example.com")
-        self.assertIs(answers, expectedAnswers)
-        self.assertIs(authority, expectedAuthority)
-        self.assertIs(additional, expectedAdditional)
+        self.assertIs(answers, expectedResponse.answer)
+        self.assertIs(authority, expectedResponse.authority)
+        self.assertIs(additional, expectedResponse.additional)
 
     def test_gotResolverErrorCallsResponseFromMessage(self):
         """
@@ -1040,7 +1051,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         request.additional = [object(), object()]
 
         factory.gotResolverResponse(
-            ([], [], []), protocol=None, message=request, address=None
+            common.ResolverResponse(), protocol=None, message=request, address=None
         )
 
         self.assertEqual([dns.Message(rCode=0, answer=True)], responses)
