@@ -42,6 +42,8 @@ class NoFileAuthority(authority.FileAuthority):
         self.soa, self.records = soa, records
 
 
+outside_domain = "other.com"
+
 soa_record = dns.Record_SOA(
     mname=b"test-domain.com",
     rname="root.test-domain.com",
@@ -663,6 +665,55 @@ class AuthorityTests(unittest.TestCase):
             ],
         )
         self.assertEqual(resp.additional, [])
+
+    def test_queryNXDOMAInZone(self):
+        """
+        Requesting a record where no records exist for the name in question,
+        when the name belongs to the authoritative zone of the
+        L{FileAuthority}, results in a NXDOMAIN response with the SOA record
+        in the authority section.
+        """
+        testDomain = test_domain_com
+        testDomainName = b"nonexistent.subdomain." + testDomain.soa[0]
+
+        # The SOA record used when creating the testDomain
+        soa = soa_record
+
+        expected_resp = common.ResolverResponse(
+            response_code=dns.ENAME,
+            answer=[],
+            authority=[
+                dns.RRHeader(
+                    str(soa.mname),
+                    soa.TYPE,
+                    dns.IN,
+                    soa.ttl,
+                    soa,
+                    auth=True,
+                )
+            ],
+            additional=[],
+        )
+
+        resp = self.successResultOf(
+            testDomain.query(Query(name=testDomainName, type=dns.A))
+        )
+
+        self.assertEqual(resp, expected_resp)
+
+    def test_queryNXDOMAOutside(self):
+        """
+        Requesting a name that is neither in the authoritative zone of
+        L{FileAuthority}, or its children, results in L{DomainError}.
+        """
+        testDomain = test_domain_com
+        testDomainName = outside_domain
+
+        f = self.failureResultOf(
+            testDomain.query(Query(name=testDomainName, type=dns.A))
+        )
+
+        self.assertIsInstance(f.value, DomainError)
 
     def test_unknownTypeNXDOMAIN(self):
         """
