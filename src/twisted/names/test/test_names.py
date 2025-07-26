@@ -472,11 +472,13 @@ class ServerDNSTests(unittest.TestCase):
             resolver.lookupZone("impossible.invalid"), error.DNSLookupError
         )
 
-    def test_similarZonesDontInterfere(self):
-        """Tests that unrelated zones don't mess with each other."""
-        return self.namesTest(
+    def test_domainOutsideZoneButInZoneFile(self):
+        """Tests that a name outside of the zone is not resolved, even if the
+        zone file contains a record associated to it"""
+        self.assertIn(b"anothertest-domain.com", test_domain_com.records)
+        return self.assertFailure(
             self.resolver.lookupAddress("anothertest-domain.com"),
-            [dns.Record_A("1.2.3.4", ttl=19283784)],
+            DomainError,
         )
 
     def test_NAPTR(self):
