@@ -430,8 +430,9 @@ class Resolver(common.ResolverBase):
         )
 
         def eliminateTimeout(failure):
-            controller.timeoutCall.cancel()
-            controller.timeoutCall = None
+            if controller.timeoutCall is not None:
+                controller.timeoutCall.cancel()
+                controller.timeoutCall = None
             return failure
 
         return d.addCallbacks(
