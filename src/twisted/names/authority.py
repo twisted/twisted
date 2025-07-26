@@ -58,7 +58,9 @@ def getSerial(filename="/tmp/twisted-names.serial"):
 
 class FileAuthority(common.ResolverBase):
     """
-    An Authority that is loaded from a file.
+    An Authority that is loaded from a file. An abstraction over an
+    authoritative zone. Only manages names in the zone or
+    its children zones.
 
     This is an abstract class that implements record search logic. To create
     a functional resolver, subclass it and override the L{loadFile} method.
@@ -136,7 +138,8 @@ class FileAuthority(common.ResolverBase):
 
     def _lookup(self, name, cls, type, timeout=None):
         """
-        Determine a response to a particular DNS query.
+        Determine a response to a particular DNS query within the current
+        authoritative zone.
 
         @param name: The name which is being queried and for which to lookup a
             response.
@@ -158,6 +161,15 @@ class FileAuthority(common.ResolverBase):
             I{additional} sections of a DNS response) or with a L{Failure} if
             there is a problem processing the query.
         """
+        # Partially implements the algorithm from RFC 1034 section 4.3.2
+
+        # PTR queries are an exception, because the key in a PTR record
+        # is IP-like address. For example: `52.0.0.10.IN-ADDR.ARPA`
+        if not dns._isSubdomainOf(name, self.soa[0]) and type != dns.PTR:
+            return defer.fail(failure.Failure(error.DomainError(name)))
+
+        # 3. Start matching down, label by label, in the zone. [...]
+
         resp = common.ResolverResponse()
         cnames = []
         default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
