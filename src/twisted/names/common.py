@@ -171,7 +171,7 @@ class ResolverBase:
         return result
 
 
-@dataclass(slots=True)
+@dataclass
 class ResolverResponse:
     """
     DNS message data that can be written by a resolver. This can be seen
