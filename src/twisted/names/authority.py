@@ -255,7 +255,7 @@ class FileAuthority(common.ResolverBase):
                 return defer.succeed(resp)
 
             else:
-                # If the QNAME is not an descendant of the zone, fail with
+                # If the QNAME is not a descendant of the zone, fail with
                 # DomainError so that the next chained authority or
                 # resolver will be queried.
                 return defer.fail(failure.Failure(error.DomainError(name)))
