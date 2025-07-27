@@ -20,7 +20,7 @@ for resolvers to deal with.  Fix it.
 import time
 
 from twisted.internet import protocol
-from twisted.names import common, dns, resolve
+from twisted.names import dns, resolve
 from twisted.python import log
 
 
