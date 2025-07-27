@@ -462,6 +462,22 @@ class ServerDNSTests(unittest.TestCase):
             results,
         )
 
+    def test_zoneTransferTimeout(self):
+        """
+        An AXFR query for an unkown host fails with L{error.TimeoutError}.
+        """
+        default_ttl = soa_record.expire
+        results = [
+            copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())
+        ]
+        for r in results:
+            if r.ttl is None:
+                r.ttl = default_ttl
+        return self.assertFailure(
+            self.resolver.lookupZone("unknown.host", timeout=0.1),
+            error.TimeoutError,
+        )
+
     def test_zoneTransferConnectionFails(self):
         """
         A failed AXFR TCP connection errbacks the L{Deferred} returned
