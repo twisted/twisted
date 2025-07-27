@@ -863,6 +863,23 @@ class DNSServerFactoryTests(unittest.TestCase):
             (response1.auth, response2.auth),
         )
 
+    def test_responseFromMessageAuthorityAuthoritativeMessage(self):
+        """
+        L{server.DNSServerFactory._responseFromMessage} marks the response
+        message as authoritative if any of the authority records are authoritative.
+        """
+        factory = server.DNSServerFactory()
+        response1 = factory._responseFromMessage(
+            message=dns.Message(), authority=[dns.RRHeader(auth=True)]
+        )
+        response2 = factory._responseFromMessage(
+            message=dns.Message(), authority=[dns.RRHeader(auth=False)]
+        )
+        self.assertEqual(
+            (True, False),
+            (response1.auth, response2.auth),
+        )
+
     def test_gotResolverResponseLogging(self):
         """
         L{server.DNSServerFactory.gotResolverResponse} logs the total number of
