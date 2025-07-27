@@ -846,7 +846,7 @@ class DNSServerFactoryTests(unittest.TestCase):
             (e.args, e.kwargs),
         )
 
-    def test_responseFromMessageAuthoritativeMessage(self):
+    def test_responseFromMessageAnswerAuthoritativeMessage(self):
         """
         L{server.DNSServerFactory._responseFromMessage} marks the response
         message as authoritative if any of the answer records are authoritative.
