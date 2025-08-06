@@ -41,9 +41,6 @@ class NoFileAuthority(authority.FileAuthority):
         common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
 
-
-outside_domain = "other.com"
-
 soa_record = dns.Record_SOA(
     mname=b"test-domain.com",
     rname="root.test-domain.com",
@@ -629,6 +626,9 @@ class ResolvConfHandlingTests(unittest.TestCase):
         r = client.Resolver(resolv=resolvConf)
         self.assertEqual(r.dynServers, [("127.0.0.1", 53)])
         r._parseCall.cancel()
+
+
+outside_domain = "other.com"
 
 
 class AuthorityTests(unittest.TestCase):
