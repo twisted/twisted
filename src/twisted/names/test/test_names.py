@@ -41,6 +41,7 @@ class NoFileAuthority(authority.FileAuthority):
         common.ResolverBase.__init__(self)
         self.soa, self.records = soa, records
 
+
 soa_record = dns.Record_SOA(
     mname=b"test-domain.com",
     rname="root.test-domain.com",
