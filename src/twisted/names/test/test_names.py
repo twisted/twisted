@@ -684,7 +684,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(resp.additional, [])
 
-    def test_queryNXDOMAInZone(self):
+    def test_queryNXDOMAINInZone(self):
         """
         Requesting a record where no records exist for the name in question,
         when the name belongs to the authoritative zone of the
@@ -719,7 +719,7 @@ class AuthorityTests(unittest.TestCase):
 
         self.assertEqual(resp, expected_resp)
 
-    def test_queryNXDOMAOutside(self):
+    def test_queryNXDOMAINOutside(self):
         """
         Requesting a name that is neither in the authoritative zone of
         L{FileAuthority}, or its children, results in L{DomainError}.
