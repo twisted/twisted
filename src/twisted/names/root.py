@@ -91,10 +91,9 @@ class Resolver(common.ResolverBase):
         @type timeout: L{tuple} of L{int}
 
         @param filter: A flag indicating whether to filter the results.  If
-            C{True}, the returned L{Deferred} will fire with a three-tuple of
-            lists of L{twisted.names.dns.RRHeader} (like the return value of
-            the I{lookup*} methods of L{IResolver}.  IF C{False}, the result
-            will be a L{Message} instance.
+            C{True}, the returned L{Deferred} will fire with a
+            L{common.ResolverResponse} instance. If C{False}, the result will
+            be a L{Message} instance.
         @type filter: L{bool}
 
         @return: A L{Deferred} which fires with the response or a timeout
@@ -139,9 +138,8 @@ class Resolver(common.ResolverBase):
             yet be attempted to answer this query before the attempt will be
             abandoned.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} giving the response, or with a
-            L{Failure} if there is a timeout or response error.
+        @return: A L{Deferred} which fires with a L{common.ResolverResponse}
+        instance, or with a L{Failure} if there is a timeout or response error.
         """
         # Stop now if we've hit the query limit.
         if queriesLeft <= 0:
@@ -170,9 +168,9 @@ class Resolver(common.ResolverBase):
             yet be attempted to answer this query before the attempt will be
             abandoned.
 
-        @return: A L{Failure} indicating a response error, a three-tuple of
-            lists of L{twisted.names.dns.RRHeader} giving the response to
-            C{query} or a L{Deferred} which will fire with one of those.
+        @return: A L{Failure} indicating a response error, a
+        L{common.ResolverResponse} instance, or a L{Deferred} which will
+        fire with one of those.
         """
         if response.rCode != dns.OK:
             return Failure(self.exceptionForCode(response.rCode)(response))
