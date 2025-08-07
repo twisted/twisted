@@ -217,15 +217,19 @@ class Resolver(common.ResolverBase):
                     # We also want to include the CNAME in the ultimate result,
                     # otherwise this will be pretty confusing.
 
-                    def cbResolved(results):
-                        answers, authority, additional = results
-                        answers.insert(0, previous)
-                        return (answers, authority, additional)
+                    def cbResolved(resolver_response):
+                        resolver_response.answer.insert(0, previous)
+                        return resolver_response
 
                     d.addCallback(cbResolved)
                     return d
             elif record.type == query.type:
-                return (response.answers, response.authority, response.additional)
+                return common.ResolverResponse(
+                    response_code=response.rCode,
+                    answer=response.answers,
+                    authority=response.authority,
+                    additional=response.additional,
+                )
             else:
                 # It's a CNAME record.  Try to resolve it from the records
                 # in this response with another iteration around the loop.
