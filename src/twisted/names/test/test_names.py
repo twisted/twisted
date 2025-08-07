@@ -698,7 +698,7 @@ class AuthorityTests(unittest.TestCase):
         # The SOA record used when creating the testDomain
         soa = soa_record
 
-        expectedResp = common.ResolverResponse(
+        expected_resp = common.ResolverResponse(
             response_code=dns.ENAME,
             answer=[],
             authority=[
