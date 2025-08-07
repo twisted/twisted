@@ -125,7 +125,7 @@ class Resolver(common.ResolverBase):
             fail with L{dns.DomainError} if there are no result records.
         """
         if records:
-            return defer.succeed((records, (), ()))
+            return defer.succeed(common.ResolverResponse(answer=records))
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
     def lookupAddress(self, name, timeout=None):
