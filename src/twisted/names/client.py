@@ -377,7 +377,12 @@ class Resolver(common.ResolverBase):
             return self.queryTCP(message.queries).addCallback(self.filterAnswers)
         if message.rCode != dns.OK:
             return failure.Failure(self.exceptionForCode(message.rCode)(message))
-        return (message.answers, message.authority, message.additional)
+        return common.ResolverResponse(
+            response_code=message.rCode,
+            answer=message.answers,
+            authority=message.authority,
+            additional=message.additional,
+        )
 
     def _lookup(self, name, cls, type, timeout):
         """
