@@ -232,13 +232,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupAddress(
@@ -251,13 +248,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupAddress6(
@@ -270,13 +264,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupIPV6Address(
@@ -289,13 +280,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupMailExchange(
@@ -308,13 +296,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupNameservers(
@@ -327,13 +312,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupCanonicalName(
@@ -346,13 +328,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupMailBox(
@@ -365,13 +344,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupMailGroup(
@@ -384,13 +360,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupMailRename(
@@ -403,13 +376,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupPointer(
@@ -422,13 +392,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupAuthority(
@@ -441,13 +408,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupNull(
@@ -460,13 +424,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupWellKnownServices(
@@ -479,13 +440,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupHostInfo(
@@ -498,13 +456,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupMailboxInfo(
@@ -517,13 +472,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupText(
@@ -536,13 +488,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupResponsibility(
@@ -555,13 +504,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupAFSDatabase(
@@ -574,13 +520,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupService(
@@ -593,13 +536,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupAllRecords(
@@ -612,13 +552,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupSenderPolicy(
@@ -631,13 +568,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupNamingAuthorityPointer(
@@ -650,13 +584,10 @@ class IResolver(IResolverSimple):
         @param timeout: Number of seconds after which to reissue the query.
             When the last timeout expires, the query is considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
     def lookupZone(
@@ -676,13 +607,10 @@ class IResolver(IResolverSimple):
         @param timeout: When this timeout expires, the query is
             considered failed.
 
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.
-            The first element of the tuple gives answers.
-            The second and third elements are always empty.
-            The L{Deferred} may instead fail with one of the
-            exceptions defined in L{twisted.names.error} or with
-            C{NotImplementedError}.
+        @return: A L{Deferred} which fires with a
+            L{twisted.names.common.ResponseResolver} instance. The L{Deferred}
+            may instead fail with one of the exceptions defined in
+            L{twisted.names.error} or with C{NotImplementedError}.
         """
 
 
