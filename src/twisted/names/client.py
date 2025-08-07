@@ -370,8 +370,7 @@ class Resolver(common.ResolverBase):
         If the message's result code is not C{twisted.names.dns.OK}, return a
         Failure indicating the type of error which occurred.
 
-        Otherwise, return a three-tuple of lists containing the results from
-        the answers section, the authority section, and the additional section.
+        Otherwise, return a L{common.ResolverResponse}.
         """
         if message.trunc:
             return self.queryTCP(message.queries).addCallback(self.filterAnswers)
@@ -396,8 +395,7 @@ class Resolver(common.ResolverBase):
         @type type: C{int}
         @type cls: C{int}
 
-        @return: A L{Deferred} which fires with a three-tuple giving the
-            answer, authority, and additional sections of the response or with
+        @return: A L{Deferred} which fires with L{common.ResolverResponse}, or with
             a L{Failure} if the response code is anything other than C{dns.OK}.
         """
         key = (name, type, cls)
