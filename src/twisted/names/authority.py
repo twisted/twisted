@@ -156,10 +156,8 @@ class FileAuthority(common.ResolverBase):
         @param timeout: All processing is done locally and a result is
             available immediately, so the timeout value is ignored.
 
-        @return: A L{Deferred} that fires with a L{tuple} of three sets of
-            response records (to comprise the I{answer}, I{authority}, and
-            I{additional} sections of a DNS response) or with a L{Failure} if
-            there is a problem processing the query.
+        @return: A L{Deferred} that fires with a L{ResolverResponse}, or with a
+        L{Failure} if there is a problem processing the query.
         """
         # Partially implements the algorithm from RFC 1034 section 4.3.2
 
