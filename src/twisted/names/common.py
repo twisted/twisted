@@ -157,8 +157,8 @@ class ResolverBase:
         d.addCallback(self._cbRecords, name, effort)
         return d
 
-    def _cbRecords(self, records, name, effort):
-        (ans, auth, add) = records
+    def _cbRecords(self, resp, name, effort):
+        ans, auth, add = resp.answer, resp.authority, resp.additional
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
             raise error.DNSLookupError(name)

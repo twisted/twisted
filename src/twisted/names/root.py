@@ -255,9 +255,8 @@ class Resolver(common.ResolverBase):
         elif traps:
             d = self.lookupAddress(traps[0], timeout)
 
-            def getOneAddress(results):
-                answers, authority, additional = results
-                return answers[0].payload.dottedQuad()
+            def getOneAddress(resolver_response: common.ResolverResponse):
+                return resolver_response.answer[0].payload.dottedQuad()
 
             d.addCallback(getOneAddress)
             d.addCallback(

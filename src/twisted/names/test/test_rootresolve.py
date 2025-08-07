@@ -10,7 +10,7 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.defer import Deferred, TimeoutError, gatherResults, succeed
 from twisted.internet.interfaces import IResolverSimple
-from twisted.names import client, root
+from twisted.names import client, common, root
 from twisted.names.dns import (
     CNAME,
     ENAME,
@@ -35,21 +35,20 @@ from twisted.trial import util
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-def getOnePayload(results):
+def getOnePayload(resolver_response: common.ResolverResponse):
     """
     From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
     return the payload of the first record in the answer section.
     """
-    ans, auth, add = results
-    return ans[0].payload
+    return resolver_response.answer[0].payload
 
 
-def getOneAddress(results):
+def getOneAddress(resolver_response: common.ResolverResponse):
     """
     From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
     return the first IPv4 address from the answer section.
     """
-    return getOnePayload(results).dottedQuad()
+    return getOnePayload(resolver_response).dottedQuad()
 
 
 class RootResolverTests(TestCase):
@@ -107,12 +106,13 @@ class RootResolverTests(TestCase):
         the query.  If a true value is passed for the C{filter} parameter, the
         result is a three-tuple of lists of records.
         """
-        answer, authority, additional = self._queryTest(True)
-        self.assertEqual(
-            answer, [RRHeader(b"foo.example.com", payload=Record_A("5.8.13.21", ttl=0))]
+        resolver_response = self._queryTest(True)
+        expected = common.ResolverResponse(
+            answer=[RRHeader(b"foo.example.com", payload=Record_A("5.8.13.21", ttl=0))],
+            authority=[],
+            additional=[],
         )
-        self.assertEqual(authority, [])
-        self.assertEqual(additional, [])
+        self.assertEqual(resolver_response, expected)
 
     def test_unfilteredQuery(self):
         """
@@ -355,9 +355,8 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupNameservers(b"example.com")
 
-        def getOneName(results):
-            ans, auth, add = results
-            return ans[0].payload.name
+        def getOneName(resolver_response: common.ResolverResponse):
+            return resolver_response.answer[0].payload.name
 
         d.addCallback(getOneName)
         d.addCallback(self.assertEqual, Name(b"ns1.example.com"))
@@ -380,7 +379,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b"example.com")
-        d.addCallback(lambda results: results[0])  # Get the answer section
+        d.addCallback(lambda resp: resp.answer)
         d.addCallback(
             self.assertEqual,
             [
@@ -408,7 +407,7 @@ class RootResolverTests(TestCase):
         }
         resolver = self._getResolver(servers)
         d = resolver.lookupAddress(b"example.com")
-        d.addCallback(lambda results: results[0])  # Get the answer section
+        d.addCallback(lambda resp: resp.answer)
         d.addCallback(
             self.assertEqual,
             [

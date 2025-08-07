@@ -31,8 +31,8 @@ from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
 
-def justPayload(results):
-    return [r.payload for r in results[0]]
+def justAnswerPayload(resolver_response: common.ResolverResponse):
+    return [r.payload for r in resolver_response.answer]
 
 
 class NoFileAuthority(authority.FileAuthority):
@@ -215,7 +215,7 @@ class ServerDNSTests(unittest.TestCase):
         """
 
         def checkResults(response):
-            receivedRecords = justPayload(response)
+            receivedRecords = justAnswerPayload(response)
             self.assertEqual(set(expectedRecords), set(receivedRecords))
 
         querying.addCallback(checkResults)
@@ -447,18 +447,21 @@ class ServerDNSTests(unittest.TestCase):
         Test DNS 'AXFR' queries (Zone transfer)
         """
         default_ttl = soa_record.expire
-        results = [
+        expectedRecords = [
             copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())
         ]
-        for r in results:
+        for r in expectedRecords:
             if r.ttl is None:
                 r.ttl = default_ttl
-        return self.namesTest(
-            self.resolver.lookupZone("test-domain.com").addCallback(
-                lambda r: (r[0][:-1],)
-            ),
-            results,
-        )
+
+        def checkResults(response):
+            receivedRecords = [r.payload for r in response[0][:-1]]
+            self.assertEqual(set(expectedRecords), set(receivedRecords))
+
+        d = self.resolver.lookupZone("test-domain.com")
+        d.addCallback(checkResults)
+
+        return d
 
     def test_zoneTransferTimeout(self):
         """
@@ -698,7 +701,7 @@ class AuthorityTests(unittest.TestCase):
         # The SOA record used when creating the testDomain
         soa = soa_record
 
-        expected_resp = common.ResolverResponse(
+        expectedResponse = common.ResolverResponse(
             response_code=dns.ENAME,
             answer=[],
             authority=[
@@ -718,7 +721,7 @@ class AuthorityTests(unittest.TestCase):
             testDomain.query(Query(name=testDomainName, type=dns.A))
         )
 
-        self.assertEqual(resp, expected_resp)
+        self.assertEqual(resp, expectedResponse)
 
     def test_queryNXDOMAINOutside(self):
         """

@@ -90,7 +90,7 @@ class Resolver(common.ResolverBase):
         Return a tuple of L{dns.RRHeader} instances for all of the IPv4
         addresses in the hosts file.
         """
-        return tuple(
+        return list(
             dns.RRHeader(name, dns.A, dns.IN, self.ttl, dns.Record_A(addr, self.ttl))
             for addr in searchFileForAll(FilePath(self.file), name)
             if isIPAddress(addr)
@@ -101,7 +101,7 @@ class Resolver(common.ResolverBase):
         Return a tuple of L{dns.RRHeader} instances for all of the IPv6
         addresses in the hosts file.
         """
-        return tuple(
+        return list(
             dns.RRHeader(
                 name, dns.AAAA, dns.IN, self.ttl, dns.Record_AAAA(addr, self.ttl)
             )
