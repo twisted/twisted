@@ -24,12 +24,6 @@ from twisted.names.error import (
     DNSUnknownError,
 )
 
-# Helpers for indexing the three-tuples that get thrown around by this code a
-# lot.
-_ANS, _AUTH, _ADD = range(3)
-
-EMPTY_RESULT = (), (), ()
-
 
 @implementer(interfaces.IResolver)
 class ResolverBase:
