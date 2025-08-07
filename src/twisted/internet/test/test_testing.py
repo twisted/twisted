@@ -6,11 +6,9 @@ Tests for L{twisted.internet.testing}.
 """
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Protocol
 
 from zope.interface.verify import verifyObject
-
-from typing_extensions import Protocol
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import (

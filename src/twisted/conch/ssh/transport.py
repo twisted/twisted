@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Tuple, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -30,8 +30,6 @@ try:
 except ImportError:
     # Deprecated path, will be removed in cryptography 48.0.0
     from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
-
-from typing_extensions import Literal
 
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
