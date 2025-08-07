@@ -120,9 +120,9 @@ class Resolver(common.ResolverBase):
         @param records: A tuple of L{dns.RRHeader} instances giving the results
             that will go into the response.
 
-        @return: A L{Deferred} which will fire with a three-tuple of result
-            records, authority records, and additional records, or which will
-            fail with L{dns.DomainError} if there are no result records.
+        @return: A L{Deferred} which will fire with a
+            L{common.ResolverResponse} instance, or which will fail with
+            L{dns.DomainError} if there are no result records.
         """
         if records:
             return defer.succeed(common.ResolverResponse(answer=records))
