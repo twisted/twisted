@@ -833,7 +833,7 @@ class ClientTests(unittest.TestCase):
         """
         client.theResolver = None
 
-    def checkResult(self, resolver_response: ResolverResponse, qtype):
+    def checkResult(self, resolver_response, qtype):
         """
         Verify that the result is the same query type as what is expected.
         """
