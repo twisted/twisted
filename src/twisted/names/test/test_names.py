@@ -31,7 +31,7 @@ from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
 
-def justAnswerPayload(resolver_response: common.ResolverResponse):
+def justAnswerPayload(resolver_response):
     return [r.payload for r in resolver_response.answer]
 
 

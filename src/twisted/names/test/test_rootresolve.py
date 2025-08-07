@@ -35,7 +35,7 @@ from twisted.trial import util
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
-def getOnePayload(resolver_response: common.ResolverResponse):
+def getOnePayload(resolver_response):
     """
     From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
     return the payload of the first record in the answer section.
@@ -43,7 +43,7 @@ def getOnePayload(resolver_response: common.ResolverResponse):
     return resolver_response.answer[0].payload
 
 
-def getOneAddress(resolver_response: common.ResolverResponse):
+def getOneAddress(resolver_response):
     """
     From the result of a L{Deferred} returned by L{IResolver.lookupAddress},
     return the first IPv4 address from the answer section.
@@ -355,7 +355,7 @@ class RootResolverTests(TestCase):
         resolver = self._getResolver(servers)
         d = resolver.lookupNameservers(b"example.com")
 
-        def getOneName(resolver_response: common.ResolverResponse):
+        def getOneName(resolver_response):
             return resolver_response.answer[0].payload.name
 
         d.addCallback(getOneName)

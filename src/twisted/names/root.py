@@ -255,7 +255,7 @@ class Resolver(common.ResolverBase):
         elif traps:
             d = self.lookupAddress(traps[0], timeout)
 
-            def getOneAddress(resolver_response: common.ResolverResponse):
+            def getOneAddress(resolver_response):
                 return resolver_response.answer[0].payload.dottedQuad()
 
             d.addCallback(getOneAddress)
