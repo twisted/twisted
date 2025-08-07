@@ -173,9 +173,17 @@ class ResolverResponse:
     """
 
     response_code: int = 0
+    """Represents the RCODE field in a DNS message header, as specified in
+    RFC1035 Section 4.1.1."""
     answer: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the answer section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
     authority: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the authority section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
     additional: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the additional section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
 
 
 def extractRecord(resolver, name, answers, level=10):
