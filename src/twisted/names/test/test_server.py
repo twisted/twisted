@@ -700,9 +700,9 @@ class DNSServerFactoryTests(unittest.TestCase):
 
     def test_gotResolverResponse(self):
         """
-        L{server.DNSServerFactory.gotResolverResponse} accepts a tuple of
-        resource record lists and triggers a response message containing those
-        resource record lists.
+        L{server.DNSServerFactory.gotResolverResponse} accepts a
+        L{ResolverResponse} instance with resource records, and triggers a
+        response message containing those resource records.
         """
         f = server.DNSServerFactory()
         answers = []

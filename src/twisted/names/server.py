@@ -287,7 +287,7 @@ class DNSServerFactory(protocol.ServerFactory):
         is C{>1}.
 
         @param response: Answer records, authority records and additional records
-        @type response: L{tuple} of L{list} of L{dns.RRHeader} instances
+        @type response: L{ResolverResponse} instance
 
         @param protocol: The DNS protocol instance to which to send a response
             message.

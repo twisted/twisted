@@ -87,7 +87,7 @@ class Resolver(common.ResolverBase):
 
     def _aRecords(self, name):
         """
-        Return a tuple of L{dns.RRHeader} instances for all of the IPv4
+        Return a list of L{dns.RRHeader} instances for all of the IPv4
         addresses in the hosts file.
         """
         return list(
@@ -98,7 +98,7 @@ class Resolver(common.ResolverBase):
 
     def _aaaaRecords(self, name):
         """
-        Return a tuple of L{dns.RRHeader} instances for all of the IPv6
+        Return a list of L{dns.RRHeader} instances for all of the IPv6
         addresses in the hosts file.
         """
         return list(
@@ -117,7 +117,7 @@ class Resolver(common.ResolverBase):
         @param name: The DNS name the response is for.
         @type name: C{str}
 
-        @param records: A tuple of L{dns.RRHeader} instances giving the results
+        @param records: A list of L{dns.RRHeader} instances giving the results
             that will go into the response.
 
         @return: A L{Deferred} which will fire with a

@@ -104,7 +104,7 @@ class RootResolverTests(TestCase):
         L{Resolver._query} accepts a L{Query} instance and an address, issues
         the query, and returns a L{Deferred} which fires with the response to
         the query.  If a true value is passed for the C{filter} parameter, the
-        result is a three-tuple of lists of records.
+        result is a ResolverResponse instance.
         """
         resolver_response = self._queryTest(True)
         expected = common.ResolverResponse(
