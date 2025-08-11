@@ -307,8 +307,8 @@ class ProcmonTests(unittest.TestCase):
         self.pm.addProcess("foo", ["foo"])
         self.pm.startProcess("foo")
         # process will be restarted in 123 seconds, per minRestartDelay and maxRestartDelay above
-        self.assertEquals(self.pm.delay["foo"], 123)
-        self.assertEquals(len(self.flushLoggedErrors(OSError)), 1)
+        self.assertEqual(self.pm.delay["foo"], 123)
+        self.assertEqual(len(self.flushLoggedErrors(OSError)), 1)
 
     def test_startProcessSpawnUncaughtException(self) -> None:
         """
@@ -411,17 +411,17 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"hello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
-    def test_ouputReceivedCompleteErrLine(self):
+    def test_outputReceivedCompleteErrLine(self):
         """
         Getting a complete output line on stderr generates a log message.
         """
@@ -438,15 +438,15 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].errReceived(b"hello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stderr")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stderr")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
         """
@@ -465,16 +465,16 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"\xffhello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         message = events[0]
         namespace = message["log_namespace"]
         stream = message["stream"]
         tag = message["tag"]
         output = message["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(output, repr(b"\xffhello world!"))
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(output, repr(b"\xffhello world!"))
 
     def test_outputReceivedPartialLine(self):
         """
@@ -493,17 +493,17 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"hello world!")
-        self.assertEquals(len(events), 0)
+        self.assertEqual(len(events), 0)
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
     def test_connectionLostLongLivedProcess(self):
         """
@@ -634,7 +634,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(1)
         processes = list(self.reactor.spawnedProcesses)
         myProcess = processes.pop()
-        self.assertEquals(processes, [])
+        self.assertEqual(processes, [])
         self.assertIsNone(myProcess.pid)
 
     def test_stopServiceCancelRestarts(self):
@@ -703,7 +703,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         self.pm.addProcess("foo", ["foo"])
         myprocesses = self.pm.processes
-        self.assertEquals(len(myprocesses), 1)
+        self.assertEqual(len(myprocesses), 1)
         warnings = self.flushWarnings()
         foundToTuple = False
         for warning in warnings:
@@ -721,11 +721,11 @@ class DeprecationTests(unittest.SynchronousTestCase):
         should generate its own DeprecationWarning.
         """
         myProcesses = self.pm.processes
-        self.assertEquals(myProcesses, {})
+        self.assertEqual(myProcesses, {})
         warnings = self.flushWarnings()
         first = warnings.pop(0)
         self.assertIs(first["category"], DeprecationWarning)
-        self.assertEquals(warnings, [])
+        self.assertEqual(warnings, [])
 
     def test_getstate(self):
         """

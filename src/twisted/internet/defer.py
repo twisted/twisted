@@ -29,6 +29,7 @@ from typing import (
     Generic,
     Iterable,
     List,
+    Literal,
     Mapping,
     NoReturn,
     Optional,
@@ -43,7 +44,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import Concatenate, Literal, ParamSpec, Self
+from typing_extensions import Concatenate, ParamSpec, Self
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -475,7 +476,7 @@ class Deferred(Awaitable[_SelfResultT]):
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
 
-    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    @deprecatedProperty(Version("Twisted", 25, 5, 0))
     def callbacks(self) -> List[_CallbackChain]:
         return self._callbacks
 

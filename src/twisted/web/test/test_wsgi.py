@@ -180,7 +180,7 @@ class WSGIResourceTests(TestCase):
         )
 
         self.resource.render(FinishThrowingRequest(DummyChannel(), False))
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         f = logObserver[0]["log_failure"]
         self.assertIsInstance(f.value, ArbitraryError)
         self.flushLoggedErrors(ArbitraryError)
@@ -2165,7 +2165,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             event = logObserver[0]
             f = event["log_failure"]
             self.assertIsInstance(f.value, RuntimeError)

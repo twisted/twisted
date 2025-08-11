@@ -8,11 +8,9 @@ Tests for L{twisted.application.runner._pidfile}.
 import errno
 from functools import wraps
 from os import getpid, name as SYSTEM_NAME
-from typing import Any, Callable, Optional
+from typing import Any, Callable, NoReturn, Optional
 
 from zope.interface.verify import verifyObject
-
-from typing_extensions import NoReturn
 
 import twisted.trial.unittest
 from twisted.python.filepath import FilePath

@@ -137,3 +137,25 @@ class ReconnectingFactoryTests(TestCase):
 
         factory.clientConnectionLost(FakeConnector(), None)
         self.assertEqual(len(clock.calls), 1)
+
+    def test_initialDelay(self):
+        """
+        Test that the first delay for reconnection is equal to the ``initialDelay``
+        attribute.
+        """
+        clock = Clock()
+        factory = ReconnectingClientFactory()
+        factory.clock = clock
+        # Remove jitter to make it easier to check the result.
+        factory.jitter = None
+
+        # Trigger a failed connection.
+        factory.clientConnectionLost(FakeConnector(), None)
+
+        # The first retry is scheduled based only on the initial delay value. Check that
+        # the actual delay for the scheduled retry call is equal to the initial delay
+        # given by ``ReconnectingClientFactory.initialDelay``.
+        self.assertEqual(len(clock.calls), 1)
+        actualDelay = clock.calls[0].getTime()
+        expectedDelay = factory.initialDelay
+        self.assertEqual(actualDelay, expectedDelay)

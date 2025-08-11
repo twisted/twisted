@@ -2766,7 +2766,7 @@ class HTTP2TimeoutTests(unittest.TestCase, HTTP2TestHelpers):
 
         # Advance the clock.
         reactor.advance(99)
-        self.assertEquals(len(requests), 1)
+        self.assertEqual(len(requests), 1)
 
         for x in range(10):
             # It doesn't time out as it's being written...

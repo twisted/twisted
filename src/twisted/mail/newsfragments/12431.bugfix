@@ -1,2 +1,0 @@
-twisted.mail.mail.MailService.addDomain now adds the given domain's credential
-checkers to the service's portal, allowing users to authenticate to the domain.

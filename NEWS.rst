@@ -8,6 +8,99 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+
+Twisted 25.5.0 (2025-06-07)
+===========================
+
+This is the last release with support for Python 3.8.
+No changes since 25.5.0.rc1.
+
+
+Bugfixes
+--------
+
+- twisted.internet.runner.procmon.ProcessMonitor: startProcess() catches exceptions raised by reactor.spawnProcess() and attempts to restart the failed process. (#12421)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.unittest.TestCase.deferSetUp, twisted.trial.unittest.TestCase.deferTestMethod, twisted.trial.unittest.TestCase.deferTearDown, and twisted.trial.unittest.TestCase.deferRunCleanups were removed and converted to private methods. These functions expose so much of the internal structure of TestCase that it makes the code hard to change. (#12388)
+- twisted.internet.defer.waitForDeferred twisted.internet.defer.deferredGenerator have been removed. They have been deprecated since Twisted 15.0.0 (#12404)
+- twisted.internet.defer.Deferred.callbacks attribute has been deprecated. (#12407)
+
+
+Misc
+----
+
+- #12375, #12383, #12384, #12392, #12419, #12434, #12440, #12441
+
+
+Conch
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.client.direct.SSHClientTransport.verifyHostKey no longer crashes with an encoding error while attempting to verify the peer's IP address. This means that the `conch` command-line tool will no longer fail host key verification with 'bad host key' when using a known hosts file containing only plaintext, rather than hashed, hostnames. (#12414)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- The twisted.web.websockets module has been added, adding a websockets server and client based on the wsproto library. (#4173)
+- ``twisted.web.server.Site`` can now be created with a ``parsePOSTFormSubmission=False`` parameter to disable parsing of HTTP request bodies. (#12412)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web.http.Request.addCookie now supports the `none` value for cookie's `samesite` attribute. (#10088)
+- twisted.web.http.Request.requestReceived now handles multiple files in multipart/form-data with the same "name" parameter. This was a regression introduced in Twisted 24.3.0. (#12423) (#12423)
+
+
+Improved Documentation
+~~~~~~~~~~~~~~~~~~~~~~
+
+- An error in the example for using a Resource object in th documentation on Configuring and Using the Twisted Web Server has been correctd.
+
+  Furthermore, a number of references to "strings" where "bytes" where expected has been adjusted. (#12410)
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.mail.MailService.addDomain now adds the given domain's credential
+  checkers to the service's portal, allowing users to authenticate to the domain. (#12431)
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+No significant changes.
+
+
+Trial
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.trial.unittest.TestCase.addCleanup will cause the test to fail if the returned deferred is not resolved before the test's timeout. (#12390)
+
+
 Twisted 24.11.0 (2024-12-02)
 ============================
 

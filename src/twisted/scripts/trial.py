@@ -12,7 +12,7 @@ import sys
 import time
 import trace
 import warnings
-from typing import NoReturn, Optional, Type
+from typing import Callable, NoReturn, Optional, Type
 
 from twisted import plugin
 from twisted.application import app
@@ -58,10 +58,12 @@ def _autoJobs() -> int:
     @returns: A strictly positive integer.
     """
     number: Optional[int]
-    if getattr(os, "process_cpu_count", None) is not None:
-        number = os.process_cpu_count()  # type: ignore[attr-defined]
-    elif getattr(os, "sched_getaffinity", None) is not None:
-        number = len(os.sched_getaffinity(0))
+    process_cpu_count: Callable[[], int | None] | None
+    sched_getaffinity: Callable[[int], set[int]] | None
+    if process_cpu_count := getattr(os, "process_cpu_count", None):
+        number = process_cpu_count()
+    elif sched_getaffinity := getattr(os, "sched_getaffinity", None):
+        number = len(sched_getaffinity(0))
     else:
         number = os.cpu_count()
     if number is None or number < 1:
