@@ -26,7 +26,7 @@ class DynamicResolver:
     query type and name.
     """
 
-    _pattern = "workstation"
+    _pattern = b"workstation"
     _network = "172.0.2"
 
     def _dynamicResponseRequired(self, query):
@@ -34,7 +34,7 @@ class DynamicResolver:
         Check the query to determine if a dynamic response is required.
         """
         if query.type == dns.A:
-            labels = query.name.name.split(".")
+            labels = query.name.name.split(b".")
             if labels[0].startswith(self._pattern):
                 return True
 
@@ -45,12 +45,12 @@ class DynamicResolver:
         Calculate the response to a query.
         """
         name = query.name.name
-        labels = name.split(".")
+        labels = name.split(b".")
         parts = labels[0].split(self._pattern)
         lastOctet = int(parts[1])
         answer = dns.RRHeader(
             name=name,
-            payload=dns.Record_A(address=b"%s.%s" % (self._network, lastOctet)),
+            payload=dns.Record_A(address=f"{self._network}.{lastOctet}".encode()),
         )
         answers = [answer]
         authority = []

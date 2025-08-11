@@ -11,12 +11,23 @@ import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import IO, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, cast
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    Optional,
+    Protocol,
+    Tuple,
+    cast,
+)
 
 from zope.interface import Interface, implementer, providedBy
 
 from incremental import Version
-from typing_extensions import Literal, Protocol
 
 from twisted.conch import error
 from twisted.conch.ssh import keys

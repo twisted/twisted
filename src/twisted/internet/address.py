@@ -7,13 +7,12 @@ Address objects for network connections.
 
 
 import os
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 from warnings import warn
 
 from zope.interface import implementer
 
 import attr
-from typing_extensions import Literal
 
 from twisted.internet.interfaces import IAddress
 from twisted.python.filepath import _asFilesystemBytes, _coerceToFilesystemEncoding

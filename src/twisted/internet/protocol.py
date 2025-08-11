@@ -415,7 +415,6 @@ class ReconnectingClientFactory(ClientFactory):
                 log.msg("Abandoning %s after %d retries." % (connector, self.retries))
             return
 
-        self.delay = min(self.delay * self.factor, self.maxDelay)
         if self.jitter:
             self.delay = random.normalvariate(self.delay, self.delay * self.jitter)
 
@@ -437,6 +436,8 @@ class ReconnectingClientFactory(ClientFactory):
 
             self.clock = reactor
         self._callID = self.clock.callLater(self.delay, reconnector)
+
+        self.delay = min(self.delay * self.factor, self.maxDelay)
 
     def stopTrying(self):
         """
