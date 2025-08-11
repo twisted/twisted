@@ -13,9 +13,7 @@ import sys
 import zipfile
 from importlib.abc import PathEntryFinder
 from types import ModuleType
-from typing import Any, Generator
-
-from typing_extensions import Protocol
+from typing import Any, Generator, Protocol
 
 import twisted
 from twisted.python import modules

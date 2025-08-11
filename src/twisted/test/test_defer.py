@@ -669,7 +669,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d2.unpause()
         self.assertIsNotNone(self.callbackResults, "Should have been called now")
         assert self.callbackResults is not None, "make that legible to the type checker"
-        self.assertEquals(
+        self.assertEqual(
             self.callbackResults[0][0],
             2,
             "Result should have been from second deferred:{}".format(

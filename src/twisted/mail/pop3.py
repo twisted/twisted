@@ -10,12 +10,13 @@ Post-office Protocol version 3.
 @author: Glyph Lefkowitz
 @author: Jp Calderone
 """
+from __future__ import annotations
 
 import base64
 import binascii
 import warnings
 from hashlib import md5
-from typing import Optional
+from typing import IO, Optional, overload
 
 from zope.interface import implementer
 
@@ -1330,7 +1331,15 @@ class Mailbox:
     A base class for mailboxes.
     """
 
-    def listMessages(self, i=None):
+    @overload
+    def listMessages(self) -> list[int]:
+        ...
+
+    @overload
+    def listMessages(self, i: int) -> int:
+        ...
+
+    def listMessages(self, i: int | None = None) -> int | list[int]:
         """
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
@@ -1350,7 +1359,7 @@ class Mailbox:
         """
         return []
 
-    def getMessage(self, i):
+    def getMessage(self, i: int) -> IO[str]:
         """
         Retrieve a file containing the contents of a message.
 
@@ -1365,7 +1374,7 @@ class Mailbox:
         """
         raise ValueError
 
-    def getUidl(self, i):
+    def getUidl(self, i: int) -> bytes:
         """
         Get a unique identifier for a message.
 
@@ -1381,7 +1390,7 @@ class Mailbox:
         """
         raise ValueError
 
-    def deleteMessage(self, i):
+    def deleteMessage(self, i: int) -> None:
         """
         Mark a message for deletion.
 
@@ -1397,7 +1406,7 @@ class Mailbox:
         """
         raise ValueError
 
-    def undeleteMessages(self):
+    def undeleteMessages(self) -> None:
         """
         Undelete all messages marked for deletion.
 
@@ -1406,7 +1415,7 @@ class Mailbox:
         """
         pass
 
-    def sync(self):
+    def sync(self) -> None:
         """
         Discard the contents of any message marked for deletion.
         """

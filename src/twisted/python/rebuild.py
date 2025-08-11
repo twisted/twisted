@@ -210,7 +210,10 @@ def rebuild(module, doLog=1):
         log.msg("")
         log.msg(f"  (fixing   {str(module.__name__)}): ")
     modcount = 0
-    for mk, mod in sys.modules.items():
+    # note: sys.modules can change throughout iteration
+    # https://github.com/twisted/twisted/issues/12458
+    for mk in list(sys.modules):
+        mod = sys.modules.get(mk)
         modcount = modcount + 1
         if mod == module or mod is None:
             continue

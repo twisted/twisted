@@ -1488,10 +1488,10 @@ class HTTP11ClientProtocol(Protocol):
 
     _state = "QUIESCENT"
     _parser: HTTPClientParser | None = None
-    _finishedRequest: Deferred[Response] | None = None
+    _finishedRequest: Deferred[IResponse] | None = None
     _currentRequest: Request | None = None
     _transportProxy = None
-    _responseDeferred: Deferred[Response] | None = None
+    _responseDeferred: Deferred[IResponse] | None = None
     _log = Logger()
 
     def __init__(self, quiescentCallback=lambda c: None):
@@ -1506,7 +1506,7 @@ class HTTP11ClientProtocol(Protocol):
     def state(self):
         return self._state
 
-    def request(self, request):
+    def request(self, request: Request) -> Deferred[IResponse]:
         """
         Issue C{request} over C{self.transport} and return a L{Deferred} which
         will fire with a L{Response} instance or an error.
@@ -1543,7 +1543,7 @@ class HTTP11ClientProtocol(Protocol):
                 self.transport.abortConnection()
                 self._disconnectParser(Failure(CancelledError()))
 
-        self._finishedRequest = Deferred(cancelRequest)
+        self._finishedRequest: Deferred[IResponse] = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
         # on it.

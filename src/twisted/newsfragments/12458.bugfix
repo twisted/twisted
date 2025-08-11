@@ -1,0 +1,1 @@
+twisted.python.rebuild.rebuild() now handles changes to ``sys.modules`` gracefully. Prior to the change, it could possibly raise a "dictionary changed size during iteration" error if the module list changed.

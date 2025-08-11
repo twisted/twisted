@@ -7,7 +7,7 @@ This module defines L{ICredentials}, an interface for objects that represent
 authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
-
+from __future__ import annotations
 
 import base64
 import hmac
@@ -17,10 +17,11 @@ import time
 from binascii import hexlify
 from hashlib import md5
 
-from zope.interface import Interface, implementer
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.cred import error
 from twisted.cred._digest import calcHA1, calcHA2, calcResponse
+from twisted.internet.defer import Deferred
 from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
@@ -61,10 +62,13 @@ class IUsernameHashedPassword(ICredentials):
     kind of credential must store the passwords in plaintext (or as
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
-
-    @type username: L{bytes}
-    @ivar username: The username associated with these credentials.
     """
+
+    username: bytes = Attribute(
+        """
+        The username associated with these credentials.
+        """
+    )
 
     def checkPassword(password):
         """
@@ -101,18 +105,16 @@ class IUsernamePassword(ICredentials):
     username: bytes
     password: bytes
 
-    def checkPassword(password: bytes) -> bool:
+    def checkPassword(password: bytes) -> bool | Deferred[bool]:
         """
         Validate these credentials against the correct password.
 
-        @type password: L{bytes}
         @param password: The correct, plaintext password against which to
-        check.
+            check.
 
-        @rtype: C{bool} or L{Deferred}
-        @return: C{True} if the credentials represented by this object match the
-            given password, C{False} if they do not, or a L{Deferred} which will
-            be called back with one of these values.
+        @return: C{True} if the credentials represented by this object match
+            the given password, C{False} if they do not, or a L{Deferred} which
+            will be called back with one of these values.
         """
 
 
@@ -462,6 +464,14 @@ class UsernameHashedPassword:
 
 @implementer(IUsernamePassword)
 class UsernamePassword:
+    """
+    A trivial implementation of L{IUsernamePassword}, containing a username and
+    a password.
+    """
+
+    username: bytes
+    password: bytes
+
     def __init__(self, username: bytes, password: bytes) -> None:
         self.username = username
         self.password = password

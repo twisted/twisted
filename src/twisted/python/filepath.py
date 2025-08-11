@@ -50,6 +50,7 @@ from typing import (
     Generic,
     Iterable,
     List,
+    Literal,
     Optional,
     Sequence,
     Tuple,
@@ -60,8 +61,6 @@ from typing import (
 )
 
 from zope.interface import Attribute, Interface, implementer
-
-from typing_extensions import Literal
 
 from twisted.python.compat import cmp, comparable
 from twisted.python.runtime import platform

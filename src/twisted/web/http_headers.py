@@ -5,6 +5,7 @@
 """
 An API for storing HTTP header names and values.
 """
+from __future__ import annotations
 
 from typing import (
     AnyStr,
@@ -96,13 +97,15 @@ class Headers:
             )
         return NotImplemented
 
-    def copy(self):
+    def copy(self) -> Headers:
         """
         Return a copy of itself with the same headers set.
 
         @return: A new L{Headers}
         """
-        return self.__class__(self._rawHeaders)
+        # pretty sure this type:ignore is a mypy bug:
+        # https://github.com/python/mypy/issues/18279
+        return self.__class__(self._rawHeaders)  # type:ignore[arg-type]
 
     def hasHeader(self, name: AnyStr) -> bool:
         """

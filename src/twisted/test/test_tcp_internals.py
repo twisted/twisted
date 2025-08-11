@@ -345,7 +345,7 @@ class SelectReactorTests(TestCase):
 
         # This is scaled down to 1 because no accept(2)s returned
         # successfully.
-        self.assertEquals(port.numberAccepts, 1)
+        self.assertEqual(port.numberAccepts, 1)
 
     def test_unknownSocketErrorRaise(self):
         """

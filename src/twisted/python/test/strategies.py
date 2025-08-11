@@ -4,9 +4,9 @@
 """
 Hypothesis strategies for values related to L{twisted.python}.
 """
+from typing import Literal
 
 from hypothesis.strategies import SearchStrategy, characters, text
-from typing_extensions import Literal
 
 
 def systemdDescriptorNames() -> SearchStrategy[str]:
