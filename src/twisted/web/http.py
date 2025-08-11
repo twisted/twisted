@@ -922,7 +922,7 @@ class Request:
     etag = None
     lastModified = None
     args = None
-    path = None
+    path: bytes = None  # type:ignore[assignment]
     content = None
     _forceSSL = 0
     _disconnected = False
@@ -2552,6 +2552,29 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         req = self.requests[-1]
         req.requestReceived(command, path, version)
+
+    def _protocolUpgradeForWebsockets(self, protocol: IProtocol) -> None:
+        """
+        Monkeypatch the C{dataReceived} and C{connectionLost} methods on this
+        L{HTTPChannel} to deliver data to a websocket protocol implementation.
+
+        This API is used by Twisted's own websocket implementation in
+        L{twisted.web.websocket} and is tested with the same, but is
+        intentionally NOT publicly exposed yet, and would need to be tested for
+        a bunch of additional edge cases (in particular, being invoked in other
+        parts of the request lifecycle and delivering sensible errors) if it
+        were going to be.
+
+        @param protocol: The byte-level protocol implementing a websocket
+            transport, which will fully handle all delivered data for this
+            channel.
+        """
+        self.dataReceived = protocol.dataReceived  # type:ignore[method-assign]
+        self.connectionLost = protocol.connectionLost  # type:ignore[method-assign]
+        assert (
+            self.transport is not None
+        ), "websocket upgraded attempted on disconnected HTTP channel"
+        protocol.makeConnection(self.transport)
 
     def rawDataReceived(self, data: bytes) -> None:
         """

@@ -13,7 +13,7 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
-from typing import Any
+from typing import Any, Literal
 
 import bcrypt
 from constantly import NamedConstant, Names
@@ -27,7 +27,6 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from typing_extensions import Literal
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes

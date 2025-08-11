@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 from collections import UserDict
-from typing import TYPE_CHECKING, Union
+from typing import Union
 from urllib.parse import quote as _quote, unquote as _unquote
 
 from twisted.internet import defer, protocol
@@ -107,10 +107,7 @@ class PostfixTCPMapServer(basic.LineReceiver, policies.TimeoutMixin):
                 self.sendCode(500, b"put is not implemented yet.")
 
 
-if TYPE_CHECKING or sys.version_info >= (3, 9):
-    _PostfixTCPMapDict = UserDict[bytes, Union[str, bytes]]
-else:
-    _PostfixTCPMapDict = UserDict
+_PostfixTCPMapDict = UserDict[bytes, Union[str, bytes]]
 
 
 class PostfixTCPMapDictServerFactory(_PostfixTCPMapDict, protocol.ServerFactory):

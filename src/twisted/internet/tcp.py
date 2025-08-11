@@ -14,12 +14,12 @@ import os
 import socket
 import struct
 import sys
+import typing
 from typing import Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
 import attr
-import typing_extensions
 
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
@@ -960,7 +960,7 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
-class _HasClose(typing_extensions.Protocol):
+class _HasClose(typing.Protocol):
     def close(self) -> object:
         ...
 
