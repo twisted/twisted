@@ -9,12 +9,11 @@ IProxyParser implementation for version two of the PROXY protocol.
 
 import binascii
 import struct
-from typing import Callable, Tuple, Type, Union
+from typing import Callable, Literal, Tuple, Type, Union
 
 from zope.interface import implementer
 
 from constantly import ValueConstant, Values
-from typing_extensions import Literal
 
 from twisted.internet import address
 from twisted.python import compat

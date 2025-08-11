@@ -532,7 +532,7 @@ class AutoJobsTests(unittest.SynchronousTestCase):
         `_autoJobs` uses it to returns the number of CPUs that the current
         process is restricted to.
         """
-        self.assertEqual(trial._autoJobs(), len(os.sched_getaffinity(0)))
+        self.assertEqual(trial._autoJobs(), len(getattr(os, "sched_getaffinity")(0)))
 
     def test_cpuCount(self) -> None:
         """
