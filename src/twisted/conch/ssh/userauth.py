@@ -11,8 +11,8 @@ Maintainer: Paul Swartz
 from __future__ import annotations
 
 import struct
-from typing import Callable, Tuple, Type
 from hashlib import sha256
+from typing import Callable, Tuple, Type
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
