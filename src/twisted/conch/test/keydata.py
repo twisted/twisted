@@ -167,8 +167,8 @@ Ed25519Data = {
 
 SKEd25519Data = {
     "a": (
-        b"\x08}'U\xd2i\x04\x11\xea\x01~+\x165iRM\xdd\xe6R\x7f\xd3\xaf\\\xa8p"
-        b"\xa0LL\xe5\x8a\xa0"
+        b"\xd8+\xaa\xcbIgn\x8c\x81;%\xa7n\xd4\x82}3\x91EsZ\xe3jD5\xec<S\xe5"
+        b"Wo\xca"
     ),
     "k": (
         b"7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U"
@@ -246,8 +246,8 @@ publicSKECDSA_openssh = (
 )
 
 publicSKEd25519_openssh = (
-    b"sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
-    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+    b"sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAINgrqstJZ26"
+    b"MgTslp27Ugn0zkUVzWuNqRDXsPFPlV2/KAAAABHNzaDo= comment"
 )
 
 publicSKECDSA_cert_openssh = (
@@ -260,6 +260,13 @@ publicSKECDSA_cert_openssh = (
 publicSKEd25519_cert_openssh = (
     b"sk-ssh-ed25519-cert-v01@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
     b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+)
+
+signatureSKEd25519_openssh = (
+    b'\x00\x00\x00\x1ask-ssh-ed25519@openssh.com\x00\x00\x00E\xaf\xd0Uya\xc0P\x18'
+    b'\x16R?Uh\\@\x92\x1b"\xff\xcdj\x17~\xe3v\x82I\xa5\xd4O\x9b\x9cU\xc4'
+    b'\x8f\xba\x90\xca\x14\xe6B_\x1a\xd6\xdc\x01\x10\xcb\xbd-m\xca\x03\x9f(V-3W'
+    b'\xe34="\x07\x01\x00\x00\x00\n'
 )
 
 privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----

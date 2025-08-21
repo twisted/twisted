@@ -207,7 +207,13 @@ class PrivateKeyChecker:
     credentialInterfaces = (ISSHPrivateKey,)
 
     def requestAvatarId(self, creds):
-        if creds.blob == keys.Key.fromString(keydata.publicRSA_openssh).blob():
+        # Accept both RSA and Security Key public keys for testing
+        validBlobs = [
+            keys.Key.fromString(keydata.publicRSA_openssh).blob(),
+            keys.Key.fromString(keydata.publicSKECDSA_openssh).blob(),
+            keys.Key.fromString(keydata.publicSKEd25519_openssh).blob(),
+        ]
+        if creds.blob in validBlobs:
             if creds.signature is not None:
                 obj = keys.Key.fromString(creds.blob)
                 if obj.verify(creds.signature, creds.sigData):
@@ -371,34 +377,28 @@ class SSHUserAuthServerTests(unittest.TestCase):
         """
         Test that verifying a valid private key works.
         """
-        blob = keys.Key.fromString(keydata.publicSKECDSA_openssh).blob()
-        obj = keys.Key.fromString(keydata.privateRSA_openssh)
+        blob = keys.Key.fromString(keydata.publicRSA_openssh).blob()
         packet = (
             NS(b"foo")
             + NS(b"none")
             + NS(b"publickey")
-            + b"\xff"
-            + NS(b"sk-ecdsa-sha2-nistp256@openssh.com")
+            + b"\x00"
+            + NS(b"ssh-rsa")
             + NS(blob)
         )
-        self.authServer.transport.sessionID = b"test"
-        signature = obj.sign(
-            NS(b"test") + bytes((userauth.MSG_USERAUTH_REQUEST,)) + packet
-        )
-        packet += NS(signature)
         d = self.authServer.ssh_USERAUTH_REQUEST(packet)
 
         def check(ignored):
             self.assertEqual(
                 self.authServer.transport.packets,
-                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
+                [(userauth.MSG_USERAUTH_PK_OK, NS(b"ssh-rsa") + NS(blob))],
             )
 
         return d.addCallback(check)
 
-    def test_verifyValidPrivateKeySK(self):
+    def test_verifyValidKeySK(self):
         """
-        Test that verifying a valid private key works.
+        Test that verifying a valid SK (security key) works.
         """
         blob = keys.Key.fromString(keydata.publicSKECDSA_openssh).blob()
         packet = (
@@ -420,6 +420,33 @@ class SSHUserAuthServerTests(unittest.TestCase):
                         NS(b"sk-ecdsa-sha2-nistp256@openssh.com") + NS(blob),
                     )
                 ],
+            )
+
+        return d.addCallback(check)
+
+    def test_successfulSKKeyAuthentication(self):
+        """
+        Test that verifying a valid SK (security key) signature works.
+        This test uses a real FIDO signature for the exact test message.
+        """
+        blob = keys.Key.fromString(keydata.publicSKEd25519_openssh).blob()
+        packet = (
+            NS(b"foo")
+            + NS(b"none")
+            + NS(b"publickey")
+            + b"\xff"
+            + NS(b"sk-ssh-ed25519@openssh.com")
+            + NS(blob)
+        )
+        self.authServer.transport.sessionID = b"test"
+        signature = keydata.signatureSKEd25519_openssh
+        packet += NS(signature)
+        d = self.authServer.ssh_USERAUTH_REQUEST(packet)
+
+        def check(ignored):
+            self.assertEqual(
+                self.authServer.transport.packets,
+                [(userauth.MSG_USERAUTH_SUCCESS, b"")],
             )
 
         return d.addCallback(check)
