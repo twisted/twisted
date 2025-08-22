@@ -210,14 +210,30 @@ class PrivateKeyChecker:
         # Accept both RSA and Security Key public keys for testing
         validBlobs = [
             keys.Key.fromString(keydata.publicRSA_openssh).blob(),
+        ]
+
+        validSKBlobs = [
             keys.Key.fromString(keydata.publicSKECDSA_openssh).blob(),
             keys.Key.fromString(keydata.publicSKEd25519_openssh).blob(),
         ]
+
         if creds.blob in validBlobs:
             if creds.signature is not None:
                 obj = keys.Key.fromString(creds.blob)
                 if obj.verify(creds.signature, creds.sigData):
                     return creds.username
+            else:
+                raise ValidPublicKey()
+        elif creds.blob in validSKBlobs:
+            if creds.signature is not None:
+                obj = keys.Key.fromString(creds.blob)
+                obj._sk = True
+                print(f"Extracted signature {creds.signature}")
+                print(f"Verifying against {creds.sigData}")
+                if obj.verify(creds.signature, creds.sigData):
+                    return creds.username
+                else:
+                    raise UnauthorizedLogin()
             else:
                 raise ValidPublicKey()
         raise UnauthorizedLogin()

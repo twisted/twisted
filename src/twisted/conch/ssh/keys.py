@@ -1801,6 +1801,8 @@ class Key:
             if not self.isPublic():
                 k = k.public_key()
             args = (common.getNS(signature)[0], data)
+            print(args)
+            print(k)
 
         try:
             k.verify(*args)
