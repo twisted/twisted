@@ -1770,7 +1770,10 @@ class _ReadBodyProtocol(protocol.Protocol):
                 )
             )
         else:
-            self.deferred.errback(reason)
+            try:
+                self.deferred.errback(reason)
+            except defer.AlreadyCalledError:  # after abortConnection. I don't know why
+                pass
 
 
 def readBody(response: IResponse) -> defer.Deferred[bytes]:
