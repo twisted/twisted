@@ -3216,6 +3216,24 @@ class ReadBodyTests(TestCase):
         self.failureResultOf(deferred, defer.CancelledError)
         self.assertTrue(response.transport.aborting)
 
+    def test_cancelWithConnectionLost(self):
+        """
+        When cancelling the L{Deferred} returned by L{client.readBody}, the
+        CancelledError failure is sent repeatedly in response protocol. Exception
+        defer.AlreadyCalledError should be suppressed
+        """
+        response = DummyResponse()
+        deferred = client.readBody(response)
+        deferred.cancel()
+
+        try:
+            response.protocol.connectionLost(Failure(defer.CancelledError))
+        except defer.AlreadyCalledError:
+            self.fail()
+
+        self.failureResultOf(deferred, defer.CancelledError)
+        self.assertTrue(response.transport.aborting)
+
     def test_withPotentialDataLoss(self):
         """
         If the full body of the L{IResponse} passed to L{client.readBody} is
