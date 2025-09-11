@@ -1772,7 +1772,7 @@ class _ReadBodyProtocol(protocol.Protocol):
         else:
             try:
                 self.deferred.errback(reason)
-            except defer.AlreadyCalledError:  # after abortConnection. I don't know why
+            except defer.AlreadyCalledError:
                 pass
 
 
