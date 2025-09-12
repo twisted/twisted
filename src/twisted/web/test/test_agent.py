@@ -3229,11 +3229,11 @@ class ReadBodyTests(TestCase):
         # For example due to a timeout or some other
         # conditions.
         deferred.cancel()
-
-        try:
-            response.protocol.connectionLost(Failure(defer.CancelledError))
-        except defer.AlreadyCalledError:
-            self.fail()
+        # At some point the connection used by the response
+        # to read the body will get lost.
+        # This happend after the `readBody` deferred is
+        # cancelled by the user.
+        response.protocol.connectionLost(Failure(Exception('We are lost')))
 
         self.failureResultOf(deferred, defer.CancelledError)
         self.assertTrue(response.transport.aborting)
