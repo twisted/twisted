@@ -3224,6 +3224,10 @@ class ReadBodyTests(TestCase):
         """
         response = DummyResponse()
         deferred = client.readBody(response)
+        # It is cancelled by the user before we get the
+        # full body.
+        # For example due to a timeout or some other
+        # conditions.
         deferred.cancel()
 
         try:
