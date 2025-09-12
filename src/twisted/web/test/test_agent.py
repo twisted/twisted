@@ -3233,7 +3233,7 @@ class ReadBodyTests(TestCase):
         # to read the body will get lost.
         # This happend after the `readBody` deferred is
         # cancelled by the user.
-        response.protocol.connectionLost(Failure(Exception('We are lost')))
+        response.protocol.connectionLost(Failure(Exception("We are lost")))
 
         self.failureResultOf(deferred, defer.CancelledError)
         self.assertTrue(response.transport.aborting)
