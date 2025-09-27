@@ -22,3 +22,4 @@ pip-wheel-metadata/
 .idea/
 .tox/
 .hypothesis/
+coverage.xml

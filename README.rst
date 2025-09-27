@@ -69,7 +69,7 @@ Twisted has a comprehensive test suite, which can be run by ``tox``::
   $ tox -l                       # to view all test environments
   $ tox -e nocov                 # to run all the tests without coverage
   $ tox -e withcov               # to run all the tests with coverage
-  $ tox -e alldeps-withcov-posix # install all dependencies, run tests with coverage on POSIX platform
+  $ tox -e alldeps-withcov       # install all dependencies, run tests with coverage
 
 
 You can test running the test suite under the different reactors with the ``TWISTED_REACTOR`` environment variable::

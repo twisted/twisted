@@ -145,13 +145,13 @@ jobs:
           - python-version: '3.9'
             runs-on: 'macos-13'
             job-name: 'macos-13-default-tests'
-            tox-env: 'macos-withcov-alldeps'
+            tox-env: 'withcov-alldeps-macos'
 
           # Newest ARM macOS and newest Python supported versions.
           - python-version: '3.13'
             runs-on: 'macos-14'
             job-name: 'macos-14-default-tests'
-            tox-env: 'macos-withcov-alldeps'
+            tox-env: 'withcov-alldeps-macos'
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.9'
@@ -190,7 +190,7 @@ jobs:
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
           - python-version: '3.9'
-            tox-env: 'alldeps-gtk-withcov-posix'
+            tox-env: 'alldeps-withcov-posix-gtk'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
@@ -304,11 +304,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install --upgrade coverage[toml] diff_cover
-
     - name: Download coverage reports
       uses: actions/download-artifact@v4
       with:
@@ -316,16 +311,9 @@ jobs:
         merge-multiple: true
         path: .
 
-    - name: Prepare coverage
-      run: |
-          coverage combine .coverage-job-*
-          # XML is needed for the diff-cover.
-          coverage xml
-
     - name: Report coverage
       run: |
-          # Report for the job log.
-          diff-cover --markdown-report coverage-report.md --compare-branch origin/trunk coverage.xml
+          tox -e coverage-report
           cat coverage-report.md >> $GITHUB_STEP_SUMMARY
 
           {
@@ -342,7 +330,7 @@ jobs:
     - name: Generate HTML report on failure
       if: ${{ failure() }}
       run: |
-          coverage html --skip-covered --skip-empty
+          tox -e coverage-html
 
     - name: Upload HTML report on failure
       if: ${{ failure() }}
