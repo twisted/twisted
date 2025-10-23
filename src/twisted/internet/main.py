@@ -4,34 +4,20 @@
 
 
 """
-Backwards compatibility, and utility functions.
+This namespace is for backwards compatibility only.  See the new locations for
+its previous contents.
 
-In general, this module should not be used, other than by reactor authors
-who need to use the 'installReactor' method.
+@see: L{CONNECTION_DONE}
+@see: L{CONNECTION_LOST}
+@see: L{installReactor}
 """
 
 
-from twisted.internet import error
+from twisted.internet.error import CONNECTION_DONE, CONNECTION_LOST
+from twisted.internet.reactors import installGlobalReactor as installReactor
 
-CONNECTION_DONE = error.ConnectionDone("Connection done")
-CONNECTION_LOST = error.ConnectionLost("Connection lost")
-
-
-def installReactor(reactor):
-    """
-    Install reactor C{reactor}.
-
-    @param reactor: An object that provides one or more IReactor* interfaces.
-    """
-    # this stuff should be common to all reactors.
-    import sys
-
-    import twisted.internet
-
-    if "twisted.internet.reactor" in sys.modules:
-        raise error.ReactorAlreadyInstalledError("reactor already installed")
-    twisted.internet.reactor = reactor
-    sys.modules["twisted.internet.reactor"] = reactor
-
-
-__all__ = ["CONNECTION_LOST", "CONNECTION_DONE", "installReactor"]
+# not in __all__ any more because we don't want to signal to pydoctor that we
+# moved them, but referenced for pyflakes
+CONNECTION_DONE
+CONNECTION_LOST
+installReactor

@@ -15,7 +15,6 @@ import pickle
 from zope.interface import implementer
 from zope.interface.verify import verifyClass
 
-from twisted.application import internet
 from twisted.application.internet import (
     ClientService,
     StreamServerEndpointService,
@@ -32,6 +31,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
+from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.internet.testing import StringTransport
 from twisted.logger import formatEvent, globalLogPublisher
 from twisted.python.failure import Failure
@@ -349,20 +349,16 @@ class TimerServiceTests(TestCase):
         self.timer.startService()
         self.assertEqual([None], result)
 
-    def test_startServiceUsesGlobalReactor(self):
+    def test_startServiceUsesGlobalReactor(self) -> None:
         """
-        L{TimerService.startService} uses L{internet._maybeGlobalReactor} to
-        choose the reactor to pass to L{task.LoopingCall}
-        uses the global reactor.
+        L{TimerService.startService} passes the current global reactor to
+        L{task.LoopingCall} if it doesn't have its own clock set.
         """
         otherClock = task.Clock()
-
-        def getOtherClock(maybeReactor):
-            return otherClock
-
-        self.patch(internet, "_maybeGlobalReactor", getOtherClock)
-        self.timer.startService()
-        self.assertIdentical(otherClock, self.timer._loop.clock)
+        with AlternateReactor(otherClock):
+            self.timer.clock = None
+            self.timer.startService()
+            self.assertIdentical(otherClock, self.timer._loop.clock)
 
     def test_stopServiceWaits(self):
         """

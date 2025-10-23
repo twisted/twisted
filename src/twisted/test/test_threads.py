@@ -352,12 +352,13 @@ import time
 import %(reactor)s
 %(reactor)s.install()
 
-from twisted.internet import reactor
+from twisted.internet.reactors import getGlobal
+from twisted.internet.interfaces import IReactorTime
 
 def threadedCall():
     print('threaded call')
 
-reactor.callInThread(threadedCall)
+getGlobal(IReactorTime).callInThread(threadedCall)
 
 # Spin very briefly to try to give the thread a chance to run, if it
 # is going to.  Is there a better way to achieve this behavior?
