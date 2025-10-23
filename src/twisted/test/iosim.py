@@ -8,6 +8,10 @@ Utilities and helpers for simulating a network
 from __future__ import annotations
 
 import itertools
+from typing import Callable, TypeVar
+
+from twisted.internet.interfaces import IReactorTime, ITransport
+from twisted.internet.task import Clock
 
 try:
     from OpenSSL.SSL import Error as NativeOpenSSLError
@@ -413,15 +417,19 @@ def connect(
     return pump
 
 
+_TServer = TypeVar("_TServer")
+_TClient = TypeVar("_TClient")
+
+
 def connectedServerAndClient(
-    ServerClass,
-    ClientClass,
-    clientTransportFactory=makeFakeClient,
-    serverTransportFactory=makeFakeServer,
-    debug=False,
-    greet=True,
-    clock=None,
-):
+    ServerClass: Callable[[], _TServer],
+    ClientClass: Callable[[], _TClient],
+    clientTransportFactory: Callable[[_TClient], ITransport] = makeFakeClient,
+    serverTransportFactory: Callable[[_TServer], ITransport] = makeFakeServer,
+    debug: bool = False,
+    greet: bool = True,
+    clock: Clock | None = None,
+) -> tuple[_TClient, _TServer, IOPump]:
     """
     Connect a given server and client class to each other.
 
@@ -542,6 +550,7 @@ class ConnectionCompleter:
                         clientTransport,
                         debug,
                         greet=greet,
+                        clock=IReactorTime(self._reactor, None),
                     )
                     return result
         return None

@@ -15,12 +15,21 @@ import stat
 import sys
 import time
 from pprint import pformat
-from typing import IO, AnyStr, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import (
+    IO,
+    AnyStr,
+    Callable,
+    Dict,
+    List,
+    NoReturn,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
-
-from typing_extensions import NoReturn
 
 from twisted.python import filepath
 from twisted.python.filepath import FileMode, OtherAnyStr

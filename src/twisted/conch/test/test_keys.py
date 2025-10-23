@@ -27,6 +27,7 @@ if cryptography:
     from cryptography.hazmat.primitives.asymmetric import padding
 
     from twisted.conch.ssh import common, keys, sexpy
+    from twisted.conch.test.sk_dummy import SK_FLAGS_USER_PRESENCE, DummySK, SKAlgorithm
 
     ED25519_SUPPORTED = default_backend().ed25519_supported()
 else:
@@ -919,6 +920,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         from cryptography import utils
 
+        application = b"ssh:"
         skEcPublicData = {
             "x": keydata.SKECDatanistp256["x"],
             "y": keydata.SKECDatanistp256["y"],
@@ -933,11 +935,13 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
                 + utils.int_to_bytes(skEcPublicData["x"], 32)
                 + utils.int_to_bytes(skEcPublicData["y"], 32)
             )
+            + common.NS(application)
         )
 
         skEckey = keys.Key.fromString(skEcblob)
         self.assertTrue(skEckey.isPublic())
         self.assertTrue(skEckey._sk)
+        self.assertEqual(skEckey.application, application)
         self.assertEqual(skEcPublicData, skEckey.data())
 
     @skipWithoutEd25519
@@ -960,18 +964,22 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         """
         A public SK-Ed25519 key is correctly generated from a public key blob.
         """
+        application = b"ssh:"
         skEd25519PublicData = {
             "a": keydata.SKEd25519Data["a"],
         }
 
-        skEd25519Blob = common.NS(b"sk-ssh-ed25519@openssh.com") + common.NS(
-            skEd25519PublicData["a"]
+        skEd25519Blob = (
+            common.NS(b"sk-ssh-ed25519@openssh.com")
+            + common.NS(skEd25519PublicData["a"])
+            + common.NS(application)
         )
 
         skEd25519Key = keys.Key.fromString(skEd25519Blob)
 
         self.assertTrue(skEd25519Key.isPublic())
         self.assertTrue(skEd25519Key._sk)
+        self.assertEqual(skEd25519Key.application, application)
         self.assertEqual(skEd25519PublicData, skEd25519Key.data())
 
     def test_fromPrivateBlobUnsupportedType(self):
@@ -1137,6 +1145,64 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertEqual(
             keys.Key(self.ed25519Obj).blob(),
             common.NS(b"ssh-ed25519") + common.NS(publicBytes),
+        )
+
+    @skipWithoutEd25519
+    def test_blobSKEd25519(self):
+        """
+        End-to-end test verifying that an Ed25519 security key public key blob can be
+        parsed into a Key object and serialized back without modification.
+        """
+        sk = DummySK()
+
+        enroll = sk.enroll(
+            SKAlgorithm.ED25519,
+            challenge=b"dummy-challenge",
+            application="ssh:",
+            flags=SK_FLAGS_USER_PRESENCE,
+        )
+
+        alg_name = b"sk-ssh-ed25519@openssh.com"
+
+        pubkey_blob = (
+            common.NS(alg_name) + common.NS(enroll.public_key) + common.NS(b"ssh:")
+        )
+
+        self.assertEqual(
+            keys.Key.fromString(pubkey_blob).blob(),
+            common.NS(alg_name) + common.NS(enroll.public_key) + common.NS(b"ssh:"),
+        )
+
+    def test_blobSKECDSA(self):
+        """
+        End-to-end test verifying that an ECDSA security key public key blob can be
+        parsed into a Key object and serialized back without modification.
+        """
+
+        sk = DummySK()
+        application = "test-application"
+        enroll = sk.enroll(
+            SKAlgorithm.ECDSA,
+            challenge=b"dummy-challenge",
+            application=application,
+            flags=SK_FLAGS_USER_PRESENCE,
+        )
+
+        alg_name = b"sk-ecdsa-sha2-nistp256@openssh.com"
+
+        pubkey_blob = (
+            common.NS(alg_name)
+            + common.NS(b"nistp256")
+            + common.NS(enroll.public_key)
+            + common.NS(application)
+        )
+
+        self.assertEqual(
+            keys.Key.fromString(pubkey_blob).blob(),
+            common.NS(alg_name)
+            + common.NS(b"nistp256")
+            + common.NS(enroll.public_key)
+            + common.NS(application),
         )
 
     def test_blobNoKey(self):

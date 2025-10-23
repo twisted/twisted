@@ -19,7 +19,6 @@ from twisted.python import failure
 from twisted.python.compat import iterbytes
 from twisted.python.reflect import requireModule
 from twisted.test.test_internet import DummyProducer
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial import unittest
 from twisted.web import http
 from twisted.web.server import Site
@@ -2938,6 +2937,8 @@ class EndToEndTests(unittest.TestCase):
         """
         Twisted's HTTP/2 server can talk to a third-party HTTP/2 client.
         """
+        from twisted.test.test_sslverify import certificatesForAuthorityAndServer
+
         _, serverCert = certificatesForAuthorityAndServer("test.local")
         resource = Data(b"hello world", "application/octet-stream")
         resource.isLeaf = True

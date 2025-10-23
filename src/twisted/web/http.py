@@ -142,7 +142,6 @@ from twisted.internet.interfaces import (
     IReactorTime,
     ITCPTransport,
 )
-from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
@@ -3115,16 +3114,15 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.
 
-    @ivar _negotiatedProtocol: The protocol negotiated with ALPN or NPN, if
-        any.
+    @ivar _negotiatedProtocol: The protocol negotiated with ALPN, if any.
     @type _negotiatedProtocol: Either a bytestring containing the ALPN token
         for the negotiated protocol, or L{None} if no protocol has yet been
         negotiated.
 
     @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
-        is backing this object. By default this is a L{HTTPChannel}, but if a
+        is backing this object.  By default this is a L{HTTPChannel}, but if a
         HTTP protocol upgrade takes place this may be a different channel
-        object. Must implement L{IProtocol}.
+        object.  Must implement L{IProtocol}.
     @type _channel: L{HTTPChannel}
 
     @ivar _requestFactory: A callable to use to build L{IRequest} objects.
@@ -3299,7 +3297,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         return self._channel.dataReceived(data)
 
 
-def _genericHTTPChannelProtocolFactory(self):
+def _genericHTTPChannelProtocolFactory(
+    self: HTTPFactory,
+) -> _GenericHTTPChannelProtocol:
     """
     Returns an appropriately initialized _GenericHTTPChannelProtocol.
     """
@@ -3321,7 +3321,7 @@ class _MinimalLogFile(TypingProtocol):
 value: type[_MinimalLogFile] = TextIOWrapper
 
 
-class HTTPFactory(protocol.ServerFactory):
+class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
     """
     Factory for HTTP server.
 
@@ -3348,7 +3348,7 @@ class HTTPFactory(protocol.ServerFactory):
     # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
     # to a Protocol, instead of a concrete Protocol object, as expected in
     # the protocol.Factory interface
-    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
+    protocol = _genericHTTPChannelProtocolFactory
 
     logPath = None
     _logFile: _MinimalLogFile | None = None
@@ -3434,8 +3434,10 @@ class HTTPFactory(protocol.ServerFactory):
         self._logDateTime = datetimeToLogString(self.reactor.seconds())
         self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
-    def buildProtocol(self, addr: IAddress) -> Protocol | None:
-        p = protocol.ServerFactory.buildProtocol(self, addr)
+    def buildProtocol(
+        self, addr: IAddress | None
+    ) -> _GenericHTTPChannelProtocol | None:
+        p = super().buildProtocol(addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts
         # occur on the same reactor as the one we're using here. This could

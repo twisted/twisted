@@ -42,7 +42,6 @@ from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.failure import Failure
 from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import (
@@ -96,10 +95,11 @@ except ImportError:
 else:
     ssl = _ssl
     sslPresent = True
-    from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
+    from twisted.internet._sslverify import IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols import tls
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot:
@@ -1442,15 +1442,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         endpoint = self.makeEndpoint(port=expectedPort)
         self.assertEqual(endpoint._wrappedEndpoint._port, expectedPort)
 
-    def test_contextFactoryType(self):
-        """
-        L{Agent} wraps its connection creator creator and uses modern TLS APIs.
-        """
-        endpoint = self.makeEndpoint()
-        contextFactory = endpoint._wrapperFactory(None)._connectionCreator
-        self.assertIsInstance(contextFactory, ClientTLSOptions)
-        self.assertEqual(contextFactory._hostname, "example.com")
-
     def test_connectHTTPSCustomConnectionCreator(self):
         """
         If a custom L{WebClientConnectionCreator}-like object is passed to
@@ -1478,6 +1469,21 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
                 The connection started.  Record that fact.
                 """
                 self.connectState = True
+
+            def get_context(self):
+                """
+                Get the context object.
+                """
+
+            def set_app_data(self, app_data):
+                """
+                Set app data.
+                """
+
+            def get_app_data(self):
+                """
+                Get the app data.
+                """
 
         contextArgs = []
 
@@ -1570,8 +1576,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
-        self.assertTrue(trustRoot.called)
         connection = creator.clientConnectionForTLS(None)
+        self.assertTrue(trustRoot.called)
         self.assertIs(trustRoot.context, connection.get_context())
 
     def integrationTest(self, hostName, expectedAddress, addressType):
@@ -3301,6 +3307,8 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
+        firstConnection = creator.clientConnectionForTLS(None)
+        self.assertIs(trustRoot.context, firstConnection.get_context())
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
         self.assertEqual(1, len(policy._cache))

@@ -664,7 +664,7 @@ class _HTTP11ClientFactory(protocol.Factory):
             self._quiescentCallback, self._metadata
         )
 
-    def buildProtocol(self, addr: IAddress) -> HTTP11ClientProtocol:
+    def buildProtocol(self, addr: IAddress | None) -> HTTP11ClientProtocol:
         return HTTP11ClientProtocol(self._quiescentCallback)
 
 

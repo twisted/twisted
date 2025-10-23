@@ -42,6 +42,7 @@ from twisted.internet.interfaces import (
     IHostResolution,
     IListeningPort,
     IProtocol,
+    IProtocolFactory,
     IPushProducer,
     IReactorCore,
     IReactorFDSet,
@@ -53,6 +54,7 @@ from twisted.internet.interfaces import (
     IResolutionReceiver,
     ITransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
 from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
@@ -539,6 +541,8 @@ class MemoryReactor:
     """
 
     nameResolver: IHostnameResolver
+    tcpServers: list[tuple[int, IProtocolFactory, int, str]]
+    tcpClients: list[tuple[str, int, ClientFactory, int, str | None]]
 
     def __init__(self):
         """
@@ -547,9 +551,9 @@ class MemoryReactor:
         self.hasInstalled = False
 
         self.running = False
-        self.hasRun = True
-        self.hasStopped = True
-        self.hasCrashed = True
+        self.hasRun = False
+        self.hasStopped = False
+        self.hasCrashed = False
 
         self.whenRunningHooks = []
         self.triggers = {}
@@ -665,8 +669,20 @@ class MemoryReactor:
         """
         Fake L{IReactorCore.callWhenRunning}.
         Keeps a list of invocations to make in C{self.whenRunningHooks}.
+
+        If the reactor has not started, the callable will be scheduled
+        to run when it does start. Otherwise, the callable will be invoked
+        immediately.
         """
-        self.whenRunningHooks.append((callable, args, kw))
+        # Normally, we would only key off of `self.running`, but the `MemoryReactor` is
+        # a bit unique in the fact that it stops itself immediately after calling
+        # `MemoryReactor.run()`. We're going to consider it good enough if the reactor
+        # has ever been started (`self.hasRun`).
+        if self.running or self.hasRun:
+            callable(*args, **kw)
+            return None
+        else:
+            self.whenRunningHooks.append((callable, args, kw))
 
     def adoptStreamPort(self, fileno, addressFamily, factory):
         """

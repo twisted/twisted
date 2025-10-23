@@ -11,9 +11,7 @@ import os
 import subprocess
 import sys
 from io import StringIO
-from typing import Callable
-
-from typing_extensions import NoReturn
+from typing import Callable, NoReturn
 
 from twisted.conch.test.keydata import (
     privateECDSA_openssh,

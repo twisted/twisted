@@ -8,6 +8,8 @@ Protocol wrapper that provides HAProxy PROXY protocol support.
 """
 from typing import Optional, Union
 
+from typing_extensions import Self
+
 from twisted.internet import interfaces
 from twisted.internet.endpoints import _WrapperServerEndpoint
 from twisted.protocols import policies
@@ -27,7 +29,9 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper):
     """
 
     def __init__(
-        self, factory: policies.WrappingFactory, wrappedProtocol: interfaces.IProtocol
+        self,
+        factory: policies.WrappingFactory[Self],
+        wrappedProtocol: interfaces.IProtocol,
     ):
         super().__init__(factory, wrappedProtocol)
         self._proxyInfo: Optional[_info.ProxyInfo] = None

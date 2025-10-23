@@ -2373,20 +2373,19 @@ class ISSLTransport(ITCPTransport):
 
 class INegotiated(ISSLTransport):
     """
-    A TLS based transport that supports using ALPN/NPN to negotiate the
-    protocol to be used inside the encrypted tunnel.
+    A TLS based transport that supports using ALPN to negotiate the protocol to
+    be used inside the encrypted tunnel.
     """
 
-    negotiatedProtocol = Attribute(
+    negotiatedProtocol: bytes | None = Attribute(
         """
-        The protocol selected to be spoken using ALPN/NPN. The result from ALPN
-        is preferred to the result from NPN if both were used. If the remote
-        peer does not support ALPN or NPN, or neither NPN or ALPN are available
-        on this machine, will be L{None}. Otherwise, will be the name of the
-        selected protocol as C{bytes}. Note that until the handshake has
-        completed this property may incorrectly return L{None}: wait until data
-        has been received before trusting it (see
-        https://twistedmatrix.com/trac/ticket/6024).
+        The protocol selected to be spoken using ALPN.  If the remote peer does
+        not support ALPN, or ALPN is not available via local TLS libraries,
+        C{negotiatedProtocol} will be L{None}.  Otherwise,
+        C{negotiatedProtocol} will be the name of the selected protocol as
+        C{bytes}.  Until the TLS handshake has completed, this property may
+        incorrectly return L{None}: wait until data has been received before
+        trusting it.  See U{https://github.com/twisted/twisted/issues/6024}.
         """
     )
 

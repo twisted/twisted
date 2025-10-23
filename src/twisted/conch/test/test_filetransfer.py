@@ -23,22 +23,6 @@ from twisted.python.filepath import FilePath
 from twisted.trial.unittest import TestCase
 
 try:
-    from twisted.conch import unix as _unix
-except ImportError:
-    unix = None
-else:
-    unix = _unix
-
-try:
-    from twisted.conch.unix import (
-        SFTPServerForUnixConchUser as _SFTPServerForUnixConchUser,
-    )
-except ImportError:
-    SFTPServerForUnixConchUser = None
-else:
-    SFTPServerForUnixConchUser = _SFTPServerForUnixConchUser
-
-try:
     import cryptography as _cryptography
 except ImportError:
     cryptography = None
@@ -77,35 +61,14 @@ class TestAvatar(ConchUser):
         return r
 
 
-class FileTransferTestAvatar(TestAvatar):
-    def __init__(self, homeDir):
-        TestAvatar.__init__(self)
-        self.homeDir = homeDir
-
-    def getHomeDir(self):
-        return FilePath(os.getcwd()).preauthChild(self.homeDir.path)
-
-
-class ConchSessionForTestAvatar:
-    def __init__(self, avatar):
-        self.avatar = avatar
-
-
-if SFTPServerForUnixConchUser is None:
-    # unix should either be a fully working module, or None.  I'm not sure
-    # how this happens, but on win32 it does.  Try to cope.  --spiv.
-    import warnings
-
-    warnings.warn(
-        (
-            "twisted.conch.unix imported %r, "
-            "but doesn't define SFTPServerForUnixConchUser'"
-        )
-        % (unix,)
-    )
+try:
+    from twisted.conch.unix import SFTPServerForUnixConchUser
+except ImportError:
+    unix = False
 else:
+    unix = True
 
-    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):  # type: ignore[misc,valid-type]
+    class FileTransferForTestAvatar(SFTPServerForUnixConchUser):
         def gotVersion(self, version, otherExt):
             return {b"conchTest": b"ext data"}
 
@@ -117,6 +80,15 @@ else:
     components.registerAdapter(
         FileTransferForTestAvatar, TestAvatar, filetransfer.ISFTPServer
     )
+
+
+class FileTransferTestAvatar(TestAvatar):
+    def __init__(self, homeDir):
+        TestAvatar.__init__(self)
+        self.homeDir = homeDir
+
+    def getHomeDir(self):
+        return FilePath(os.getcwd()).preauthChild(self.homeDir.path)
 
 
 class SFTPTestBase(TestCase):

@@ -317,6 +317,8 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     _bootstrap: _Bootstrap
     _wsp: _WSP
 
+    factory: ProtocolFactory[_WebSocketWireProtocol[_WSP]] = field(init=False)
+
     # Public attribute.
     transport: ITransport = field(init=False)
 

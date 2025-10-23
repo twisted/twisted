@@ -6,11 +6,9 @@ Tests for L{twisted.internet.testing}.
 """
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Protocol
 
 from zope.interface.verify import verifyObject
-
-from typing_extensions import Protocol
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import (
@@ -307,6 +305,33 @@ class ReactorTests(TestCase):
         reactor.removeWriter(writer)
 
         self.assertEqual(reactor.getWriters(), [])
+
+    def test_call_when_running(self) -> None:
+        """
+        L{MemoryReactor.callWhenRunning} calls the given callable when the
+        reactor is started, or immediately if the reactor has already been
+        started.
+        """
+        reactor = MemoryReactor()
+        called = []
+
+        def f(x: int) -> None:
+            called.append(x)
+
+        # Schedule some calls to be run when the reactor starts.
+        reactor.callWhenRunning(f, 1)
+        self.assertEqual(called, [])
+
+        # Start the reactor
+        reactor.run()
+
+        # We should see the scheduled calls run now.
+        self.assertEqual(called, [1])
+
+        # Schedule another call which should be called immediately if the reactor is
+        # already running.
+        reactor.callWhenRunning(f, 2)
+        self.assertEqual(called, [1, 2])
 
 
 class TestConsumer:

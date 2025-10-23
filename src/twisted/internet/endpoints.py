@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.internet.test.test_endpoints.HostnameEndpointMemoryIPv4ReactorTests.test_errorsLogged -*-
+# -*- test-case-name: twisted.internet.test.test_endpoints -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -39,13 +39,17 @@ from twisted.internet.interfaces import (
     IHostnameResolver,
     IHostResolution,
     IOpenSSLClientConnectionCreator,
+    IOpenSSLServerConnectionCreator,
     IProtocol,
     IProtocolFactory,
+    IReactorCore,
     IReactorPluggableNameResolver,
     IReactorSocket,
+    IReactorTime,
     IResolutionReceiver,
     IStreamClientEndpoint,
     IStreamClientEndpointStringParserWithReactor,
+    IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
@@ -72,7 +76,9 @@ from ._idna import _idnaBytes, _idnaText
 
 try:
     from OpenSSL.SSL import Error as SSLError
-
+except ImportError:
+    TLSMemoryBIOFactory = None
+else:
     from twisted.internet.ssl import (
         Certificate,
         CertificateOptions,
@@ -81,10 +87,13 @@ try:
         optionsForClientTLS,
         trustRootFromCertificates,
     )
+    from twisted.protocols._sni import (
+        SNIConnectionCreator,
+        TLSServerEndpoint as _TLSServerEndpoint,
+        autoReloadingDirectoryOfPEMs,
+    )
     from twisted.protocols.tls import TLSMemoryBIOFactory as _TLSMemoryBIOFactory
-except ImportError:
-    TLSMemoryBIOFactory = None
-else:
+
     TLSMemoryBIOFactory = _TLSMemoryBIOFactory
 
 __all__ = [
@@ -104,6 +113,7 @@ __all__ = [
     "HostnameEndpoint",
     "StandardErrorBehavior",
     "connectProtocol",
+    "wrapServerTLS",
     "wrapClientTLS",
 ]
 
@@ -204,7 +214,8 @@ class _WrappingFactory(ClientFactory):
     """
 
     # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
-    protocol = _WrappingProtocol  # type: ignore[assignment]
+
+    protocol = _WrappingProtocol
 
     def __init__(self, wrappedFactory: IProtocolFactory) -> None:
         """
@@ -2279,24 +2290,21 @@ class _WrapperServerEndpoint:
 def wrapClientTLS(
     connectionCreator: IOpenSSLClientConnectionCreator,
     wrappedEndpoint: IStreamClientEndpoint,
-) -> _WrapperEndpoint:
+    clock: IReactorTime | None = None,
+) -> IStreamClientEndpoint:
     """
-    Wrap an endpoint which upgrades to TLS as soon as the connection is
-    established.
+    Wrap a stream client endpoint which such that it upgrades to TLS as soon as
+    the wrapped connection is established.
 
     @since: 16.0
 
     @param connectionCreator: The TLS options to use when connecting; see
         L{twisted.internet.ssl.optionsForClientTLS} for how to construct this.
-    @type connectionCreator:
-        L{twisted.internet.interfaces.IOpenSSLClientConnectionCreator}
 
     @param wrappedEndpoint: The endpoint to wrap.
-    @type wrappedEndpoint: An L{IStreamClientEndpoint} provider.
 
     @return: an endpoint that provides transport level encryption layered on
         top of C{wrappedEndpoint}
-    @rtype: L{twisted.internet.interfaces.IStreamClientEndpoint}
     """
     if TLSMemoryBIOFactory is None:
         raise NotImplementedError(
@@ -2305,9 +2313,34 @@ def wrapClientTLS(
     return _WrapperEndpoint(
         wrappedEndpoint,
         lambda protocolFactory: TLSMemoryBIOFactory(
-            connectionCreator, True, protocolFactory
+            connectionCreator,
+            True,
+            protocolFactory,
+            clock=clock,
         ),
     )
+
+
+def wrapServerTLS(
+    connectionCreator: IOpenSSLServerConnectionCreator,
+    wrappedEndpoint: IStreamServerEndpoint,
+    clock: IReactorTime | None = None,
+) -> IStreamServerEndpoint:
+    """
+    Wrap a server endpoint in a TLS configuration.
+
+    @param connectionCreator: The policy to create server connections.  See
+        L{twisted.internet.ssl.CertificateOptions}.
+
+    @param wrappedEndpoint: The transport server endpoint.  See
+        L{TCP6ServerEndpoint}.
+
+    @param clock: The clock interface used to schedule TLS buffered writes.
+
+    @return: an endpoint that listens with TLS encryption added to
+        C{wrappedEndpoint}
+    """
+    return _TLSServerEndpoint(wrappedEndpoint, connectionCreator, clock)
 
 
 def _parseClientTLS(
@@ -2419,3 +2452,38 @@ class _TLSClientEndpointParser:
         @rtype: L{IStreamClientEndpoint}
         """
         return _parseClientTLS(reactor, *args, **kwargs)
+
+
+@implementer(IPlugin, IStreamServerEndpointStringParser)
+class _TLSServerEndpointParser:
+    """
+    TLS server endpoint parser.
+    """
+
+    prefix: str = "tls"
+
+    def _actualParseStreamServer(
+        self,
+        reactor: IReactorCore,
+        path: str,
+        port: str = "443",
+        backlog: str = "50",
+        interface: str = "::",
+    ) -> IStreamServerEndpoint:
+        """
+        Actual parsing method, with detailed signature breaking out all
+        parameters.
+        """
+        p = FilePath(path)
+        return wrapServerTLS(
+            SNIConnectionCreator(autoReloadingDirectoryOfPEMs(p)),
+            TCP6ServerEndpoint(reactor, int(port), int(backlog), interface),
+        )
+
+    def parseStreamServer(
+        self, reactor: IReactorCore, *args: Any, **kwargs: Any
+    ) -> IStreamServerEndpoint:
+        """
+        Parse a TLS stream server endpoint.
+        """
+        return self._actualParseStreamServer(reactor, *args, **kwargs)

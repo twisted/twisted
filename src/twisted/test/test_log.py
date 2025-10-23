@@ -13,11 +13,9 @@ import sys
 import time
 import warnings
 from io import IOBase, StringIO
-from typing import Callable, List
+from typing import Callable, List, Protocol
 
 from zope.interface import implementer
-
-from typing_extensions import Protocol
 
 from twisted.logger import (
     ILogObserver,

@@ -9,7 +9,7 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_event_loop
+from asyncio import AbstractEventLoop, get_running_loop, new_event_loop, set_event_loop
 from typing import Dict, Optional, Type
 
 from zope.interface import implementer
@@ -47,7 +47,11 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
-            _eventloop: AbstractEventLoop = get_event_loop()
+            try:
+                _eventloop: AbstractEventLoop = get_running_loop()
+            except RuntimeError:
+                _eventloop = new_event_loop()
+            set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
 

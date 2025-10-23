@@ -3945,7 +3945,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a text-based I/O (i.e.: anything other than an
         # io.BufferedBase) it stays exactly the same, no modification.
         self.assertIs(getBackLogFile, factory.logFile)
-        proto = factory.buildProtocol(None)  # type:ignore
+        proto = factory.buildProtocol(None)
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
@@ -3956,7 +3956,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()  # type:ignore
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())

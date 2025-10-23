@@ -2,19 +2,19 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 """
-tls_alpn_npn_client
+tls_alpn_client
 ~~~~~~~~~~~~~~~~~~~
 
 This test script demonstrates the usage of the acceptableProtocols API as a
 client peer.
 
-It performs next protocol negotiation using NPN and ALPN.
+It performs next protocol negotiation using ALPN.
 
 It will print what protocol was negotiated and exit.
 The global variables are provided as input values.
 
 This is set up to run against the server from
-tls_alpn_npn_server.py from the directory that contains this example.
+tls_alpn_server.py from the directory that contains this example.
 
 It assumes that you have a self-signed server certificate, named
 `server-cert.pem` and located in the working directory.
