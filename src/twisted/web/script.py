@@ -3,18 +3,20 @@
 # See LICENSE for details.
 
 """
-I contain PythonScript, which is a very simple python script resource.
+I contain L{PythonScript} and L{ResourceScript} which execute Python
+code to handle requests.
 """
-
 
 import os
 import traceback
 from io import StringIO
+from typing import Optional
 
 from twisted import copyright
 from twisted.python.compat import execfile, networkString
 from twisted.python.filepath import _coerceToFilesystemEncoding
-from twisted.web import http, resource, server, static, util
+from twisted.web import pages, server, static, util
+from twisted.web.resource import Resource, _UnsafeErrorPage
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
@@ -33,6 +35,9 @@ class AlreadyCached(Exception):
     """
 
 
+noRsrc = _UnsafeErrorPage(500, "Whoops! Internal Error", rpyNoResource)
+
+
 class CacheScanner:
     def __init__(self, path, registry):
         self.path = path
@@ -49,14 +54,11 @@ class CacheScanner:
         self.doCache = 1
 
 
-noRsrc = resource._UnsafeErrorPage(500, "Whoops! Internal Error", rpyNoResource)
-
-
 def ResourceScript(path, registry):
     """
-    I am a normal py file which must define a 'resource' global, which should
-    be an instance of (a subclass of) web.resource.Resource; it will be
-    renderred.
+    I am a normal C{.py} file which must define a C{resource} global, which
+    should be an instance of (a subclass of) L{twisted.web.resource.Resource};
+    it will be rendered.
     """
     cs = CacheScanner(path, registry)
     glob = {
@@ -81,9 +83,7 @@ def ResourceTemplate(path, registry):
 
     glob = {
         "__file__": _coerceToFilesystemEncoding("", path),
-        "resource": resource._UnsafeErrorPage(
-            500, "Whoops! Internal Error", rpyNoResource
-        ),
+        "resource": noRsrc,
         "registry": registry,
     }
 
@@ -94,9 +94,20 @@ def ResourceTemplate(path, registry):
     return glob["resource"]
 
 
-class ResourceScriptWrapper(resource.Resource):
-    def __init__(self, path, registry=None):
-        resource.Resource.__init__(self)
+class ResourceScriptWrapper(Resource):
+    """
+    L{ResourceScriptWrapper} is a resource that delegates all requests
+    to a single script.
+
+    @ivar path: Filesystem path of the script.
+
+    @ivar registry: A L{static.Registry} provided to the script.
+
+    @see: L{ResourceScript}
+    """
+
+    def __init__(self, path: bytes, registry: Optional[static.Registry] = None) -> None:
+        Resource.__init__(self)
         self.path = path
         self.registry = registry or static.Registry()
 
@@ -109,22 +120,24 @@ class ResourceScriptWrapper(resource.Resource):
         return res.getChildWithDefault(path, request)
 
 
-class ResourceScriptDirectory(resource.Resource):
+class ResourceScriptDirectory(Resource):
     """
     L{ResourceScriptDirectory} is a resource which serves scripts from a
     filesystem directory.  File children of a L{ResourceScriptDirectory} will
     be served using L{ResourceScript}.  Directory children will be served using
     another L{ResourceScriptDirectory}.
 
-    @ivar path: A C{str} giving the filesystem path in which children will be
+    @ivar path: A C{bytes} giving the filesystem path in which children will be
         looked up.
 
     @ivar registry: A L{static.Registry} instance which will be used to decide
         how to interpret scripts found as children of this resource.
     """
 
-    def __init__(self, pathname, registry=None):
-        resource.Resource.__init__(self)
+    def __init__(
+        self, pathname: bytes, registry: Optional[static.Registry] = None
+    ) -> None:
+        Resource.__init__(self)
         self.path = pathname
         self.registry = registry or static.Registry()
 
@@ -135,15 +148,15 @@ class ResourceScriptDirectory(resource.Resource):
             return ResourceScriptDirectory(fn, self.registry)
         if os.path.exists(fn):
             return ResourceScript(fn, self.registry)
-        return resource._UnsafeNoResource()
+        return pages.notFound()
 
     def render(self, request):
-        return resource._UnsafeNoResource().render(request)
+        return pages.notFound().render(request)
 
 
-class PythonScript(resource.Resource):
+class PythonScript(Resource):
     """
-    I am an extremely simple dynamic resource; an embedded python script.
+    I am an extremely simple dynamic resource; an embedded Python script.
 
     This will execute a file (usually of the extension '.epy') as Python code,
     internal to the webserver.
@@ -151,7 +164,7 @@ class PythonScript(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, filename, registry):
+    def __init__(self, filename: bytes, registry: Optional[static.Registry]) -> None:
         """
         Initialize me with a script name.
         """
@@ -177,12 +190,8 @@ class PythonScript(resource.Resource):
         }
         try:
             execfile(self.filename, namespace, namespace)
-        except OSError as e:
-            if e.errno == 2:  # file not found
-                request.setResponseCode(http.NOT_FOUND)
-                request.write(
-                    resource._UnsafeNoResource("File not found.").render(request)
-                )
+        except FileNotFoundError:
+            return pages.notFound("File not found.").render(request)
         except BaseException:
             io = StringIO()
             traceback.print_exc(file=io)

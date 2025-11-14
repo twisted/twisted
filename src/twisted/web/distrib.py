@@ -25,7 +25,7 @@ from twisted.logger import Logger
 from twisted.persisted import styles
 from twisted.spread import pb
 from twisted.spread.banana import SIZE_LIMIT
-from twisted.web import http, resource, server, static, util
+from twisted.web import http, pages, resource, server, static, util
 from twisted.web.http_headers import Headers
 
 
@@ -377,7 +377,7 @@ class UserDirectory(resource.Resource):
                 pw_shell,
             ) = self._pwd.getpwnam(username.decode(sys.getfilesystemencoding()))
         except KeyError:
-            return resource._UnsafeNoResource()
+            return pages.notFound()
         if sub:
             twistdsock = os.path.join(pw_dir, self.userSocketName)
             rs = ResourceSubscription("unix", twistdsock)
@@ -386,5 +386,5 @@ class UserDirectory(resource.Resource):
         else:
             path = os.path.join(pw_dir, self.userDirName)
             if not os.path.exists(path):
-                return resource._UnsafeNoResource()
+                return pages.notFound()
             return static.File(path)

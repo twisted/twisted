@@ -17,7 +17,7 @@ from twisted.internet import protocol
 from twisted.logger import Logger
 from twisted.python import filepath
 from twisted.spread import pb
-from twisted.web import http, resource, server, static
+from twisted.web import http, pages, resource, server, static
 
 
 class CGIDirectory(resource.Resource, filepath.FilePath[AnyStr]):
@@ -35,8 +35,9 @@ class CGIDirectory(resource.Resource, filepath.FilePath[AnyStr]):
             return CGIScript(fnp.path)
 
     def render(self, request):
-        notFound = resource.NoResource(
-            "CGI directories do not support directory listing."
+        notFound = pages.notFound(
+            "Not Found",
+            "CGI directories do not support directory listing.",
         )
         return notFound.render(request)
 
@@ -323,13 +324,11 @@ class CGIProcessProtocol(protocol.ProcessProtocol, pb.Viewable):
                 headerText=self.headertext,
             )
             if not self._requestFinished:
-                self.request.write(
-                    resource.ErrorPage(
-                        http.INTERNAL_SERVER_ERROR,
-                        "CGI Script Error",
-                        "Premature end of script headers.",
-                    ).render(self.request)
-                )
+                pages.errorPage(
+                    http.INTERNAL_SERVER_ERROR,
+                    "CGI Script Error",
+                    "Premature end of script headers.",
+                ).render(self.request)
 
         if not self._requestFinished:
             self.request.unregisterProducer()

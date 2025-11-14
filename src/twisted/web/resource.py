@@ -7,6 +7,7 @@ Implementation of the lowest-level Resource class.
 
 See L{twisted.web.pages} for some utility implementations.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -28,7 +29,7 @@ from incremental import Version
 
 from twisted.python.compat import nativeString
 from twisted.python.components import proxyForInterface
-from twisted.python.deprecate import deprecated
+from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
@@ -171,15 +172,15 @@ class Resource:
         Retrieve a 'child' resource from me.
 
         Implement this to create dynamic resource generation -- resources which
-        are always available may be registered with self.putChild().
+        are always available may be registered with L{putChild()}.
 
         This will not be called if the class-level variable 'isLeaf' is set in
         your subclass; instead, the 'postpath' attribute of the request will be
         left as a list of the remaining path elements.
 
-        For example, the URL /foo/bar/baz will normally be::
+        For example, the URL C{/foo/bar/baz} will normally be:
 
-          | site.resource.getChild('foo').getChild('bar').getChild('baz').
+            site.resource.getChild('foo').getChild('bar').getChild('baz')
 
         However, if the resource returned by 'bar' has isLeaf set to true, then
         the getChild call will never be made on it.
@@ -187,14 +188,17 @@ class Resource:
         Parameters and return value have the same meaning and requirements as
         those defined by L{IResource.getChildWithDefault}.
         """
-        return _UnsafeNoResource()
+        # Local import due to circularity.
+        from twisted.web.pages import notFound
+
+        return notFound()
 
     def getChildWithDefault(self, path, request):
         """
         Retrieve a static or dynamically generated child resource from me.
 
-        First checks if a resource was added manually by putChild, and then
-        call getChild to check for dynamic resources. Only override if you want
+        First checks if a resource was added manually by L{putChild}, and then
+        call L{getChild} to check for dynamic resources. Only override if you want
         to affect behaviour of all child lookups, rather than just dynamic
         ones.
 
@@ -311,11 +315,12 @@ class _UnsafeErrorPageBase(Resource):
     @ivar code: An integer status code which will be used for the response.
     @type code: C{int}
 
-    @ivar brief: A short string which will be included in the response body as
-        the page title.
+    @ivar brief: A short HTML string which will be included in the response body
+        as the page title.
     @type brief: C{str}
 
-    @ivar detail: A longer string which will be included in the response body.
+    @ivar detail: A longer HTML string which will be included in the response
+        body.
     @type detail: C{str}
     """
 
@@ -360,10 +365,6 @@ class _UnsafeErrorPage(_UnsafeErrorPageBase):
     L{twisted.web.pages.errorPage} instead.
     """
 
-    @deprecated(
-        Version("Twisted", 22, 10, 0),
-        "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
-    )
     def __init__(self, status, brief, detail):
         _UnsafeErrorPageBase.__init__(self, status, brief, detail)
 
@@ -378,10 +379,6 @@ class _UnsafeNoResource(_UnsafeErrorPageBase):
     L{twisted.web.pages.notFound} instead.
     """
 
-    @deprecated(
-        Version("Twisted", 22, 10, 0),
-        "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
-    )
     def __init__(self, message="Sorry. No luck finding that resource."):
         _UnsafeErrorPageBase.__init__(self, NOT_FOUND, "No Such Resource", message)
 
@@ -396,10 +393,6 @@ class _UnsafeForbiddenResource(_UnsafeErrorPageBase):
     L{twisted.web.pages.forbidden} instead.
     """
 
-    @deprecated(
-        Version("Twisted", 22, 10, 0),
-        "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
-    )
     def __init__(self, message="Sorry, resource is forbidden."):
         _UnsafeErrorPageBase.__init__(self, FORBIDDEN, "Forbidden Resource", message)
 
@@ -408,6 +401,26 @@ class _UnsafeForbiddenResource(_UnsafeErrorPageBase):
 ErrorPage = _UnsafeErrorPage
 NoResource = _UnsafeNoResource
 ForbiddenResource = _UnsafeForbiddenResource
+
+# Explicitly deprecate the public aliases:
+deprecatedModuleAttribute(
+    Version("Twisted", 22, 10, 0),
+    "Use twisted.web.pages.errorPage instead, which properly escapes HTML.",
+    __name__,
+    "ErrorPage",
+)
+deprecatedModuleAttribute(
+    Version("Twisted", 22, 10, 0),
+    "Use twisted.web.pages.notFound instead, which properly escapes HTML.",
+    __name__,
+    "NoResource",
+)
+deprecatedModuleAttribute(
+    Version("Twisted", 22, 10, 0),
+    "Use twisted.web.pages.forbidden instead, which properly escapes HTML.",
+    __name__,
+    "ForbiddenResource",
+)
 
 
 class _IEncodingResource(Interface):

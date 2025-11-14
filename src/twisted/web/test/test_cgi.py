@@ -419,27 +419,22 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         self.assertEqual(_reactor.process_env["PATH_INFO"], "/a/b")
 
 
-class CGIDirectoryTests(unittest.TestCase):
+class CGIDirectoryTests(unittest.SynchronousTestCase):
     """
     Tests for L{twcgi.CGIDirectory}.
     """
 
-    def test_render(self):
+    def test_render(self) -> None:
         """
         L{twcgi.CGIDirectory.render} sets the HTTP response code to I{NOT
         FOUND}.
         """
         resource = twcgi.CGIDirectory(self.mktemp())
-        request = DummyRequest([""])
-        d = _render(resource, request)
+        request = DummyRequest([b""])
+        self.successResultOf(_render(resource, request))
+        self.assertEqual(request.responseCode, NOT_FOUND)
 
-        def cbRendered(ignored):
-            self.assertEqual(request.responseCode, NOT_FOUND)
-
-        d.addCallback(cbRendered)
-        return d
-
-    def test_notFoundChild(self):
+    def test_notFoundChild(self) -> None:
         """
         L{twcgi.CGIDirectory.getChild} returns a resource which renders an
         response with the HTTP I{NOT FOUND} status code if the indicated child
@@ -449,15 +444,10 @@ class CGIDirectoryTests(unittest.TestCase):
         path = self.mktemp()
         os.makedirs(path)
         resource = twcgi.CGIDirectory(path)
-        request = DummyRequest(["foo"])
-        child = resource.getChild("foo", request)
-        d = _render(child, request)
-
-        def cbRendered(ignored):
-            self.assertEqual(request.responseCode, NOT_FOUND)
-
-        d.addCallback(cbRendered)
-        return d
+        request = DummyRequest([b"foo"])
+        child = resource.getChild(b"foo", request)
+        self.successResultOf(_render(child, request))
+        self.assertEqual(request.responseCode, NOT_FOUND)
 
 
 class CGIProcessProtocolTests(unittest.TestCase):
@@ -471,7 +461,7 @@ class CGIProcessProtocolTests(unittest.TestCase):
         finishing writing out headers, the response has I{INTERNAL SERVER
         ERROR} as its status code.
         """
-        request = DummyRequest([""])
+        request = DummyRequest([b""])
         protocol = twcgi.CGIProcessProtocol(request)
         protocol.processEnded(failure.Failure(error.ProcessTerminated()))
         self.assertEqual(request.responseCode, INTERNAL_SERVER_ERROR)
