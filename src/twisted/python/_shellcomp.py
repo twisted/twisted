@@ -30,7 +30,6 @@ import getopt
 import inspect
 import itertools
 from types import MethodType
-from typing import Set
 
 from twisted.python import reflect, usage, util
 from twisted.python.compat import ioType
@@ -468,7 +467,7 @@ class ZshArgumentsGenerator:
         strings.sort()  # need deterministic order for reliable unit-tests
         return "(%s)" % " ".join(strings)
 
-    def makeExcludesDict(self) -> dict[str, Set[str]]:
+    def makeExcludesDict(self) -> dict[str, set[str]]:
         """
         @return: A C{dict} that maps each option name appearing in
             self.mutuallyExclusive to a set of those option names that is it
@@ -481,7 +480,7 @@ class ZshArgumentsGenerator:
             if optList[1] != None:
                 longToShort[optList[0]] = optList[1]
 
-        excludes: dict[str, Set[str]] = {}
+        excludes: dict[str, set[str]] = {}
         for lst in self.mutuallyExclusive:
             for i, longname in enumerate(lst):
                 tmp = set(lst[:i] + lst[i + 1 :])

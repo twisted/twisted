@@ -10,7 +10,7 @@ import traceback
 import unittest as pyunit
 import weakref
 from enum import Enum
-from typing import Any, Generator, Set, Union
+from typing import Any, Generator, Union
 
 from twisted.internet import reactor, task
 from twisted.internet.defer import (
@@ -397,7 +397,7 @@ class BasicTests(TestCase):
         """
 
         # Create an object and weak reference to track if its gotten freed.
-        obj: Set[Any] = set()
+        obj: set[Any] = set()
         objWeakRef = weakref.ref(obj)
 
         @inlineCallbacks

@@ -10,7 +10,7 @@ import sys
 from functools import partial
 from io import StringIO
 from os.path import sep
-from typing import Callable, Set
+from typing import Callable
 from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify
@@ -68,7 +68,7 @@ class FakeTransport:
     A simple fake process transport.
     """
 
-    _closed: Set[int] = field(default=Factory(set))
+    _closed: set[int] = field(default=Factory(set))
 
     def writeToChild(self, fd, data):
         """

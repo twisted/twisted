@@ -31,7 +31,6 @@ from typing import (
     Mapping,
     NoReturn,
     Optional,
-    Set,
     Type,
     TypeVar,
     Union,
@@ -4027,7 +4026,7 @@ class InlineCallbackTests(unittest.SynchronousTestCase):
         """
 
         # Create an object and weak reference to track if its gotten freed.
-        obj: Set[Any] = set()
+        obj: set[Any] = set()
         objWeakRef = weakref.ref(obj)
 
         async def func(a: Any) -> Any:

@@ -9,7 +9,7 @@ workers.
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, Optional, Set
+from typing import Callable, Optional
 
 from zope.interface import implementer
 
@@ -100,7 +100,7 @@ class Team:
         self._logException = logException
 
         # Don't touch these except from the coordinator.
-        self._idle: Set[IWorker] = set()
+        self._idle: set[IWorker] = set()
         self._busyCount = 0
         self._pending: "deque[Callable[..., object]]" = deque()
         self._shouldQuitCoordinator = False

@@ -21,7 +21,6 @@ from typing import (
     NewType,
     Optional,
     Sequence,
-    Set,
     Union,
     cast,
 )
@@ -630,7 +629,7 @@ class ReactorBase(PluggableResolverMixin):
         self._startedBefore = False
         # reactor internal readers, e.g. the waker.
         # Using Any as the type here… unable to find a suitable defined interface
-        self._internalReaders: Set[Any] = set()
+        self._internalReaders: set[Any] = set()
         self.waker: Any = None
 
         # Arrange for the running attribute to change to True at the right time
