@@ -13,7 +13,7 @@ import socket
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Dict
 
 from zope.interface import Interface, implementer
 
@@ -340,7 +340,7 @@ class URL:
             self.headers = headers
 
     def toString(self) -> str:
-        l: List[str] = []
+        l: list[str] = []
         w = l.append
         w("sip:")
         if self.username != None:

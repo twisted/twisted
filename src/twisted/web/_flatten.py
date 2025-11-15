@@ -18,7 +18,6 @@ from typing import (
     Callable,
     Coroutine,
     Generator,
-    List,
     Mapping,
     Optional,
     Sequence,
@@ -52,7 +51,7 @@ Flattenable = Union[
     Comment,
     Tag,
     Tuple[FlattenableRecursive, ...],
-    List[FlattenableRecursive],
+    list[FlattenableRecursive],
     Generator[FlattenableRecursive, None, None],
     CharRef,
     Deferred[FlattenableRecursive],
@@ -227,7 +226,7 @@ def _flattenElement(
     request: Optional[IRequest],
     root: Flattenable,
     write: Callable[[bytes], object],
-    slotData: List[Optional[Mapping[str, Flattenable]]],
+    slotData: list[Optional[Mapping[str, Flattenable]]],
     renderFactory: Optional[IRenderable],
     dataEscaper: Callable[[Union[bytes, str]], bytes],
     # This is annotated as Generator[T, None, None] instead of Iterator[T]
@@ -412,7 +411,7 @@ async def _flattenTree(
             del buf[:]
             bufSize = 0
 
-    stack: List[Generator[Any, Any, Any]] = [
+    stack: list[Generator[Any, Any, Any]] = [
         _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
 

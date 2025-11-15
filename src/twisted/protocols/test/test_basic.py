@@ -9,7 +9,7 @@ Test cases for L{twisted.protocols.basic}.
 import struct
 import sys
 from io import BytesIO
-from typing import List, Optional, Type
+from typing import Optional, Type
 
 from zope.interface.verify import verifyObject
 
@@ -555,7 +555,7 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 
 class LPTestCaseMixin:
-    illegalStrings: Optional[List[bytes]] = []
+    illegalStrings: Optional[list[bytes]] = []
     protocol: "Optional[Type[protocol.Protocol]]" = None
 
     def getProtocol(self):
@@ -801,9 +801,9 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     """
 
     protocol: "Optional[Type[protocol.Protocol]]" = None
-    strings: Optional[List[bytes]] = None
-    illegalStrings: Optional[List[bytes]] = None
-    partialStrings: Optional[List[bytes]] = None
+    strings: Optional[list[bytes]] = None
+    illegalStrings: Optional[list[bytes]] = None
+    partialStrings: Optional[list[bytes]] = None
 
     def test_receive(self):
         """

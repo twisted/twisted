@@ -10,7 +10,7 @@ Interface definitions for L{twisted.web}.
     body is not known in advance.
 """
 
-from typing import TYPE_CHECKING, Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from zope.interface import Attribute, Interface
 
@@ -543,7 +543,7 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load() -> List["Flattenable"]:
+    def load() -> list["Flattenable"]:
         """
         Load a template suitable for rendering.
 

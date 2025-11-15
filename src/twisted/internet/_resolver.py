@@ -23,7 +23,6 @@ from socket import (
 from typing import (
     TYPE_CHECKING,
     Callable,
-    List,
     NoReturn,
     Optional,
     Sequence,
@@ -95,7 +94,7 @@ _socktypeToType = {
 }
 
 
-_GETADDRINFO_RESULT = List[
+_GETADDRINFO_RESULT = list[
     Tuple[
         AddressFamily,
         SocketKind,

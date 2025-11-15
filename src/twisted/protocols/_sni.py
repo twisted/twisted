@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property, partial
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, Tuple
 
 from zope.interface import implementer
 
@@ -149,7 +149,7 @@ class TLSServerEndpoint(object):
         )
 
 
-def _getSubjectAltNames(c: Certificate) -> List[str]:
+def _getSubjectAltNames(c: Certificate) -> list[str]:
     """
     Get all the DNSName SANs for a given certificate.
     """
@@ -217,12 +217,12 @@ class PEMObjects:
     A collection of objects loaded from a collection of PEM-encoded files.
     """
 
-    _certificates: List[tuple[FilePath[str], Certificate]]
+    _certificates: list[tuple[FilePath[str], Certificate]]
     """
     A list of pairs of (FilePath, Certificate) that indicates what files
     contain what certificates.
     """
-    _keyPairs: List[tuple[FilePath[str], KeyPair]]
+    _keyPairs: list[tuple[FilePath[str], KeyPair]]
     """
     A list of pairs of (FilePath, KeyPair) that indicates what pairs contain
     what certificates.
@@ -254,8 +254,8 @@ class PEMObjects:
         @param fp: A L{FilePath} pointing at a file on the filesystem whose
             contents should be PEM data.
         """
-        certBlobs: List[bytes] = []
-        keyBlobs: List[bytes] = []
+        certBlobs: list[bytes] = []
+        keyBlobs: list[bytes] = []
         blobs = [b""]
         with fp.open() as pemlines:
             for line in pemlines:

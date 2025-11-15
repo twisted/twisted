@@ -6,7 +6,7 @@ Tests for L{twisted.application.twist._twist}.
 """
 
 from sys import stdout
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import twisted.trial.unittest
 from twisted.internet.interfaces import IReactorCore
@@ -56,7 +56,7 @@ class TwistTests(twisted.trial.unittest.TestCase):
         Patch L{MultiService.startService} so we can capture usage and prevent
         actual starts.
         """
-        self.serviceStarts: List[IService] = []
+        self.serviceStarts: list[IService] = []
 
         def startService(service: IService) -> None:
             self.serviceStarts.append(service)

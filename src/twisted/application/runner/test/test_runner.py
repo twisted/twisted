@@ -9,7 +9,7 @@ import errno
 from io import StringIO
 from signal import SIGTERM
 from types import TracebackType
-from typing import Any, Iterable, List, Optional, TextIO, Tuple, Type, Union, cast
+from typing import Any, Iterable, Optional, TextIO, Tuple, Type, Union, cast
 
 from attr import Factory, attrib, attrs
 
@@ -215,7 +215,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # running (started by trial) logging system.
 
         class LogBeginner:
-            observers: List[ILogObserver] = []
+            observers: list[ILogObserver] = []
 
             def beginLoggingTo(self, observers: Iterable[ILogObserver]) -> None:
                 LogBeginner.observers = list(observers)
@@ -226,7 +226,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
 
         class MockFilteringLogObserver(FilteringLogObserver):
             observer: Optional[ILogObserver] = None
-            predicates: List[LogLevelFilterPredicate] = []
+            predicates: list[LogLevelFilterPredicate] = []
 
             def __init__(
                 self,
@@ -357,7 +357,7 @@ class DummyRunner(Runner):
     Keep track of calls to some methods without actually doing anything.
     """
 
-    calledMethods = attrib(type=List[str], default=Factory(list))
+    calledMethods = attrib(type=list[str], default=Factory(list))
 
     def killIfRequested(self) -> None:
         self.calledMethods.append("killIfRequested")
@@ -424,7 +424,7 @@ class DummyKill:
     """
 
     def __init__(self) -> None:
-        self.calls: List[Tuple[int, int]] = []
+        self.calls: list[Tuple[int, int]] = []
 
     def __call__(self, pid: int, sig: int) -> None:
         self.calls.append((pid, sig))

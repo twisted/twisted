@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._filter}.
 """
 
-from typing import Iterable, List, Tuple, Union, cast
+from typing import Iterable, Tuple, Union, cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -42,7 +42,7 @@ class FilteringLogObserverTests(unittest.TestCase):
 
     def filterWith(
         self, filters: Iterable[str], other: bool = False
-    ) -> Union[List[int], Tuple[List[int], List[int]]]:
+    ) -> Union[list[int], Tuple[list[int], list[int]]]:
         """
         Apply a set of pre-defined filters on a known set of events and return
         the filtered list of event numbers.
@@ -60,7 +60,7 @@ class FilteringLogObserverTests(unittest.TestCase):
 
         @return: event numbers or 2-tuple of lists of event numbers.
         """
-        events: List[LogEvent] = [
+        events: list[LogEvent] = [
             dict(count=0),
             dict(count=1),
             dict(count=2),
@@ -133,8 +133,8 @@ class FilteringLogObserverTests(unittest.TestCase):
                 return None
 
         predicates = (getattr(Filters, f) for f in filters)
-        eventsSeen: List[LogEvent] = []
-        eventsNotSeen: List[LogEvent] = []
+        eventsSeen: list[LogEvent] = []
+        eventsNotSeen: list[LogEvent] = []
         trackingObserver = cast(ILogObserver, eventsSeen.append)
 
         if other:
@@ -206,8 +206,8 @@ class FilteringLogObserverTests(unittest.TestCase):
         """
         e: LogEvent = dict(obj=object())
 
-        def callWithPredicateResult(result: NamedConstant) -> List[LogEvent]:
-            seen: List[LogEvent] = []
+        def callWithPredicateResult(result: NamedConstant) -> list[LogEvent]:
+            seen: list[LogEvent] = []
             observer = FilteringLogObserver(
                 cast(ILogObserver, lambda e: seen.append(e)),
                 (cast(ILogFilterPredicate, lambda e: result),),

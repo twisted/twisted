@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import inspect
 import warnings
-from typing import Callable, List
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -27,7 +27,7 @@ from twisted.trial._synctest import FailTest, SkipTest, SynchronousTestCase
 
 _P = ParamSpec("_P")
 
-_wait_is_running: List[None] = []
+_wait_is_running: list[None] = []
 
 
 @implementer(itrial.ITestCase)

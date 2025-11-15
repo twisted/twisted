@@ -21,7 +21,7 @@ Serializing a formatting structure is done with L{flatten}.
 """
 
 
-from typing import ClassVar, List, Sequence
+from typing import ClassVar, Sequence
 
 from twisted.python.util import FancyEqMixin
 
@@ -296,7 +296,7 @@ def flatten(output, attrs, attributeRenderer="toVT102"):
     @return: A string expressing the text and display attributes specified by
         L{output}.
     """
-    flattened: List[str] = []
+    flattened: list[str] = []
     output.serialize(flattened.append, attrs, attributeRenderer)
     return "".join(flattened)
 

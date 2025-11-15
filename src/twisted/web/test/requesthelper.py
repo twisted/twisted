@@ -10,7 +10,7 @@ from __future__ import annotations
 __all__ = ["DummyChannel", "DummyRequest"]
 
 from io import BytesIO
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from zope.interface import implementer, verify
 
@@ -211,11 +211,11 @@ class DummyRequest:
     uri = b"http://dummy/"
     method = b"GET"
     client: Optional[IAddress] = None
-    sitepath: List[bytes]
-    written: List[bytes]
-    prepath: List[bytes]
-    args: Dict[bytes, List[bytes]]
-    _finishedDeferreds: List[Deferred[None]]
+    sitepath: list[bytes]
+    written: list[bytes]
+    prepath: list[bytes]
+    args: Dict[bytes, list[bytes]]
+    _finishedDeferreds: list[Deferred[None]]
 
     def registerProducer(self, prod, s):
         """

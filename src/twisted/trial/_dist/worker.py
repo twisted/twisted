@@ -15,7 +15,6 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    List,
     Optional,
     Protocol,
     TextIO,
@@ -181,7 +180,7 @@ class LocalWorkerAMP(AMP):
         self,
         error: WorkerException,
         errorClass: str,
-        frames: List[str],
+        frames: list[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.

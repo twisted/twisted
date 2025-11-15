@@ -16,7 +16,7 @@ import unittest as pyunit
 import warnings
 from collections import OrderedDict
 from types import TracebackType
-from typing import TYPE_CHECKING, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Type, Union
 
 from zope.interface import implementer
 
@@ -97,9 +97,9 @@ class TestResult(pyunit.TestResult):
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
     _DEFAULT_TODO = "Test expected to fail"
 
-    skips: List[Tuple[itrial.ITestCase, str]]
-    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
-    unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
+    skips: list[Tuple[itrial.ITestCase, str]]
+    expectedFailures: list[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    unexpectedSuccesses: list[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
     successes: int
     _testStarted: Optional[int]
     # The duration of the test. It is None until the test completes.

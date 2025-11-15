@@ -37,7 +37,7 @@ import unittest as pyunit
 import warnings
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Callable, Generator, List, Optional, Protocol, TextIO, Type, Union
+from typing import Callable, Generator, Optional, Protocol, TextIO, Type, Union
 
 from zope.interface import implementer
 
@@ -714,7 +714,7 @@ class TestLoader:
 
     loadTestsFromName = loadByName
 
-    def loadByNames(self, names: List[str], recurse: bool = False) -> TestSuite:
+    def loadByNames(self, names: list[str], recurse: bool = False) -> TestSuite:
         """
         Load some tests by a list of names.
 

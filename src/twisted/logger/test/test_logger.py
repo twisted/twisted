@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._logger}.
 """
 
-from typing import List, Optional, Type, cast
+from typing import Optional, Type, cast
 
 from zope.interface import implementer
 
@@ -86,7 +86,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result: List[Logger] = []
+        result: list[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -120,7 +120,7 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed: List[LogEvent] = []
+        observed: list[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))

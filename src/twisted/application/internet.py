@@ -38,8 +38,6 @@ reactor.listen/connect* methods for more information.
 """
 
 
-from typing import List
-
 from twisted.application import service
 from twisted.internet import task
 from twisted.internet.defer import CancelledError
@@ -48,7 +46,7 @@ from ._client_service import ClientService, _maybeGlobalReactor, backoffPolicy
 
 
 class _VolatileDataService(service.Service):
-    volatile: List[str] = []
+    volatile: list[str] = []
 
     def __getstate__(self):
         d = service.Service.__getstate__(self)

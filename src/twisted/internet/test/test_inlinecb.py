@@ -10,7 +10,7 @@ import traceback
 import unittest as pyunit
 import weakref
 from enum import Enum
-from typing import Any, Generator, List, Set, Union
+from typing import Any, Generator, Set, Union
 
 from twisted.internet import reactor, task
 from twisted.internet.defer import (
@@ -1638,8 +1638,8 @@ class CancellationTests(SynchronousTestCase):
             3. Cancelling the deferred again cancels any deferred the function
                is waiting on, and the exception is raised.
         """
-        canceller1Calls: List[Deferred[object]] = []
-        canceller2Calls: List[Deferred[object]] = []
+        canceller1Calls: list[Deferred[object]] = []
+        canceller2Calls: list[Deferred[object]] = []
         d1: Deferred[object] = Deferred(canceller1Calls.append)
         d2: Deferred[object] = Deferred(canceller2Calls.append)
 

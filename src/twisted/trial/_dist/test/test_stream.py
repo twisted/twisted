@@ -3,7 +3,7 @@ Tests for L{twisted.trial._dist.stream}.
 """
 
 from random import Random
-from typing import Awaitable, Dict, List, TypeVar, Union
+from typing import Awaitable, Dict, TypeVar, Union
 
 from hamcrest import (
     all_of,
@@ -37,7 +37,7 @@ class StreamReceiverTests(SynchronousTestCase):
     """
 
     @given(lists(lists(binary())), randoms())
-    def test_streamReceived(self, streams: List[List[bytes]], random: Random) -> None:
+    def test_streamReceived(self, streams: list[list[bytes]], random: Random) -> None:
         """
         All data passed to L{StreamReceiver.write} is returned by a call to
         L{StreamReceiver.finish} with a matching C{streamId}.
@@ -195,7 +195,7 @@ class StreamTests(SynchronousTestCase):
     """
 
     @given(lists(binary()))
-    def test_stream(self, chunks: List[bytes]) -> None:
+    def test_stream(self, chunks: list[bytes]) -> None:
         """
         All of the chunks passed to L{stream} are sent in order over a
         stream using the given AMP connection.

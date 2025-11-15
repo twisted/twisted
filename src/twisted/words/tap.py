@@ -7,7 +7,7 @@ Shiny new words service maker
 
 import socket
 import sys
-from typing import List, Optional, Sequence
+from typing import Optional, Sequence
 
 from twisted import plugin
 from twisted.application import strports
@@ -19,7 +19,7 @@ from twisted.words import iwords, service
 
 class Options(usage.Options, strcred.AuthOptionMixin):
     supportedInterfaces = [credentials.IUsernamePassword]
-    optParameters: List[Sequence[Optional[str]]] = [
+    optParameters: list[Sequence[Optional[str]]] = [
         (
             "hostname",
             None,

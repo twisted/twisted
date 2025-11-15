@@ -16,7 +16,6 @@ from typing import (
     AnyStr,
     Callable,
     Dict,
-    List,
     Mapping,
     Optional,
     Tuple,
@@ -383,10 +382,10 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # Depending on our active context, the element type can be Tag, slot
         # or str. Since mypy doesn't understand that context, it would be
         # a pain to not use Any here.
-        self.document: List[Any] = []
+        self.document: list[Any] = []
         self.current = self.document
-        self.stack: List[Any] = []
-        self.xmlnsAttrs: List[Tuple[str, str]] = []
+        self.stack: list[Any] = []
+        self.xmlnsAttrs: list[Tuple[str, str]] = []
 
     def endDocument(self) -> None:
         """
@@ -604,7 +603,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.current.append(Comment(content))
 
 
-def _flatsaxParse(fl: Union[IO[AnyStr], str]) -> List["Flattenable"]:
+def _flatsaxParse(fl: Union[IO[AnyStr], str]) -> list["Flattenable"]:
     """
     Perform a SAX parse of an XML document with the _ToStan class.
 
@@ -644,10 +643,10 @@ class XMLString:
         if not isinstance(s, str):
             s = s.decode("utf8")
 
-        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(io.StringIO(s))
+        self._loadedTemplate: list["Flattenable"] = _flatsaxParse(io.StringIO(s))
         """The loaded document."""
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list["Flattenable"]:
         """
         Return the document.
 
@@ -818,7 +817,7 @@ class TagLoader:
         self.tag: "Flattenable" = tag
         """The object which will be loaded."""
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list["Flattenable"]:
         return [self.tag]
 
 
@@ -842,13 +841,13 @@ class XMLFile:
                 stacklevel=2,
             )
 
-        self._loadedTemplate: Optional[List["Flattenable"]] = None
+        self._loadedTemplate: Optional[list["Flattenable"]] = None
         """The loaded document, or L{None}, if not loaded."""
 
         self._path: FilePath[Any] = path
         """The file that is being loaded from."""
 
-    def _loadDoc(self) -> List["Flattenable"]:
+    def _loadDoc(self) -> list["Flattenable"]:
         """
         Read and parse the XML.
 
@@ -863,7 +862,7 @@ class XMLFile:
     def __repr__(self) -> str:
         return f"<XMLFile of {self._path!r}>"
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list["Flattenable"]:
         """
         Return the document, first loading it if necessary.
 

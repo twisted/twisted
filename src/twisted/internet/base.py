@@ -19,7 +19,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    List,
     NewType,
     Optional,
     Sequence,
@@ -411,9 +410,9 @@ class _ThreePhaseEvent:
     """
 
     def __init__(self) -> None:
-        self.before: List[_ThreePhaseEventTrigger] = []
-        self.during: List[_ThreePhaseEventTrigger] = []
-        self.after: List[_ThreePhaseEventTrigger] = []
+        self.before: list[_ThreePhaseEventTrigger] = []
+        self.during: list[_ThreePhaseEventTrigger] = []
+        self.after: list[_ThreePhaseEventTrigger] = []
         self.state = "BASE"
 
     def addTrigger(
@@ -494,7 +493,7 @@ class _ThreePhaseEvent:
         """
         self.state = "BEFORE"
         self.finishedBefore = []
-        beforeResults: List[Deferred[object]] = []
+        beforeResults: list[Deferred[object]] = []
         while self.before:
             callable, args, kwargs = self.before.pop(0)
             self.finishedBefore.append((callable, args, kwargs))
@@ -622,10 +621,10 @@ class ReactorBase(PluggableResolverMixin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.threadCallQueue: List[_ThreadCall] = []
+        self.threadCallQueue: list[_ThreadCall] = []
         self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
-        self._pendingTimedCalls: List[DelayedCall] = []
-        self._newTimedCalls: List[DelayedCall] = []
+        self._pendingTimedCalls: list[DelayedCall] = []
+        self._newTimedCalls: list[DelayedCall] = []
         self._cancellations = 0
         self.running = False
         self._started = False
@@ -754,17 +753,17 @@ class ReactorBase(PluggableResolverMixin):
             reflect.qual(self.__class__) + " did not implement removeWriter"
         )
 
-    def removeAll(self) -> List[Union[IReadDescriptor, IWriteDescriptor]]:
+    def removeAll(self) -> list[Union[IReadDescriptor, IWriteDescriptor]]:
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement removeAll"
         )
 
-    def getReaders(self) -> List[IReadDescriptor]:
+    def getReaders(self) -> list[IReadDescriptor]:
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement getReaders"
         )
 
-    def getWriters(self) -> List[IWriteDescriptor]:
+    def getWriters(self) -> list[IWriteDescriptor]:
         raise NotImplementedError(
             reflect.qual(self.__class__) + " did not implement getWriters"
         )
@@ -1345,4 +1344,4 @@ class BasePort(abstract.FileDescriptor):
         raise RuntimeError("doWrite called on a %s" % reflect.qual(self.__class__))
 
 
-__all__: List[str] = []
+__all__: list[str] = []

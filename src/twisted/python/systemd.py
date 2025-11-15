@@ -13,7 +13,7 @@ feature are supported.
 __all__ = ["ListenFDs"]
 
 from os import getpid
-from typing import Dict, List, Mapping, Optional, Sequence
+from typing import Dict, Mapping, Optional, Sequence
 
 from attrs import Factory, define
 
@@ -71,7 +71,7 @@ class ListenFDs:
             start = cls._START
 
         if str(getpid()) == environ.get("LISTEN_PID"):
-            descriptors: List[int] = _parseDescriptors(start, environ)
+            descriptors: list[int] = _parseDescriptors(start, environ)
             names: Sequence[str] = _parseNames(environ)
         else:
             descriptors = []
@@ -89,7 +89,7 @@ class ListenFDs:
 
         return cls(descriptors, names)
 
-    def inheritedDescriptors(self) -> List[int]:
+    def inheritedDescriptors(self) -> list[int]:
         """
         @return: The configured descriptors.
         """
@@ -103,7 +103,7 @@ class ListenFDs:
         return dict(zip(self._names, self._descriptors))
 
 
-def _parseDescriptors(start: int, environ: Mapping[str, str]) -> List[int]:
+def _parseDescriptors(start: int, environ: Mapping[str, str]) -> list[int]:
     """
     Parse the I{LISTEN_FDS} environment variable supplied by systemd.
 

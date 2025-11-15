@@ -28,7 +28,6 @@ from typing import (
     Coroutine,
     Dict,
     Generator,
-    List,
     Literal,
     Mapping,
     NoReturn,
@@ -111,7 +110,7 @@ class ImmediateFailureMixin:
         @return: The exception instance in the Deferred.
         """
         testCase = cast(unittest.TestCase, self)
-        failures: List[Failure] = []
+        failures: list[Failure] = []
         deferred.addErrback(failures.append)
         testCase.assertEqual(len(failures), 1)
         testCase.assertTrue(failures[0].check(exception))
@@ -285,7 +284,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.errbackResults[1], {})
 
     def testDeferredList(self) -> None:
-        ResultList = List[Tuple[bool, Union[str, Failure]]]
+        ResultList = list[Tuple[bool, Union[str, Failure]]]
 
         defr1: Deferred[str] = Deferred()
         defr2: Deferred[str] = Deferred()
@@ -321,11 +320,11 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         )
 
     def testEmptyDeferredList(self) -> None:
-        result: List[_DeferredListResultListT[None]] = []
+        result: list[_DeferredListResultListT[None]] = []
 
         def cb(
             resultList: _DeferredListResultListT[None],
-            result: List[_DeferredListResultListT[None]] = result,
+            result: list[_DeferredListResultListT[None]] = result,
         ) -> None:
             result.append(resultList)
 
@@ -345,7 +344,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         defr2: Deferred[str] = Deferred()
         defr3: Deferred[str] = Deferred()
         dl = DeferredList([defr1, defr2, defr3], fireOnOneErrback=True)
-        result: List[Failure] = []
+        result: list[Failure] = []
         dl.addErrback(result.append)
 
         # consume errors after they pass through the DeferredList (to avoid
@@ -385,10 +384,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d1: Deferred[None] = Deferred()
         dl = DeferredList([d1])
 
-        errorTrap: List[Failure] = []
+        errorTrap: list[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        resultLists: List[_DeferredListResultListT[None]] = []
+        resultLists: list[_DeferredListResultListT[None]] = []
         dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
@@ -402,10 +401,10 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d1: Deferred[None] = Deferred()
         dl = DeferredList([d1], consumeErrors=True)
 
-        errorTrap: List[Failure] = []
+        errorTrap: list[Failure] = []
         d1.addErrback(errorTrap.append)
 
-        resultLists: List[_DeferredListResultListT[None]] = []
+        resultLists: list[_DeferredListResultListT[None]] = []
         dl.addCallback(resultLists.append)
 
         d1.errback(GenericError("Bang"))
@@ -423,7 +422,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
 
         # *Then* build the DeferredList, with fireOnOneErrback=True
         dl = DeferredList([d1, d2], fireOnOneErrback=True)
-        result: List[Failure] = []
+        result: list[Failure] = []
         dl.addErrback(result.append)
         self.assertEqual(1, len(result))
 
@@ -439,7 +438,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # *Then* build the DeferredList
         dl = DeferredList([d1, d2])
 
-        result: List[List[Tuple[bool, int]]] = []
+        result: list[list[Tuple[bool, int]]] = []
         dl.addCallback(result.append)
 
         self.assertEqual(1, len(result))
@@ -603,7 +602,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.failureResultOf(deferredList, defer.FirstError)
 
     def testImmediateSuccess(self) -> None:
-        l: List[str] = []
+        l: list[str] = []
         d: Deferred[str] = defer.succeed("success")
         d.addCallback(l.append)
         self.assertEqual(l, ["success"])
@@ -618,13 +617,13 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(d.__dict__, d2.__dict__)
 
     def testImmediateFailure(self) -> None:
-        l: List[Failure] = []
+        l: list[Failure] = []
         d: Deferred[None] = defer.fail(GenericError("fail"))
         d.addErrback(l.append)
         self.assertEqual(str(l[0].value), "fail")
 
     def testPausedFailure(self) -> None:
-        l: List[Failure] = []
+        l: list[Failure] = []
         d = defer.fail(GenericError("fail"))
         d.pause()
         d.addErrback(l.append)
@@ -633,7 +632,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(str(l[0].value), "fail")
 
     def testCallbackErrors(self) -> None:
-        l: List[Failure] = []
+        l: list[Failure] = []
         d: Deferred[int] = Deferred()
         d.addCallback(lambda _: 1 // 0).addErrback(l.append)
         d.callback(1)
@@ -743,7 +742,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         chained.addCallback(lambda ignored: paused)
         chained.callback(None)
 
-        result: List[object] = []
+        result: list[object] = []
         chained.addCallback(result.append)
         self.assertEqual(result, [])
         paused.unpause()
@@ -761,19 +760,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         first.callback(None)
         first.pause()
         second.callback(None)
-        result: List[None] = []
+        result: list[None] = []
         second.addCallback(result.append)
         self.assertEqual(result, [None])
 
     def test_gatherResults(self) -> None:
         # test successful list of deferreds
-        results: List[List[int]] = []
+        results: list[list[int]] = []
         defer.gatherResults([defer.succeed(1), defer.succeed(2)]).addCallback(
             results.append
         )
         self.assertEqual(results, [[1, 2]])
         # test failing list of deferreds
-        errors: List[Failure] = []
+        errors: list[Failure] = []
         dl = [defer.succeed(1), defer.fail(ValueError())]
         defer.gatherResults(dl).addErrback(errors.append)
         self.assertEqual(len(errors), 1)
@@ -791,9 +790,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         dgood = defer.succeed(1)
         dbad = defer.fail(RuntimeError("oh noes"))
         d = defer.gatherResults([dgood, dbad], consumeErrors=True)
-        unconsumedErrors: List[Failure] = []
+        unconsumedErrors: list[Failure] = []
         dbad.addErrback(unconsumedErrors.append)
-        gatheredErrors: List[Failure] = []
+        gatheredErrors: list[Failure] = []
         d.addErrback(gatheredErrors.append)
 
         self.assertEqual((len(unconsumedErrors), len(gatheredErrors)), (0, 1))
@@ -837,8 +836,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         function and pass it to its resulting L{Deferred}.
         """
         result = object()
-        results: List[object] = []
-        errors: List[Failure] = []
+        results: list[object] = []
+        errors: list[Failure] = []
         d = defer.maybeDeferred(lambda: result)
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(errors, [])
@@ -853,8 +852,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         def plusFive(x: int) -> int:
             return x + 5
 
-        results: List[int] = []
-        errors: List[Failure] = []
+        results: list[int] = []
+        errors: list[Failure] = []
         d = defer.maybeDeferred(plusFive, 10)
         assert_type(d, Deferred[int])
         d.addCallbacks(results.append, errors.append)
@@ -871,8 +870,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         def raisesException() -> NoReturn:
             raise expected
 
-        results: List[int] = []
-        errors: List[Failure] = []
+        results: list[int] = []
+        errors: list[Failure] = []
         defer.maybeDeferred(raisesException).addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
@@ -888,8 +887,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         except TypeError:
             expected = Failure()
 
-        results: List[int] = []
-        errors: List[Failure] = []
+        results: list[int] = []
+        errors: list[Failure] = []
         d = defer.maybeDeferred(lambda: expected)
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
@@ -904,7 +903,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d1: Deferred[str] = Deferred()
         d2 = defer.maybeDeferred(lambda: d1)
         d1.callback("Success")
-        result: List[str] = []
+        result: list[str] = []
         d2.addCallback(result.append)
         self.assertEqual(result, ["Success"])
 
@@ -988,8 +987,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         callbacks are executed after the third L{Deferred} fires and before the
         first receives a result.
         """
-        results: List[Union[Tuple[str, str], str]] = []
-        failures: List[Failure] = []
+        results: list[Union[Tuple[str, str], str]] = []
+        failures: list[Failure] = []
         inner: Deferred[str] = Deferred()
 
         def cb(result: str) -> Deferred[str]:
@@ -1032,19 +1031,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         checking that we search for that callback among the whole list of
         callbacks.
         """
-        results: List[Tuple[str, Union[str, List[str], None]]] = []
-        failures: List[Failure] = []
+        results: list[Tuple[str, Union[str, list[str], None]]] = []
+        failures: list[Failure] = []
         a: Deferred[str] = Deferred()
 
         def cb(result: str) -> Deferred[None]:
             results.append(("cb", result))
             d: Deferred[None] = Deferred()
 
-            def firstCallback(result: None) -> Deferred[List[str]]:
+            def firstCallback(result: None) -> Deferred[list[str]]:
                 results.append(("firstCallback", result))
                 return defer.gatherResults([a])
 
-            def secondCallback(result: List[str]) -> None:
+            def secondCallback(result: list[str]) -> None:
                 results.append(("secondCallback", result))
 
             returner = (
@@ -1070,19 +1069,19 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         another L{Deferred} as a result is run after the callbacks of the other
         L{Deferred} are run.
         """
-        results: List[Tuple[str, Union[str, List[str], None]]] = []
-        failures: List[Failure] = []
+        results: list[Tuple[str, Union[str, list[str], None]]] = []
+        failures: list[Failure] = []
         a: Deferred[str] = Deferred()
 
         def cb(result: str) -> Deferred[None]:
             results.append(("cb", result))
             d: Deferred[None] = Deferred()
 
-            def firstCallback(result: None) -> Deferred[List[str]]:
+            def firstCallback(result: None) -> Deferred[list[str]]:
                 results.append(("firstCallback", result))
                 return defer.gatherResults([a])
 
-            def secondCallback(result: List[str]) -> None:
+            def secondCallback(result: list[str]) -> None:
                 results.append(("secondCallback", result))
 
             returner = (
@@ -1187,7 +1186,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(lambda ign: first)
         second.callback(None)
 
-        results: List[Optional[object]] = []
+        results: list[Optional[object]] = []
         first.addCallback(results.append)
         self.assertIsNone(results[0])
         second.addCallback(results.append)
@@ -1205,9 +1204,9 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(lambda ign: first)
         second.callback(None)
 
-        firstResult: List[object] = []
+        firstResult: list[object] = []
         first.addCallback(firstResult.append)
-        secondResult: List[object] = []
+        secondResult: list[object] = []
         second.addCallback(secondResult.append)
 
         self.assertEqual(firstResult, [])
@@ -1234,7 +1233,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second: Deferred[None] = Deferred()
         second.addCallback(cb)
         second.callback(None)
-        firstResult: List[None] = []
+        firstResult: list[None] = []
         first.addCallback(firstResult.append)
         self.assertIsNone(firstResult[0])
         self.assertImmediateFailure(second, RuntimeError)
@@ -1252,12 +1251,12 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second: Deferred[None] = Deferred()
         second.addCallback(lambda ign: first)
         second.callback(None)
-        secondError: List[Failure] = []
+        secondError: list[Failure] = []
         second.addErrback(secondError.append)
 
-        firstResult: List[None] = []
+        firstResult: list[None] = []
         first.addCallback(firstResult.append)
-        secondResult: List[None] = []
+        secondResult: list[None] = []
         second.addCallback(secondResult.append)
 
         self.assertEqual(firstResult, [])
@@ -1282,7 +1281,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         third: Deferred[object] = Deferred()
         third.addCallback(lambda ign: second)
 
-        thirdResult: List[object] = []
+        thirdResult: list[object] = []
         third.addCallback(thirdResult.append)
 
         result = object()
@@ -1305,8 +1304,8 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         When these "inner" L{Deferred}s fire (even asynchronously), the
         callback chain continues.
         """
-        results: List[Union[Tuple[str, str], str]] = []
-        failures: List[Failure] = []
+        results: list[Union[Tuple[str, str], str]] = []
+        failures: list[Failure] = []
 
         # A Deferred returned in the inner callback.
         inner: Deferred[str] = Deferred()
@@ -1368,30 +1367,30 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         L{Deferred}s fire (even asynchronously), the outer callback chain
         continues.
         """
-        results: List[Any] = []
-        failures: List[Failure] = []
+        results: list[Any] = []
+        failures: list[Failure] = []
 
         # A Deferred returned in the inner callback after a callback is
         # added explicitly and directly to it.
         inner: Deferred[str] = Deferred()
 
-        def cb(result: str) -> Deferred[Optional[List[str]]]:
+        def cb(result: str) -> Deferred[Optional[list[str]]]:
             results.append(("start-of-cb", result))
             d = defer.succeed("inner")
 
-            def firstCallback(result: str) -> Deferred[List[str]]:
+            def firstCallback(result: str) -> Deferred[list[str]]:
                 results.append(("firstCallback", result))
                 # Return a Deferred that definitely has not fired yet with a
                 # result-transforming callback so we can fire the Deferreds
                 # out of order and see how the callback affects the ultimate
                 # results.
 
-                def transform(result: str) -> List[str]:
+                def transform(result: str) -> list[str]:
                     return [result]
 
                 return inner.addCallback(transform)
 
-            def secondCallback(result: List[str]) -> List[str]:
+            def secondCallback(result: list[str]) -> list[str]:
                 results.append(("secondCallback", result))
                 return result * 2
 
@@ -1559,7 +1558,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
                 stack.append(len(traceback.extract_stack()))
 
             top: Deferred[None] = Deferred()
-            innerDeferreds: List[Deferred[None]] = [
+            innerDeferreds: list[Deferred[None]] = [
                 Deferred() for ignored in range(howMany)
             ]
             originalInners = innerDeferreds[:]
@@ -1624,7 +1623,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.callback(None)
         first.callback(None)
         third.callback(None)
-        results: List[None] = []
+        results: list[None] = []
         second.addCallback(results.append)
         self.assertEqual(results, [None])
 
@@ -1636,7 +1635,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         defer.setDebugging(False)
         d: Deferred[None] = Deferred()
-        l: List[Failure] = []
+        l: list[Failure] = []
         exc = GenericError("Bang")
         try:
             raise exc
@@ -1657,7 +1656,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         defer.setDebugging(True)
         d: Deferred[None] = Deferred()
-        l: List[Failure] = []
+        l: list[Failure] = []
         exc = GenericError("Bang")
         try:
             raise exc
@@ -1683,7 +1682,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             raise GenericError("Bang")
 
         d.addCallback(raiseError)
-        l: List[Failure] = []
+        l: list[Failure] = []
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
@@ -1703,7 +1702,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             raise GenericError("Bang")
 
         d.addCallback(raiseError)
-        l: List[Failure] = []
+        l: list[Failure] = []
         d.addErrback(l.append)
         fail = l[0]
         localz, globalz = fail.frames[0][-2:]
@@ -2126,7 +2125,7 @@ class AlreadyCalledTests(unittest.SynchronousTestCase):
         self._err_1(d)
         self.assertRaises(defer.AlreadyCalledError, self._call_2, d)
 
-    def _count(self, linetype: str, func: str, lines: List[str], expected: int) -> None:
+    def _count(self, linetype: str, func: str, lines: list[str], expected: int) -> None:
         count = 0
         for line in lines:
             if line.startswith(" %s:" % linetype) and line.endswith(" %s" % func):
@@ -2494,7 +2493,7 @@ class LogTests(unittest.SynchronousTestCase):
         """
         Add a custom observer to observer logging.
         """
-        self.c: List[Dict[str, Any]] = []
+        self.c: list[Dict[str, Any]] = []
         log.addObserver(self.c.append)
 
     def tearDown(self) -> None:
@@ -2503,7 +2502,7 @@ class LogTests(unittest.SynchronousTestCase):
         """
         log.removeObserver(self.c.append)
 
-    def _loggedErrors(self) -> List[Dict[str, Any]]:
+    def _loggedErrors(self) -> list[Dict[str, Any]]:
         return [e for e in self.c if e["isError"]]
 
     def _check(self) -> None:
@@ -2616,8 +2615,8 @@ class LogTests(unittest.SynchronousTestCase):
 
         # Sanity check - this isn't too interesting, but we do want the original
         # Deferred to have gotten the failure.
-        results: List[None] = []
-        errors: List[Failure] = []
+        results: list[None] = []
+        errors: list[Failure] = []
         d.addCallbacks(results.append, errors.append)
         self.assertEqual(results, [])
         self.assertEqual(len(errors), 1)
@@ -2660,7 +2659,7 @@ class DeferredListEmptyTests(unittest.SynchronousTestCase):
         dl: Deferred[_DeferredListResultListT[object]] = DeferredList([])
         dl.addCallback(self.cb_empty)
 
-    def cb_empty(self, res: List[Tuple[bool, object]]) -> None:
+    def cb_empty(self, res: list[Tuple[bool, object]]) -> None:
         self.callbackRan = 1
         self.assertEqual([], res)
 
@@ -2780,7 +2779,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             helperArg = arg
             return controlDeferred
 
-        results: List[object] = []
+        results: list[object] = []
         uniqueObject = object()
         resultDeferred = sem.run(helper, arg=uniqueObject)
         resultDeferred.addCallback(results.append)
@@ -2856,7 +2855,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         N, M = 2, 2
         queue: DeferredQueue[int] = DeferredQueue(N, M)
 
-        gotten: List[int] = []
+        gotten: list[int] = []
 
         for i in range(M):
             queue.get().addCallback(gotten.append)
@@ -2923,7 +2922,7 @@ class OtherPrimitivesTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             return queue.get().addCallback(self.assertIs, None)
 
         d.addCallback(cb)
-        done: List[None] = []
+        done: list[None] = []
         d.addCallback(done.append)
         self.assertEqual(len(done), 1)
 

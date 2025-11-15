@@ -20,7 +20,7 @@ import stat
 import sys
 import traceback
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 _PS_CLOSE: int
 _PS_DUP2: int
@@ -632,11 +632,11 @@ def _listOpenFDs():
 
 
 def _getFileActions(
-    fdState: List[Tuple[int, bool]],
+    fdState: list[Tuple[int, bool]],
     childToParentFD: Dict[int, int],
     doClose: int,
     doDup2: int,
-) -> List[Tuple[int, ...]]:
+) -> list[Tuple[int, ...]]:
     """
     Get the C{file_actions} parameter for C{posix_spawn} based on the
     parameters describing the current process state.
@@ -649,7 +649,7 @@ def _getFileActions(
     @param doDup2: the integer to use for the 'dup2' instruction
     """
     fdStateDict = dict(fdState)
-    parentToChildren: Dict[int, List[int]] = defaultdict(list)
+    parentToChildren: Dict[int, list[int]] = defaultdict(list)
     for inChild, inParent in childToParentFD.items():
         parentToChildren[inParent].append(inChild)
     allocated = set(fdStateDict)
@@ -664,7 +664,7 @@ def _getFileActions(
         allocated.add(nextFD)
         return nextFD
 
-    result: List[Tuple[int, ...]] = []
+    result: list[Tuple[int, ...]] = []
     relocations = {}
     for inChild, inParent in sorted(childToParentFD.items()):
         # The parent FD will later be reused by a child FD.

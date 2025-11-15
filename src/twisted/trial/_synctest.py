@@ -23,7 +23,6 @@ from typing import (
     Coroutine,
     Generator,
     Iterable,
-    List,
     NoReturn,
     Optional,
     Tuple,
@@ -716,7 +715,7 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        results: List[Union[T, failure.Failure]] = []
+        results: list[Union[T, failure.Failure]] = []
         deferred.addBoth(results.append)
 
         if not results:

@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._observer}.
 """
 
-from typing import Dict, List, Tuple, cast
+from typing import Dict, Tuple, cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -93,9 +93,9 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1: List[LogEvent] = []
-        events2: List[LogEvent] = []
-        events3: List[LogEvent] = []
+        events1: list[LogEvent] = []
+        events2: list[LogEvent] = []
+        events3: list[LogEvent] = []
 
         o1 = cast(ILogObserver, events1.append)
         o2 = cast(ILogObserver, events2.append)
@@ -115,7 +115,7 @@ class LogPublisherTests(unittest.TestCase):
         event = dict(foo=1, bar=2)
         exception = RuntimeError("ARGH! EVIL DEATH!")
 
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -124,7 +124,7 @@ class LogPublisherTests(unittest.TestCase):
             if shouldRaise:
                 raise exception
 
-        collector: List[LogEvent] = []
+        collector: list[LogEvent] = []
 
         publisher = LogPublisher(observer, cast(ILogObserver, collector.append))
         publisher(event)

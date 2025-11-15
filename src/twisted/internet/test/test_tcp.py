@@ -16,7 +16,7 @@ import socket
 from functools import wraps
 from io import BytesIO
 from types import ModuleType
-from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, ClassVar, Mapping, Optional, Sequence, Type
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -1037,7 +1037,7 @@ class _ExhaustsFileDescriptors:
         default=lambda: os.dup(0), repr=False
     )
     _close: Callable[[int], None] = attr.ib(default=os.close, repr=False)
-    _fileDescriptors: List[int] = attr.ib(
+    _fileDescriptors: list[int] = attr.ib(
         default=attr.Factory(list), init=False, repr=False
     )
     _sourceCache: SourceCacheForCoverage | None = None

@@ -8,7 +8,7 @@ to load code.
 
 import sys
 from types import ModuleType
-from typing import Iterable, List, Tuple
+from typing import Iterable, Tuple
 
 from twisted.python.filepath import FilePath
 
@@ -19,7 +19,7 @@ class TwistedModulesMixin:
     methods for manipulating Python's module system.
     """
 
-    def replaceSysPath(self, sysPath: List[str]) -> None:
+    def replaceSysPath(self, sysPath: list[str]) -> None:
         """
         Replace sys.path, for the duration of the test, with the given value.
         """

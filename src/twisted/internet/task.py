@@ -15,7 +15,6 @@ from typing import (
     Coroutine,
     Iterable,
     Iterator,
-    List,
     NoReturn,
     Optional,
     Sequence,
@@ -419,7 +418,7 @@ class CooperativeTask:
         """
         self._iterator = iterator
         self._cooperator = cooperator
-        self._deferreds: List[Deferred[Iterator[_TaskResultT]]] = []
+        self._deferreds: list[Deferred[Iterator[_TaskResultT]]] = []
         self._pauseCount = 0
         self._completionState: Optional[SchedulerError] = None
         self._completionResult: Optional[Union[Iterator[_TaskResultT], Failure]] = None
@@ -594,7 +593,7 @@ class Cooperator:
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks: List[CooperativeTask] = []
+        self._tasks: list[CooperativeTask] = []
         self._metarator: Iterator[CooperativeTask] = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
@@ -771,7 +770,7 @@ class Clock:
     rightNow = 0.0
 
     def __init__(self) -> None:
-        self.calls: List[DelayedCall] = []
+        self.calls: list[DelayedCall] = []
 
     def seconds(self) -> float:
         """

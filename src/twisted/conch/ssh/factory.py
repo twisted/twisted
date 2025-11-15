@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import random
 from itertools import chain
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from twisted.conch import error
 from twisted.conch.ssh import _kex, connection, transport, userauth
@@ -32,7 +32,7 @@ class SSHFactory(protocol.Factory[Any]):
     A Factory for SSH servers.
     """
 
-    primes: Optional[Dict[int, List[Tuple[int, int]]]]
+    primes: Optional[Dict[int, list[Tuple[int, int]]]]
 
     _log = Logger()
     protocol: Any = transport.SSHServerTransport
@@ -104,7 +104,7 @@ class SSHFactory(protocol.Factory[Any]):
         """
         raise NotImplementedError("getPrivateKeys unimplemented")
 
-    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
+    def getPrimes(self) -> Optional[Dict[int, list[Tuple[int, int]]]]:
         """
         Called when the factory is started to get Diffie-Hellman generators and
         primes to use.  Returns a dictionary mapping number of bits to lists of

@@ -10,7 +10,7 @@ Test reporter forwarding test results over trial distributed AMP commands.
 """
 
 from types import TracebackType
-from typing import Callable, List, Literal, Optional, Sequence, Type, TypeVar
+from typing import Callable, Literal, Optional, Sequence, Type, TypeVar
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
@@ -28,7 +28,7 @@ T = TypeVar("T")
 
 
 async def addError(
-    amp: AMP, testName: str, errorClass: str, error: str, frames: List[str]
+    amp: AMP, testName: str, errorClass: str, error: str, frames: list[str]
 ) -> None:
     """
     Send an error to the worker manager over an AMP connection.
@@ -57,7 +57,7 @@ async def addError(
 
 
 async def addFailure(
-    amp: AMP, testName: str, fail: str, failClass: str, frames: List[str]
+    amp: AMP, testName: str, fail: str, failClass: str, frames: list[str]
 ) -> None:
     """
     Like L{addError} but for failures.
@@ -123,7 +123,7 @@ class ReportingResults:
     """
 
     _reporter: "WorkerReporter"
-    _results: List[Deferred[object]] = Factory(list)
+    _results: list[Deferred[object]] = Factory(list)
 
     def __enter__(self) -> Sequence[Deferred[object]]:
         """
@@ -201,11 +201,11 @@ class WorkerReporter(TestResult):
             return Failure(error[1], error[0], error[2])
         return error
 
-    def _getFrames(self, failure: Failure) -> List[str]:
+    def _getFrames(self, failure: Failure) -> list[str]:
         """
         Extract frames from a C{Failure} instance.
         """
-        frames: List[str] = []
+        frames: list[str] = []
         for frame in failure.frames:
             # The code object's name, the code object's filename, and the line
             # number.

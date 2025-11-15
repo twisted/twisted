@@ -14,7 +14,6 @@ from typing import (
     AnyStr,
     Callable,
     Iterable,
-    List,
     Mapping,
     Optional,
     Sequence,
@@ -1594,7 +1593,7 @@ class IReactorFDSet(Interface):
         Removes an object previously added with L{addWriter}.
         """
 
-    def removeAll() -> List[Union["IReadDescriptor", "IWriteDescriptor"]]:
+    def removeAll() -> list[Union["IReadDescriptor", "IWriteDescriptor"]]:
         """
         Remove all readers and writers.
 
@@ -1604,7 +1603,7 @@ class IReactorFDSet(Interface):
                  which were removed.
         """
 
-    def getReaders() -> List["IReadDescriptor"]:
+    def getReaders() -> list["IReadDescriptor"]:
         """
         Return the list of file descriptors currently monitored for input
         events by the reactor.
@@ -1612,7 +1611,7 @@ class IReactorFDSet(Interface):
         @return: the list of file descriptors monitored for input events.
         """
 
-    def getWriters() -> List["IWriteDescriptor"]:
+    def getWriters() -> list["IWriteDescriptor"]:
         """
         Return the list file descriptors currently monitored for output events
         by the reactor.
@@ -2301,7 +2300,7 @@ class IProtocolNegotiationFactory(Interface):
     @see: L{twisted.internet.ssl}
     """
 
-    def acceptableProtocols() -> List[bytes]:
+    def acceptableProtocols() -> list[bytes]:
         """
         Returns a list of protocols that can be spoken by the connection
         factory in the form of ALPN tokens, as laid out in the IANA registry

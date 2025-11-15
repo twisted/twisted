@@ -20,7 +20,6 @@ from typing import (
     Dict,
     Generic,
     Iterable,
-    List,
     Literal,
     Tuple,
     TypeVar,
@@ -81,7 +80,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         archiveFilename: _ZipStr = _coerceToFilesystemEncoding(
             pathInArchive, archive._zipfileFilename
         )
-        segments: List[_ZipStr] = self.pathInArchive.split(sep)
+        segments: list[_ZipStr] = self.pathInArchive.split(sep)
         fakePath: _ZipStr = os.path.join(archiveFilename, *segments)
         self.path: _ZipStr = fakePath
 
@@ -93,7 +92,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         )
 
     def __repr__(self) -> str:
-        parts: List[_ZipStr]
+        parts: list[_ZipStr]
         parts = [
             _coerceToFilesystemEncoding(self.sep, os.path.abspath(self.archive.path))
         ]
@@ -175,7 +174,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
     def islink(self) -> bool:
         return False
 
-    def listdir(self) -> List[_ZipStr]:
+    def listdir(self) -> list[_ZipStr]:
         if self.exists():
             if self.isdir():
                 parentArchivePath: _ArchiveStr = _coerceToFilesystemEncoding(

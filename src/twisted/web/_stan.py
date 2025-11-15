@@ -23,7 +23,7 @@ cumbersome.
 
 
 from inspect import iscoroutine, isgenerator
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 from warnings import warn
 
 import attr
@@ -45,7 +45,7 @@ class slot:
     The key which must be used in L{Tag.fillSlots} to fill it.
     """
 
-    children: List["Tag"] = attr.ib(init=False, factory=list)
+    children: list["Tag"] = attr.ib(init=False, factory=list)
     """
     The L{Tag} objects included in this L{slot}'s template.
     """
@@ -102,7 +102,7 @@ class Tag:
     attributes: Dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
     """The attributes of the element."""
 
-    children: List["Flattenable"] = attr.ib(factory=list)
+    children: list["Flattenable"] = attr.ib(factory=list)
     """The contents of this C{Tag}."""
 
     render: Optional[str] = None

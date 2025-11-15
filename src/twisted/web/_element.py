@@ -7,7 +7,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    List,
     Optional,
     TypeVar,
     Union,
@@ -70,7 +69,7 @@ class Expose:
         @return: The first of C{funcObjs}.
         """
         for fObj in itertools.chain([f], funcObjs):
-            exposedThrough: List[Expose] = getattr(fObj, "exposedThrough", [])
+            exposedThrough: list[Expose] = getattr(fObj, "exposedThrough", [])
             exposedThrough.append(self)
             setattr(fObj, "exposedThrough", exposedThrough)
         return f

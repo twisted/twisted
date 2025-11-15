@@ -6,7 +6,7 @@ Tests for L{twisted.application.twist._options}.
 """
 
 from sys import stderr, stdout
-from typing import Callable, Dict, List, Optional, TextIO, Tuple
+from typing import Callable, Dict, Optional, TextIO, Tuple
 
 import twisted.trial.unittest
 from twisted.copyright import version
@@ -44,7 +44,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         Patch L{_options.open} so we can capture usage and prevent actual opens.
         """
-        self.opened: List[Tuple[str, Optional[str]]] = []
+        self.opened: list[Tuple[str, Optional[str]]] = []
 
         def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
             if name == "nocanopen":

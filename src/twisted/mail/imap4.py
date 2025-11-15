@@ -28,7 +28,7 @@ import uuid
 from base64 import decodebytes, encodebytes
 from io import BytesIO
 from itertools import chain
-from typing import Any, List, Optional, cast
+from typing import Any, Optional, cast
 
 from zope.interface import implementer
 
@@ -184,7 +184,7 @@ class MessageSet:
         that it will not be called out-of-order).
     """
 
-    _empty: List[Any] = []
+    _empty: list[Any] = []
     _infinity = float("inf")
 
     def __init__(self, start=_empty, end=_empty):

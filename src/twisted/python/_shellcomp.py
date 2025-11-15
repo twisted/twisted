@@ -30,7 +30,7 @@ import getopt
 import inspect
 import itertools
 from types import MethodType
-from typing import Dict, List, Set
+from typing import Dict, Set
 
 from twisted.python import reflect, usage, util
 from twisted.python.compat import ioType
@@ -305,8 +305,8 @@ class ZshArgumentsGenerator:
 
         aCL = reflect.accumulateClassList
 
-        optFlags: List[List[object]] = []
-        optParams: List[List[object]] = []
+        optFlags: list[list[object]] = []
+        optParams: list[list[object]] = []
 
         aCL(options.__class__, "optFlags", optFlags)
         aCL(options.__class__, "optParameters", optParams)

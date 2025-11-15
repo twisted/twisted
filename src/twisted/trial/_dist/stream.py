@@ -3,7 +3,7 @@ Buffer byte streams.
 """
 
 from itertools import count
-from typing import Dict, Iterator, List, TypeVar
+from typing import Dict, Iterator, TypeVar
 
 from attrs import Factory, define
 
@@ -38,7 +38,7 @@ class StreamReceiver:
     """
 
     _counter: Iterator[int] = count()
-    _streams: Dict[int, List[bytes]] = Factory(dict)
+    _streams: Dict[int, list[bytes]] = Factory(dict)
 
     def open(self) -> int:
         """
@@ -56,7 +56,7 @@ class StreamReceiver:
         """
         self._streams[streamId].append(chunk)
 
-    def finish(self, streamId: int) -> List[bytes]:
+    def finish(self, streamId: int) -> list[bytes]:
         """
         Indicate an open stream may receive no further data and return all of
         its current contents.

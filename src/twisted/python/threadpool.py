@@ -12,7 +12,7 @@ instead of creating a thread pool directly.
 from __future__ import annotations
 
 from threading import Thread, current_thread
-from typing import Any, Callable, List, Optional, Protocol, TypeVar
+from typing import Any, Callable, Optional, Protocol, TypeVar
 
 from typing_extensions import ParamSpec, TypedDict
 
@@ -91,7 +91,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads: List[Thread] = []
+        self.threads: list[Thread] = []
 
         def trackingThreadFactory(*a: Any, **kw: Any) -> Thread:
             thread = self.threadFactory(  # type: ignore[misc]

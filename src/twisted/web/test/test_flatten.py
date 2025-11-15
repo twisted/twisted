@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, List, NoReturn, Optional, Tuple, cast
+from typing import Callable, Dict, NoReturn, Optional, Tuple, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -266,7 +266,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_commentEscaping(self) -> Deferred[List[bytes]]:
+    def test_commentEscaping(self) -> Deferred[list[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
         so that the result can be safely included in an HTML document.
@@ -465,7 +465,7 @@ class FlattenChunkingTests(SynchronousTestCase):
         into the buffer it is all passed to a single call to the write
         function.
         """
-        output: List[bytes] = []
+        output: list[bytes] = []
         self.successResultOf(flatten(None, ["1", "2", "3"], output.append))
         assert_that(output, equal_to([b"123"]))
 
@@ -479,7 +479,7 @@ class FlattenChunkingTests(SynchronousTestCase):
         someMore = ["y"] * BUFFER_SIZE
         evenMore = ["z"] * BUFFER_SIZE
 
-        output: List[bytes] = []
+        output: list[bytes] = []
         self.successResultOf(flatten(None, [some, someMore, evenMore], output.append))
         assert_that(
             output,
@@ -517,7 +517,7 @@ class FlattenChunkingTests(SynchronousTestCase):
             "more-chunks-",
             "already-available",
         ]
-        output: List[bytes] = []
+        output: list[bytes] = []
         d = flatten(None, value, output.append)
         first_finish()
         second_finish()

@@ -6,7 +6,7 @@ Test cases for L{twisted.logger._io}.
 """
 
 import sys
-from typing import List, Optional
+from typing import Optional
 
 from zope.interface import implementer
 
@@ -33,8 +33,8 @@ class TestLoggingFile(LoggingFile):
         encoding: Optional[str] = None,
     ) -> None:
         super().__init__(logger=logger, level=level, encoding=encoding)
-        self.events: List[LogEvent] = []
-        self.messages: List[str] = []
+        self.events: list[LogEvent] = []
+        self.messages: list[str] = []
 
     def __call__(self, event: LogEvent) -> None:
         self.events.append(event)
@@ -277,7 +277,7 @@ class LoggingFileTests(unittest.TestCase):
         # TestLoggingFile we will create, but that takes the Logger as an
         # argument, so we'll use an array to indirectly reference the
         # TestLoggingFile.
-        loggingFiles: List[TestLoggingFile] = []
+        loggingFiles: list[TestLoggingFile] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:

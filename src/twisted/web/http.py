@@ -117,7 +117,6 @@ from typing import (
     AnyStr,
     Callable,
     Dict,
-    List,
     Optional,
     Protocol as TypingProtocol,
     Tuple,
@@ -942,7 +941,7 @@ class Request:
             URL-encoded body uploads into C{request.args}. This can use large
             amounts of memory for large uploads.
         """
-        self.notifications: List[Deferred[None]] = []
+        self.notifications: list[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -954,7 +953,7 @@ class Request:
         self.requestHeaders: Headers = Headers()
         self.received_cookies: Dict[bytes, bytes] = {}
         self.responseHeaders: Headers = Headers()
-        self.cookies: List[bytes] = []  # outgoing cookies
+        self.cookies: list[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport
 
         if queued is _QUEUED_SENTINEL:
@@ -2000,7 +1999,7 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
-        self._trailerHeaders: List[bytearray] = []
+        self._trailerHeaders: list[bytearray] = []
         self._maxTrailerHeadersSize = 2**16
         self._receivedTrailerHeadersSize = 0
 

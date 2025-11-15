@@ -201,7 +201,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    List,
     Optional,
     Tuple,
     Type,
@@ -624,7 +623,7 @@ class AmpBox(Dict[bytes, bytes]):
 
     # be like a regular dictionary don't magically
     # acquire a __dict__...
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __init__(self, *args, **kw):
         """
@@ -720,7 +719,7 @@ class QuitBox(AmpBox):
     I am an AmpBox that, upon being sent, terminates the connection.
     """
 
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __repr__(self) -> str:
         return f"QuitBox(**{super().__repr__()})"
@@ -1797,9 +1796,9 @@ class Command(metaclass=_CommandMeta):
     """
 
     commandName: ClassVar[bytes]
-    arguments: ClassVar[List[Tuple[bytes, Argument]]] = []
-    response: ClassVar[List[Tuple[bytes, Argument]]] = []
-    extra: ClassVar[List[Any]] = []
+    arguments: ClassVar[list[Tuple[bytes, Argument]]] = []
+    response: ClassVar[list[Tuple[bytes, Argument]]] = []
+    extra: ClassVar[list[Any]] = []
     errors: ClassVar[Dict[Type[Exception], bytes]] = {}
     fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}
 
@@ -2038,7 +2037,7 @@ class _TLSBox(AmpBox):
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
 
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __init__(self):
         if ssl is None:

@@ -7,7 +7,7 @@ Support for starting, monitoring, and restarting child process.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import attr
 import incremental
@@ -48,7 +48,7 @@ class _Process:
     @type cwd: C{str}
     """
 
-    args: List[str]
+    args: list[str]
     uid: Optional[int] = None
     gid: Optional[int] = None
     env: Dict[str, str] = attr.ib(default=attr.Factory(dict))

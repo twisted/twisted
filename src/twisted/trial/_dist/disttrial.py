@@ -18,7 +18,6 @@ from typing import (
     Awaitable,
     Callable,
     Iterable,
-    List,
     Optional,
     Sequence,
     TextIO,
@@ -119,8 +118,8 @@ class StartedWorkerPool:
     workingDirectory: FilePath[Any]
     testDirLock: FilesystemLock
     testLog: TextIO
-    workers: List[LocalWorker]
-    ampWorkers: List[LocalWorkerAMP]
+    workers: list[LocalWorker]
+    ampWorkers: list[LocalWorkerAMP]
 
     _logger = Logger()
 
@@ -168,7 +167,7 @@ class WorkerPool:
         protocols: Iterable[LocalWorkerAMP],
         workingDirectory: FilePath[Any],
         logFile: TextIO,
-    ) -> List[LocalWorker]:
+    ) -> list[LocalWorker]:
         """
         Create local worker protocol instances and return them.
 
@@ -310,7 +309,7 @@ class DistTrialRunner:
     # on the argument annotation
     _reporterFactory: Callable[..., IReporter]
     _maxWorkers: int
-    _workerArguments: List[str]
+    _workerArguments: list[str]
     _exitFirst: bool = False
     _reactor: IDistTrialReactor = field(
         # mypy doesn't understand the converter

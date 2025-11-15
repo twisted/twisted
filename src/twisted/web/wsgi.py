@@ -8,7 +8,7 @@ U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-
 
 from collections.abc import Sequence
 from sys import exc_info
-from typing import List, Union
+from typing import Union
 from warnings import warn
 
 from zope.interface import implementer
@@ -100,7 +100,7 @@ class _ErrorStream:
         # will overwrite this value if it is not properly formatted here.
         self._log.error(data, system="wsgi", isError=True, message=(data,))
 
-    def writelines(self, iovec: List[str]) -> None:
+    def writelines(self, iovec: list[str]) -> None:
         """
         Join the given lines and pass them to C{write} to be handled in the
         usual way.

@@ -23,7 +23,6 @@ from typing import (
     Callable,
     ClassVar,
     Iterable,
-    List,
     Optional,
     Protocol as TypingProtocol,
     Sequence,
@@ -753,7 +752,7 @@ class TCP6ClientEndpoint:
             return defer.fail()
 
 
-_gairesult = List[
+_gairesult = list[
     Tuple[
         socket.AddressFamily,
         socket.SocketKind,

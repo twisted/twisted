@@ -8,7 +8,7 @@ The point of integration of application and authentication.
 """
 
 
-from typing import Callable, Dict, Iterable, List, Tuple, Type, Union
+from typing import Callable, Dict, Iterable, Tuple, Type, Union
 
 from zope.interface import Interface, providedBy
 
@@ -88,7 +88,7 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
-    def listCredentialsInterfaces(self) -> List[Type[Interface]]:
+    def listCredentialsInterfaces(self) -> list[Type[Interface]]:
         """
         Return list of credentials interfaces that can be used to login.
         """

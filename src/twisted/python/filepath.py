@@ -49,7 +49,6 @@ from typing import (
     Dict,
     Generic,
     Iterable,
-    List,
     Literal,
     Optional,
     Sequence,
@@ -351,7 +350,7 @@ class AbstractFilePath(Generic[AnyStr]):
         """
         raise NotImplementedError()
 
-    def listdir(self) -> List[AnyStr]:
+    def listdir(self) -> list[AnyStr]:
         """
         Subclasses must implement this.
         """
@@ -404,7 +403,7 @@ class AbstractFilePath(Generic[AnyStr]):
         @return: an iterable of all currently-existing children of this object.
         """
         try:
-            subnames: List[AnyStr] = self.listdir()
+            subnames: list[AnyStr] = self.listdir()
         except OSError as ose:
             # Under Python 3.3 and higher on Windows, WindowsError is an
             # alias for OSError.  OSError has a winerror attribute and an
@@ -512,7 +511,7 @@ class AbstractFilePath(Generic[AnyStr]):
             path = path.child(name)
         return path
 
-    def segmentsFrom(self: _Self, ancestor: _Self) -> List[AnyStr]:
+    def segmentsFrom(self: _Self, ancestor: _Self) -> list[AnyStr]:
         """
         Return a list of segments between a child and its ancestor.
 
@@ -533,7 +532,7 @@ class AbstractFilePath(Generic[AnyStr]):
         # obvious fast implemenation does the right thing too
         f = self
         p: _Self = f.parent()  # type:ignore[assignment]
-        segments: List[AnyStr] = []
+        segments: list[AnyStr] = []
         while f != ancestor and p != f:
             segments[0:0] = [f.basename()]
             f = p
@@ -1396,7 +1395,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return isabs(self.path)
 
-    def listdir(self) -> List[AnyStr]:
+    def listdir(self) -> list[AnyStr]:
         """
         List the base names of the direct children of this L{FilePath}.
 
@@ -1472,7 +1471,7 @@ class FilePath(AbstractFilePath[AnyStr]):
             ):
                 raise
 
-    def globChildren(self, pattern: OtherAnyStr) -> List[FilePath[OtherAnyStr]]:
+    def globChildren(self, pattern: OtherAnyStr) -> list[FilePath[OtherAnyStr]]:
         """
         Assuming I am representing a directory, return a list of FilePaths
         representing my children that match the given pattern.

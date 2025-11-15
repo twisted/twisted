@@ -9,7 +9,7 @@ Support for generic select()able objects.
 from __future__ import annotations
 
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, Optional, Union
 
 from zope.interface import implementer
 
@@ -194,7 +194,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             reactor = _reactor  # type: ignore[assignment]
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer: List[bytes] = []
+        self._tempDataBuffer: list[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):

@@ -10,7 +10,7 @@ from __future__ import annotations
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -122,7 +122,7 @@ class StubHTTPProtocol(Protocol):
     """
 
     def __init__(self) -> None:
-        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
+        self.requests: list[Tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):

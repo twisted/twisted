@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorCore}.
 import signal
 import time
 from types import FrameType
-from typing import Callable, List, Optional, Tuple, Union, cast
+from typing import Callable, Optional, Tuple, Union, cast
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.defer import Deferred
@@ -49,7 +49,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         L{reactor.callWhenRunning}.
         """
         reactor = self.buildReactor()
-        events: List[str] = []
+        events: list[str] = []
         reactor.callWhenRunning(events.append, "first")
         reactor.callWhenRunning(events.append, "second")
         reactor.callWhenRunning(reactor.stop)
@@ -147,7 +147,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         L{reactor.stop}.
         """
         reactor = self.buildReactor()
-        events: List[str] = []
+        events: list[str] = []
         reactor.addSystemEventTrigger(
             "before", "shutdown", events.append, "before shutdown"
         )
@@ -200,7 +200,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} raises L{ReactorAlreadyRunning} when called when
         the reactor is already running.
         """
-        events: List[str] = []
+        events: list[str] = []
 
         testCase = cast(SynchronousTestCase, self)
 
@@ -275,7 +275,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} restarts the reactor after it has been stopped by
         C{reactor.crash()}.
         """
-        events: List[Union[str, Tuple[str, bool]]] = []
+        events: list[Union[str, Tuple[str, bool]]] = []
 
         def crash() -> None:
             events.append("crash")
@@ -298,7 +298,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} raises L{ReactorNotRestartable} when called when
         the reactor is being run after getting stopped priorly.
         """
-        events: List[str] = []
+        events: list[str] = []
 
         testCase = cast(SynchronousTestCase, self)
 

@@ -28,7 +28,6 @@ from typing import (
     Generator,
     Generic,
     Iterable,
-    List,
     Literal,
     Mapping,
     NoReturn,
@@ -355,8 +354,8 @@ class DebugInfo:
     """
 
     failResult: Optional[Failure] = None
-    creator: Optional[List[str]] = None
-    invoker: Optional[List[str]] = None
+    creator: Optional[list[str]] = None
+    invoker: Optional[list[str]] = None
 
     def _getDebugTracebacks(self) -> str:
         info = ""
@@ -470,14 +469,14 @@ class Deferred(Awaitable[_SelfResultT]):
         @type canceller: a 1-argument callable which takes a L{Deferred}. The
             return result is ignored.
         """
-        self._callbacks: List[_CallbackChain] = []
+        self._callbacks: list[_CallbackChain] = []
         self._canceller = canceller
         if self.debug:
             self._debugInfo = DebugInfo()
             self._debugInfo.creator = traceback.format_stack()[:-1]
 
     @deprecatedProperty(Version("Twisted", 25, 5, 0))
-    def callbacks(self) -> List[_CallbackChain]:
+    def callbacks(self) -> list[_CallbackChain]:
         return self._callbacks
 
     def addCallbacks(
@@ -1040,7 +1039,7 @@ class Deferred(Awaitable[_SelfResultT]):
         # added its _continuation() to the callbacks list of a second Deferred
         # and then that second Deferred being fired.  ie, if ever had _chainedTo
         # set to something other than None, you might end up on this stack.
-        chain: List[Deferred[Any]] = [self]
+        chain: list[Deferred[Any]] = [self]
 
         while chain:
             current = chain[-1]
@@ -1416,7 +1415,7 @@ class FirstError(Exception):
 
 _DeferredListSingleResultT = Tuple[_SelfResultT, int]
 _DeferredListResultItemT = Tuple[bool, _SelfResultT]
-_DeferredListResultListT = List[_DeferredListResultItemT[_SelfResultT]]
+_DeferredListResultListT = list[_DeferredListResultItemT[_SelfResultT]]
 
 if TYPE_CHECKING:
     # The result type is different depending on whether fireOnOneCallback
@@ -1522,7 +1521,7 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
         # Note this contains optional result values as the DeferredList is
         # processing its results, even though the callback result will not,
         # which is why we aren't using _DeferredListResultListT here.
-        self.resultList: List[Optional[_DeferredListResultItemT[Any]]] = [None] * len(
+        self.resultList: list[Optional[_DeferredListResultItemT[Any]]] = [None] * len(
             self._deferredList
         )
         """
@@ -1601,8 +1600,8 @@ class DeferredList(  # type: ignore[no-redef] # noqa:F811
 
 
 def _parseDeferredListResult(
-    resultList: List[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False, /
-) -> List[_T]:
+    resultList: list[_DeferredListResultItemT[_T]], fireOnOneErrback: bool = False, /
+) -> list[_T]:
     if __debug__:
         for result in resultList:
             assert result is not None
@@ -1613,7 +1612,7 @@ def _parseDeferredListResult(
 
 def gatherResults(
     deferredList: Iterable[Deferred[_T]], consumeErrors: bool = False
-) -> Deferred[List[_T]]:
+) -> Deferred[list[_T]]:
     """
     Returns, via a L{Deferred}, a list with the results of the given
     L{Deferred}s - in effect, a "join" of multiple deferred operations.
@@ -1779,7 +1778,7 @@ class _CancellationStatus(Generic[_SelfResultT]):
 
 def _gotResultInlineCallbacks(
     r: object,
-    waiting: List[Any],
+    waiting: list[Any],
     gen: Union[
         Generator[Deferred[Any], Any, _T],
         Coroutine[Deferred[Any], Any, _T],
@@ -1840,7 +1839,7 @@ def _inlineCallbacks(
     # recursion.
 
     # waiting for result?  # result
-    waiting: List[Any] = [True, None]
+    waiting: list[Any] = [True, None]
 
     stopIteration: bool = False
     callbackValue: Any = None
@@ -2144,7 +2143,7 @@ def inlineCallbacks(
 
 class _ConcurrencyPrimitive(ABC):
     def __init__(self: Self) -> None:
-        self.waiting: List[Deferred[Self]] = []
+        self.waiting: list[Deferred[Self]] = []
 
     def _releaseAndReturn(self, r: _T) -> _T:
         self.release()
@@ -2392,8 +2391,8 @@ class DeferredQueue(Generic[_T]):
     def __init__(
         self, size: Optional[int] = None, backlog: Optional[int] = None
     ) -> None:
-        self.waiting: List[Deferred[_T]] = []
-        self.pending: List[_T] = []
+        self.waiting: list[Deferred[_T]] = []
+        self.pending: list[_T] = []
         self.size = size
         self.backlog = backlog
 

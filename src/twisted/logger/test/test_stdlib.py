@@ -11,7 +11,7 @@ import sys
 from inspect import getsourcefile
 from io import BytesIO, TextIOWrapper
 from logging import Formatter, LogRecord, StreamHandler, getLogger
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
@@ -99,7 +99,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.addCleanup(logger.close)
         return logger
 
-    def logEvent(self, *events: LogEvent) -> Tuple[List[LogRecord], str]:
+    def logEvent(self, *events: LogEvent) -> Tuple[list[LogRecord], str]:
         """
         Send one or more events to Python's logging module, and capture the
         emitted L{LogRecord}s and output stream as a string.
@@ -284,7 +284,7 @@ class BufferedHandler(py_logging.Handler):
         Initialize this L{BufferedHandler}.
         """
         py_logging.Handler.__init__(self)
-        self.records: List[LogRecord] = []
+        self.records: list[LogRecord] = []
 
     def emit(self, record: LogRecord) -> None:
         """

@@ -15,7 +15,7 @@ import stat
 import struct
 import sys
 import tty
-from typing import List, Optional, TextIO, Union
+from typing import Optional, TextIO, Union
 
 from twisted.conch.client import connect, default, options
 from twisted.conch.ssh import channel, common, connection, filetransfer
@@ -35,7 +35,7 @@ class ClientOptions(options.ConchOptions):
         "executing commands to send and receive file information"
     )
 
-    optParameters: List[List[Optional[Union[str, int]]]] = [
+    optParameters: list[list[Optional[Union[str, int]]]] = [
         ["buffersize", "B", 32768, "Size of the buffer to use for sending/receiving."],
         ["batchfile", "b", None, "File to read commands from, or '-' for stdin."],
         ["requests", "R", 5, "Number of requests to make before waiting for a reply."],

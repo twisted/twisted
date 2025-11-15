@@ -19,7 +19,7 @@ import re
 import zlib
 from binascii import hexlify
 from html import escape
-from typing import List, Optional
+from typing import Optional
 from urllib.parse import quote as _quote
 
 from zope.interface import implementer
@@ -90,8 +90,8 @@ class Request(Copyable, http.Request, components.Componentized):
     defaultContentType: Optional[bytes] = b"text/html"
     site = None
     appRootURL = None
-    prepath: Optional[List[bytes]] = None
-    postpath: Optional[List[bytes]] = None
+    prepath: Optional[list[bytes]] = None
+    postpath: Optional[list[bytes]] = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None

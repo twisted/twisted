@@ -8,7 +8,6 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 from io import BytesIO
-from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -1890,7 +1889,7 @@ class QueueResource(Resource):
 
     def __init__(self) -> None:
         super().__init__()
-        self.dispatchedRequests: List[Request] = []
+        self.dispatchedRequests: list[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.dispatchedRequests.append(request)

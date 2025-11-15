@@ -10,7 +10,6 @@ import pdb
 import sys
 import unittest as pyunit
 from io import StringIO
-from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -580,7 +579,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         A test case that fails when run 3 times in a row.
         """
 
-        count: List[None] = []
+        count: list[None] = []
 
         def test_foo(self):
             self.count.append(None)

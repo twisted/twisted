@@ -7,7 +7,7 @@ Tests for L{twisted.web.template}
 
 import sys
 from io import StringIO
-from typing import List, Optional
+from typing import Optional
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -160,7 +160,7 @@ class ElementTests(TestCase):
 
         @implementer(ITemplateLoader)
         class TemplateLoader:
-            def load(self) -> List[Flattenable]:
+            def load(self) -> list[Flattenable]:
                 return ["result"]
 
         class StubElement(Element):

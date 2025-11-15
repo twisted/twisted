@@ -15,7 +15,7 @@ import socket
 import struct
 import sys
 import typing
-from typing import Any, Callable, ClassVar, List, Optional, Union
+from typing import Any, Callable, ClassVar, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -1133,7 +1133,7 @@ class _BuffersLogs:
 
     _namespace: str
     _observer: ILogObserver
-    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
+    _logs: list[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
