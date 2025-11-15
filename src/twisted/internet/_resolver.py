@@ -20,15 +20,7 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    NoReturn,
-    Optional,
-    Sequence,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, NoReturn, Optional, Sequence, Type, Union
 
 from zope.interface import implementer
 

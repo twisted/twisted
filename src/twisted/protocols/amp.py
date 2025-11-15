@@ -196,15 +196,7 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, ClassVar, Optional, Type, TypeVar, Union
 
 from zope.interface import Interface, implementer
 

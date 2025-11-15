@@ -15,15 +15,7 @@ import stat
 import sys
 import time
 from pprint import pformat
-from typing import (
-    IO,
-    AnyStr,
-    Callable,
-    NoReturn,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import IO, AnyStr, Callable, NoReturn, Optional, TypeVar, Union
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject

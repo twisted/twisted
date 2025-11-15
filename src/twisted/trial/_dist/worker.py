@@ -10,15 +10,7 @@ This module implements the worker classes.
 """
 
 import os
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Optional,
-    Protocol,
-    TextIO,
-    TypeVar,
-)
+from typing import Any, Awaitable, Callable, Optional, Protocol, TextIO, TypeVar
 from unittest import TestCase
 
 from zope.interface import implementer

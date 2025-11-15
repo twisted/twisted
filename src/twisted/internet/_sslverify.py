@@ -8,15 +8,7 @@ import warnings
 from binascii import hexlify
 from functools import lru_cache
 from hashlib import md5
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, TypeVar, Union
 
 from zope.interface import Interface, implementer
 

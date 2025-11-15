@@ -10,16 +10,7 @@ import linecache
 import warnings
 from collections import OrderedDict
 from html import escape
-from typing import (
-    IO,
-    Any,
-    AnyStr,
-    Callable,
-    Mapping,
-    Optional,
-    Union,
-    cast,
-)
+from typing import IO, Any, AnyStr, Callable, Mapping, Optional, Union, cast
 from xml.sax import handler, make_parser
 from xml.sax.xmlreader import AttributesNSImpl, Locator
 

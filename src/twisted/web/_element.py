@@ -3,15 +3,7 @@
 # See LICENSE for details.
 
 import itertools
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Optional,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, overload
 
 from zope.interface import implementer
 
