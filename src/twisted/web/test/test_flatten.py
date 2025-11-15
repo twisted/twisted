@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, NoReturn, Optional, cast
+from typing import Callable, NoReturn, Optional, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -361,7 +361,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         from textwrap import dedent
 
-        namespace: Dict[str, FunctionType] = {}
+        namespace: dict[str, FunctionType] = {}
         exec(
             dedent(
                 """

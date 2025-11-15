@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._observer}.
 """
 
-from typing import Dict, cast
+from typing import cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -168,7 +168,7 @@ class LogPublisherTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2, log_trace=[])
 
-        traces: Dict[int, tuple[tuple[Logger, ILogObserver]]] = {}
+        traces: dict[int, tuple[tuple[Logger, ILogObserver]]] = {}
 
         # Copy trace to a tuple; otherwise, both observers will store the same
         # mutable list, and we won't be able to see o1's view distinctly.

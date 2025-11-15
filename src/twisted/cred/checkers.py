@@ -10,7 +10,7 @@ Basic credential checkers
 
 
 import os
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -168,7 +168,7 @@ class FilePasswordDB:
     """
 
     cache = False
-    _credCache: Optional[Dict[bytes, bytes]] = None
+    _credCache: Optional[dict[bytes, bytes]] = None
     _cacheTimestamp: float = 0
     _log = Logger()
 

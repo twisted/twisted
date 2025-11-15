@@ -46,7 +46,6 @@ from typing import (
     Any,
     AnyStr,
     Callable,
-    Dict,
     Generic,
     Iterable,
     Literal,
@@ -804,7 +803,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return FilePath(path)
 
-    def __getstate__(self) -> Dict[str, object]:
+    def __getstate__(self) -> dict[str, object]:
         """
         Support serialization by discarding cached L{os.stat} results and
         returning everything else.

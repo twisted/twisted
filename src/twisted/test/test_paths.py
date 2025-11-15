@@ -19,7 +19,6 @@ from typing import (
     IO,
     AnyStr,
     Callable,
-    Dict,
     NoReturn,
     Optional,
     TypeVar,
@@ -198,7 +197,7 @@ class AbstractFilePathTests(BytesTestCase):
         with their string counterparts.
         """
         f1 = self.path.child(b"file1")
-        dictoid: Dict[Union[filepath.FilePath[bytes], bytes], str] = {f1: "hello"}
+        dictoid: dict[Union[filepath.FilePath[bytes], bytes], str] = {f1: "hello"}
         dictoid[f1.path] = "goodbye"
         self.assertEqual(len(dictoid), 2)
 

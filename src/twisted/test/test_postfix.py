@@ -5,8 +5,6 @@
 Test cases for twisted.protocols.postfix module.
 """
 
-from typing import Dict
-
 from twisted.internet.testing import StringTransport
 from twisted.protocols import postfix
 from twisted.trial import unittest
@@ -41,7 +39,7 @@ class PostfixTCPMapQuoteTests(unittest.TestCase):
 
 
 class PostfixTCPMapServerTestCase:
-    data: Dict[bytes, bytes] = {
+    data: dict[bytes, bytes] = {
         # 'key': 'value',
     }
 

@@ -18,7 +18,7 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence, Type, Union, cast
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Type, Union, cast
 
 from zope.interface import Interface
 
@@ -179,7 +179,7 @@ class ReactorBuilder:
 
     originalHandler = None
     requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
-    skippedReactors: Dict[str, str] = {}
+    skippedReactors: dict[str, str] = {}
 
     def setUp(self):
         """
@@ -356,12 +356,12 @@ class ReactorBuilder:
     @classmethod
     def makeTestCaseClasses(
         cls: Type["ReactorBuilder"],
-    ) -> Dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]]:
+    ) -> dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]]:
         """
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes: Dict[
+        classes: dict[
             str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
         ] = {}
         for reactor in cls._reactors:

@@ -8,7 +8,7 @@ The point of integration of application and authentication.
 """
 
 
-from typing import Callable, Dict, Iterable, Type, Union
+from typing import Callable, Iterable, Type, Union
 
 from zope.interface import Interface, providedBy
 
@@ -75,7 +75,7 @@ class Portal:
     in the realm object and in the credentials checker objects.
     """
 
-    checkers: Dict[Type[Interface], ICredentialsChecker]
+    checkers: dict[Type[Interface], ICredentialsChecker]
 
     def __init__(
         self, realm: IRealm, checkers: Iterable[ICredentialsChecker] = ()

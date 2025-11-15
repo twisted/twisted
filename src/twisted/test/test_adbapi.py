@@ -7,7 +7,7 @@ Tests for twisted.enterprise.adbapi.
 
 import os
 import stat
-from typing import Dict, Optional
+from typing import Optional
 
 from twisted.enterprise.adbapi import (
     Connection,
@@ -32,7 +32,7 @@ class ADBAPITestBase:
     Test the asynchronous DB-API code.
     """
 
-    openfun_called: Dict[object, bool] = {}
+    openfun_called: dict[object, bool] = {}
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"

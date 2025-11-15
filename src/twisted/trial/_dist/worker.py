@@ -14,7 +14,6 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Dict,
     Optional,
     Protocol,
     TextIO,
@@ -210,7 +209,7 @@ class LocalWorkerAMP(AMP):
         errorClass: str,
         errorStreamId: int,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add an error to the reporter.
 
@@ -240,7 +239,7 @@ class LocalWorkerAMP(AMP):
         failStreamId: int,
         failClass: str,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add a failure to the reporter.
 
@@ -271,7 +270,7 @@ class LocalWorkerAMP(AMP):
     @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
         self, testName: str, errorStreamId: int, todo: Optional[str]
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add an expected failure to the reporter.
 

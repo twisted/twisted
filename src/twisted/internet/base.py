@@ -18,7 +18,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     NewType,
     Optional,
     Sequence,
@@ -97,7 +96,7 @@ class DelayedCall:
         time: float,
         func: Callable[..., Any],
         args: Sequence[object],
-        kw: Dict[str, object],
+        kw: dict[str, object],
         cancel: Callable[["DelayedCall"], None],
         reset: Callable[["DelayedCall"], None],
         seconds: Callable[[], float] = runtimeSeconds,
@@ -293,7 +292,7 @@ class ThreadedResolver:
 
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
-        self._runningQueries: Dict[
+        self._runningQueries: dict[
             Deferred[str], tuple[Deferred[str], IDelayedCall]
         ] = {}
 
@@ -370,11 +369,11 @@ class BlockingResolver:
 
 _ThreePhaseEventTriggerCallable = Callable[..., Any]
 _ThreePhaseEventTrigger = tuple[
-    _ThreePhaseEventTriggerCallable, tuple[object, ...], Dict[str, object]
+    _ThreePhaseEventTriggerCallable, tuple[object, ...], dict[str, object]
 ]
 _ThreePhaseEventTriggerHandle = NewType(
     "_ThreePhaseEventTriggerHandle",
-    tuple[str, _ThreePhaseEventTriggerCallable, tuple[object, ...], Dict[str, object]],
+    tuple[str, _ThreePhaseEventTriggerCallable, tuple[object, ...], dict[str, object]],
 )
 
 
@@ -567,7 +566,7 @@ class PluggableResolverMixin:
 
 
 _SystemEventID = NewType("_SystemEventID", tuple[str, _ThreePhaseEventTriggerHandle])
-_ThreadCall = tuple[Callable[..., Any], tuple[object, ...], Dict[str, object]]
+_ThreadCall = tuple[Callable[..., Any], tuple[object, ...], dict[str, object]]
 
 _DEFAULT_DELAYED_CALL_LOGGING_HANDLER = _log.failureHandler("while handling timed call")
 
@@ -621,7 +620,7 @@ class ReactorBase(PluggableResolverMixin):
     def __init__(self) -> None:
         super().__init__()
         self.threadCallQueue: list[_ThreadCall] = []
-        self._eventTriggers: Dict[str, _ThreePhaseEvent] = {}
+        self._eventTriggers: dict[str, _ThreePhaseEvent] = {}
         self._pendingTimedCalls: list[DelayedCall] = []
         self._newTimedCalls: list[DelayedCall] = []
         self._cancellations = 0

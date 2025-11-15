@@ -15,7 +15,7 @@ import sys
 from collections.abc import Callable
 from functools import wraps
 from importlib import reload
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
@@ -206,7 +206,7 @@ def _defaultPrivateKeySubtype(keyType):
 
 
 def _getKeyOrDefault(
-    options: Dict[Any, Any],
+    options: dict[Any, Any],
     inputCollector: Optional[Callable[[str], str]] = None,
     keyTypeName: str = "rsa",
 ) -> str:
@@ -231,7 +231,7 @@ def _getKeyOrDefault(
     return str(filename)
 
 
-def printFingerprint(options: Dict[Any, Any]) -> None:
+def printFingerprint(options: dict[Any, Any]) -> None:
     filename = _getKeyOrDefault(options)
     if os.path.exists(filename + ".pub"):
         filename += ".pub"
@@ -328,7 +328,7 @@ def _inputSaveFile(prompt: str) -> str:
 
 def _saveKey(
     key: keys.Key,
-    options: Dict[Any, Any],
+    options: dict[Any, Any],
     inputCollector: Optional[Callable[[str], str]] = None,
 ) -> None:
     """

@@ -200,7 +200,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Dict,
     Optional,
     Type,
     TypeVar,
@@ -614,7 +613,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(Dict[bytes, bytes]):
+class AmpBox(dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -1722,8 +1721,8 @@ class _CommandMeta(type):
             if not isinstance(bname, bytes):
                 raise TypeError(f"Response names must be byte strings, got: {bname!r}")
 
-        errors: Dict[Type[Exception], bytes] = {}
-        fatalErrors: Dict[Type[Exception], bytes] = {}
+        errors: dict[Type[Exception], bytes] = {}
+        fatalErrors: dict[Type[Exception], bytes] = {}
         accumulateClassDict(newtype, "errors", errors)
         accumulateClassDict(newtype, "fatalErrors", fatalErrors)
 
@@ -1798,8 +1797,8 @@ class Command(metaclass=_CommandMeta):
     arguments: ClassVar[list[tuple[bytes, Argument]]] = []
     response: ClassVar[list[tuple[bytes, Argument]]] = []
     extra: ClassVar[list[Any]] = []
-    errors: ClassVar[Dict[Type[Exception], bytes]] = {}
-    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}
+    errors: ClassVar[dict[Type[Exception], bytes]] = {}
+    fatalErrors: ClassVar[dict[Type[Exception], bytes]] = {}
 
     commandType: "ClassVar[Union[Type[Command], Type[Box]]]" = Box
     responseType: ClassVar[Type[AmpBox]] = Box

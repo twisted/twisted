@@ -21,7 +21,7 @@ import os
 import sys
 import textwrap
 from os import path
-from typing import Any, Dict, Optional, cast
+from typing import Any, Optional, cast
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -63,7 +63,7 @@ class CoerceParameter:
         self.options.opts[parameterName] = value
 
 
-class Options(Dict[str, Any]):
+class Options(dict[str, Any]):
     """
     An option list parser class
 

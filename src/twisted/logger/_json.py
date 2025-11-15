@@ -7,7 +7,7 @@ Tools for saving and loading log events in a structured format.
 """
 
 from json import dumps, loads
-from typing import IO, Any, AnyStr, Dict, Iterable, Optional, Union, cast
+from typing import IO, Any, AnyStr, Iterable, Optional, Union, cast
 from uuid import UUID
 
 from constantly import NamedConstant
@@ -22,7 +22,7 @@ from ._logger import Logger
 log = Logger()
 
 
-JSONDict = Dict[str, Any]
+JSONDict = dict[str, Any]
 
 
 def failureAsJSON(failure: Failure) -> JSONDict:

@@ -97,7 +97,7 @@ import sys
 from dis import findlinestarts
 from functools import wraps
 from types import ModuleType
-from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, cast
+from typing import Any, Callable, Optional, Sequence, TypeVar, cast
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -647,7 +647,7 @@ def _passedArgSpec(argspec, positional, keyword):
         to values that were passed explicitly by the user.
     @rtype: L{dict} mapping L{str} to L{object}
     """
-    result: Dict[str, object] = {}
+    result: dict[str, object] = {}
     unpassed = len(argspec.args) - len(positional)
     if argspec.keywords is not None:
         kwargs = result[argspec.keywords] = {}

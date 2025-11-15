@@ -20,7 +20,7 @@ import stat
 import sys
 import traceback
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Optional
 
 _PS_CLOSE: int
 _PS_DUP2: int
@@ -66,7 +66,7 @@ else:
 # here for backwards compatibility:
 ProcessExitedAlready = error.ProcessExitedAlready
 
-reapProcessHandlers: Dict[int, _BaseProcess] = {}
+reapProcessHandlers: dict[int, _BaseProcess] = {}
 
 
 def reapAllProcesses() -> None:
@@ -633,7 +633,7 @@ def _listOpenFDs():
 
 def _getFileActions(
     fdState: list[tuple[int, bool]],
-    childToParentFD: Dict[int, int],
+    childToParentFD: dict[int, int],
     doClose: int,
     doDup2: int,
 ) -> list[tuple[int, ...]]:
@@ -649,7 +649,7 @@ def _getFileActions(
     @param doDup2: the integer to use for the 'dup2' instruction
     """
     fdStateDict = dict(fdState)
-    parentToChildren: Dict[int, list[int]] = defaultdict(list)
+    parentToChildren: dict[int, list[int]] = defaultdict(list)
     for inChild, inParent in childToParentFD.items():
         parentToChildren[inParent].append(inChild)
     allocated = set(fdStateDict)

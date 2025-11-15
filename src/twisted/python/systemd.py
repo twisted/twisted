@@ -13,7 +13,7 @@ feature are supported.
 __all__ = ["ListenFDs"]
 
 from os import getpid
-from typing import Dict, Mapping, Optional, Sequence
+from typing import Mapping, Optional, Sequence
 
 from attrs import Factory, define
 
@@ -95,7 +95,7 @@ class ListenFDs:
         """
         return list(self._descriptors)
 
-    def inheritedNamedDescriptors(self) -> Dict[str, int]:
+    def inheritedNamedDescriptors(self) -> dict[str, int]:
         """
         @return: A mapping from the names of configured descriptors to
             their integer values.

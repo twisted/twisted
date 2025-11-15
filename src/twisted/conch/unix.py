@@ -16,7 +16,7 @@ import socket
 import struct
 import time
 import tty
-from typing import Callable, Dict
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -72,7 +72,7 @@ class UnixConchUser(ConchUser):
             if username in userlist:
                 l.append(gid)
         self.otherGroups = l
-        self.listeners: Dict[
+        self.listeners: dict[
             str, IListeningPort
         ] = {}  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(

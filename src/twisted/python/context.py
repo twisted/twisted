@@ -14,9 +14,9 @@ This is thread-safe.
 
 
 from threading import local
-from typing import Dict, Type
+from typing import Type
 
-defaultContextDict: Dict[Type[object], Dict[str, str]] = {}
+defaultContextDict: dict[Type[object], dict[str, str]] = {}
 
 setDefault = defaultContextDict.__setitem__
 

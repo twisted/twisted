@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property, partial
-from typing import Callable, Dict
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -272,7 +272,7 @@ class PEMObjects:
             ],
         )
 
-    def inferDomainMapping(self) -> Dict[str, CertificateOptions]:
+    def inferDomainMapping(self) -> dict[str, CertificateOptions]:
         """
         Return a mapping of DNS name to L{CertificateOptions}.
         """

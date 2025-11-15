@@ -23,7 +23,7 @@ cumbersome.
 
 
 from inspect import iscoroutine, isgenerator
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 from warnings import warn
 
 import attr
@@ -99,7 +99,7 @@ class Tag:
     For a tag like C{<div></div>}, this would be C{"div"}.
     """
 
-    attributes: Dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
+    attributes: dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
     """The attributes of the element."""
 
     children: list["Flattenable"] = attr.ib(factory=list)
@@ -138,7 +138,7 @@ class Tag:
     If it was not parsed from an XML file, L{None}.
     """
 
-    slotData: Optional[Dict[str, "Flattenable"]] = attr.ib(init=False, default=None)
+    slotData: Optional[dict[str, "Flattenable"]] = attr.ib(init=False, default=None)
     """
     The data which can fill slots.
 

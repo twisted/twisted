@@ -17,7 +17,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
-    Dict,
     Generic,
     Iterable,
     Literal,
@@ -294,7 +293,7 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
         self.pathInArchive = _coerceToFilesystemEncoding(archivePathname, "")
         # zipfile is already wasting O(N) memory on cached ZipInfo instances,
         # so there's no sense in trying to do this lazily or intelligently
-        self.childmap: Dict[AnyStr, Dict[AnyStr, int]] = {}
+        self.childmap: dict[AnyStr, dict[AnyStr, int]] = {}
 
         for name in self.zipfile.namelist():
             splitName = _coerceToFilesystemEncoding(self.path, name).split(self.sep)

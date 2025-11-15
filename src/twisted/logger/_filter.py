@@ -7,7 +7,7 @@ Filtering log observer.
 """
 
 from functools import partial
-from typing import Dict, Iterable
+from typing import Iterable
 
 from zope.interface import Interface, implementer
 
@@ -138,7 +138,7 @@ class LogLevelFilterPredicate:
         """
         @param defaultLogLevel: The default minimum log level.
         """
-        self._logLevelsByNamespace: Dict[str, NamedConstant] = {}
+        self._logLevelsByNamespace: dict[str, NamedConstant] = {}
         self.defaultLogLevel = defaultLogLevel
         self.clearLogLevels()
 

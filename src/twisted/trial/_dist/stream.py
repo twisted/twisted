@@ -3,7 +3,7 @@ Buffer byte streams.
 """
 
 from itertools import count
-from typing import Dict, Iterator, TypeVar
+from typing import Iterator, TypeVar
 
 from attrs import Factory, define
 
@@ -38,7 +38,7 @@ class StreamReceiver:
     """
 
     _counter: Iterator[int] = count()
-    _streams: Dict[int, list[bytes]] = Factory(dict)
+    _streams: dict[int, list[bytes]] = Factory(dict)
 
     def open(self) -> int:
         """

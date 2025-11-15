@@ -9,7 +9,7 @@ moduli file.
 
 import errno
 import os
-from typing import Dict, Optional
+from typing import Optional
 
 from twisted.conch.openssh_compat import primes
 from twisted.conch.ssh import common, factory, keys
@@ -67,7 +67,7 @@ class OpenSSHFactory(factory.SSHFactory):
                     privateKeys[key.sshType()] = key
         return privateKeys
 
-    def getPrimes(self) -> Optional[Dict[int, list[tuple[int, int]]]]:
+    def getPrimes(self) -> Optional[dict[int, list[tuple[int, int]]]]:
         try:
             return primes.parseModuliFile(self.moduliRoot + "/moduli")
         except OSError:

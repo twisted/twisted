@@ -12,7 +12,7 @@ characters, case folding and canonicalisation through
 L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
-from typing import Dict, Union
+from typing import Union
 
 from twisted.words.protocols.jabber.xmpp_stringprep import (
     nameprep,
@@ -117,7 +117,7 @@ def prep(
     return (user, host, resource)
 
 
-__internJIDs: Dict[str, "JID"] = {}
+__internJIDs: dict[str, "JID"] = {}
 
 
 def internJID(jidstring):

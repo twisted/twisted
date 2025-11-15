@@ -10,7 +10,7 @@ examination.
 
 from collections import defaultdict
 from string import Formatter
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from ._interfaces import LogEvent
 
@@ -27,7 +27,7 @@ class KeyFlattener:
         """
         Initialize a L{KeyFlattener}.
         """
-        self.keys: Dict[str, int] = defaultdict(lambda: 0)
+        self.keys: dict[str, int] = defaultdict(lambda: 0)
 
     def flatKey(
         self, fieldName: str, formatSpec: Optional[str], conversion: Optional[str]

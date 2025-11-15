@@ -8,7 +8,6 @@ import errno
 import os
 import struct
 import warnings
-from typing import Dict
 
 from zope.interface import implementer
 
@@ -25,7 +24,7 @@ class FileTransferBase(protocol.Protocol):
 
     versions = (3,)
 
-    packetTypes: Dict[int, str] = {}
+    packetTypes: dict[int, str] = {}
 
     def __init__(self):
         self.buf = b""

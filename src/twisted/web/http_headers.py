@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import (
     AnyStr,
     ClassVar,
-    Dict,
     Iterator,
     Mapping,
     Optional,
@@ -70,7 +69,7 @@ class Headers:
         self,
         rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
     ) -> None:
-        self._rawHeaders: Dict[bytes, list[bytes]] = {}
+        self._rawHeaders: dict[bytes, list[bytes]] = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
@@ -221,9 +220,9 @@ class _NameEncoder:
     """
 
     __slots__ = ("_canonicalHeaderCache",)
-    _canonicalHeaderCache: Dict[Union[bytes, str], bytes]
+    _canonicalHeaderCache: dict[Union[bytes, str], bytes]
 
-    _caseMappings: ClassVar[Dict[bytes, bytes]] = {
+    _caseMappings: ClassVar[dict[bytes, bytes]] = {
         b"Content-Md5": b"Content-MD5",
         b"Dnt": b"DNT",
         b"Etag": b"ETag",

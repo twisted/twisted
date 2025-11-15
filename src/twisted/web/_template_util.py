@@ -15,7 +15,6 @@ from typing import (
     Any,
     AnyStr,
     Callable,
-    Dict,
     Mapping,
     Optional,
     Union,
@@ -326,7 +325,7 @@ class _NSContext:
         """
         self.parent = parent
         if parent is not None:
-            self.nss: Dict[Optional[str], Optional[str]] = OrderedDict(parent.nss)
+            self.nss: dict[Optional[str], Optional[str]] = OrderedDict(parent.nss)
         else:
             self.nss = {"http://www.w3.org/XML/1998/namespace": "xml"}
 

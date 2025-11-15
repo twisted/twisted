@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -514,7 +514,7 @@ class SSHTransportBase(protocol.Protocol):
     _EXT_INFO_S = b"ext-info-s"
 
     _peerSupportsExtensions = False
-    peerExtensions: Dict[bytes, bytes] = {}
+    peerExtensions: dict[bytes, bytes] = {}
 
     # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
     avatar: object

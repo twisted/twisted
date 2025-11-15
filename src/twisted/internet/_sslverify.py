@@ -12,7 +12,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Optional,
     Sequence,
     TypeVar,
@@ -178,7 +177,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(Dict[str, bytes]):
+class DistinguishedName(dict[str, bytes]):
     """
     Identify and describe an entity.
 

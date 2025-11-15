@@ -26,7 +26,6 @@ from typing import (
     Any,
     Callable,
     Coroutine,
-    Dict,
     Generator,
     Literal,
     Mapping,
@@ -147,7 +146,7 @@ class UtilTests(unittest.TestCase):
         """
         output = []
 
-        def emit(eventDict: Dict[str, Any]) -> None:
+        def emit(eventDict: dict[str, Any]) -> None:
             text = log.textFromEventDict(eventDict)
             assert text is not None
             output.append(text)
@@ -164,13 +163,13 @@ class UtilTests(unittest.TestCase):
 class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def setUp(self) -> None:
         self.callbackResults: Optional[
-            tuple[tuple[object, ...], Dict[str, object]]
+            tuple[tuple[object, ...], dict[str, object]]
         ] = None
         self.callback2Results: Optional[
-            tuple[tuple[object, ...], Dict[str, object]]
+            tuple[tuple[object, ...], dict[str, object]]
         ] = None
         self.errbackResults: Optional[
-            tuple[tuple[Failure, ...], Dict[str, object]]
+            tuple[tuple[Failure, ...], dict[str, object]]
         ] = None
 
         # Restore the debug flag to its original state when done.
@@ -2492,7 +2491,7 @@ class LogTests(unittest.SynchronousTestCase):
         """
         Add a custom observer to observer logging.
         """
-        self.c: list[Dict[str, Any]] = []
+        self.c: list[dict[str, Any]] = []
         log.addObserver(self.c.append)
 
     def tearDown(self) -> None:
@@ -2501,7 +2500,7 @@ class LogTests(unittest.SynchronousTestCase):
         """
         log.removeObserver(self.c.append)
 
-    def _loggedErrors(self) -> list[Dict[str, Any]]:
+    def _loggedErrors(self) -> list[dict[str, Any]]:
         return [e for e in self.c if e["isError"]]
 
     def _check(self) -> None:

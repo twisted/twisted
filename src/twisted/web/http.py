@@ -116,7 +116,6 @@ from time import gmtime, time
 from typing import (
     AnyStr,
     Callable,
-    Dict,
     Optional,
     Protocol as TypingProtocol,
 )
@@ -950,7 +949,7 @@ class Request:
         self.host = self.channel.getHost()
 
         self.requestHeaders: Headers = Headers()
-        self.received_cookies: Dict[bytes, bytes] = {}
+        self.received_cookies: dict[bytes, bytes] = {}
         self.responseHeaders: Headers = Headers()
         self.cookies: list[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport

@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from typing import Any, AnyStr, Dict, Optional, cast
+from typing import Any, AnyStr, Optional, cast
 
 try:
     from time import tzset
@@ -101,7 +101,7 @@ class FormattingTests(unittest.TestCase):
         """
 
         class Example(object):
-            config: Dict[str, str] = dict(foo="bar", baz="qux")
+            config: dict[str, str] = dict(foo="bar", baz="qux")
 
         self.assertEqual(
             "bar qux",

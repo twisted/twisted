@@ -10,7 +10,7 @@ from __future__ import annotations
 import zlib
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, Optional, Sequence
+from typing import TYPE_CHECKING, Optional, Sequence
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -2792,7 +2792,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
+        def normHeaders(headers: Headers) -> dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)

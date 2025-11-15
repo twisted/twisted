@@ -6,7 +6,7 @@ Tests for L{twisted.application.twist._options}.
 """
 
 from sys import stderr, stdout
-from typing import Callable, Dict, Optional, TextIO
+from typing import Callable, Optional, TextIO
 
 import twisted.trial.unittest
 from twisted.copyright import version
@@ -60,7 +60,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors: Dict[str, IReactorCore] = {}
+        self.installedReactors: dict[str, IReactorCore] = {}
 
         def installReactor(name: str) -> IReactorCore:
             if name != "fusion":

@@ -7,7 +7,7 @@ Support for starting, monitoring, and restarting child process.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import attr
 import incremental
@@ -51,7 +51,7 @@ class _Process:
     args: list[str]
     uid: Optional[int] = None
     gid: Optional[int] = None
-    env: Dict[str, str] = attr.ib(default=attr.Factory(dict))
+    env: dict[str, str] = attr.ib(default=attr.Factory(dict))
     cwd: Optional[str] = None
 
     @deprecate.deprecated(incremental.Version("Twisted", 18, 7, 0))
