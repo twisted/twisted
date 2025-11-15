@@ -6,7 +6,7 @@ Test cases for L{twisted.logger._global}.
 """
 
 import io
-from typing import IO, Any, Optional, TextIO, Tuple, Type, cast
+from typing import IO, Any, Optional, TextIO, Type, cast
 
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -66,7 +66,7 @@ class LogBeginnerTests(unittest.TestCase):
         class NotWarnings:
             def __init__(self) -> None:
                 self.warnings: list[
-                    Tuple[
+                    tuple[
                         str, Type[Warning], str, int, Optional[IO[Any]], Optional[int]
                     ]
                 ] = []

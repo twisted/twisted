@@ -37,7 +37,6 @@ from typing import (
     Mapping,
     MutableMapping,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -615,7 +614,7 @@ class FancyStrMixin:
 
     # Override in subclasses:
     showAttributes: Sequence[
-        Union[str, Tuple[str, str, str], Tuple[str, Callable[[Any], str]]]
+        Union[str, tuple[str, str, str], tuple[str, Callable[[Any], str]]]
     ] = ()
 
     def __str__(self) -> str:

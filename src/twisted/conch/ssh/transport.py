@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -67,7 +67,7 @@ _Hash = Any
 _DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
 
 
-class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
+class _MACParams(tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).

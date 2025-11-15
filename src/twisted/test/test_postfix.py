@@ -5,7 +5,7 @@
 Test cases for twisted.protocols.postfix module.
 """
 
-from typing import Dict, Tuple
+from typing import Dict
 
 from twisted.internet.testing import StringTransport
 from twisted.protocols import postfix
@@ -45,7 +45,7 @@ class PostfixTCPMapServerTestCase:
         # 'key': 'value',
     }
 
-    chat: list[Tuple[bytes, bytes]] = [
+    chat: list[tuple[bytes, bytes]] = [
         # (input, expected_output),
     ]
 

@@ -9,7 +9,7 @@ IProxyParser implementation for version two of the PROXY protocol.
 
 import binascii
 import struct
-from typing import Callable, Literal, Tuple, Type, Union
+from typing import Callable, Literal, Type, Union
 
 from zope.interface import implementer
 
@@ -81,7 +81,7 @@ class V2Parser:
 
     def feed(
         self, data: bytes
-    ) -> Union[Tuple[_info.ProxyInfo, bytes], Tuple[None, None]]:
+    ) -> Union[tuple[_info.ProxyInfo, bytes], tuple[None, None]]:
         """
         Consume a chunk of data and attempt to parse it.
 

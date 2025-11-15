@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import struct
 from hashlib import sha256
-from typing import Callable, Tuple, Type
+from typing import Callable, Type
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
@@ -27,7 +27,7 @@ from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString
 
-_ConchPortalTuple = Tuple[
+_ConchPortalTuple = tuple[
     Type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
 ]
 

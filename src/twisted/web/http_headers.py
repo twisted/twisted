@@ -15,7 +15,6 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
     overload,
@@ -199,7 +198,7 @@ class Headers:
             return [v.decode("utf8") for v in values]
         return values
 
-    def getAllRawHeaders(self) -> Iterator[Tuple[bytes, Sequence[bytes]]]:
+    def getAllRawHeaders(self) -> Iterator[tuple[bytes, Sequence[bytes]]]:
         """
         Return an iterator of key, value pairs of all headers contained in this
         object, as L{bytes}.  The keys are capitalized in canonical

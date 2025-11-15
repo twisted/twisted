@@ -8,7 +8,7 @@ to load code.
 
 import sys
 from types import ModuleType
-from typing import Iterable, Tuple
+from typing import Iterable
 
 from twisted.python.filepath import FilePath
 
@@ -31,7 +31,7 @@ class TwistedModulesMixin:
         self.addCleanup(cleanUpSysPath)  # type: ignore[attr-defined]
         sys.path[:] = sysPath
 
-    def replaceSysModules(self, sysModules: Iterable[Tuple[str, ModuleType]]) -> None:
+    def replaceSysModules(self, sysModules: Iterable[tuple[str, ModuleType]]) -> None:
         """
         Replace sys.modules, for the duration of the test, with the given value.
         """

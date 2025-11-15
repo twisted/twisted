@@ -6,7 +6,7 @@
 """
 IProxyParser implementation for version one of the PROXY protocol.
 """
-from typing import Tuple, Union
+from typing import Union
 
 from zope.interface import implementer
 
@@ -46,7 +46,7 @@ class V1Parser:
 
     def feed(
         self, data: bytes
-    ) -> Union[Tuple[_info.ProxyInfo, bytes], Tuple[None, None]]:
+    ) -> Union[tuple[_info.ProxyInfo, bytes], tuple[None, None]]:
         """
         Consume a chunk of data and attempt to parse it.
 

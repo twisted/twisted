@@ -52,7 +52,6 @@ from typing import (
     Literal,
     Optional,
     Sequence,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -1409,7 +1408,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         """
         return listdir(self.path)
 
-    def splitext(self) -> Tuple[AnyStr, AnyStr]:
+    def splitext(self) -> tuple[AnyStr, AnyStr]:
         """
         Split the file path into a pair C{(root, ext)} such that
         C{root + ext == path}.

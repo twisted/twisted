@@ -7,7 +7,7 @@ Integration with Python standard library logging.
 """
 
 import logging as stdlibLogging
-from typing import Mapping, Tuple
+from typing import Mapping
 
 from zope.interface import implementer
 
@@ -80,7 +80,7 @@ class STDLibLogObserver:
 
     def _findCaller(
         self, stackInfo: bool = False, stackLevel: int = 1
-    ) -> Tuple[str, int, str, None]:
+    ) -> tuple[str, int, str, None]:
         """
         Based on the stack depth passed to this L{STDLibLogObserver}, identify
         the calling function.

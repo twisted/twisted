@@ -10,7 +10,7 @@ import base64
 import inspect
 import re
 from io import BytesIO
-from typing import Any, Optional, Tuple, Type
+from typing import Any, Optional, Type
 
 from zope.interface import directlyProvides, implementer
 
@@ -401,7 +401,7 @@ To: foo
         ),
     ]
 
-    data: list[Tuple[bytes, bytes, Any, Any]] = [
+    data: list[tuple[bytes, bytes, Any, Any]] = [
         (b"", b"220.*\r\n$", None, None),
         (b"HELO foo.com\r\n", b"250.*\r\n$", None, None),
         (b"RSET\r\n", b"250.*\r\n$", None, None),

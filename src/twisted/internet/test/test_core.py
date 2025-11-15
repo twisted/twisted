@@ -9,7 +9,7 @@ Tests for implementations of L{IReactorCore}.
 import signal
 import time
 from types import FrameType
-from typing import Callable, Optional, Tuple, Union, cast
+from typing import Callable, Optional, Union, cast
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.defer import Deferred
@@ -275,7 +275,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} restarts the reactor after it has been stopped by
         C{reactor.crash()}.
         """
-        events: list[Union[str, Tuple[str, bool]]] = []
+        events: list[Union[str, tuple[str, bool]]] = []
 
         def crash() -> None:
             events.append("crash")

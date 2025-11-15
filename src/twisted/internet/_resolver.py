@@ -26,7 +26,6 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
-    Tuple,
     Type,
     Union,
 )
@@ -95,12 +94,12 @@ _socktypeToType = {
 
 
 _GETADDRINFO_RESULT = list[
-    Tuple[
+    tuple[
         AddressFamily,
         SocketKind,
         int,
         str,
-        Union[Tuple[str, int], Tuple[str, int, int, int]],
+        Union[tuple[str, int], tuple[str, int, int, int]],
     ]
 ]
 

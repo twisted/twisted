@@ -23,7 +23,6 @@ from typing import (
     Optional,
     Sequence,
     Set,
-    Tuple,
     Union,
     cast,
 )
@@ -295,7 +294,7 @@ class ThreadedResolver:
     def __init__(self, reactor: "ReactorBase") -> None:
         self.reactor = reactor
         self._runningQueries: Dict[
-            Deferred[str], Tuple[Deferred[str], IDelayedCall]
+            Deferred[str], tuple[Deferred[str], IDelayedCall]
         ] = {}
 
     def _fail(self, name: str, err: str) -> Failure:
@@ -370,12 +369,12 @@ class BlockingResolver:
 
 
 _ThreePhaseEventTriggerCallable = Callable[..., Any]
-_ThreePhaseEventTrigger = Tuple[
-    _ThreePhaseEventTriggerCallable, Tuple[object, ...], Dict[str, object]
+_ThreePhaseEventTrigger = tuple[
+    _ThreePhaseEventTriggerCallable, tuple[object, ...], Dict[str, object]
 ]
 _ThreePhaseEventTriggerHandle = NewType(
     "_ThreePhaseEventTriggerHandle",
-    Tuple[str, _ThreePhaseEventTriggerCallable, Tuple[object, ...], Dict[str, object]],
+    tuple[str, _ThreePhaseEventTriggerCallable, tuple[object, ...], Dict[str, object]],
 )
 
 
@@ -567,8 +566,8 @@ class PluggableResolverMixin:
         return self._nameResolver
 
 
-_SystemEventID = NewType("_SystemEventID", Tuple[str, _ThreePhaseEventTriggerHandle])
-_ThreadCall = Tuple[Callable[..., Any], Tuple[object, ...], Dict[str, object]]
+_SystemEventID = NewType("_SystemEventID", tuple[str, _ThreePhaseEventTriggerHandle])
+_ThreadCall = tuple[Callable[..., Any], tuple[object, ...], Dict[str, object]]
 
 _DEFAULT_DELAYED_CALL_LOGGING_HANDLER = _log.failureHandler("while handling timed call")
 

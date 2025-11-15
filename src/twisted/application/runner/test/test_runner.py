@@ -9,7 +9,7 @@ import errno
 from io import StringIO
 from signal import SIGTERM
 from types import TracebackType
-from typing import Any, Iterable, Optional, TextIO, Tuple, Type, Union, cast
+from typing import Any, Iterable, Optional, TextIO, Type, Union, cast
 
 from attr import Factory, attrib, attrs
 
@@ -424,7 +424,7 @@ class DummyKill:
     """
 
     def __init__(self) -> None:
-        self.calls: list[Tuple[int, int]] = []
+        self.calls: list[tuple[int, int]] = []
 
     def __call__(self, pid: int, sig: int) -> None:
         self.calls.append((pid, sig))

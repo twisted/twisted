@@ -2,7 +2,7 @@
 Tests for L{twisted.trial._dist.test.matchers}.
 """
 
-from typing import Callable, Sequence, Tuple, Type
+from typing import Callable, Sequence, Type
 
 from hamcrest import anything, assert_that, contains, contains_string, equal_to, not_
 from hamcrest.core.matcher import Matcher
@@ -42,7 +42,7 @@ class HasSumTests(SynchronousTestCase):
     )
 
     @given(summables)
-    def test_matches(self, summable: Tuple[Sequence[S], Summer[S]]) -> None:
+    def test_matches(self, summable: tuple[Sequence[S], Summer[S]]) -> None:
         """
         L{HasSum} matches a sequence if the elements sum to a value matched by
         the parameterized matcher.
@@ -62,7 +62,7 @@ class HasSumTests(SynchronousTestCase):
     @given(summables)
     def test_mismatches(
         self,
-        summable: Tuple[
+        summable: tuple[
             Sequence[S],
             Summer[S],
         ],

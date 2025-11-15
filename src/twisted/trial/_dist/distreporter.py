@@ -12,7 +12,7 @@ test is over.
 """
 
 from types import TracebackType
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from zope.interface import implementer
 
@@ -20,7 +20,7 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from ..itrial import IReporter, ITestCase
 
-ReporterFailure = Union[Failure, Tuple[type, Exception, TracebackType]]
+ReporterFailure = Union[Failure, tuple[type, Exception, TracebackType]]
 
 
 @implementer(IReporter)

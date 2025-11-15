@@ -12,7 +12,7 @@ import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, NoReturn, Optional, Tuple, cast
+from typing import Callable, Dict, NoReturn, Optional, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -489,7 +489,7 @@ class FlattenChunkingTests(SynchronousTestCase):
     def _chunksSeparatedByAsyncTest(
         self,
         start: Callable[
-            [Flattenable], Tuple[Deferred[Flattenable], Callable[[], object]]
+            [Flattenable], tuple[Deferred[Flattenable], Callable[[], object]]
         ],
     ) -> None:
         """
@@ -546,7 +546,7 @@ class FlattenChunkingTests(SynchronousTestCase):
 
         def sync_start(
             v: Flattenable,
-        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
+        ) -> tuple[Deferred[Flattenable], Callable[[], None]]:
             return (succeed(v), lambda: None)
 
         self._chunksSeparatedByAsyncTest(sync_start)
@@ -561,7 +561,7 @@ class FlattenChunkingTests(SynchronousTestCase):
 
         def async_start(
             v: Flattenable,
-        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
+        ) -> tuple[Deferred[Flattenable], Callable[[], None]]:
             d: Deferred[Flattenable] = Deferred()
             return (d, lambda: d.callback(v))
 

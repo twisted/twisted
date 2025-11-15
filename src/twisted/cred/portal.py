@@ -8,7 +8,7 @@ The point of integration of application and authentication.
 """
 
 
-from typing import Callable, Dict, Iterable, Tuple, Type, Union
+from typing import Callable, Dict, Iterable, Type, Union
 
 from zope.interface import Interface, providedBy
 
@@ -29,7 +29,7 @@ _InterfaceItself = Type[Interface]
 # This is the result shape for both IRealm.requestAvatar and Portal.login,
 # although the former is optionally allowed to return synchronously and the
 # latter must be Deferred.
-_requestResult = Tuple[_InterfaceItself, object, Callable[[], None]]
+_requestResult = tuple[_InterfaceItself, object, Callable[[], None]]
 
 
 class IRealm(Interface):
@@ -39,7 +39,7 @@ class IRealm(Interface):
     """
 
     def requestAvatar(
-        avatarId: Union[bytes, Tuple[()]], mind: object, *interfaces: _InterfaceItself
+        avatarId: Union[bytes, tuple[()]], mind: object, *interfaces: _InterfaceItself
     ) -> Union[Deferred[_requestResult], _requestResult]:
         """
         Return avatar which provides one of the given interfaces.

@@ -33,7 +33,6 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -326,15 +325,15 @@ DeferredCallback = Callable[..., object]
 #     Callable[[Failure], object] is next best, but disallows valid callback signatures
 DeferredErrback = Callable[..., object]
 
-_CallbackOrderedArguments = Tuple[object, ...]
+_CallbackOrderedArguments = tuple[object, ...]
 _CallbackKeywordArguments = Mapping[str, object]
-_CallbackChain = Tuple[
-    Tuple[
+_CallbackChain = tuple[
+    tuple[
         Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
     ],
-    Tuple[
+    tuple[
         Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
@@ -500,7 +499,7 @@ class Deferred(Awaitable[_SelfResultT]):
             ],
             None,
         ] = None,
-        callbackArgs: Tuple[Any, ...] = (),
+        callbackArgs: tuple[Any, ...] = (),
         callbackKeywords: Mapping[str, Any] = _NONE_KWARGS,
         errbackArgs: _CallbackOrderedArguments = (),
         errbackKeywords: _CallbackKeywordArguments = _NONE_KWARGS,
@@ -1413,8 +1412,8 @@ class FirstError(Exception):
         return -1
 
 
-_DeferredListSingleResultT = Tuple[_SelfResultT, int]
-_DeferredListResultItemT = Tuple[bool, _SelfResultT]
+_DeferredListSingleResultT = tuple[_SelfResultT, int]
+_DeferredListResultItemT = tuple[bool, _SelfResultT]
 _DeferredListResultListT = list[_DeferredListResultItemT[_SelfResultT]]
 
 if TYPE_CHECKING:

@@ -26,7 +26,7 @@ Stanzas.
 from binascii import hexlify
 from hashlib import sha1
 from sys import intern
-from typing import Optional, Tuple
+from typing import Optional
 
 from zope.interface import directlyProvides, implementer
 
@@ -318,7 +318,7 @@ class BaseFeatureInitiatingInitializer:
     @type required: C{bool}
     """
 
-    feature: Optional[Tuple[str, str]] = None
+    feature: Optional[tuple[str, str]] = None
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs

@@ -119,7 +119,6 @@ from typing import (
     Dict,
     Optional,
     Protocol as TypingProtocol,
-    Tuple,
 )
 from urllib.parse import (
     ParseResultBytes,
@@ -525,7 +524,7 @@ def toChunk(data):
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
-def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
+def fromChunk(data: bytes) -> tuple[bytes, bytes]:
     """
     Convert chunk to string.
 

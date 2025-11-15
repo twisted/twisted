@@ -25,7 +25,6 @@ from typing import (
     Iterable,
     NoReturn,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -98,7 +97,7 @@ class Todo:
 
 def makeTodo(
     value: Union[
-        str, Tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
+        str, tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
     ]
 ) -> Todo:
     """
@@ -991,7 +990,7 @@ class SynchronousTestCase(_Assertions):
             return self._testMethodName
         return desc
 
-    def getSkip(self) -> Tuple[bool, Optional[str]]:
+    def getSkip(self) -> tuple[bool, Optional[str]]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As

@@ -12,7 +12,7 @@ characters, case folding and canonicalisation through
 L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
 
-from typing import Dict, Tuple, Union
+from typing import Dict, Union
 
 from twisted.words.protocols.jabber.xmpp_stringprep import (
     nameprep,
@@ -27,7 +27,7 @@ class InvalidFormat(Exception):
     """
 
 
-def parse(jidstring: str) -> Tuple[Union[str, None], str, Union[str, None]]:
+def parse(jidstring: str) -> tuple[Union[str, None], str, Union[str, None]]:
     """
     Parse given JID string into its respective parts and apply stringprep.
 
@@ -76,7 +76,7 @@ def parse(jidstring: str) -> Tuple[Union[str, None], str, Union[str, None]]:
 
 def prep(
     user: Union[str, None], host: str, resource: Union[str, None]
-) -> Tuple[Union[str, None], str, Union[str, None]]:
+) -> tuple[Union[str, None], str, Union[str, None]]:
     """
     Perform stringprep on all JID fragments.
 
@@ -146,7 +146,7 @@ class JID:
     def __init__(
         self,
         str: Union[str, None] = None,
-        tuple: Union[Tuple[Union[str, None], str, Union[str, None]], None] = None,
+        tuple: Union[tuple[Union[str, None], str, Union[str, None]], None] = None,
     ):
         if str:
             user, host, res = parse(str)

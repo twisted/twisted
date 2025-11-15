@@ -20,7 +20,7 @@ import stat
 import sys
 import traceback
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional
 
 _PS_CLOSE: int
 _PS_DUP2: int
@@ -632,11 +632,11 @@ def _listOpenFDs():
 
 
 def _getFileActions(
-    fdState: list[Tuple[int, bool]],
+    fdState: list[tuple[int, bool]],
     childToParentFD: Dict[int, int],
     doClose: int,
     doDup2: int,
-) -> list[Tuple[int, ...]]:
+) -> list[tuple[int, ...]]:
     """
     Get the C{file_actions} parameter for C{posix_spawn} based on the
     parameters describing the current process state.
@@ -664,7 +664,7 @@ def _getFileActions(
         allocated.add(nextFD)
         return nextFD
 
-    result: list[Tuple[int, ...]] = []
+    result: list[tuple[int, ...]] = []
     relocations = {}
     for inChild, inParent in sorted(childToParentFD.items()):
         # The parent FD will later be reused by a child FD.

@@ -5,7 +5,7 @@
 Logger interfaces.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict
 
 from zope.interface import Interface
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 LogEvent = Dict[str, Any]
-LogTrace = list[Tuple["Logger", "ILogObserver"]]
+LogTrace = list[tuple["Logger", "ILogObserver"]]
 
 
 class ILogObserver(Interface):

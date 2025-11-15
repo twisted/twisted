@@ -11,7 +11,7 @@ to format methods.
 """
 
 import calendar
-from typing import Any, Optional, Tuple
+from typing import Any, Optional
 
 
 class FormException(Exception):
@@ -343,7 +343,7 @@ def positiveInt(x):
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault: Optional[Tuple[int, int, int]] = None
+    defaultDefault: Optional[tuple[int, int, int]] = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None

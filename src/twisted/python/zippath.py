@@ -21,7 +21,6 @@ from typing import (
     Generic,
     Iterable,
     Literal,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -191,7 +190,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
                 OSError(errno.ENOENT, "Non-existent zip entry listed")
             )
 
-    def splitext(self) -> Tuple[_ZipStr, _ZipStr]:
+    def splitext(self) -> tuple[_ZipStr, _ZipStr]:
         """
         Return a value similar to that returned by C{os.path.splitext}.
         """

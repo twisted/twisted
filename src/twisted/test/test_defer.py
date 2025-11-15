@@ -33,7 +33,6 @@ from typing import (
     NoReturn,
     Optional,
     Set,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -165,13 +164,13 @@ class UtilTests(unittest.TestCase):
 class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
     def setUp(self) -> None:
         self.callbackResults: Optional[
-            Tuple[Tuple[object, ...], Dict[str, object]]
+            tuple[tuple[object, ...], Dict[str, object]]
         ] = None
         self.callback2Results: Optional[
-            Tuple[Tuple[object, ...], Dict[str, object]]
+            tuple[tuple[object, ...], Dict[str, object]]
         ] = None
         self.errbackResults: Optional[
-            Tuple[Tuple[Failure, ...], Dict[str, object]]
+            tuple[tuple[Failure, ...], Dict[str, object]]
         ] = None
 
         # Restore the debug flag to its original state when done.
@@ -252,7 +251,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         deferred.addCallbacks(
             self._callback,
             self._errback,
-            cast(Tuple[object], None),
+            cast(tuple[object], None),
             cast(Mapping[str, object], None),
             (),
             {},
@@ -272,7 +271,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
             self._errback,
             (),
             {},
-            cast(Tuple[object], None),
+            cast(tuple[object], None),
             cast(Mapping[str, object], None),
         )
         deferred.errback(error)
@@ -284,7 +283,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.errbackResults[1], {})
 
     def testDeferredList(self) -> None:
-        ResultList = list[Tuple[bool, Union[str, Failure]]]
+        ResultList = list[tuple[bool, Union[str, Failure]]]
 
         defr1: Deferred[str] = Deferred()
         defr2: Deferred[str] = Deferred()
@@ -438,7 +437,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         # *Then* build the DeferredList
         dl = DeferredList([d1, d2])
 
-        result: list[list[Tuple[bool, int]]] = []
+        result: list[list[tuple[bool, int]]] = []
         dl.addCallback(result.append)
 
         self.assertEqual(1, len(result))
@@ -987,7 +986,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         callbacks are executed after the third L{Deferred} fires and before the
         first receives a result.
         """
-        results: list[Union[Tuple[str, str], str]] = []
+        results: list[Union[tuple[str, str], str]] = []
         failures: list[Failure] = []
         inner: Deferred[str] = Deferred()
 
@@ -1031,7 +1030,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         checking that we search for that callback among the whole list of
         callbacks.
         """
-        results: list[Tuple[str, Union[str, list[str], None]]] = []
+        results: list[tuple[str, Union[str, list[str], None]]] = []
         failures: list[Failure] = []
         a: Deferred[str] = Deferred()
 
@@ -1069,7 +1068,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         another L{Deferred} as a result is run after the callbacks of the other
         L{Deferred} are run.
         """
-        results: list[Tuple[str, Union[str, list[str], None]]] = []
+        results: list[tuple[str, Union[str, list[str], None]]] = []
         failures: list[Failure] = []
         a: Deferred[str] = Deferred()
 
@@ -1304,7 +1303,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         When these "inner" L{Deferred}s fire (even asynchronously), the
         callback chain continues.
         """
-        results: list[Union[Tuple[str, str], str]] = []
+        results: list[Union[tuple[str, str], str]] = []
         failures: list[Failure] = []
 
         # A Deferred returned in the inner callback.
@@ -2659,7 +2658,7 @@ class DeferredListEmptyTests(unittest.SynchronousTestCase):
         dl: Deferred[_DeferredListResultListT[object]] = DeferredList([])
         dl.addCallback(self.cb_empty)
 
-    def cb_empty(self, res: list[Tuple[bool, object]]) -> None:
+    def cb_empty(self, res: list[tuple[bool, object]]) -> None:
         self.callbackRan = 1
         self.assertEqual([], res)
 

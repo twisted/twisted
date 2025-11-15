@@ -9,7 +9,7 @@ Command line options for C{twist}.
 import typing
 from sys import stderr, stdout
 from textwrap import dedent
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Tuple, cast
+from typing import Callable, Iterable, Mapping, Optional, Sequence, cast
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
@@ -187,7 +187,7 @@ class TwistOptions(Options):
     @property
     def subCommands(
         self,
-    ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
+    ) -> Iterable[tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
         for name in sorted(plugins):
             plugin = plugins[name]

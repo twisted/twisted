@@ -11,7 +11,7 @@ import sys
 from inspect import getsourcefile
 from io import BytesIO, TextIOWrapper
 from logging import Formatter, LogRecord, StreamHandler, getLogger
-from typing import Optional, Tuple
+from typing import Optional
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
@@ -24,7 +24,7 @@ from .._levels import LogLevel
 from .._stdlib import STDLibLogObserver
 
 
-def nextLine() -> Tuple[Optional[str], int]:
+def nextLine() -> tuple[Optional[str], int]:
     """
     Retrive the file name and line number immediately after where this function
     is called.
@@ -99,7 +99,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.addCleanup(logger.close)
         return logger
 
-    def logEvent(self, *events: LogEvent) -> Tuple[list[LogRecord], str]:
+    def logEvent(self, *events: LogEvent) -> tuple[list[LogRecord], str]:
         """
         Send one or more events to Python's logging module, and capture the
         emitted L{LogRecord}s and output stream as a string.

@@ -17,7 +17,6 @@ from typing import (
     Mapping,
     Optional,
     Sequence,
-    Tuple,
     Type,
     Union,
 )
@@ -222,7 +221,7 @@ class IHostnameResolver(Interface):
 class IResolver(IResolverSimple):
     def query(
         query: "Query", timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Dispatch C{query} to the method which can handle its type.
 
@@ -242,7 +241,7 @@ class IResolver(IResolverSimple):
 
     def lookupAddress(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A record lookup.
 
@@ -261,7 +260,7 @@ class IResolver(IResolverSimple):
 
     def lookupAddress6(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an A6 record lookup.
 
@@ -280,7 +279,7 @@ class IResolver(IResolverSimple):
 
     def lookupIPV6Address(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AAAA record lookup.
 
@@ -299,7 +298,7 @@ class IResolver(IResolverSimple):
 
     def lookupMailExchange(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MX record lookup.
 
@@ -318,7 +317,7 @@ class IResolver(IResolverSimple):
 
     def lookupNameservers(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an NS record lookup.
 
@@ -337,7 +336,7 @@ class IResolver(IResolverSimple):
 
     def lookupCanonicalName(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a CNAME record lookup.
 
@@ -356,7 +355,7 @@ class IResolver(IResolverSimple):
 
     def lookupMailBox(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MB record lookup.
 
@@ -375,7 +374,7 @@ class IResolver(IResolverSimple):
 
     def lookupMailGroup(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MG record lookup.
 
@@ -394,7 +393,7 @@ class IResolver(IResolverSimple):
 
     def lookupMailRename(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MR record lookup.
 
@@ -413,7 +412,7 @@ class IResolver(IResolverSimple):
 
     def lookupPointer(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a PTR record lookup.
 
@@ -432,7 +431,7 @@ class IResolver(IResolverSimple):
 
     def lookupAuthority(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SOA record lookup.
 
@@ -451,7 +450,7 @@ class IResolver(IResolverSimple):
 
     def lookupNull(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NULL record lookup.
 
@@ -470,7 +469,7 @@ class IResolver(IResolverSimple):
 
     def lookupWellKnownServices(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a WKS record lookup.
 
@@ -489,7 +488,7 @@ class IResolver(IResolverSimple):
 
     def lookupHostInfo(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a HINFO record lookup.
 
@@ -508,7 +507,7 @@ class IResolver(IResolverSimple):
 
     def lookupMailboxInfo(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an MINFO record lookup.
 
@@ -527,7 +526,7 @@ class IResolver(IResolverSimple):
 
     def lookupText(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a TXT record lookup.
 
@@ -546,7 +545,7 @@ class IResolver(IResolverSimple):
 
     def lookupResponsibility(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an RP record lookup.
 
@@ -565,7 +564,7 @@ class IResolver(IResolverSimple):
 
     def lookupAFSDatabase(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AFSDB record lookup.
 
@@ -584,7 +583,7 @@ class IResolver(IResolverSimple):
 
     def lookupService(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an SRV record lookup.
 
@@ -603,7 +602,7 @@ class IResolver(IResolverSimple):
 
     def lookupAllRecords(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an ALL_RECORD lookup.
 
@@ -622,7 +621,7 @@ class IResolver(IResolverSimple):
 
     def lookupSenderPolicy(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a SPF record lookup.
 
@@ -641,7 +640,7 @@ class IResolver(IResolverSimple):
 
     def lookupNamingAuthorityPointer(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform a NAPTR record lookup.
 
@@ -660,7 +659,7 @@ class IResolver(IResolverSimple):
 
     def lookupZone(
         name: str, timeout: Sequence[int]
-    ) -> "Deferred[Tuple[RRHeader, RRHeader, RRHeader]]":
+    ) -> "Deferred[tuple[RRHeader, RRHeader, RRHeader]]":
         """
         Perform an AXFR record lookup.
 
@@ -715,7 +714,7 @@ class IReactorTCP(Interface):
         port: int,
         factory: "ClientFactory",
         timeout: float = 30.0,
-        bindAddress: Optional[Tuple[str, int]] = None,
+        bindAddress: Optional[tuple[str, int]] = None,
     ) -> IConnector:
         """
         Connect a TCP client.
@@ -743,7 +742,7 @@ class IReactorSSL(Interface):
         factory: "ClientFactory",
         contextFactory: "ClientContextFactory",
         timeout: float,
-        bindAddress: Optional[Tuple[str, int]],
+        bindAddress: Optional[tuple[str, int]],
     ) -> IConnector:
         """
         Connect a client Protocol to a remote SSL socket.
@@ -838,7 +837,7 @@ class IReactorUNIXDatagram(Interface):
         protocol: "ConnectedDatagramProtocol",
         maxPacketSize: int,
         mode: int,
-        bindAddress: Optional[Tuple[str, int]],
+        bindAddress: Optional[tuple[str, int]],
     ) -> IConnector:
         """
         Connect a client protocol to a datagram UNIX socket.
@@ -2402,7 +2401,7 @@ class IAcceptableCiphers(Interface):
     A list of acceptable ciphers for a TLS context.
     """
 
-    def selectCiphers(availableCiphers: Tuple[ICipher]) -> Tuple[ICipher]:
+    def selectCiphers(availableCiphers: tuple[ICipher]) -> tuple[ICipher]:
         """
         Choose which ciphers to allow to be negotiated on a TLS connection.
 
@@ -2514,7 +2513,7 @@ class IUDPTransport(Interface):
     Transport for UDP DatagramProtocols.
     """
 
-    def write(packet: bytes, addr: Optional[Tuple[str, int]]) -> None:
+    def write(packet: bytes, addr: Optional[tuple[str, int]]) -> None:
         """
         Write packet to given address.
 

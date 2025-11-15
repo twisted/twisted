@@ -18,7 +18,6 @@ from typing import (
     Dict,
     Mapping,
     Optional,
-    Tuple,
     Union,
     cast,
 )
@@ -385,7 +384,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.document: list[Any] = []
         self.current = self.document
         self.stack: list[Any] = []
-        self.xmlnsAttrs: list[Tuple[str, str]] = []
+        self.xmlnsAttrs: list[tuple[str, str]] = []
 
     def endDocument(self) -> None:
         """
@@ -431,7 +430,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
     def startElementNS(
         self,
-        namespaceAndName: Tuple[str, str],
+        namespaceAndName: tuple[str, str],
         qname: Optional[str],
         attrs: AttributesNSImpl,
     ) -> None:
@@ -559,7 +558,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             return
         self.current.append(ch)
 
-    def endElementNS(self, name: Tuple[str, str], qname: Optional[str]) -> None:
+    def endElementNS(self, name: tuple[str, str], qname: Optional[str]) -> None:
         """
         A namespace tag is closed.  Pop the stack, if there's anything left in
         it, otherwise return to the document's namespace.

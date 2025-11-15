@@ -16,7 +16,7 @@ import signal
 import struct
 import sys
 import tty
-from typing import Any, Tuple
+from typing import Any
 
 from twisted.conch.client import connect, default
 from twisted.conch.client.options import ConchOptions
@@ -73,8 +73,8 @@ class ClientOptions(ConchOptions):
         ],
     )
 
-    localForwards: list[Tuple[int, Tuple[int, int]]] = []
-    remoteForwards: list[Tuple[int, Tuple[int, int]]] = []
+    localForwards: list[tuple[int, tuple[int, int]]] = []
+    remoteForwards: list[tuple[int, tuple[int, int]]] = []
 
     def opt_escape(self, esc):
         """

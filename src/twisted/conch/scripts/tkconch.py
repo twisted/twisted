@@ -16,7 +16,6 @@ import sys
 import tkinter as Tkinter
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
-from typing import Tuple
 
 from twisted.conch import error
 from twisted.conch.client.default import isInKnownHosts
@@ -279,8 +278,8 @@ class GeneralOptions(usage.Options):
     )
 
     identitys: list[str] = []
-    localForwards: list[Tuple[int, Tuple[int, int]]] = []
-    remoteForwards: list[Tuple[int, Tuple[int, int]]] = []
+    localForwards: list[tuple[int, tuple[int, int]]] = []
+    remoteForwards: list[tuple[int, tuple[int, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)

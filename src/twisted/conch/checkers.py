@@ -21,7 +21,6 @@ from typing import (
     Mapping,
     Optional,
     Protocol,
-    Tuple,
     cast,
 )
 
@@ -45,7 +44,7 @@ from twisted.python.util import runAsEffectiveUser
 _log = Logger()
 
 
-class UserRecord(Tuple[str, str, int, int, str, str, str]):
+class UserRecord(tuple[str, str, int, int, str, str, str]):
     """
     A record in a UNIX-style password database.  See L{pwd} for field details.
 

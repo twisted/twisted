@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._filter}.
 """
 
-from typing import Iterable, Tuple, Union, cast
+from typing import Iterable, Union, cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -42,7 +42,7 @@ class FilteringLogObserverTests(unittest.TestCase):
 
     def filterWith(
         self, filters: Iterable[str], other: bool = False
-    ) -> Union[list[int], Tuple[list[int], list[int]]]:
+    ) -> Union[list[int], tuple[list[int], list[int]]]:
         """
         Apply a set of pre-defined filters on a known set of events and return
         the filtered list of event numbers.

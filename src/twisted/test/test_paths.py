@@ -22,7 +22,6 @@ from typing import (
     Dict,
     NoReturn,
     Optional,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -1132,7 +1131,7 @@ class FilePathTests(AbstractFilePathTests):
             (OSError, IOError), self.path.moveTo, self.path.child(b"file1")
         )
 
-    def setUpFaultyRename(self) -> list[Tuple[str, str]]:
+    def setUpFaultyRename(self) -> list[tuple[str, str]]:
         """
         Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
         This is used to simulate a cross-device rename failure.

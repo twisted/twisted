@@ -26,7 +26,6 @@ from typing import (
     Optional,
     Protocol as TypingProtocol,
     Sequence,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -753,14 +752,14 @@ class TCP6ClientEndpoint:
 
 
 _gairesult = list[
-    Tuple[
+    tuple[
         socket.AddressFamily,
         socket.SocketKind,
         int,
         str,
         Union[
-            Tuple[str, int],
-            Tuple[str, int, int, int],
+            tuple[str, int],
+            tuple[str, int, int, int],
         ],
     ]
 ]

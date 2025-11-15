@@ -202,7 +202,6 @@ from typing import (
     ClassVar,
     Dict,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     Union,
@@ -1796,8 +1795,8 @@ class Command(metaclass=_CommandMeta):
     """
 
     commandName: ClassVar[bytes]
-    arguments: ClassVar[list[Tuple[bytes, Argument]]] = []
-    response: ClassVar[list[Tuple[bytes, Argument]]] = []
+    arguments: ClassVar[list[tuple[bytes, Argument]]] = []
+    response: ClassVar[list[tuple[bytes, Argument]]] = []
     extra: ClassVar[list[Any]] = []
     errors: ClassVar[Dict[Type[Exception], bytes]] = {}
     fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property, partial
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict
 
 from zope.interface import implementer
 
@@ -313,7 +313,7 @@ class PEMObjects:
             )
         ]
 
-        def hashDN(dn: DN) -> Tuple[Tuple[str, bytes], ...]:
+        def hashDN(dn: DN) -> tuple[tuple[str, bytes], ...]:
             return tuple(sorted(dn.items()))
 
         bySubject = {

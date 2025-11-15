@@ -10,7 +10,7 @@ Basic credential checkers
 
 
 import os
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -35,7 +35,7 @@ from twisted.python import failure
 # username.  We do not want an instance of 'object', because that would
 # create potential problems with persistence.
 
-ANONYMOUS: Tuple[()] = ()
+ANONYMOUS: tuple[()] = ()
 
 
 class ICredentialsChecker(Interface):
@@ -48,7 +48,7 @@ class ICredentialsChecker(Interface):
         "may check."
     )
 
-    def requestAvatarId(credentials: Any) -> Deferred[Union[bytes, Tuple[()]]]:
+    def requestAvatarId(credentials: Any) -> Deferred[Union[bytes, tuple[()]]]:
         """
         Validate credentials and produce an avatar ID.
 
@@ -277,7 +277,7 @@ class FilePasswordDB:
             self._log.error("Unable to load credentials db: {e!r}", e=e)
             raise error.UnauthorizedLogin()
 
-    def getUser(self, username: bytes) -> Tuple[bytes, bytes]:
+    def getUser(self, username: bytes) -> tuple[bytes, bytes]:
         """
         Look up the credentials for a username.
 
@@ -310,7 +310,7 @@ class FilePasswordDB:
 
     def requestAvatarId(
         self, credentials: IUsernamePassword
-    ) -> Deferred[Union[bytes, Tuple[()]]]:
+    ) -> Deferred[Union[bytes, tuple[()]]]:
         try:
             u, p = self.getUser(credentials.username)
         except KeyError:
