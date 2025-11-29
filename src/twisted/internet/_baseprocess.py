@@ -7,7 +7,7 @@ Cross-platform process-related functionality used by different
 L{IReactorProcess} implementations.
 """
 
-from typing import Optional
+from __future__ import annotations
 
 from twisted.logger import Logger
 from twisted.python.deprecate import getWarningMethod
@@ -23,8 +23,8 @@ _missingProcessExited = (
 
 
 class BaseProcess:
-    pid: Optional[int] = None
-    status: Optional[int] = None
+    pid: int | None = None
+    status: int | None = None
     lostProcess = 0
     proto = None
 
