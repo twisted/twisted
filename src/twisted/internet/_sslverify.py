@@ -6,18 +6,10 @@ from __future__ import annotations
 
 import warnings
 from binascii import hexlify
+from collections.abc import Sequence
 from functools import lru_cache
 from hashlib import md5
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -178,7 +170,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(Dict[str, bytes]):
+class DistinguishedName(dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -998,7 +990,7 @@ class ClientTLSOptions:
         <https://www.rfc-editor.org/rfc/rfc3546#section-3.1>} extension.
     """
 
-    _ctx: Optional[SSL.Context]
+    _ctx: SSL.Context | None
     _hostname: str
     _hostnameASCII: str
     _hostnameIsDnsName: bool
@@ -1008,7 +1000,7 @@ class ClientTLSOptions:
     def __init__(
         self,
         hostname: str,
-        context: Optional[SSL.Context],
+        context: SSL.Context | None,
         createContext: Callable[[], SSL.Context],
         sendServerName: bool | None = None,
     ) -> None:
@@ -1104,11 +1096,11 @@ def _verifyCB(
 
 def optionsForClientTLS(
     hostname: str,
-    trustRoot: Optional[Union[IOpenSSLTrustRoot, Certificate]] = None,
-    clientCertificate: Optional[PrivateCertificate] = None,
-    acceptableProtocols: Optional[Sequence[bytes]] = None,
+    trustRoot: IOpenSSLTrustRoot | Certificate | None = None,
+    clientCertificate: PrivateCertificate | None = None,
+    acceptableProtocols: Sequence[bytes] | None = None,
     *,
-    extraCertificateOptions: Optional[dict[str, Any]] = None,
+    extraCertificateOptions: dict[str, Any] | None = None,
     sendServerName: bool | None = None,
 ) -> ClientTLSOptions:
     """
