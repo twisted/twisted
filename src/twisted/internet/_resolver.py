@@ -8,7 +8,9 @@ IPv6-aware hostname resolution.
 @see: L{IHostnameResolver}
 """
 
+from __future__ import annotations
 
+from collections.abc import Sequence
 from socket import (
     AF_INET,
     AF_INET6,
@@ -20,19 +22,11 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    List,
-    NoReturn,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, NoReturn, Union
 
 from zope.interface import implementer
+
+from typing_extensions import TypeAlias
 
 from twisted.internet._idna import _idnaBytes
 from twisted.internet.address import IPv4Address, IPv6Address
@@ -95,13 +89,13 @@ _socktypeToType = {
 }
 
 
-_GETADDRINFO_RESULT = List[
-    Tuple[
+_GETADDRINFO_RESULT: TypeAlias = list[
+    tuple[
         AddressFamily,
         SocketKind,
         int,
         str,
-        Union[Tuple[str, int], Tuple[str, int, int, int]],
+        Union[tuple[str, int], tuple[str, int, int, int]],
     ]
 ]
 
@@ -116,7 +110,7 @@ class GAIResolver:
     def __init__(
         self,
         reactor: IReactorThreads,
-        getThreadPool: Optional[Callable[[], "ThreadPool"]] = None,
+        getThreadPool: Callable[[], ThreadPool] | None = None,
         getaddrinfo: Callable[[str, int, int, int], _GETADDRINFO_RESULT] = getaddrinfo,
     ):
         """
@@ -146,7 +140,7 @@ class GAIResolver:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -213,7 +207,7 @@ class SimpleResolverComplexifier:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -274,7 +268,7 @@ class FirstOneWins:
     An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
     """
 
-    def __init__(self, deferred: "Deferred[str]"):
+    def __init__(self, deferred: Deferred[str]):
         """
         @param deferred: The L{Deferred} to fire when the first resolution
             result arrives.
@@ -327,7 +321,7 @@ class ComplexResolverSimplifier:
         """
         self._nameResolver = nameResolver
 
-    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> "Deferred[str]":
+    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> Deferred[str]:
         """
         See L{IResolverSimple.getHostByName}
 
@@ -337,6 +331,6 @@ class ComplexResolverSimplifier:
 
         @return: see L{IResolverSimple.getHostByName}
         """
-        result: "Deferred[str]" = Deferred()
+        result: Deferred[str] = Deferred()
         self._nameResolver.resolveHostName(FirstOneWins(result), name, 0, [IPv4Address])
         return result
