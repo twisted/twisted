@@ -10,7 +10,7 @@ For basic support see reactor threading API docs.
 from __future__ import annotations
 
 import queue as Queue
-from typing import Callable, TypeVar, Union, cast
+from typing import Callable, TypeVar, cast
 
 from typing_extensions import ParamSpec
 
@@ -109,7 +109,7 @@ def callMultipleInThread(tupleList):
 
 def blockingCallFromThread(
     reactor: IReactorFromThreads,
-    f: Union[Callable[_P, _R], Callable[_P, defer.Deferred[_R]]],
+    f: Callable[_P, _R] | Callable[_P, defer.Deferred[_R]],
     *a: _P.args,
     **kw: _P.kwargs,
 ) -> _R:
