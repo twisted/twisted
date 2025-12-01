@@ -368,7 +368,7 @@ class LimitConnectionsByPeer(WrappingFactory):
         self.peerConnections = {}
 
     def buildProtocol(self, addr):
-        peerHost = addr[0]
+        peerHost = addr.host
         connectionCount = self.peerConnections.get(peerHost, 0)
         if connectionCount >= self.maxConnectionsPerPeer:
             return None
@@ -376,7 +376,7 @@ class LimitConnectionsByPeer(WrappingFactory):
         return WrappingFactory.buildProtocol(self, addr)
 
     def unregisterProtocol(self, p):
-        peerHost = p.getPeer()[1]
+        peerHost = p.getPeer().host
         self.peerConnections[peerHost] -= 1
         if self.peerConnections[peerHost] == 0:
             del self.peerConnections[peerHost]
