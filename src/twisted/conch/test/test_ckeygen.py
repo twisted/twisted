@@ -702,7 +702,7 @@ class KeyGenTests(TestCase):
         Ensure FileNotFoundError is handled, whether the user has supplied
         a bad path, or has no key at the default path.
         """
-        options = {"filename": "/foo/bar"}
+        options = {"filename": " "}
         exc = self.assertRaises(SystemExit, displayPublicKey, options)
         self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
@@ -710,7 +710,7 @@ class KeyGenTests(TestCase):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
-        options = {"filename": "/foo/bar"}
+        options = {"filename": " "}
         exc = self.assertRaises(SystemExit, changePassPhrase, options)
         self.assertIn("could not be opened, please specify a file.", exc.args[0])
 
@@ -718,6 +718,6 @@ class KeyGenTests(TestCase):
         """
         Ensure FileNotFoundError is handled for an invalid filename.
         """
-        options = {"filename": "/foo/bar", "format": "md5-hex"}
+        options = {"filename": " ", "format": "md5-hex"}
         exc = self.assertRaises(SystemExit, printFingerprint, options)
         self.assertIn("could not be opened, please specify a file.", exc.args[0])
