@@ -2,6 +2,7 @@ Contributing to Twisted
 =======================
 
 As an open source project, Twisted welcomes contributions of many forms.
+
 This document summarizes the process.
 
 Twisted has a [Code of Conduct](./code_of_conduct.md).
