@@ -110,9 +110,9 @@ all-non-platform = [
 
 macos-platform = [
     "twisted[all-non-platform]",
-    "pyobjc-core; python_version >= '3.9'",
-    "pyobjc-framework-CFNetwork; python_version >= '3.9'",
-    "pyobjc-framework-Cocoa; python_version >= '3.9'",
+    "pyobjc-core >= 12 ; python_version >= '3.10'",
+    "pyobjc-framework-CFNetwork >= 12; python_version >= '3.10'",
+    "pyobjc-framework-Cocoa >= 12; python_version >= '3.10'",
 ]
 
 windows-platform = [
