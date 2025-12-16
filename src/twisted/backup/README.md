@@ -170,7 +170,7 @@ network_backups = relay_backup.list_backups("network")
 
 ### iPhone Export Format
 
-The iPhone export format creates a property-list compatible dictionary:
+The iPhone export format creates a property-list compatible dictionary with base64-encoded data:
 
 ```python
 iphone_data = storage.export_to_iphone_format(backup_id)
@@ -179,11 +179,15 @@ iphone_data = storage.export_to_iphone_format(backup_id)
 # {
 #     "BackupID": "backup_id",
 #     "BackupDate": "2025-12-16T06:00:00.000000",
-#     "BackupData": "decoded_data",
+#     "BackupData": "base64_encoded_data",  # Base64-encoded for binary safety
 #     "DataChecksum": "sha256_hash",
 #     "DataSize": 1024,
 #     "Metadata": {...}
 # }
+
+# Decode data on iPhone:
+import base64
+original_data = base64.b64decode(iphone_data["BackupData"])
 ```
 
 ## Architecture

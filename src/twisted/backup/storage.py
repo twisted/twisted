@@ -8,6 +8,7 @@ Secure storage backend for encrypted backups.
 Provides filesystem-based secure storage with encryption and integrity verification.
 """
 
+import base64
 import hashlib
 import json
 import os
@@ -188,11 +189,11 @@ class SecureStorage:
                 record = backup
                 break
         
-        # Create iPhone-compatible structure
+        # Create iPhone-compatible structure with base64-encoded data
         iphone_data = {
             "BackupID": backup_id,
             "BackupDate": record["timestamp"],
-            "BackupData": data.decode('utf-8', errors='replace'),
+            "BackupData": base64.b64encode(data).decode('ascii'),
             "DataChecksum": record["checksum"],
             "DataSize": record["size"],
             "Metadata": record["metadata"]
