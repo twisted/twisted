@@ -1,0 +1,1 @@
+EPollReactor now handles ENOENT errors from epoll_ctl(EPOLL_CTL_MOD) gracefully. This fixes a race condition where fd reuse could cause FileNotFoundError when registering new connections, commonly seen in high-traffic applications behind reverse proxies.

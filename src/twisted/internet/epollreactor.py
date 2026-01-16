@@ -18,6 +18,7 @@ from zope.interface import implementer
 
 from twisted.internet import posixbase
 from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.main import CONNECTION_LOST
 from twisted.python import log
 
 try:
@@ -109,6 +110,52 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             primary.add(fd)
             selectables[fd] = xer
 
+    def _handleENOENT(self, selectable):
+        """
+        Handle ENOENT error from epoll_ctl(EPOLL_CTL_MOD).
+
+        When C{_add()} sees a fd in the "other" set (e.g. fd is in C{_writes}
+        when C{addReader} is called), it uses C{modify()} rather than
+        C{register()}.  If the fd is not actually in the epoll interest list,
+        C{modify()} fails with ENOENT.
+
+        This has been observed in production but the exact cause of the
+        stale tracking state is not yet known.  The normal Twisted
+        connection lifecycle always calls C{stopReading}/C{stopWriting}
+        (which clean up C{_reads}/C{_writes}) before closing the socket fd,
+        so this should not happen.  Possible causes include a kernel epoll
+        bug or an as-yet-unidentified code path that closes a socket fd
+        without updating the reactor's tracking state.
+
+        As a defensive measure, clean up the stale tracking state and
+        schedule C{connectionLost} on the old selectable so the protocol
+        layer is notified.
+
+        @param selectable: The L{FileDescriptor} that triggered the ENOENT
+            when the reactor tried to modify its epoll registration.
+        """
+        fd = selectable.fileno()
+        old_selectable = self._selectables.get(fd)
+        log.msg(
+            f"epoll: ENOENT on modify(fd={fd}), "
+            f"old_selectable={old_selectable}, new_selectable={selectable}. "
+            f"fd in _reads={fd in self._reads}, fd in _writes={fd in self._writes}. "
+            f"Cleaning up stale state."
+        )
+        self._reads.discard(fd)
+        self._writes.discard(fd)
+        self._selectables.pop(fd, None)
+
+        # Notify the old selectable's protocol that the connection is gone.
+        if old_selectable is not None and old_selectable is not selectable:
+            self.callLater(
+                0,
+                log.callWithLogger,
+                old_selectable,
+                old_selectable.connectionLost,
+                CONNECTION_LOST,
+            )
+
     def addReader(self, reader):
         """
         Add a FileDescriptor for notification of data available to read.
@@ -123,6 +170,8 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 # e.g. filesystem files, so for those we just poll
                 # continuously:
                 self._continuousPolling.addReader(reader)
+            elif e.errno == errno.ENOENT:
+                self._handleENOENT(reader)
             else:
                 raise
 
@@ -140,6 +189,8 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
                 # e.g. filesystem files, so for those we just poll
                 # continuously:
                 self._continuousPolling.addWriter(writer)
+            elif e.errno == errno.ENOENT:
+                self._handleENOENT(writer)
             else:
                 raise
 
