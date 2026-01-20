@@ -5,6 +5,7 @@
 Tests for L{twisted.internet.epollreactor}.
 """
 
+import errno
 from unittest import skipIf
 
 from twisted.internet.error import ConnectionDone
@@ -38,6 +39,113 @@ class Descriptor:
     def connectionLost(self, reason):
         reason.trap(ConnectionDone)
         self.events.append("lost")
+
+
+class FakeEpoll:
+    """
+    A fake epoll object that raises ENOENT on modify() to simulate
+    fd reuse race conditions.
+    """
+
+    def __init__(self, size=None):
+        self._registered = set()
+
+    def register(self, fd, events):
+        self._registered.add(fd)
+
+    def modify(self, fd, events):
+        raise OSError(errno.ENOENT, "No such file or directory")
+
+    def unregister(self, fd):
+        self._registered.discard(fd)
+
+    def poll(self, timeout, maxevents):
+        return []
+
+    def close(self):
+        pass
+
+
+class ENOENTDescriptor:
+    """
+    A descriptor that tracks connectionLost calls for ENOENT testing.
+    """
+
+    def __init__(self, fd):
+        self._fd = fd
+        self.events = []
+
+    def fileno(self):
+        return self._fd
+
+    def logPrefix(self):
+        return "ENOENTDescriptor"
+
+    def connectionLost(self, reason):
+        from twisted.internet.error import ConnectionLost
+
+        assert isinstance(reason, ConnectionLost)
+        self.events.append("lost")
+
+
+@skipIf(not epollreactor, "epoll not supported in this environment.")
+class EPollENOENTTests(TestCase):
+    """
+    Tests for ENOENT handling in L{EPollReactor}.
+
+    These tests verify that the reactor gracefully handles ENOENT errors
+    from epoll_ctl(EPOLL_CTL_MOD), which can occur due to fd reuse race
+    conditions.
+    """
+
+    def setUp(self):
+        """
+        Create an EPollReactor with a fake epoll that raises ENOENT on modify().
+        """
+        self.patch(epollreactor, "epoll", FakeEpoll)
+        self.reactor = epollreactor.EPollReactor()
+
+    def test_addReader_addWriter_ENOENT_handlesGracefully(self):
+        """
+        When L{EPollReactor.addReader} encounters ENOENT from
+        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
+        connectionLost on the selectable.
+        """
+        fd = 42
+        descriptor = ENOENTDescriptor(fd)
+
+        # Pre-populate _writes to trigger the modify() code path in _add()
+        self.reactor._writes.add(fd)
+
+        # This should trigger ENOENT when _add() calls modify()
+        self.reactor.addReader(descriptor)
+
+        # Process the callLater(0, ...) to trigger connectionLost
+        self.reactor.runUntilCurrent()
+
+        # Verify connectionLost was called
+        self.assertIn("lost", descriptor.events)
+
+    def test_addWriter_ENOENT_handlesGracefully(self):
+        """
+        When L{EPollReactor.addWriter} encounters ENOENT from
+        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
+        connectionLost on the selectable.
+        """
+        fd = 42
+        descriptor = ENOENTDescriptor(fd)
+
+        # Pre-populate _reads to trigger the modify() code path in _add()
+        self.reactor._reads.add(fd)
+
+        # This should trigger ENOENT when _add() calls modify()
+        self.reactor.addWriter(descriptor)
+
+        # Process the callLater(0, ...) to trigger connectionLost
+        self.reactor.runUntilCurrent()
+
+        # Verify connectionLost was called
+        self.assertIn("lost", descriptor.events)
 
 
 @skipIf(not epollreactor, "epoll not supported in this environment.")
