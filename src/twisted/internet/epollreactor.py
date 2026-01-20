@@ -17,7 +17,7 @@ import select
 from zope.interface import implementer
 
 from twisted.internet import posixbase
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.interfaces import IFileDescriptor, IReactorFDSet
 from twisted.internet.main import CONNECTION_LOST
 from twisted.python import log
 
@@ -110,7 +110,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             primary.add(fd)
             selectables[fd] = xer
 
-    def _handleENOENT(self, selectable):
+    def _handleENOENT(self, selectable: IFileDescriptor) -> None:
         """
         Handle ENOENT error from epoll_ctl(EPOLL_CTL_MOD).
 

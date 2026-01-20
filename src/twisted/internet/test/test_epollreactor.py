@@ -5,6 +5,8 @@
 Tests for L{twisted.internet.epollreactor}.
 """
 
+from __future__ import annotations
+
 import errno
 from unittest import skipIf
 
@@ -47,22 +49,22 @@ class FakeEpoll:
     fd reuse race conditions.
     """
 
-    def __init__(self, size=None):
-        self._registered = set()
+    def __init__(self, size: int | None = None) -> None:
+        self._registered: set[int] = set()
 
-    def register(self, fd, events):
+    def register(self, fd: int, events: int) -> None:
         self._registered.add(fd)
 
-    def modify(self, fd, events):
+    def modify(self, fd: int, events: int) -> None:
         raise OSError(errno.ENOENT, "No such file or directory")
 
-    def unregister(self, fd):
+    def unregister(self, fd: int) -> None:
         self._registered.discard(fd)
 
-    def poll(self, timeout, maxevents):
+    def poll(self, timeout: float, maxevents: int) -> list[tuple[int, int]]:
         return []
 
-    def close(self):
+    def close(self) -> None:
         pass
 
 
@@ -71,17 +73,17 @@ class ENOENTDescriptor:
     A descriptor that tracks connectionLost calls for ENOENT testing.
     """
 
-    def __init__(self, fd):
+    def __init__(self, fd: int) -> None:
         self._fd = fd
-        self.events = []
+        self.events: list[str] = []
 
-    def fileno(self):
+    def fileno(self) -> int:
         return self._fd
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         return "ENOENTDescriptor"
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: BaseException) -> None:
         from twisted.internet.error import ConnectionLost
 
         assert isinstance(reason, ConnectionLost)
