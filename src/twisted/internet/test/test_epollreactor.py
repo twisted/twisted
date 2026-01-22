@@ -68,6 +68,27 @@ class FakeEpoll:
         pass
 
 
+class FakeEpollTests(TestCase):
+    """
+    Tests for L{FakeEpoll} to verify the test double behaves correctly.
+    """
+
+    def test_fakeEpoll(self) -> None:
+        """
+        L{FakeEpoll} tracks registered fds and raises ENOENT on modify.
+        """
+        fake = FakeEpoll()
+        fake.register(5, 0)
+        self.assertIn(5, fake._registered)
+        fake.unregister(5)
+        self.assertNotIn(5, fake._registered)
+        self.assertEqual(fake.poll(1.0, 10), [])
+        fake.close()
+        with self.assertRaises(OSError) as cm:
+            fake.modify(5, 0)
+        self.assertEqual(cm.exception.errno, errno.ENOENT)
+
+
 class ENOENTDescriptor:
     """
     A descriptor that tracks connectionLost calls for ENOENT testing.
