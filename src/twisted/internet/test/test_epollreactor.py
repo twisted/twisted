@@ -45,9 +45,11 @@ class Descriptor:
 
 class FakeEpoll:
     """
-    A fake epoll object that raises ENOENT on modify() to simulate
-    fd reuse race conditions.
+    A fake epoll object that raises configurable errors on modify() to simulate
+    fd reuse race conditions and other error scenarios.
     """
+
+    modifyErrno: int = errno.ENOENT
 
     def __init__(self, size: int | None = None) -> None:
         self._registered: set[int] = set()
@@ -56,7 +58,7 @@ class FakeEpoll:
         self._registered.add(fd)
 
     def modify(self, fd: int, events: int) -> None:
-        raise OSError(errno.ENOENT, "No such file or directory")
+        raise OSError(self.modifyErrno, "Fake error")
 
     def unregister(self, fd: int) -> None:
         self._registered.discard(fd)
@@ -75,7 +77,7 @@ class FakeEpollTests(TestCase):
 
     def test_fakeEpoll(self) -> None:
         """
-        L{FakeEpoll} tracks registered fds and raises ENOENT on modify.
+        L{FakeEpoll} tracks registered fds and raises ENOENT on modify by default.
         """
         fake = FakeEpoll()
         fake.register(5, 0)
@@ -128,11 +130,11 @@ class EPollENOENTTests(TestCase):
         self.patch(epollreactor, "epoll", FakeEpoll)
         self.reactor = epollreactor.EPollReactor()
 
-    def test_addReader_addWriter_ENOENT_handlesGracefully(self):
+    def test_addReader_ENOENT_handlesGracefully(self) -> None:
         """
         When L{EPollReactor.addReader} encounters ENOENT from
         epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
-        connectionLost on the selectable.
+        connectionLost on the selectable. Unexpected errors are re-raised.
         """
         fd = 42
         descriptor = ENOENTDescriptor(fd)
@@ -149,11 +151,18 @@ class EPollENOENTTests(TestCase):
         # Verify connectionLost was called
         self.assertIn("lost", descriptor.events)
 
-    def test_addWriter_ENOENT_handlesGracefully(self):
+        # Verify unexpected errors are re-raised
+        self.reactor._poller.modifyErrno = errno.EBADF
+        self.reactor._writes.add(fd)
+        with self.assertRaises(OSError) as cm:
+            self.reactor.addReader(ENOENTDescriptor(fd))
+        self.assertEqual(cm.exception.errno, errno.EBADF)
+
+    def test_addWriter_ENOENT_handlesGracefully(self) -> None:
         """
         When L{EPollReactor.addWriter} encounters ENOENT from
         epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
-        connectionLost on the selectable.
+        connectionLost on the selectable. Unexpected errors are re-raised.
         """
         fd = 42
         descriptor = ENOENTDescriptor(fd)
@@ -169,6 +178,13 @@ class EPollENOENTTests(TestCase):
 
         # Verify connectionLost was called
         self.assertIn("lost", descriptor.events)
+
+        # Verify unexpected errors are re-raised
+        self.reactor._poller.modifyErrno = errno.EBADF
+        self.reactor._reads.add(fd)
+        with self.assertRaises(OSError) as cm:
+            self.reactor.addWriter(ENOENTDescriptor(fd))
+        self.assertEqual(cm.exception.errno, errno.EBADF)
 
 
 @skipIf(not epollreactor, "epoll not supported in this environment.")
