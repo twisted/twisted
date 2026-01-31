@@ -136,15 +136,19 @@ class EPollENOENTTests(TestCase):
         connectionLost on the old selectable. Unexpected errors are re-raised.
         """
         fd = 42
-        descriptor = ENOENTDescriptor(fd)
+        old_descriptor = ENOENTDescriptor(fd)
+        new_descriptor = ENOENTDescriptor(fd)
 
-        # Pre-populate _writes to trigger the modify() code path in _add()
+        # Simulate stale state from an old connection: fd is in _writes
+        # and _selectables still maps to the old descriptor.
         self.reactor._writes.add(fd)
+        self.reactor._selectables[fd] = old_descriptor
 
-        # This should trigger ENOENT when _add() calls modify()
-        self.reactor.addReader(descriptor)
+        # New connection tries addReader on the same fd, triggering ENOENT
+        self.reactor.addReader(new_descriptor)
 
-        self.assertIn("lost", descriptor.events)
+        self.assertIn("lost", old_descriptor.events)
+        self.assertEqual(new_descriptor.events, [])
 
         # Verify unexpected errors are re-raised
         self.reactor._poller.modifyErrno = errno.EBADF
@@ -160,15 +164,19 @@ class EPollENOENTTests(TestCase):
         connectionLost on the old selectable. Unexpected errors are re-raised.
         """
         fd = 42
-        descriptor = ENOENTDescriptor(fd)
+        old_descriptor = ENOENTDescriptor(fd)
+        new_descriptor = ENOENTDescriptor(fd)
 
-        # Pre-populate _reads to trigger the modify() code path in _add()
+        # Simulate stale state from an old connection: fd is in _reads
+        # and _selectables still maps to the old descriptor.
         self.reactor._reads.add(fd)
+        self.reactor._selectables[fd] = old_descriptor
 
-        # This should trigger ENOENT when _add() calls modify()
-        self.reactor.addWriter(descriptor)
+        # New connection tries addWriter on the same fd, triggering ENOENT
+        self.reactor.addWriter(new_descriptor)
 
-        self.assertIn("lost", descriptor.events)
+        self.assertIn("lost", old_descriptor.events)
+        self.assertEqual(new_descriptor.events, [])
 
         # Verify unexpected errors are re-raised
         self.reactor._poller.modifyErrno = errno.EBADF
