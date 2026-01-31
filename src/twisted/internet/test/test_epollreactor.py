@@ -133,8 +133,8 @@ class EPollENOENTTests(TestCase):
     def test_addReader_ENOENT_handlesGracefully(self) -> None:
         """
         When L{EPollReactor.addReader} encounters ENOENT from
-        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
-        connectionLost on the selectable. Unexpected errors are re-raised.
+        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and calls
+        connectionLost on the old selectable. Unexpected errors are re-raised.
         """
         fd = 42
         descriptor = ENOENTDescriptor(fd)
@@ -145,10 +145,6 @@ class EPollENOENTTests(TestCase):
         # This should trigger ENOENT when _add() calls modify()
         self.reactor.addReader(descriptor)
 
-        # Process the callLater(0, ...) to trigger connectionLost
-        self.reactor.runUntilCurrent()
-
-        # Verify connectionLost was called
         self.assertIn("lost", descriptor.events)
 
         # Verify unexpected errors are re-raised
@@ -161,8 +157,8 @@ class EPollENOENTTests(TestCase):
     def test_addWriter_ENOENT_handlesGracefully(self) -> None:
         """
         When L{EPollReactor.addWriter} encounters ENOENT from
-        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and schedules
-        connectionLost on the selectable. Unexpected errors are re-raised.
+        epoll_ctl(EPOLL_CTL_MOD), it cleans up stale state and calls
+        connectionLost on the old selectable. Unexpected errors are re-raised.
         """
         fd = 42
         descriptor = ENOENTDescriptor(fd)
@@ -173,10 +169,6 @@ class EPollENOENTTests(TestCase):
         # This should trigger ENOENT when _add() calls modify()
         self.reactor.addWriter(descriptor)
 
-        # Process the callLater(0, ...) to trigger connectionLost
-        self.reactor.runUntilCurrent()
-
-        # Verify connectionLost was called
         self.assertIn("lost", descriptor.events)
 
         # Verify unexpected errors are re-raised

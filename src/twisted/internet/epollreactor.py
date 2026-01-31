@@ -128,7 +128,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         without updating the reactor's tracking state.
 
         As a defensive measure, clean up the stale tracking state and
-        schedule C{connectionLost} on the old selectable so the protocol
+        call C{connectionLost} on the old selectable so the protocol
         layer is notified.
 
         @param selectable: The L{FileDescriptor} that triggered the ENOENT
@@ -148,9 +148,7 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
         # Notify the old selectable's protocol that the connection is gone.
         if old_selectable is not None and old_selectable is not selectable:
-            self.callLater(
-                0,
-                log.callWithLogger,
+            log.callWithLogger(
                 old_selectable,
                 old_selectable.connectionLost,
                 CONNECTION_LOST,
