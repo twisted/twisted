@@ -143,9 +143,11 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         old_selectable = self._selectables.get(fd)
         log.msg(
             f"epoll: ENOENT on modify(fd={fd}), "
-            f"old_selectable={old_selectable}, new_selectable={selectable}. "
+            f"old_selectable={old_selectable}, new_selectable={selectable}, "
             f"fd in _reads={fd in self._reads}, fd in _writes={fd in self._writes}. "
-            f"Cleaning up stale state."
+            f"This is either a bug in the reactor, the application, or the "
+            f"kernel. Please report this at https://github.com/twisted/twisted "
+            f"with reproduction steps if possible."
         )
         self._reads.discard(fd)
         self._writes.discard(fd)
