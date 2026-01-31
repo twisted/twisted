@@ -127,8 +127,7 @@ class EPollENOENTTests(TestCase):
         """
         Create an EPollReactor with a fake epoll that raises ENOENT on modify().
         """
-        self.patch(epollreactor, "epoll", FakeEpoll)
-        self.reactor = epollreactor.EPollReactor()
+        self.reactor = epollreactor.EPollReactor(poller=FakeEpoll())
 
     def test_addReader_ENOENT_handlesGracefully(self) -> None:
         """

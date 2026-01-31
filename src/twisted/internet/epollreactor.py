@@ -69,15 +69,20 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     _POLL_IN = EPOLLIN
     _POLL_OUT = EPOLLOUT
 
-    def __init__(self):
+    def __init__(self, poller=None):
         """
         Initialize epoll object, file descriptor tracking dictionaries, and the
         base class.
+
+        @param poller: An epoll-like object to use for I/O event notification.
+            If C{None}, a new C{select.epoll} instance is created.
         """
         # Create the poller we're going to use.  The 1024 here is just a hint
         # to the kernel, it is not a hard maximum.  After Linux 2.6.8, the size
         # argument is completely ignored.
-        self._poller = epoll(1024)
+        if poller is None:
+            poller = epoll(1024)
+        self._poller = poller
         self._reads = set()
         self._writes = set()
         self._selectables = {}
