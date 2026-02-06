@@ -10,23 +10,22 @@ Maintainer: Paul Swartz
 """
 
 
-import struct
-import signal
-import sys
 import os
+import signal
+import struct
+import sys
 
 from zope.interface import implementer
 
-from twisted.internet import interfaces, protocol
-from twisted.logger import Logger
-from twisted.python.compat import networkString
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted,
     ISession,
     ISessionSetEnv,
 )
-from twisted.conch.ssh import common, channel, connection
-
+from twisted.conch.ssh import channel, common, connection
+from twisted.internet import interfaces, protocol
+from twisted.logger import Logger
+from twisted.python.compat import networkString
 
 log = Logger()
 
@@ -134,14 +133,6 @@ class SSHSession(channel.SSHChannel):
         if not self.session:
             self.session = ISession(self.avatar)
         if not ISessionSetEnv.providedBy(self.session):
-            log.warn(
-                "Can't handle environment variables for SSH avatar {avatar}: "
-                "{session} does not provide ISessionSetEnv interface. "
-                "It should be decorated with @implementer(ISession, "
-                "ISessionSetEnv) to support env variables.",
-                avatar=self.avatar,
-                session=self.session,
-            )
             return 0
         name, value, data = common.getNS(data, 2)
         try:
@@ -181,16 +172,20 @@ class SSHSession(channel.SSHChannel):
             log.warn("Weird extended data: {dataType}", dataType=dataType)
 
     def eofReceived(self):
+        # If we have a session, tell it that EOF has been received and
+        # expect it to send a close message (it may need to send other
+        # messages such as exit-status or exit-signal first).  If we don't
+        # have a session, then just send a close message directly.
         if self.session:
             self.session.eofReceived()
         elif self.client:
             self.conn.sendClose(self)
 
     def closed(self):
+        if self.client and self.client.transport:
+            self.client.transport.loseConnection()
         if self.session:
             self.session.closed()
-        elif self.client:
-            self.client.transport.loseConnection()
 
     # def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this

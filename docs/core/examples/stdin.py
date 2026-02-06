@@ -7,9 +7,10 @@ An example of reading a line at a time from standard input
 without blocking the reactor.
 """
 
+from os import linesep
+
 from twisted.internet import stdio
 from twisted.protocols import basic
-from os import linesep
 
 
 class Echo(basic.LineReceiver):

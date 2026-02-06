@@ -11,14 +11,15 @@ Resource limiting policies.
 
 # system imports
 import sys
+from typing import Callable, Optional, Type
 
-from typing import Optional, Type
 from zope.interface import directlyProvides, providedBy
 
-# twisted imports
-from twisted.internet.protocol import ServerFactory, Protocol, ClientFactory
+from typing_extensions import Self, TypeVar
+
 from twisted.internet import error, interfaces
 from twisted.internet.interfaces import ILoggingContext
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
 
@@ -50,7 +51,7 @@ class ProtocolWrapper(Protocol):
     disconnecting = 0
 
     def __init__(
-        self, factory: "WrappingFactory", wrappedProtocol: interfaces.IProtocol
+        self, factory: "WrappingFactory[Self]", wrappedProtocol: interfaces.IProtocol
     ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
@@ -116,12 +117,15 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol = None
 
 
-class WrappingFactory(ClientFactory):
+WP = TypeVar("WP", bound=ProtocolWrapper, default=ProtocolWrapper)
+
+
+class WrappingFactory(ClientFactory[WP]):
     """
     Wraps a factory and its protocols, and keeps track of them.
     """
 
-    protocol: Type[Protocol] = ProtocolWrapper
+    protocol: Callable[..., WP] = ProtocolWrapper  # type:ignore[assignment]
 
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory
@@ -358,7 +362,6 @@ class SpewingFactory(WrappingFactory):
 
 
 class LimitConnectionsByPeer(WrappingFactory):
-
     maxConnectionsPerPeer = 5
 
     def startFactory(self):

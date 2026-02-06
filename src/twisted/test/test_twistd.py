@@ -8,14 +8,14 @@ Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 
 import errno
 import inspect
+import os
 import pickle
 import signal
-import os
 import sys
 
 try:
-    import pwd as _pwd
     import grp as _grp
+    import pwd as _pwd
 except ImportError:
     pwd = None
     grp = None
@@ -25,39 +25,40 @@ else:
 
 from io import StringIO
 from unittest import skipIf
+
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
-from twisted.test.test_process import MockOS
-
-from twisted import plugin, logger, internet
-from twisted.application import service, app, reactors
+from twisted import internet, logger, plugin
+from twisted.application import app, reactors, service
 from twisted.application.service import IServiceMaker
+from twisted.internet.base import ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorDaemonize, _ISupportsExitSignalCapturing
 from twisted.internet.test.modulehelpers import AlternateReactor
-from twisted.logger import globalLogBeginner, globalLogPublisher, ILogObserver
-from twisted.internet.base import ReactorBase
-from twisted.test.proto_helpers import MemoryReactor
-from twisted.python.components import Componentized
+from twisted.internet.testing import MemoryReactor
+from twisted.logger import ILogObserver, globalLogBeginner, globalLogPublisher
 from twisted.python import util
+from twisted.python.components import Componentized
+from twisted.python.fakepwd import UserDatabase
 from twisted.python.log import ILogObserver as LegacyILogObserver, textFromEventDict
 from twisted.python.reflect import requireModule
 from twisted.python.runtime import platformType
 from twisted.python.usage import UsageError
-from twisted.python.fakepwd import UserDatabase
 from twisted.scripts import twistd
+from twisted.test.test_process import MockOS
+from twisted.trial.unittest import TestCase
 
-
-_twistd_unix = requireModule("twistd.scripts._twistd_unix")
+_twistd_unix = requireModule("twisted.scripts._twistd_unix")
 if _twistd_unix:
-    from twisted.scripts._twistd_unix import checkPID
-    from twisted.scripts._twistd_unix import UnixApplicationRunner
-    from twisted.scripts._twistd_unix import UnixAppLogger
+    from twisted.scripts._twistd_unix import (
+        UnixApplicationRunner,
+        UnixAppLogger,
+        checkPID,
+    )
 
 
-syslog = requireModule("twistd.python.syslog")
+syslog = requireModule("twisted.python.syslog")
 profile = requireModule("profile")
 pstats = requireModule("pstats")
 cProfile = requireModule("cProfile")
@@ -578,7 +579,6 @@ class ApplicationRunnerTests(TestCase):
 
         @implementer(service.IService, service.IProcess)
         class FakeService:
-
             parent = None
             running = None
             name = None
@@ -712,7 +712,7 @@ class ApplicationRunnerTests(TestCase):
             {"profile": False, "profiler": "profile", "debug": False}
         )
         runner.startReactor(reactor, None, None)
-        self.assertEquals(2, runner._exitSignal)
+        self.assertEqual(2, runner._exitSignal)
 
     def test_applicationRunnerIgnoresNoSignal(self):
         """
@@ -743,7 +743,7 @@ class ApplicationRunnerTests(TestCase):
             {"profile": False, "profiler": "profile", "debug": False}
         )
         runner.startReactor(reactor, None, None)
-        self.assertEquals(None, runner._exitSignal)
+        self.assertEqual(None, runner._exitSignal)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -972,7 +972,7 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         exc = self.assertRaises(SystemExit, runner.shedPrivileges, 35, 200, None)
         self.assertEqual(exc.code, 1)
 
-    def _setUID(self, wantedUser, wantedUid, wantedGroup, wantedGid):
+    def _setUID(self, wantedUser, wantedUid, wantedGroup, wantedGid, pidFile):
         """
         Common code for tests which try to pass the the UID to
         L{UnixApplicationRunner}.
@@ -994,7 +994,9 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         self.patch(os, "setgid", setgid)
 
         options = twistd.ServerOptions()
-        options.parseOptions(["--nodaemon", "--uid", str(wantedUid)])
+        options.parseOptions(
+            ["--nodaemon", "--uid", str(wantedUid), "--pidfile", pidFile]
+        )
         application = service.Application("test_setupEnvironment")
         self.runner = UnixApplicationRunner(options)
         runner = UnixApplicationRunner(options)
@@ -1006,7 +1008,9 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         with a UID and no GUID will result in the GUID being
         set to the default GUID for that UID.
         """
-        self._setUID("foo", 5151, "bar", 4242)
+        self._setUID(
+            "foo", 5151, "bar", 4242, self.mktemp() + "_test_setUidWithoutGid.pid"
+        )
 
     def test_setUidSameAsCurrentUid(self):
         """
@@ -1014,15 +1018,17 @@ class UnixApplicationRunnerStartApplicationTests(TestCase):
         then a warning is displayed.
         """
         currentUid = os.getuid()
-        self._setUID("morefoo", currentUid, "morebar", 4343)
+        self._setUID(
+            "morefoo", currentUid, "morebar", 4343, "test_setUidSameAsCurrentUid.pid"
+        )
 
         warningsShown = self.flushWarnings()
-        self.assertEqual(1, len(warningsShown))
         expectedWarning = (
             "tried to drop privileges and setuid {} but uid is already {}; "
             "should we be root? Continuing.".format(currentUid, currentUid)
         )
         self.assertEqual(expectedWarning, warningsShown[0]["message"])
+        self.assertEqual(1, len(warningsShown), warningsShown)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -1612,7 +1618,6 @@ class AppLoggerTests(TestCase):
         self.assertIn("starting up", textFromEventDict(logs[0]))
 
         warnings = self.flushWarnings([self.test_unmarkedObserversDeprecated])
-        self.assertEqual(len(warnings), 1, warnings)
         self.assertEqual(
             warnings[0]["message"],
             (
@@ -1626,6 +1631,7 @@ class AppLoggerTests(TestCase):
                 "implementing objects instead."
             ),
         )
+        self.assertEqual(len(warnings), 1, warnings)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -1733,7 +1739,8 @@ class UnixAppLoggerTests(TestCase):
         """
         logFiles = _patchTextFileLogObserver(self.patch)
         logger = UnixAppLogger({"logfile": "", "nodaemon": False})
-        logger._getLogObserver()
+        observer = logger._getLogObserver()
+        self.addCleanup(observer._outFile.close)
 
         self.assertEqual(len(logFiles), 1)
         self.assertEqual(logFiles[0].path, os.path.abspath("twistd.log"))
@@ -2172,10 +2179,10 @@ class ExitWithSignalTests(TestCase):
         self.patch(signal, "signal", fake_signal)
         app._exitWithSignal(signal.SIGINT)
 
-        self.assertEquals(fakeSignalArgs[0], signal.SIGINT)
-        self.assertEquals(fakeSignalArgs[1], signal.SIG_DFL)
-        self.assertEquals(self.fakeKillArgs[0], os.getpid())
-        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
+        self.assertEqual(fakeSignalArgs[0], signal.SIGINT)
+        self.assertEqual(fakeSignalArgs[1], signal.SIG_DFL)
+        self.assertEqual(self.fakeKillArgs[0], os.getpid())
+        self.assertEqual(self.fakeKillArgs[1], signal.SIGINT)
 
     def test_normalExit(self):
         """
@@ -2199,5 +2206,5 @@ class ExitWithSignalTests(TestCase):
             stubApplicationRunnerFactoryCreator(signal.SIGINT),
         )
         twistd.runApp(self.config)
-        self.assertEquals(self.fakeKillArgs[0], os.getpid())
-        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
+        self.assertEqual(self.fakeKillArgs[0], os.getpid())
+        self.assertEqual(self.fakeKillArgs[1], signal.SIGINT)

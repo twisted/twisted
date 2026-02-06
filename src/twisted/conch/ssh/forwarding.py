@@ -11,10 +11,9 @@ Maintainer: Paul Swartz
 
 import struct
 
+from twisted.conch.ssh import channel, common
 from twisted.internet import protocol, reactor
 from twisted.internet.endpoints import HostnameEndpoint, connectProtocol
-
-from twisted.conch.ssh import common, channel
 
 
 class SSHListenForwardingFactory(protocol.Factory):
@@ -58,12 +57,10 @@ class SSHListenForwardingChannel(channel.SSHChannel):
 
 
 class SSHListenClientForwardingChannel(SSHListenForwardingChannel):
-
     name = b"direct-tcpip"
 
 
 class SSHListenServerForwardingChannel(SSHListenForwardingChannel):
-
     name = b"forwarded-tcpip"
 
 

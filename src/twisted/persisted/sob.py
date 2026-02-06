@@ -11,12 +11,13 @@ Maintainer: Moshe Zadka
 
 
 import os
+import pickle
 import sys
 
-import pickle
-from twisted.python import log, runtime
+from zope.interface import Interface, implementer
+
 from twisted.persisted import styles
-from zope.interface import implementer, Interface
+from twisted.python import log, runtime
 
 
 class IPersistable(Interface):
@@ -40,7 +41,6 @@ class IPersistable(Interface):
 
 @implementer(IPersistable)
 class Persistent:
-
     style = "pickle"
 
     def __init__(self, original, name):
@@ -107,7 +107,6 @@ Persistant = Persistent
 
 
 class _EverythingEphemeral(styles.Ephemeral):
-
     initRun = 0
 
     def __init__(self, mainMod):

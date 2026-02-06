@@ -10,10 +10,9 @@ import sys
 from typing import Sequence
 
 from twisted.application.app import _exitWithSignal
-from twisted.internet.interfaces import _ISupportsExitSignalCapturing, IReactorCore
+from twisted.internet.interfaces import IReactorCore, _ISupportsExitSignalCapturing
 from twisted.python.usage import Options, UsageError
-
-from ..runner._exit import exit, ExitStatus
+from ..runner._exit import ExitStatus, exit
 from ..runner._runner import Runner
 from ..service import Application, IService, IServiceMaker
 from ._options import TwistOptions

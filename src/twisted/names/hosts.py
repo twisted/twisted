@@ -7,14 +7,12 @@ hosts(5) support.
 """
 
 
-from twisted.python.compat import nativeString
-from twisted.names import dns
-from twisted.python import failure
-from twisted.python.filepath import FilePath
 from twisted.internet import defer
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-
-from twisted.names import common
+from twisted.names import common, dns
+from twisted.python import failure
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 
 def searchFileForAll(hostsFile, name):

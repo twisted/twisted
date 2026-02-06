@@ -10,28 +10,14 @@ the workers.
 @since: 12.3
 """
 
-import sys
-import os
 import errno
-
-
-def _setupPath(environ):
-    """
-    Override C{sys.path} with what the parent passed in B{TRIAL_PYTHONPATH}.
-
-    @see: twisted.trial._dist.disttrial.DistTrialRunner.launchWorkerProcesses
-    """
-    if "TRIAL_PYTHONPATH" in environ:
-        sys.path[:] = environ["TRIAL_PYTHONPATH"].split(os.pathsep)
-
-
-_setupPath(os.environ)
-
+import os
+import sys
 
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
-from twisted.trial._dist.options import WorkerOptions
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
+from twisted.trial._dist.options import WorkerOptions
 
 
 class WorkerLogObserver:

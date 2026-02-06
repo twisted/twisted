@@ -6,9 +6,9 @@ Tests for L{twisted.internet.stdio}.
 """
 
 
-from twisted.python.runtime import platform
-from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.internet.protocol import Protocol
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.runtime import platform
 
 if not platform.isWindows():
     from twisted.internet.stdio import StandardIO
@@ -99,7 +99,6 @@ class StdioFilesTests(ReactorBuilder):
         no longer polled.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
 
         path = self.mktemp()
         open(path, "wb").close()
@@ -122,7 +121,6 @@ class StdioFilesTests(ReactorBuilder):
         no longer polled.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
 
         # Cleanup might fail if file is GCed too soon:
         self.f = f = open(self.mktemp(), "wb")
@@ -143,7 +141,6 @@ class StdioFilesTests(ReactorBuilder):
         filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
 
         path = self.mktemp()
         open(path, "wb").close()
@@ -168,7 +165,6 @@ class StdioFilesTests(ReactorBuilder):
         C{reactor.getReaders} includes descriptors that are filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
 
         path = self.mktemp()
         open(path, "wb").close()
@@ -189,7 +185,6 @@ class StdioFilesTests(ReactorBuilder):
         C{reactor.getWriters} includes descriptors that are filesystem files.
         """
         reactor = self.buildReactor()
-        self.addCleanup(self.unbuildReactor, reactor)
 
         # Cleanup might fail if file is GCed too soon:
         self.f = f = open(self.mktemp(), "wb")

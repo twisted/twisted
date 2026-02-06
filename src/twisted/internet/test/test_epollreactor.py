@@ -7,16 +7,15 @@ Tests for L{twisted.internet.epollreactor}.
 
 from unittest import skipIf
 
-from twisted.trial.unittest import TestCase
+from twisted.internet.error import ConnectionDone
 from twisted.internet.posixbase import _ContinuousPolling
 from twisted.internet.task import Clock
-from twisted.internet.error import ConnectionDone
-
+from twisted.trial.unittest import TestCase
 
 try:
     from twisted.internet import epollreactor
 except ImportError:
-    epollreactor = None  # type: ignore[assignment,misc]
+    epollreactor = None  # type: ignore[assignment]
 
 
 class Descriptor:

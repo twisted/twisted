@@ -16,8 +16,8 @@ Then visit http://example.com/ with a web browser and compare the results to
 visiting http://localhost/.
 """
 
-from twisted.web import vhost, static, script, server
 from twisted.application import internet, service
+from twisted.web import script, server, static, vhost
 
 default = static.Data(b"", "text/html")
 # Setting up vhost resource.

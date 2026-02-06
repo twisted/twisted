@@ -8,16 +8,17 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 
 
+import math
+
 # System imports
 import re
-from struct import pack, unpack, calcsize
 from io import BytesIO
-import math
+from struct import calcsize, pack, unpack
 
 from zope.interface import implementer
 
 # Twisted imports
-from twisted.internet import protocol, defer, interfaces
+from twisted.internet import defer, interfaces, protocol
 from twisted.python import log
 
 
@@ -114,9 +115,9 @@ class NetstringReceiver(protocol.Protocol):
     """
 
     MAX_LENGTH = 99999
-    _LENGTH = re.compile(br"(0|[1-9]\d*)(:)")
+    _LENGTH = re.compile(rb"(0|[1-9]\d*)(:)")
 
-    _LENGTH_PREFIX = re.compile(br"(0|[1-9]\d*)$")
+    _LENGTH_PREFIX = re.compile(rb"(0|[1-9]\d*)$")
 
     # Some error information for NetstringParseError instances.
     _MISSING_LENGTH = (
@@ -853,7 +854,7 @@ class FileSender:
     optionally performing some transformation on the bytes in between.
     """
 
-    CHUNK_SIZE = 2 ** 14
+    CHUNK_SIZE = 2**14
 
     lastSent = ""
     deferred = None

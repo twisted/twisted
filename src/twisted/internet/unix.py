@@ -12,21 +12,20 @@ Maintainer: Itamar Shtull-Trauring
 
 
 import os
-import stat
 import socket
+import stat
 import struct
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
+from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
 from typing import Optional, Type
-from zope.interface import implementer, implementer_only, implementedBy
 
-from twisted.internet import main, base, tcp, udp, error, interfaces
-from twisted.internet import protocol, address
+from zope.interface import implementedBy, implementer, implementer_only
+
+from twisted.internet import address, base, error, interfaces, main, protocol, tcp, udp
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import lockfile, log, reflect, failure
+from twisted.python import failure, lockfile, log, reflect
+from twisted.python.compat import lazyByteSlice
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
-from twisted.python.compat import lazyByteSlice
-
 
 try:
     from twisted.python import sendmsg as _sendmsg
@@ -241,7 +240,6 @@ else:
 
 @implementer(interfaces.IUNIXTransport)
 class Server(_SendmsgMixin, tcp.Server):
-
     _writeSomeDataBase = tcp.Server
 
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
@@ -295,6 +293,21 @@ class Server(_SendmsgMixin, tcp.Server):
 
     def getPeer(self):
         return address.UNIXAddress(self.hostname or None)
+
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Server} inherits from L{twisted.internet.tcp.Server} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
 
 
 def _inFilesystemNamespace(path):
@@ -468,6 +481,21 @@ class Client(_SendmsgMixin, tcp.BaseClient):
 
     def getHost(self):
         return address.UNIXAddress(None)
+
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Client} inherits from L{twisted.internet.tcp.Client} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
 
 
 class Connector(base.BaseConnector):

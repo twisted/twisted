@@ -1,19 +1,21 @@
 # A program which exits after starting a child which inherits its
 # stdin/stdout/stderr and keeps them open until stdin is closed.
 
-import sys, os
+import os
+import sys
 
 
-def grandchild():
+def grandchild() -> None:
     sys.stdout.write("grandchild started")
     sys.stdout.flush()
     sys.stdin.read()
 
 
-def main():
+def main() -> None:
     if sys.argv[1] == "child":
         if sys.argv[2] == "windows":
-            import win32api as api, win32process as proc  # type: ignore[import]
+            import win32api as api
+            import win32process as proc
 
             info = proc.STARTUPINFO()
             info.hStdInput = api.GetStdHandle(api.STD_INPUT_HANDLE)

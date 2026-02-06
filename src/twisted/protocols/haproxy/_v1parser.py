@@ -6,18 +6,18 @@
 """
 IProxyParser implementation for version one of the PROXY protocol.
 """
-from typing import Union, Tuple
-from zope.interface import implementer
-from twisted.internet import address
+from typing import Tuple, Union
 
+from zope.interface import implementer
+
+from twisted.internet import address
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError,
-    InvalidProxyHeader,
     InvalidNetworkProtocol,
+    InvalidProxyHeader,
     MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
 
 
 @implementer(_interfaces.IProxyParser)
@@ -114,7 +114,6 @@ class V1Parser:
             raise InvalidNetworkProtocol()
 
         if networkProtocol == cls.UNKNOWN_PROTO:
-
             return _info.ProxyInfo(originalLine, None, None)
 
         with convertError(ValueError, MissingAddressData):
@@ -130,7 +129,6 @@ class V1Parser:
             destPort = line.split(b" ")[0]
 
         if networkProtocol == cls.TCP4_PROTO:
-
             return _info.ProxyInfo(
                 originalLine,
                 address.IPv4Address("TCP", sourceAddr.decode(), int(sourcePort)),

@@ -5,21 +5,20 @@
 Tools for automated testing of L{twisted.pair}-based applications.
 """
 
-import struct
 import socket
-from errno import EPERM, EAGAIN, EWOULDBLOCK, ENOSYS, EBADF, EINVAL, EINTR, ENOBUFS
+import struct
 from collections import deque
+from errno import EAGAIN, EBADF, EINTR, EINVAL, ENOBUFS, ENOSYS, EPERM, EWOULDBLOCK
 from functools import wraps
 
 from zope.interface import implementer
 
 from twisted.internet.protocol import DatagramProtocol
 from twisted.pair.ethernet import EthernetProtocol
-from twisted.pair.rawudp import RawUDPProtocol
 from twisted.pair.ip import IPProtocol
-from twisted.pair.tuntap import _IFNAMSIZ, _TUNSETIFF, _IInputOutputSystem, TunnelFlags
+from twisted.pair.rawudp import RawUDPProtocol
+from twisted.pair.tuntap import _IFNAMSIZ, _TUNSETIFF, TunnelFlags, _IInputOutputSystem
 from twisted.python.compat import nativeString
-
 
 # The number of bytes in the "protocol information" header that may be present
 # on datagrams read from a tunnel device.  This is two bytes of flags followed

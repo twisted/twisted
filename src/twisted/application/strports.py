@@ -8,7 +8,7 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.serverFromString}
 @see: L{twisted.internet.endpoints.clientFromString}
 """
-from typing import cast, Optional
+from typing import Optional, cast
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet import endpoints, interfaces

@@ -1,4 +1,4 @@
-from twisted.internet import protocol, reactor, endpoints
+from twisted.internet import endpoints, protocol, reactor
 
 
 class FingerProtocol(protocol.Protocol):

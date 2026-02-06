@@ -7,6 +7,8 @@ Interfaces related to threads.
 """
 
 
+from typing import Callable
+
 from zope.interface import Interface
 
 
@@ -23,7 +25,7 @@ class IWorker(Interface):
     All methods on this interface must be thread-safe.
     """
 
-    def do(task):
+    def do(task: Callable[[], None]) -> None:
         """
         Perform the given task.
 
@@ -43,7 +45,7 @@ class IWorker(Interface):
         @raise AlreadyQuit: if C{quit} has been called.
         """
 
-    def quit():
+    def quit() -> None:
         """
         Free any resources associated with this L{IWorker} and cause it to
         reject all future work.

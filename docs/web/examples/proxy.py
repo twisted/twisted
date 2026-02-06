@@ -15,8 +15,8 @@ which are visited.
 See also logging-proxy.py for a proxy with additional features.
 """
 
-from twisted.web import proxy, http
 from twisted.internet import reactor
+from twisted.web import http, proxy
 
 
 class ProxyFactory(http.HTTPFactory):

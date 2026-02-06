@@ -26,31 +26,20 @@ import inspect
 import os
 import platform
 import socket
-import sys
 import urllib.parse as urllib_parse
-import warnings
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
 from http import cookiejar as cookielib
-from io import IOBase
-from io import StringIO as NativeStringIO
-from io import TextIOBase
+from io import IOBase, StringIO as NativeStringIO, TextIOBase
 from sys import intern
 from types import FrameType, MethodType as _MethodType
 from typing import Any, AnyStr, cast
-from urllib.parse import quote as urlquote
-from urllib.parse import unquote as urlunquote
+from urllib.parse import quote as urlquote, unquote as urlunquote
 
 from incremental import Version
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-
-
-if sys.version_info >= (3, 7, 0):
-    _PY37PLUS = True
-else:
-    _PY37PLUS = False
 
 if platform.python_implementation() == "PyPy":
     _PYPY = True
@@ -431,16 +420,16 @@ def intToBytes(i: int) -> bytes:
 
 def lazyByteSlice(object, offset=0, size=None):
     """
-    Return a copy of the given bytes-like object.
+    Return a memory view of the given bytes-like object.
 
-    If an offset is given, the copy starts at that offset. If a size is
-    given, the copy will only be of that length.
+    If an offset is given, the view starts at that offset. If a size is
+    given, the view will only be of that length.
 
-    @param object: C{bytes} to be copied.
+    @param object: C{bytes} to be sliced.
 
-    @param offset: C{int}, starting index of copy.
+    @param offset: C{int}, starting index of view.
 
-    @param size: Optional, if an C{int} is given limit the length of copy
+    @param size: Optional, if an C{int} is given limit the length of the view
         to this size.
     """
     view = memoryview(object)
@@ -484,7 +473,7 @@ def bytesEnviron():
     encodekey = os.environ.encodekey
     encodevalue = os.environ.encodevalue
 
-    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}  # type: ignore[call-arg]
+    return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
 
 def _constructMethod(cls, name, self):
@@ -507,42 +496,13 @@ def _constructMethod(cls, name, self):
     return _MethodType(func, self)
 
 
-def _get_async_param(isAsync=None, **kwargs):
-    """
-    Provide a backwards-compatible way to get async param value that does not
-    cause a syntax error under Python 3.7.
-
-    @param isAsync: isAsync param value (should default to None)
-    @type isAsync: L{bool}
-
-    @param kwargs: keyword arguments of the caller (only async is allowed)
-    @type kwargs: L{dict}
-
-    @raise TypeError: Both isAsync and async specified.
-
-    @return: Final isAsync param value
-    @rtype: L{bool}
-    """
-    if "async" in kwargs:
-        warnings.warn(
-            "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    if isAsync is None and "async" in kwargs:
-        isAsync = kwargs.pop("async")
-    if kwargs:
-        raise TypeError
-    return bool(isAsync)
-
-
 def _pypy3BlockingHack():
     """
     Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:
-        from fcntl import fcntl, F_GETFL, F_SETFL
+        from fcntl import F_GETFL, F_SETFL, fcntl
     except ImportError:
         return
     if not _PYPY:
@@ -655,6 +615,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_get_async_param",
     "Sequence",
 ]

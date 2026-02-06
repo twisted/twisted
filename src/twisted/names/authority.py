@@ -10,8 +10,8 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns, error, common
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
 from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
@@ -237,7 +237,7 @@ class FileAuthority(common.ResolverBase):
                     self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
                 )
             ]
-            for (k, r) in self.records.items():
+            for k, r in self.records.items():
                 for rec in r:
                     if rec.ttl is not None:
                         ttl = rec.ttl
@@ -307,12 +307,11 @@ class BindAuthority(FileAuthority):
         Load records from C{filename}.
 
         @param filename: file to read from
-        @type filename: L{bytes}
         """
         fp = FilePath(filename)
         # Not the best way to set an origin. It can be set using $ORIGIN
         # though.
-        self.origin = nativeString(fp.basename() + b".")
+        self.origin = fp.asTextMode().basename() + "."
 
         lines = fp.getContent().splitlines(True)
         lines = self.stripComments(lines)

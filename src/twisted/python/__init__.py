@@ -6,17 +6,8 @@ Twisted Python: Utilities and Enhancements for Python.
 """
 
 
-# Deprecating twisted.python.constants.
-from .versions import Version
 from .deprecate import deprecatedModuleAttribute
-
-deprecatedModuleAttribute(
-    Version("Twisted", 16, 5, 0),
-    "Please use constantly from PyPI instead.",
-    "twisted.python",
-    "constants",
-)
-
+from .versions import Version
 
 deprecatedModuleAttribute(
     Version("Twisted", 17, 5, 0),

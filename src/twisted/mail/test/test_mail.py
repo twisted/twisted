@@ -4,24 +4,27 @@
 """
 Tests for large portions of L{twisted.mail}.
 """
+from __future__ import annotations
 
-import io
-import os
-import sys
-import textwrap
-import errno
-import shutil
-import pickle
 import email.message
 import email.parser
-import tempfile
+import errno
+import glob
+import io
+import os
+import pickle
+import shutil
 import signal
+import sys
+import tempfile
+import textwrap
 import time
 from hashlib import md5
+from typing import Any, NoReturn
 from unittest import skipIf
 
-from zope.interface.verify import verifyClass
 from zope.interface import Interface, implementer
+from zope.interface.verify import verifyClass
 
 import twisted.cred.checkers
 import twisted.cred.credentials
@@ -32,29 +35,29 @@ import twisted.mail.maildir
 import twisted.mail.protocols
 import twisted.mail.relay
 import twisted.mail.relaymanager
-
 from twisted import cred, mail
 from twisted.internet import address, defer, interfaces, protocol, reactor, task
 from twisted.internet.defer import Deferred
 from twisted.internet.error import (
-    DNSLookupError,
     CannotListenError,
+    DNSLookupError,
     ProcessDone,
     ProcessTerminated,
 )
-from twisted.mail import pop3, smtp
-from twisted.mail.relaymanager import _AttemptManager
-from twisted.names import dns
-from twisted.names.dns import RRHeader, Record_CNAME, Record_MX
-from twisted.names.error import DNSNameError
-from twisted.python import failure, log
-from twisted.python.filepath import FilePath
-from twisted.python.runtime import platformType
-from twisted.test.proto_helpers import (
+from twisted.internet.testing import (
     LineSendingProtocol,
     MemoryReactorClock,
     StringTransport,
 )
+from twisted.mail import pop3, smtp
+from twisted.mail.maildir import MaildirMailbox
+from twisted.mail.relaymanager import _AttemptManager
+from twisted.names import dns
+from twisted.names.dns import Record_CNAME, Record_MX, RRHeader
+from twisted.names.error import DNSNameError
+from twisted.python import failure, log
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platformType
 from twisted.trial.unittest import TestCase
 
 
@@ -221,24 +224,11 @@ class BounceWithSMTPServerTests(TestCase):
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class FileMessageTests(TestCase):
     def setUp(self):
-        self.name = "fileMessage.testFile"
-        self.final = "final.fileMessage.testFile"
-        self.f = open(self.name, "w")
+        self.name = self.mktemp()
+        self.final = self.mktemp()
+        self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
         self.fp = mail.mail.FileMessage(self.f, self.name, self.final)
-
-    def tearDown(self):
-        try:
-            self.f.close()
-        except BaseException:
-            pass
-        try:
-            os.remove(self.name)
-        except BaseException:
-            pass
-        try:
-            os.remove(self.final)
-        except BaseException:
-            pass
 
     def testFinalName(self):
         return self.fp.eomReceived().addCallback(self._cbFinalName)
@@ -248,23 +238,86 @@ class FileMessageTests(TestCase):
         self.assertTrue(self.f.closed)
         self.assertFalse(os.path.exists(self.name))
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testContents(self):
-        contents = "first line\nsecond line\nthird line\n"
+        contents = b"first line\nsecond line\nthird line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.eomReceived()
-        with open(self.final) as f:
+        with open(self.final, "rb") as f:
             self.assertEqual(f.read(), contents)
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
     def testInterrupted(self):
-        contents = "first line\nsecond line\n"
+        contents = b"first line\nsecond line\n"
         for line in contents.splitlines():
             self.fp.lineReceived(line)
         self.fp.connectionLost()
         self.assertFalse(os.path.exists(self.name))
         self.assertFalse(os.path.exists(self.final))
+
+
+@skipIf(platformType != "posix", "twisted.mail only works on posix")
+class MaildirMessageTests(TestCase):
+    """
+    Tests for the file creating by the L{mail.maildir.MaildirMessage}.
+    """
+
+    def setUp(self):
+        """
+        Create and open a temporary file.
+        """
+        self.name = self.mktemp()
+        self.final = self.mktemp()
+        self.address = b"user@example.com"
+        self.f = open(self.name, "wb")
+        self.addCleanup(self.f.close)
+        self.fp = mail.maildir.MaildirMessage(
+            self.address, self.f, self.name, self.final
+        )
+
+    def _finalName(self):
+        """
+        Search for the final file path.
+
+        @rtype: L{str}
+        @return: Final file path.
+        """
+        return glob.glob(f"{self.final},S=[0-9]*")[0]
+
+    def test_finalName(self):
+        """
+        Send the EOM to the message and check that the final file name contains
+        the correct file size and the temporary file has been closed and removed.
+        """
+        final = self.successResultOf(self.fp.eomReceived())
+        self.assertEqual(final, f"{self.final},S={os.path.getsize(final)}")
+        self.assertTrue(self.f.closed)
+        self.assertFalse(os.path.exists(self.name))
+
+    def test_contents(self):
+        """
+        Send a message contents and the EOM to the message and check that the
+        final file contains the correct header and the message contents.
+        """
+        contents = b"first line\nsecond line\nthird line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        final = self.successResultOf(self.fp.eomReceived())
+        with open(final, "rb") as f:
+            self.assertEqual(
+                f.read(), b"Delivered-To: %s\n%s" % (self.address, contents)
+            )
+
+    def test_interrupted(self):
+        """
+        Check that the interrupted message transfer removes the temporary file
+        and a doesn't create a final file.
+        """
+        contents = b"first line\nsecond line\n"
+        for line in contents.splitlines():
+            self.fp.lineReceived(line)
+        self.fp.connectionLost()
+        self.assertFalse(os.path.exists(self.name))
+        self.assertRaises(IndexError, self._finalName)
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
@@ -406,23 +459,23 @@ class _AppendTestMixin:
     for serially appending multiple messages to a mailbox.
     """
 
-    def _appendMessages(self, mbox, messages):
+    def _appendMessages(
+        self, mbox: twisted.mail.maildir.MaildirMailbox, messages: list[bytes]
+    ) -> Deferred[list[None]]:
         """
         Deliver the given messages one at a time.  Delivery is serialized to
         guarantee a predictable order in the mailbox (overlapped message deliver
         makes no guarantees about which message which appear first).
         """
-        results = []
 
-        def append():
+        async def append() -> list[None]:
+            results: list[None] = []
             for m in messages:
-                d = mbox.appendMessage(m)
-                d.addCallback(results.append)
-                yield d
+                await mbox.appendMessage(m)
+                results.append(None)
+            return results
 
-        d = task.cooperate(append()).whenDone()
-        d.addCallback(lambda ignored: results)
-        return d
+        return Deferred.fromCoroutine(append())
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
@@ -431,12 +484,12 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
 
-    def setUp(self):
-        self.d = self.mktemp()
+    def setUp(self) -> None:
+        self.d = os.fsencode(self.mktemp())
         mail.maildir.initializeMaildir(self.d)
 
-    def _append(self, ignored, mbox):
-        d = mbox.appendMessage("TEST")
+    def _append(self, ignored: object, mbox: MaildirMailbox) -> Deferred[None]:
+        d = mbox.appendMessage(b"TEST")
         return self.assertFailure(d, Exception)
 
     def _setState(self, ignored, mbox, rename=None, write=None, open=None):
@@ -474,8 +527,7 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
             )
             mbox.AppendFactory._openstate = open
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def test_append(self):
+    def test_append(self) -> Any:
         """
         L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
         the message has been added to the end of the mailbox.
@@ -483,10 +535,29 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
 
-        d = self._appendMessages(mbox, ["X" * i for i in range(1, 11)])
+        d = self._appendMessages(mbox, [b"X" * i for i in range(1, 11)])
         d.addCallback(self.assertEqual, [None] * 10)
         d.addCallback(self._cbTestAppend, mbox)
         return d
+
+    def test_reopenMailbox(self) -> Any:
+        """
+        Appending a message, then re-opening the mailbox by creating a new
+        MaildirMailbox, should result in seeing the message as loadable.
+        """
+
+        async def go() -> None:
+            mbox1 = mail.maildir.MaildirMailbox(self.d)
+            sample = b"xyzzy"
+            await mbox1.appendMessage(sample)
+            mbox2 = mail.maildir.MaildirMailbox(self.d)
+            listed = mbox2.listMessages()
+            self.assertEqual(len(listed), 1)
+            [messageSize] = listed
+            self.assertEqual(messageSize, len(sample))
+            self.assertEqual(mbox2.getMessage(0).read(), sample.decode())
+
+        return Deferred.fromCoroutine(go())
 
     def _cbTestAppend(self, ignored, mbox):
         """
@@ -658,7 +729,7 @@ class MaildirDirdbmDomainTests(TestCase):
     Tests for L{MaildirDirdbmDomain}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a temporary L{MaildirDirdbmDomain} and parent
         L{MailService} before running each test.
@@ -682,10 +753,10 @@ class MaildirDirdbmDomainTests(TestCase):
         attribute and creates a directory for each user.
         """
         toAdd = (("user1", "pwd1"), ("user2", "pwd2"), ("user3", "pwd3"))
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.D.addUser(u, p)
 
-        for (u, p) in toAdd:
+        for u, p in toAdd:
             self.assertTrue(u in self.D.dbm)
             self.assertEqual(self.D.dbm[u], p)
             self.assertTrue(os.path.exists(os.path.join(self.P, u)))
@@ -745,8 +816,7 @@ class MaildirDirdbmDomainTests(TestCase):
         creds = cred.credentials.UsernamePassword("user", "password")
         self.assertEqual(database.requestAvatarId(creds), "user")
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def test_userDirectory(self):
+    def test_userDirectory(self) -> None:
         """
         L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
         and returns the path to that user's maildir subdirectory.
@@ -754,17 +824,18 @@ class MaildirDirdbmDomainTests(TestCase):
         non-existent user returns the 'postmaster' directory if there
         is a postmaster or returns L{None} if there is no postmaster.
         """
-        self.D.addUser("user", "password")
+        self.D.addUser(b"user", b"password")
         self.assertEqual(
-            self.D.userDirectory("user"), os.path.join(self.D.root, "user")
+            self.D.userDirectory(b"user"), os.path.join(self.D.root, b"user")
         )
 
         self.D.postmaster = False
-        self.assertIdentical(self.D.userDirectory("nouser"), None)
+        self.assertIdentical(self.D.userDirectory(b"nouser"), None)
 
         self.D.postmaster = True
         self.assertEqual(
-            self.D.userDirectory("nouser"), os.path.join(self.D.root, "postmaster")
+            self.D.userDirectory(b"nouser"),
+            os.path.join(self.D.root, b"postmaster"),
         )
 
 
@@ -802,6 +873,14 @@ class StubAliasableDomain:
         Just record the value so the test can check it later.
         """
         self.aliasGroup = aliases
+
+    def requestAvatar(
+        self, avatarId: bytes | tuple[()], mind: object, *interfaces: type[Interface]
+    ) -> NoReturn:
+        """
+        Stub domains cannot authenticate users.
+        """
+        raise NotImplementedError()
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
@@ -885,20 +964,16 @@ class ServiceDomainTests(TestCase):
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class VirtualPOP3Tests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         self.D.addUser(b"user", b"password")
-        self.S.addDomain("test.domain", self.D)
-
-        portal = cred.portal.Portal(self.D)
-        map(portal.registerChecker, self.D.getCredentialsCheckers())
-        self.S.portals[""] = self.S.portals["test.domain"] = portal
-
+        self.S.addDomain(b"test.domain", self.D)
+        self.S.addDomain(b"", self.D)
         self.P = mail.protocols.VirtualPOP3()
         self.P.service = self.S
-        self.P.magic = "<unit test magic>"
+        self.P.magic = b"<unit test magic>"
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -930,9 +1005,8 @@ class VirtualPOP3Tests(TestCase):
             self.P.authenticateUserAPOP("user", resp), cred.error.UnauthorizedLogin
         )
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticatePASS(self):
-        return self.P.authenticateUserPASS("user", "password").addCallback(
+    def testAuthenticatePASS(self) -> Deferred[object]:
+        return self.P.authenticateUserPASS(b"user", b"password").addCallback(
             self._cbAuthenticatePASS
         )
 
@@ -942,17 +1016,15 @@ class VirtualPOP3Tests(TestCase):
         self.assertTrue(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticateBadUserPASS(self):
+    def testAuthenticateBadUserPASS(self) -> Any:
         return self.assertFailure(
-            self.P.authenticateUserPASS("resu", "password"),
+            self.P.authenticateUserPASS(b"resu", b"password"),
             cred.error.UnauthorizedLogin,
         )
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticateBadPasswordPASS(self):
+    def testAuthenticateBadPasswordPASS(self) -> Any:
         return self.assertFailure(
-            self.P.authenticateUserPASS("user", "wrong password"),
+            self.P.authenticateUserPASS(b"user", b"wrong password"),
             cred.error.UnauthorizedLogin,
         )
 
@@ -1159,9 +1231,7 @@ class DirectoryQueueTests(TestCase):
             self.assertEqual(envelopes.pop(0), ["header", i])
 
 
-from twisted.names import server
-from twisted.names import client
-from twisted.names import common
+from twisted.names import client, common, server
 
 
 class TestAuthority(common.ResolverBase):

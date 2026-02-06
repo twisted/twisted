@@ -9,7 +9,7 @@ An asynchronous mapping to U{DB-API
 
 
 from twisted.internet import threads
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 
 
 class ConnectionLost(Exception):
@@ -226,8 +226,7 @@ class ConnectionPool:
         self.connections = {}
 
         # These are optional so import them here
-        from twisted.python import threadpool
-        from twisted.python import threadable
+        from twisted.python import threadable, threadpool
 
         self.threadID = threadable.getThreadID
         self.threadpool = threadpool.ThreadPool(self.min, self.max)

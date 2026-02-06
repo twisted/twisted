@@ -5,8 +5,8 @@
 
 __version__ = "$Revision: 1.5 $"[11:-2]
 
-from twisted.trial import unittest
 from twisted.protocols import pcp
+from twisted.trial import unittest
 
 # Goal:
 

@@ -9,13 +9,14 @@ Interface definitions for L{twisted.web}.
     L{IBodyProducer.length} to indicate that the length of the entity
     body is not known in advance.
 """
+
 from typing import TYPE_CHECKING, Callable, List, Optional
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
+from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IPushProducer
-from twisted.cred.credentials import IUsernameDigestHash
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
@@ -595,15 +596,15 @@ class IResponse(Interface):
         L{IPushProducer}.  The protocol's C{connectionLost} method will be
         called with:
 
-            - ResponseDone, which indicates that all bytes from the response
+            - L{ResponseDone}, which indicates that all bytes from the response
               have been successfully delivered.
 
-            - PotentialDataLoss, which indicates that it cannot be determined
+            - L{PotentialDataLoss}, which indicates that it cannot be determined
               if the entire response body has been delivered.  This only occurs
               when making requests to HTTP servers which do not set
               I{Content-Length} or a I{Transfer-Encoding} in the response.
 
-            - ResponseFailed, which indicates that some bytes from the response
+            - L{ResponseFailed}, which indicates that some bytes from the response
               were lost.  The C{reasons} attribute of the exception may provide
               more specific indications as to why.
         """
@@ -713,15 +714,27 @@ class IAgent(Interface):
     obtained by combining a number of (hypothetical) implementations::
 
         baseAgent = Agent(reactor)
-        redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
+        decode = ContentDecoderAgent(baseAgent, [(b"gzip", GzipDecoder())])
+        cookie = CookieAgent(decode, diskStore.cookie)
         authenticate = AuthenticateAgent(
-            redirect, [diskStore.credentials, GtkAuthInterface()])
-        cookie = CookieAgent(authenticate, diskStore.cookie)
-        decode = ContentDecoderAgent(cookie, [(b"gzip", GzipDecoder())])
-        cache = CacheAgent(decode, diskStore.cache)
+            cookie, [diskStore.credentials, GtkAuthInterface()])
+        cache = CacheAgent(authenticate, diskStore.cache)
+        redirect = BrowserLikeRedirectAgent(cache, limit=10)
 
         doSomeRequests(cache)
     """
+
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IAgent does not have any particular requirement upon its
+            constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
 
     def request(
         method: bytes,

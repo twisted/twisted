@@ -4,10 +4,11 @@
 # See LICENSE for details.
 
 
-from twisted.application import service, internet
+import copy2_classes  # needed to get ReceiverPond registered with Jelly
+
+from twisted.application import internet, service
 from twisted.internet import reactor
 from twisted.spread import pb
-import copy2_classes  # needed to get ReceiverPond registered with Jelly
 
 
 class Receiver(pb.Root):

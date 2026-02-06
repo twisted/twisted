@@ -1,0 +1,1 @@
+twisted.internet.ssl and twisted.protocols.tls no longer mutate the pyOpenSSL context after creating pyOpenSSL connections, maintaining compatibility with an upcoming version of pyOpenSSL and increasing reliability (possibly even fixing a very rare segfault)

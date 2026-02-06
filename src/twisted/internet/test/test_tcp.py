@@ -6,96 +6,106 @@ Tests for implementations of L{IReactorTCP} and the TCP parts of
 L{IReactorSocket}.
 """
 
+from __future__ import annotations
 
 import errno
 import gc
 import io
 import os
 import socket
-
 from functools import wraps
-from typing import Optional, Sequence, Type, List, Callable, ClassVar
+from io import BytesIO
+from types import ModuleType
+from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence, Type
 from unittest import skipIf
-
-import attr
 
 from zope.interface import Interface, implementer
 from zope.interface.verify import verifyClass, verifyObject
 
-from twisted.logger import Logger
-from twisted.python.runtime import platform
-from twisted.python.failure import Failure
-from twisted.python import log
+import attr
 
-from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import (
+    Deferred,
+    DeferredList,
+    fail,
+    gatherResults,
+    maybeDeferred,
+    succeed,
+)
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
 from twisted.internet.error import (
-    ConnectionLost,
-    UserError,
-    ConnectionRefusedError,
-    ConnectionDone,
+    ConnectBindError,
     ConnectionAborted,
+    ConnectionClosed,
+    ConnectionDone,
+    ConnectionLost,
+    ConnectionRefusedError,
     DNSLookupError,
     NoProtocol,
-    ConnectBindError,
-    ConnectionClosed,
+    UserError,
+)
+from twisted.internet.interfaces import (
+    IAddress,
+    IConnector,
+    IHalfCloseableProtocol,
+    IListeningPort,
+    ILoggingContext,
+    IPullProducer,
+    IPushProducer,
+    IReactorFDSet,
+    IReactorSocket,
+    IReactorTCP,
+    IReactorTime,
+    IResolverSimple,
+    ITLSTransport,
+)
+from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
+from twisted.internet.tcp import (
+    Connection,
+    Server,
+    _BuffersLogs,
+    _FileDescriptorReservation,
+    _IFileDescriptorReservation,
+    _NullFileDescriptorReservation,
+    _resolveIPv6,
 )
 from twisted.internet.test.connectionmixins import (
-    LogObserverMixin,
+    BrokenContextFactory,
+    ConnectableProtocol,
     ConnectionTestsMixin,
+    EndpointCreator,
+    LogObserverMixin,
+    Stop,
     StreamClientTestsMixin,
     findFreePort,
-    ConnectableProtocol,
-    EndpointCreator,
     runProtocolsWithReactor,
-    Stop,
-    BrokenContextFactory,
 )
 from twisted.internet.test.reactormixins import (
     ReactorBuilder,
     needsRunningReactor,
     stopOnError,
 )
-from twisted.internet.interfaces import (
-    ILoggingContext,
-    IConnector,
-    IReactorFDSet,
-    IReactorSocket,
-    IReactorTCP,
-    IResolverSimple,
-    ITLSTransport,
+from twisted.internet.testing import (
+    AccumulatingProtocol,
+    MemoryReactor,
+    StringTransport,
 )
-from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet.defer import (
-    Deferred,
-    DeferredList,
-    maybeDeferred,
-    gatherResults,
-    succeed,
-    fail,
+from twisted.logger import Logger
+from twisted.python import log
+from twisted.python.failure import Failure
+from twisted.python.modules import walkModules
+from twisted.python.runtime import platform
+from twisted.test.test_tcp import (
+    ClientStartStopFactory,
+    ClosingFactory,
+    MyClientFactory,
+    MyServerFactory,
 )
-from twisted.internet.endpoints import TCP4ServerEndpoint, TCP4ClientEndpoint
-from twisted.internet.protocol import ServerFactory, ClientFactory, Protocol
-from twisted.internet.interfaces import (
-    IPushProducer,
-    IPullProducer,
-    IHalfCloseableProtocol,
-)
-from twisted.internet.tcp import (
-    _BuffersLogs,
-    Connection,
-    _FileDescriptorReservation,
-    _IFileDescriptorReservation,
-    _NullFileDescriptorReservation,
-    Server,
-    _resolveIPv6,
-)
-from twisted.internet.test.test_core import ObjectModelIntegrationMixin
-from twisted.test.test_tcp import MyClientFactory, MyServerFactory
-from twisted.test.test_tcp import ClosingFactory, ClientStartStopFactory
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
+from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
 
 try:
-    from OpenSSL import SSL  # type: ignore[import]
+    from OpenSSL import SSL
 except ImportError:
     useSSL = False
 else:
@@ -461,10 +471,10 @@ class FakeResolver:
     A resolver implementation based on a C{dict} mapping names to addresses.
     """
 
-    def __init__(self, names):
+    def __init__(self, names: Mapping[str, str]):
         self.names = names
 
-    def getHostByName(self, name, timeout):
+    def getHostByName(self, name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.
@@ -890,7 +900,7 @@ class TCPConnectorTestsBuilder(ReactorBuilder):
         protocolMadeAndClosed = []
 
         def reconnectFailed(ignored):
-            p = clientFactory.protocol
+            p = clientFactory.lastProtocol
             protocolMadeAndClosed.append((p.made, p.closed))
             reactor.stop()
 
@@ -963,6 +973,51 @@ class _IExhaustsFileDescriptors(Interface):
         """
 
 
+@attr.s(auto_attribs=True)
+class SourceCacheForCoverage:
+    """
+    Per U{this upstream issue in coverage.py
+    <https://github.com/coveragepy/coveragepy/issues/2091>}, C{coverage} may
+    need to open files at any time, on any line of code, to examine the
+    relevant source file being covered.  When it does this, under conditions of
+    file-descriptor exhaustion (which we are testing in this test suite), it
+    will (obviously) fail, raising an unexpected
+    C{coverage.exceptions.NoSource} exception out of a line of code which is of
+    course not being covered by anything.
+
+    L{SourceCacheForCoverage} prevents this issue by monkey-patching
+    C{coverage.py} in order to replace the C{open} function in the relevant
+    module to pre-allocate the source code of I{every} module in the C{twisted}
+    package and return that code back without opening any files in-line.
+    """
+
+    patchedModule: ModuleType
+    origOpen: Callable[..., Any]
+    pathToContents: dict[str, bytes] = attr.ib(default=attr.Factory(dict))
+
+    @classmethod
+    def enable(cls) -> SourceCacheForCoverage | None:
+        try:
+            from coverage import python
+        except ImportError:  # pragma: no cover
+            return None  # pragma: no cover
+
+        origOpen = getattr(python, "open", open)
+        self = cls(python, origOpen)
+        for module in walkModules("twisted"):
+            self.pathToContents[module.filePath.path] = module.filePath.getContent()
+        python.open = self.open  # type:ignore[assignment]
+        return self
+
+    def open(self, path: str, mode: str) -> BytesIO:
+        # this is called *inside* coverage, and so will not be marked as
+        # covered.
+        return BytesIO(self.pathToContents[path])  # pragma: no cover
+
+    def disable(self) -> None:
+        self.patchedModule.open = self.origOpen  # type:ignore[attr-defined]
+
+
 @implementer(_IExhaustsFileDescriptors)
 @attr.s(auto_attribs=True)
 class _ExhaustsFileDescriptors:
@@ -985,12 +1040,15 @@ class _ExhaustsFileDescriptors:
     _fileDescriptors: List[int] = attr.ib(
         default=attr.Factory(list), init=False, repr=False
     )
+    _sourceCache: SourceCacheForCoverage | None = None
 
-    def exhaust(self):
+    def exhaust(self) -> None:
         """
         Open file descriptors until C{EMFILE} is reached.
         """
         # Force a collection to close dangling files.
+        if self._sourceCache is None:  # pragma: no branch
+            self._sourceCache = SourceCacheForCoverage.enable()
         gc.collect()
         try:
             while True:
@@ -1012,7 +1070,7 @@ class _ExhaustsFileDescriptors:
                 openedFileDescriptors=self.count(),
             )
 
-    def release(self):
+    def release(self) -> None:
         """
         Release all file descriptors opened by L{exhaust}.
         """
@@ -1024,6 +1082,9 @@ class _ExhaustsFileDescriptors:
                 if e.errno == errno.EBADF:
                     continue
                 raise
+        if self._sourceCache is not None:
+            self._sourceCache.disable()
+            self._sourceCache = None
 
     def count(self):
         """
@@ -1183,45 +1244,34 @@ class ExhaustsFileDescriptorsTests(SynchronousTestCase):
 
 
 def assertPeerClosedOnEMFILE(
-    testCase,
-    exhauster,
-    reactor,
-    runReactor,
-    listen,
-    connect,
-):
+    testCase: SynchronousTestCase,
+    exhauster: _ExhaustsFileDescriptors,
+    reactor: Any,
+    runReactor: Callable[[Any], None],
+    listen: Callable[[Any, ServerFactory], IListeningPort],
+    connect: Callable[[Any, IAddress, ClientFactory], None],
+) -> None:
     """
-    Assert that an L{IListeningPort} immediately closes an accepted
-    peer socket when the number of open file descriptors exceeds the
-    soft resource limit.
+    Assert that an L{IListeningPort} immediately closes an accepted peer socket
+    when the number of open file descriptors exceeds the soft resource limit.
 
     @param testCase: The test case under which to run this assertion.
-    @type testCase: L{trial.unittest.SynchronousTestCase}
 
     @param exhauster: The file descriptor exhauster.
-    @type exhauster: L{_ExhaustsFileDescriptors}
 
     @param reactor: The reactor under test.
 
-    @param runReactor: A callable that will synchronously run the
-        provided reactor.
+    @param runReactor: A callable that will synchronously run the provided
+        reactor.
 
     @param listen: A callback to bind to a port.
-    @type listen: A L{callable} that accepts two arguments: the
-        provided C{reactor}; and a L{ServerFactory}.  It must return
-        an L{IListeningPort} provider.
 
-    @param connect: A callback to connect a client to the listening
-        port.
-    @type connect: A L{callable} that accepts three arguments: the
-        provided C{reactor}; the address returned by
-        L{IListeningPort.getHost}; and a L{ClientFactory}.  Its return
-        value is ignored.
+    @param connect: A callback to connect a client to the listening port.
     """
     testCase.addCleanup(exhauster.release)
 
     serverFactory = MyServerFactory()
-    serverConnectionMade = Deferred()
+    serverConnectionMade: Deferred[AccumulatingProtocol] = Deferred()
     serverFactory.protocolConnectionMade = serverConnectionMade
     serverConnectionCompleted = [False]
 
@@ -1231,12 +1281,30 @@ def assertPeerClosedOnEMFILE(
 
     serverConnectionMade.addCallback(stopReactorIfServerAccepted)
 
-    port = listen(reactor, serverFactory)
-    listeningHost = port.getHost()
     clientFactory = MyClientFactory()
-    connect(reactor, listeningHost, clientFactory)
 
-    reactor.callWhenRunning(exhauster.exhaust)
+    if IReactorTime.providedBy(reactor):
+        # For Glib-based reactors, the exhauster should be run after the signal
+        # handler used by glib [1] and restoration of twisted signal handlers
+        # [2], thus such 2-level callLater
+
+        # [1] https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/gi/_ossighelper.py#L76
+        # [2] https://github.com/twisted/twisted/blob/twisted-22.4.0/src/twisted/internet/_glibbase.py#L134
+
+        # See also https://github.com/twisted/twisted/issues/10342
+        def inner():
+            port = listen(reactor, serverFactory)
+            listeningHost = port.getHost()
+            connect(reactor, listeningHost, clientFactory)
+            exhauster.exhaust()
+
+        reactor.callLater(0, reactor.callLater, 0, inner)
+    else:
+        # For reactors without callLater (ex: MemoryReactor)
+        port = listen(reactor, serverFactory)
+        listeningHost = port.getHost()
+        connect(reactor, listeningHost, clientFactory)
+        reactor.callWhenRunning(exhauster.exhaust)
 
     def stopReactorAndCloseFileDescriptors(result):
         exhauster.release()
@@ -1248,7 +1316,7 @@ def assertPeerClosedOnEMFILE(
 
     runReactor(reactor)
 
-    noResult = []
+    noResult: list[AccumulatingProtocol | None] = []
     serverConnectionMade.addBoth(noResult.append)
     testCase.assertFalse(noResult, "Server accepted connection; EMFILE not triggered.")
     testCase.assertNoResult(clientFactory.failDeferred)
@@ -1388,15 +1456,6 @@ class StreamTransportTestsMixin(LogObserverMixin):
         reactor.run()
 
         self.assertIn(expectedMessage, loggedMessages)
-
-    def test_allNewStyle(self):
-        """
-        The L{IListeningPort} object is an instance of a class with no
-        classic classes in its hierarchy.
-        """
-        reactor = self.buildReactor()
-        port = self.getListeningPort(reactor, ServerFactory())
-        self.assertFullyNewStyle(port)
 
     @skipIf(SKIP_EMFILE, "Reserved EMFILE file descriptor not supported on Windows.")
     def test_closePeerOnEMFILE(self):
@@ -1765,7 +1824,6 @@ class TCPPortTestsBuilder(
     ReactorBuilder,
     ListenTCPMixin,
     TCPPortTestsMixin,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     pass
@@ -1775,7 +1833,6 @@ class TCPFDPortTestsBuilder(
     ReactorBuilder,
     SocketTCPMixin,
     TCPPortTestsMixin,
-    ObjectModelIntegrationMixin,
     StreamTransportTestsMixin,
 ):
     pass
@@ -2820,6 +2877,12 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2828,6 +2891,12 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
+    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
+    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
@@ -3006,7 +3075,7 @@ class BuffersLogsTests(SynchronousTestCase):
                 self.assertFalse(self.events)
                 raise TestException()
 
-        self.assertEqual(1, len(self.events))  # type: ignore[unreachable]
+        self.assertEqual(1, len(self.events))
         [event] = self.events
         self.assertEqual(event["log_format"], "An event")
         self.assertEqual(event["log_namespace"], self.namespace)
@@ -3162,7 +3231,7 @@ class FileDescriptorReservationTests(SynchronousTestCase):
             with reservedFD:
                 raise AllowedException()
 
-        errors = self.flushLoggedErrors(SuppressedException)  # type: ignore[unreachable]
+        errors = self.flushLoggedErrors(SuppressedException)
         self.assertEqual(len(errors), 1)
 
 

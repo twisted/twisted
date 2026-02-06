@@ -48,6 +48,8 @@ class MonkeyPatcher:
                 self._originals.append((obj, name, getattr(obj, name)))
             setattr(obj, name, value)
 
+    __enter__ = patch
+
     def restore(self):
         """
         Restore all original values to any patched objects.
@@ -55,6 +57,9 @@ class MonkeyPatcher:
         while self._originals:
             obj, name, value = self._originals.pop()
             setattr(obj, name, value)
+
+    def __exit__(self, excType=None, excValue=None, excTraceback=None):
+        self.restore()
 
     def runWithPatches(self, f, *args, **kw):
         """

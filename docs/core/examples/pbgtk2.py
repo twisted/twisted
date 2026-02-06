@@ -7,10 +7,11 @@ gtk2reactor.install()
 
 import gtk
 from gtk import glade
-from twisted.internet import reactor, defer
+
+from twisted.cred.credentials import UsernamePassword
+from twisted.internet import defer, reactor
 from twisted.python import failure, util
 from twisted.spread import pb
-from twisted.cred.credentials import UsernamePassword
 
 
 class LoginDialog:

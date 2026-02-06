@@ -8,17 +8,22 @@ L{twisted.cred.credentials}.
 
 
 import base64
-
 from binascii import hexlify
 from hashlib import md5, sha1
 
 from zope.interface.verify import verifyObject
-from twisted.trial.unittest import TestCase
-from twisted.internet.address import IPv4Address
+
+from twisted.cred.credentials import (
+    DigestCredentialFactory,
+    IUsernameDigestHash,
+    calcHA1,
+    calcHA2,
+    calcResponse,
+)
 from twisted.cred.error import LoginFailed
-from twisted.cred.credentials import calcHA1, calcHA2, IUsernameDigestHash
-from twisted.cred.credentials import calcResponse, DigestCredentialFactory
+from twisted.internet.address import IPv4Address
 from twisted.python.compat import networkString
+from twisted.trial.unittest import TestCase
 
 
 def b64encode(s):

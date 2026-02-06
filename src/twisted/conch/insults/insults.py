@@ -8,9 +8,9 @@ VT102 and VT220 terminal manipulation.
 @author: Jp Calderone
 """
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
-from twisted.internet import protocol, defer, interfaces as iinternet
+from twisted.internet import defer, interfaces as iinternet, protocol
 from twisted.python.compat import iterbytes, networkString
 
 
@@ -431,23 +431,7 @@ _KEY_NAMES = (
     "CONTROL",
 )
 
-
-class _const:
-    """
-    @ivar name: A string naming this constant
-    """
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __repr__(self) -> str:
-        return "[" + self.name + "]"
-
-    def __bytes__(self) -> bytes:
-        return ("[" + self.name + "]").encode("ascii")
-
-
-FUNCTION_KEYS = [_const(_name).__bytes__() for _name in _KEY_NAMES]
+FUNCTION_KEYS = [f"[{_name}]".encode("ascii") for _name in _KEY_NAMES]
 
 
 @implementer(ITerminalTransport)
@@ -893,7 +877,6 @@ for name, const in zip(_KEY_NAMES, FUNCTION_KEYS):
 
 
 class ClientProtocol(protocol.Protocol):
-
     terminalFactory = None
     terminal = None
 
@@ -1057,7 +1040,7 @@ class ClientProtocol(protocol.Protocol):
 
             return simple
 
-        for (ch, fName) in (
+        for ch, fName in (
             ("A", "Up"),
             ("B", "Down"),
             ("C", "Forward"),

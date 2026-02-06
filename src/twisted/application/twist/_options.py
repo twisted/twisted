@@ -6,32 +6,23 @@
 Command line options for C{twist}.
 """
 
-from sys import stdout, stderr
-from textwrap import dedent
 import typing
-from typing import (
-    Callable,
-    Iterable,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    cast,
-)
+from sys import stderr, stdout
+from textwrap import dedent
+from typing import Callable, Iterable, Mapping, Optional, Sequence, Tuple, cast
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
-    LogLevel,
     InvalidLogLevelError,
-    textFileLogObserver,
+    LogLevel,
     jsonFileLogObserver,
+    textFileLogObserver,
 )
 from twisted.plugin import getPlugins
 from twisted.python.usage import Options, UsageError
-
-from ..reactors import installReactor, NoSuchReactor, getReactorTypes
-from ..runner._exit import exit, ExitStatus
+from ..reactors import NoSuchReactor, getReactorTypes, installReactor
+from ..runner._exit import ExitStatus, exit
 from ..service import IServiceMaker
 
 openFile = open

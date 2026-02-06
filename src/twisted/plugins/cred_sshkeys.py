@@ -13,7 +13,6 @@ from zope.interface import implementer
 from twisted import plugin
 from twisted.cred.strcred import ICheckerFactory
 
-
 sshKeyCheckerFactoryHelp = """
 This allows SSH public key authentication, based on public keys listed in
 authorized_keys and authorized_keys2 files in user .ssh/ directories.

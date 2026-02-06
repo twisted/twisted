@@ -8,17 +8,24 @@ L{twisted.python.threadpool}.
 """
 
 
-from threading import Thread, Lock, local as LocalStorage
 from queue import Queue
+from threading import Lock, Thread, local as LocalStorage
+from typing import Callable, Optional, Protocol
 
 from twisted.python.log import err
-
-from ._threadworker import LockWorker
+from ._ithreads import IWorker
 from ._team import Team
-from ._threadworker import ThreadWorker
+from ._threadworker import LockWorker, ThreadWorker
 
 
-def pool(currentLimit, threadFactory=Thread):
+class _ThreadFactory(Protocol):
+    def __call__(self, *, target: Callable[..., object]) -> Thread:
+        ...
+
+
+def pool(
+    currentLimit: Callable[[], int], threadFactory: _ThreadFactory = Thread
+) -> Team:
     """
     Construct a L{Team} that spawns threads as a thread pool, with the given
     limiting function.
@@ -47,10 +54,10 @@ def pool(currentLimit, threadFactory=Thread):
     @return: a new L{Team}.
     """
 
-    def startThread(target):
+    def startThread(target: Callable[..., object]) -> None:
         return threadFactory(target=target).start()
 
-    def limitedWorkerCreator():
+    def limitedWorkerCreator() -> Optional[IWorker]:
         stats = team.statistics()
         if stats.busyWorkerCount + stats.idleWorkerCount >= currentLimit():
             return None

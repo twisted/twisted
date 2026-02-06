@@ -9,10 +9,10 @@ Test cases for L{jelly} object serialization.
 import datetime
 import decimal
 
+from twisted.internet.testing import StringTransport
 from twisted.spread import banana, jelly, pb
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import StringTransport
 
 
 class TestNode(jelly.Jellyable):

@@ -5,11 +5,11 @@
 Test cases for twisted.protocols package.
 """
 
-from twisted.trial import unittest
-from twisted.protocols import wire, portforward
+from twisted.internet import address, defer, protocol, reactor
+from twisted.protocols import portforward, wire
 from twisted.python.compat import iterbytes
-from twisted.internet import reactor, defer, address, protocol
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class WireTests(unittest.TestCase):

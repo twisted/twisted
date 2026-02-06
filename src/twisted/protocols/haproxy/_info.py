@@ -6,8 +6,10 @@
 IProxyInfo implementation.
 """
 from typing import Optional
-import attr
+
 from zope.interface import implementer
+
+import attr
 
 from twisted.internet.interfaces import IAddress
 from ._interfaces import IProxyInfo

@@ -1,9 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from twisted.internet import defer, error
 from twisted.trial import unittest
 from twisted.words.im import basesupport
-from twisted.internet import error, defer
 
 
 class DummyAccount(basesupport.AbstractAccount):

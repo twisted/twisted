@@ -9,51 +9,35 @@ Simple Mail Transfer Protocol implementation.
 """
 
 
-import time
-import re
 import base64
-import socket
+import binascii
 import os
 import random
-import binascii
+import re
+import socket
+import time
 import warnings
-from typing import Type
-
 from email.utils import parseaddr
+from io import BytesIO
+from typing import Type
 
 from zope.interface import implementer
 
 from twisted import cred
 from twisted.copyright import longversion
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet import reactor
-from twisted.internet.interfaces import ITLSTransport, ISSLTransport
+from twisted.internet import defer, error, protocol, reactor
 from twisted.internet._idna import _idnaText
-from twisted.python import log
-from twisted.python import util
-from twisted.python.compat import networkString, nativeString, iterbytes
-from twisted.python.runtime import platform
-
-from twisted.mail.interfaces import (
-    IClientAuthentication,
-    IMessageSMTP as IMessage,
-    IMessageDeliveryFactory,
-    IMessageDelivery,
-)
+from twisted.internet.interfaces import ISSLTransport, ITLSTransport
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
     LOGINAuthenticator,
     LOGINCredentials as _lcredentials,
 )
 from twisted.mail._except import (
-    AUTHDeclinedError,
-    AUTHRequiredError,
     AddressError,
+    AUTHDeclinedError,
     AuthenticationError,
+    AUTHRequiredError,
     EHLORequiredError,
     ESMTPClientError,
     SMTPAddressError,
@@ -63,16 +47,22 @@ from twisted.mail._except import (
     SMTPConnectError,
     SMTPDeliveryError,
     SMTPError,
+    SMTPProtocolError,
     SMTPServerError,
     SMTPTimeoutError,
     SMTPTLSError as TLSError,
     TLSRequiredError,
-    SMTPProtocolError,
 )
-
-
-from io import BytesIO
-
+from twisted.mail.interfaces import (
+    IClientAuthentication,
+    IMessageDelivery,
+    IMessageDeliveryFactory,
+    IMessageSMTP as IMessage,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log, util
+from twisted.python.compat import iterbytes, nativeString, networkString
+from twisted.python.runtime import platform
 
 __all__ = [
     "AUTHDeclinedError",
@@ -219,7 +209,7 @@ def messageid(uniq=None, N=lambda: next(_gen)):
     """
     datetime = time.strftime("%Y%m%d%H%M%S", time.gmtime())
     pid = os.getpid()
-    rand = random.randrange(2 ** 31 - 1)
+    rand = random.randrange(2**31 - 1)
     if uniq is None:
         uniq = ""
     else:
@@ -255,7 +245,7 @@ COMMAND, DATA, AUTH = "COMMAND", "DATA", "AUTH"
 
 
 # Character classes for parsing addresses
-atom = br"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
+atom = rb"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 
 
 class Address:
@@ -272,12 +262,12 @@ class Address:
     """
 
     tstring = re.compile(
-        br"""( # A string of
+        rb"""( # A string of
                            (?:"[^"]*" # quoted string
                            |\\. # backslash-escaped characted
                            |"""
         + atom
-        + br""" # atom character
+        + rb""" # atom character
                            )+|.) # or any single character""",
         re.X,
     )
@@ -335,7 +325,7 @@ class Address:
                 defaultDomain = DNSNAME
             self.domain = defaultDomain
 
-    dequotebs = re.compile(br"\\(.)")
+    dequotebs = re.compile(rb"\\(.)")
 
     def dequote(self, addr):
         """
@@ -352,7 +342,7 @@ class Address:
             if t[0] == b'"' and t[-1] == b'"':
                 res.append(t[1:-1])
             elif "\\" in t:
-                res.append(self.dequotebs.sub(br"\1", t))
+                res.append(self.dequotebs.sub(rb"\1", t))
             else:
                 res.append(t)
 
@@ -561,27 +551,27 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     # A string of quoted strings, backslash-escaped character or
     # atom characters + '@.,:'
-    qstring = br'("[^"]*"|\\.|' + atom + br"|[@.,:])+"
+    qstring = rb'("[^"]*"|\\.|' + atom + rb"|[@.,:])+"
 
     mail_re = re.compile(
-        br"""\s*FROM:\s*(?P<path><> # Empty <>
+        rb"""\s*FROM:\s*(?P<path><> # Empty <>
                           |<"""
         + qstring
-        + br"""> # <addr>
+        + rb"""> # <addr>
                           |"""
         + qstring
-        + br""" # addr
+        + rb""" # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $""",
         re.I | re.X,
     )
     rcpt_re = re.compile(
-        br"\s*TO:\s*(?P<path><"
+        rb"\s*TO:\s*(?P<path><"
         + qstring
-        + br"""> # <addr>
+        + rb"""> # <addr>
                           |"""
         + qstring
-        + br""" # addr
+        + rb""" # addr
                           )\s*(\s(?P<opts>.*))? # Optional WS + ESMTP options
                           $""",
         re.I | re.X,
@@ -680,7 +670,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         self.datafailed = None
 
         msgs = []
-        for (user, msgFunc) in recipients:
+        for user, msgFunc in recipients:
             try:
                 msg = msgFunc()
                 rcvdhdr = self.receivedHeader(helo, origin, [user])
@@ -778,7 +768,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     def _messageHandled(self, resultList):
         failures = 0
-        for (success, result) in resultList:
+        for success, result in resultList:
             if not success:
                 failures += 1
                 log.err(result)
@@ -836,7 +826,6 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         # provided: try to perform an anonymous login and then invoke this
         # method again.
         if self.portal:
-
             result = self.portal.login(
                 cred.credentials.Anonymous(),
                 None,
@@ -2001,7 +1990,6 @@ class PLAINAuthenticator:
 
 
 class ESMTPSender(SenderMixin, ESMTPClient):
-
     requireAuthentication = True
     requireTransportSecurity = True
 
@@ -2065,7 +2053,6 @@ class ESMTPSenderFactory(SMTPSenderFactory):
         requireTransportSecurity=True,
         hostname=None,
     ):
-
         SMTPSenderFactory.__init__(
             self, fromEmail, toEmail, file, deferred, retries, timeout
         )

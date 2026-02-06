@@ -10,10 +10,11 @@ HTML pretty-printing for Python source code.
 
 __version__ = "$Revision: 1.8 $"[11:-2]
 
-from twisted.python import htmlizer, usage
-from twisted import copyright
+import os
+import sys
 
-import os, sys
+from twisted import copyright
+from twisted.python import htmlizer, usage
 
 header = """<html><head>
 <title>%(title)s</title>

@@ -4,18 +4,27 @@
 """
 Tests for L{twisted.runner.procmon}.
 """
+from __future__ import annotations
+
+import errno
+import os
 import pickle
+from typing import AnyStr, Mapping, Optional, Sequence, Union
 
-from twisted.trial import unittest
-from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
-from twisted.internet.error import ProcessDone, ProcessTerminated, ProcessExitedAlready
+from zope.interface import implementer
+
+from twisted.internet.error import ProcessDone, ProcessExitedAlready, ProcessTerminated
+from twisted.internet.interfaces import IProcessProtocol, IProcessTransport
 from twisted.internet.task import Clock
-from twisted.python.failure import Failure
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import globalLogPublisher
-from twisted.test.proto_helpers import MemoryReactor
+from twisted.python.failure import Failure
+from twisted.runner.procmon import LoggingProtocol, ProcessMonitor
+from twisted.trial import unittest
 
 
-class DummyProcess:
+@implementer(IProcessTransport)
+class DummyProcess:  # type:ignore[misc]
     """
     An incomplete and fake L{IProcessTransport} implementation for testing how
     L{ProcessMonitor} behaves when its monitored processes exit.
@@ -42,7 +51,6 @@ class DummyProcess:
         usePTY=0,
         childFDs=None,
     ):
-
         self.proto = proto
 
         self._reactor = reactor
@@ -94,31 +102,37 @@ class DummyProcessReactor(MemoryReactor, Clock):
     """
     @ivar spawnedProcesses: a list that keeps track of the fake process
         instances built by C{spawnProcess}.
-    @type spawnedProcesses: C{list}
+
+    @ivar spawnProcessException: An exception which spawnProcess() will raise.
     """
 
-    def __init__(self):
+    spawnedProcesses: list[DummyProcess]
+    spawnProcessException: Exception | None
+
+    def __init__(self) -> None:
         MemoryReactor.__init__(self)
         Clock.__init__(self)
-
         self.spawnedProcesses = []
+        self.spawnProcessException = None
 
     def spawnProcess(
         self,
-        processProtocol,
-        executable,
-        args=(),
-        env={},
-        path=None,
-        uid=None,
-        gid=None,
-        usePTY=0,
-        childFDs=None,
-    ):
+        processProtocol: IProcessProtocol,
+        executable: Union[bytes, str],
+        args: Sequence[Union[bytes, str]],
+        env: Optional[Mapping[AnyStr, AnyStr]] = None,
+        path: Union[None, bytes, str] = None,
+        uid: Optional[int] = None,
+        gid: Optional[int] = None,
+        usePTY: bool = False,
+        childFDs: Optional[Mapping[int, Union[int, str]]] = None,
+    ) -> IProcessTransport:
         """
         Fake L{reactor.spawnProcess}, that logs all the process
         arguments and returns a L{DummyProcess}.
         """
+        if self.spawnProcessException is not None:
+            raise self.spawnProcessException
 
         proc = DummyProcess(
             self,
@@ -280,6 +294,31 @@ class ProcmonTests(unittest.TestCase):
         """
         self.assertRaises(KeyError, self.pm.startProcess, "foo")
 
+    def test_startProcessSpawnCaughtException(self) -> None:
+        """
+        L{IReactorProcess.spawnProcess} might raise C{OSError}, ensure it
+        is caught and process is restarted.
+        """
+        self.reactor.spawnProcessException = OSError(
+            errno.EAGAIN, os.strerror(errno.EAGAIN)
+        )
+        self.pm.minRestartDelay = 123
+        self.pm.maxRestartDelay = 123
+        self.pm.addProcess("foo", ["foo"])
+        self.pm.startProcess("foo")
+        # process will be restarted in 123 seconds, per minRestartDelay and maxRestartDelay above
+        self.assertEqual(self.pm.delay["foo"], 123)
+        self.assertEqual(len(self.flushLoggedErrors(OSError)), 1)
+
+    def test_startProcessSpawnUncaughtException(self) -> None:
+        """
+        L{IReactorProcess.spawnProcess} might raise C{OSError}, ensure other
+        exceptions are not caught.
+        """
+        self.reactor.spawnProcessException = SystemError("Just another exception")
+        self.pm.addProcess("foo", ["foo"])
+        self.assertRaises(SystemError, self.pm.startProcess, "foo")
+
     def test_stopProcessNaturalTermination(self):
         """
         L{ProcessMonitor.stopProcess} immediately sends a TERM signal to the
@@ -301,6 +340,11 @@ class ProcmonTests(unittest.TestCase):
         # Advance the reactor just enough to give the process time to die and
         # verify that the process restarts
         self.reactor.advance(timeToDie)
+
+        # No further time is required to pass here but the reactor must
+        # iterate due to implementation details.  See the comment in
+        # test_stopProcessForcedKill.
+        self.reactor.advance(0)
 
         # We expect it to be restarted immediately
         self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
@@ -324,7 +368,14 @@ class ProcmonTests(unittest.TestCase):
         self.assertEqual(0.0, self.pm.timeStarted["foo"])
 
         self.reactor.advance(1)
-        # We expect it to be immediately restarted
+
+        # We expect it to be immediately restarted.  While no actual time
+        # should need to pass for this to happen, the reactor will need to
+        # iterate a couple times because the implementation uses `callLater`
+        # (twice!) to schedule the restart and no delayed call can run sooner
+        # than the reactor iteration after it is scheduled.
+        self.reactor.pump([0, 0])
+
         self.assertEqual(self.reactor.seconds(), self.pm.timeStarted["foo"])
 
     def test_stopProcessUnknownKeyError(self):
@@ -360,17 +411,17 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"hello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
-    def test_ouputReceivedCompleteErrLine(self):
+    def test_outputReceivedCompleteErrLine(self):
         """
         Getting a complete output line on stderr generates a log message.
         """
@@ -387,15 +438,15 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].errReceived(b"hello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stderr")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stderr")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
     def test_outputReceivedCompleteLineInvalidUTF8(self):
         """
@@ -414,16 +465,16 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"\xffhello world!\n")
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         message = events[0]
         namespace = message["log_namespace"]
         stream = message["stream"]
         tag = message["tag"]
         output = message["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(output, repr(b"\xffhello world!"))
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(output, repr(b"\xffhello world!"))
 
     def test_outputReceivedPartialLine(self):
         """
@@ -442,21 +493,21 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(self.pm.threshold)
         # Process greets
         self.pm.protocols["foo"].outReceived(b"hello world!")
-        self.assertEquals(len(events), 0)
+        self.assertEqual(len(events), 0)
         self.pm.protocols["foo"].processEnded(Failure(ProcessDone(0)))
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
         namespace = events[0]["log_namespace"]
         stream = events[0]["stream"]
         tag = events[0]["tag"]
         line = events[0]["line"]
-        self.assertEquals(namespace, "twisted.runner.procmon.ProcessMonitor")
-        self.assertEquals(stream, "stdout")
-        self.assertEquals(tag, "foo")
-        self.assertEquals(line, "hello world!")
+        self.assertEqual(namespace, "twisted.runner.procmon.ProcessMonitor")
+        self.assertEqual(stream, "stdout")
+        self.assertEqual(tag, "foo")
+        self.assertEqual(line, "hello world!")
 
     def test_connectionLostLongLivedProcess(self):
         """
-        L{ProcessMonitor.connectionLost} should immediately restart a process
+        L{ProcessMonitor.processExit} should immediately restart a process
         if it has been running longer than L{ProcessMonitor.threshold} seconds.
         """
         self.pm.addProcess("foo", ["foo"])
@@ -476,7 +527,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_connectionLostMurderCancel(self):
         """
-        L{ProcessMonitor.connectionLost} cancels a scheduled process killer and
+        L{ProcessMonitor.processExit} cancels a scheduled process killer and
         deletes the DelayedCall from the L{ProcessMonitor.murder} list.
         """
         self.pm.addProcess("foo", ["foo"])
@@ -497,7 +548,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_connectionLostProtocolDeletion(self):
         """
-        L{ProcessMonitor.connectionLost} removes the corresponding
+        L{ProcessMonitor.processExit} removes the corresponding
         ProcessProtocol instance from the L{ProcessMonitor.protocols} list.
         """
         self.pm.startService()
@@ -509,7 +560,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_connectionLostMinMaxRestartDelay(self):
         """
-        L{ProcessMonitor.connectionLost} will wait at least minRestartDelay s
+        L{ProcessMonitor.processExit} will wait at least minRestartDelay s
         and at most maxRestartDelay s
         """
         self.pm.minRestartDelay = 2
@@ -525,7 +576,7 @@ class ProcmonTests(unittest.TestCase):
 
     def test_connectionLostBackoffDelayDoubles(self):
         """
-        L{ProcessMonitor.connectionLost} doubles the restart delay each time
+        L{ProcessMonitor.processExit} doubles the restart delay each time
         the process dies too quickly.
         """
         self.pm.startService()
@@ -583,7 +634,7 @@ class ProcmonTests(unittest.TestCase):
         self.reactor.advance(1)
         processes = list(self.reactor.spawnedProcesses)
         myProcess = processes.pop()
-        self.assertEquals(processes, [])
+        self.assertEqual(processes, [])
         self.assertIsNone(myProcess.pid)
 
     def test_stopServiceCancelRestarts(self):
@@ -631,7 +682,6 @@ class ProcmonTests(unittest.TestCase):
 
 
 class DeprecationTests(unittest.SynchronousTestCase):
-
     """
     Tests that check functionality that should be deprecated is deprecated.
     """
@@ -653,7 +703,7 @@ class DeprecationTests(unittest.SynchronousTestCase):
         """
         self.pm.addProcess("foo", ["foo"])
         myprocesses = self.pm.processes
-        self.assertEquals(len(myprocesses), 1)
+        self.assertEqual(len(myprocesses), 1)
         warnings = self.flushWarnings()
         foundToTuple = False
         for warning in warnings:
@@ -671,11 +721,11 @@ class DeprecationTests(unittest.SynchronousTestCase):
         should generate its own DeprecationWarning.
         """
         myProcesses = self.pm.processes
-        self.assertEquals(myProcesses, {})
+        self.assertEqual(myProcesses, {})
         warnings = self.flushWarnings()
         first = warnings.pop(0)
         self.assertIs(first["category"], DeprecationWarning)
-        self.assertEquals(warnings, [])
+        self.assertEqual(warnings, [])
 
     def test_getstate(self):
         """

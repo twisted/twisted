@@ -4,9 +4,10 @@
 import time
 from io import BytesIO
 
+from twisted.internet import protocol
+
 # Twisted Imports
 from twisted.spread import banana
-from twisted.internet import protocol
 
 iterationCount = 10000
 

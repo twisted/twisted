@@ -11,13 +11,12 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-import re
 import os
+import re
 
 from incremental import Version
 
 from twisted.python.deprecate import deprecatedModuleAttribute
-
 
 # https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
@@ -126,7 +125,7 @@ class _ErrorFormatter:
         except ImportError:
             WinError = None
         try:
-            from win32api import FormatMessage  # type: ignore[import]
+            from win32api import FormatMessage
         except ImportError:
             FormatMessage = None
         try:

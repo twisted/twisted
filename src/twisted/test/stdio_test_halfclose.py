@@ -4,9 +4,8 @@
 
 """
 Main program for the child process run by
-L{twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost}
-to test that IHalfCloseableProtocol.readConnectionLost works for process
-transports.
+L{twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost} to
+test that IHalfCloseableProtocol.readConnectionLost works for stdio transports.
 """
 
 
@@ -14,9 +13,9 @@ import sys
 
 from zope.interface import implementer
 
+from twisted.internet import protocol, stdio
 from twisted.internet.interfaces import IHalfCloseableProtocol
-from twisted.internet import stdio, protocol
-from twisted.python import reflect, log
+from twisted.python import log, reflect
 
 
 @implementer(IHalfCloseableProtocol)

@@ -7,19 +7,21 @@ Tests for L{twisted.internet.base}.
 
 import socket
 from queue import Queue
+from typing import Callable
 from unittest import skipIf
-from typing import Any, Callable
 
 from zope.interface import implementer
 
-from twisted.python.threadpool import ThreadPool
-from twisted.internet.interfaces import IReactorTime, IReactorThreads, IResolverSimple
-from twisted.internet.error import DNSLookupError
+from typing_extensions import ParamSpec
+
 from twisted.internet._resolver import FirstOneWins
+from twisted.internet.base import DelayedCall, ReactorBase, ThreadedResolver
 from twisted.internet.defer import Deferred
-from twisted.internet.base import ThreadedResolver, DelayedCall, ReactorBase
+from twisted.internet.error import DNSLookupError
+from twisted.internet.interfaces import IReactorThreads, IReactorTime, IResolverSimple
 from twisted.internet.task import Clock
-from twisted.trial.unittest import TestCase, SkipTest
+from twisted.python.threadpool import ThreadPool
+from twisted.trial.unittest import SkipTest, TestCase
 
 try:
     import signal as _signal
@@ -27,6 +29,8 @@ except ImportError:
     signal = None
 else:
     signal = _signal
+
+_P = ParamSpec("_P")
 
 
 @implementer(IReactorTime, IReactorThreads)
@@ -46,7 +50,9 @@ class FakeReactor:
 
         self._threadCalls = Queue()
 
-    def callFromThread(self, callable: Callable[..., Any], *args, **kwargs):
+    def callFromThread(
+        self, callable: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         self._threadCalls.put((callable, args, kwargs))
 
     def _runThreadCalls(self):
@@ -60,11 +66,13 @@ class FakeReactor:
         # IReactorTime.getDelayedCalls
         pass
 
-    def seconds(self):
+    def seconds(self) -> float:  # type: ignore[empty-body]
         # IReactorTime.seconds
         pass
 
-    def callInThread(self, callable: Callable[..., Any], *args, **kwargs):
+    def callInThread(
+        self, callable: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         # IReactorInThreads.callInThread
         pass
 
@@ -356,6 +364,17 @@ class DelayedCallNoDebugTests(DelayedCallMixin, TestCase):
         )
         self.assertEqual(str(dc), expected)
 
+    def test_switchToDebug(self):
+        """
+        If L{DelayedCall.debug} changes from C{0} to C{1} between
+        L{DelayeCall.__init__} and L{DelayedCall.__repr__} then
+        L{DelayedCall.__repr__} returns a string that does not include the
+        creator stack.
+        """
+        dc = DelayedCall(3, lambda: None, (), {}, nothing, nothing, lambda: 2)
+        dc.debug = 1
+        self.assertNotIn("traceback at creation", repr(dc))
+
 
 class DelayedCallDebugTests(DelayedCallMixin, TestCase):
     """
@@ -382,6 +401,17 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
             "traceback at creation:".format(id(dc))
         )
         self.assertRegex(str(dc), expectedRegexp)
+
+    def test_switchFromDebug(self):
+        """
+        If L{DelayedCall.debug} changes from C{1} to C{0} between
+        L{DelayeCall.__init__} and L{DelayedCall.__repr__} then
+        L{DelayedCall.__repr__} returns a string that includes the creator
+        stack (we captured it, we might as well display it).
+        """
+        dc = DelayedCall(3, lambda: None, (), {}, nothing, nothing, lambda: 2)
+        dc.debug = 0
+        self.assertIn("traceback at creation", repr(dc))
 
 
 class TestSpySignalCapturingReactor(ReactorBase):
@@ -418,7 +448,7 @@ class ReactorBaseSignalTests(TestCase):
         """
         reactor = TestSpySignalCapturingReactor()
         reactor.sigInt(signal.SIGINT, None)
-        self.assertEquals(signal.SIGINT, reactor._exitSignal)
+        self.assertEqual(signal.SIGINT, reactor._exitSignal)
 
     def test_captureSIGTERM(self):
         """
@@ -427,7 +457,7 @@ class ReactorBaseSignalTests(TestCase):
         """
         reactor = TestSpySignalCapturingReactor()
         reactor.sigTerm(signal.SIGTERM, None)
-        self.assertEquals(signal.SIGTERM, reactor._exitSignal)
+        self.assertEqual(signal.SIGTERM, reactor._exitSignal)
 
     def test_captureSIGBREAK(self):
         """
@@ -439,4 +469,4 @@ class ReactorBaseSignalTests(TestCase):
 
         reactor = TestSpySignalCapturingReactor()
         reactor.sigBreak(signal.SIGBREAK, None)
-        self.assertEquals(signal.SIGBREAK, reactor._exitSignal)
+        self.assertEqual(signal.SIGBREAK, reactor._exitSignal)

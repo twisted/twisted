@@ -11,8 +11,8 @@ Usage:
 import sys
 from getpass import getpass
 
-from twisted.web.xmlrpc import Proxy
 from twisted.internet import reactor
+from twisted.web.xmlrpc import Proxy
 
 
 class AddDiary:

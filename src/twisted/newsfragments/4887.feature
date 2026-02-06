@@ -1,0 +1,1 @@
+twisted.internet.ssl.CertificateOptions has a new constructor argument, contextForServerName, which takes a callback that will get invoked when a client sends a server name indication, with the sent servername, and returns a new OpenSSL.SSL.Context that the connection will switch to.

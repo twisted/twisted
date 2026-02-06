@@ -7,13 +7,29 @@ Extended thread dispatching support.
 For basic support see reactor threading API docs.
 """
 
+from __future__ import annotations
 
 import queue as Queue
-from twisted.python import failure
+from typing import Callable, TypeVar, Union, cast
+
+from typing_extensions import ParamSpec
+
 from twisted.internet import defer
+from twisted.internet.interfaces import IReactorFromThreads, IReactorThreads
+from twisted.python import failure
+from twisted.python.threadpool import ThreadPool
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 
-def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
+def deferToThreadPool(
+    reactor: IReactorFromThreads,
+    threadpool: ThreadPool,
+    f: Callable[_P, _R],
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> defer.Deferred[_R]:
     """
     Call the function C{f} using a thread from the given threadpool and return
     the result as a Deferred.
@@ -36,9 +52,9 @@ def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
         errback with a L{twisted.python.failure.Failure} if f throws an
         exception.
     """
-    d = defer.Deferred()
+    d: defer.Deferred[_R] = defer.Deferred()
 
-    def onResult(success, result):
+    def onResult(success: bool, result: _R | BaseException) -> None:
         if success:
             reactor.callFromThread(d.callback, result)
         else:
@@ -49,7 +65,11 @@ def deferToThreadPool(reactor, threadpool, f, *args, **kwargs):
     return d
 
 
-def deferToThread(f, *args, **kwargs):
+def deferToThread(
+    f: Callable[_P, _R],
+    *args: _P.args,
+    **kwargs: _P.kwargs,
+) -> defer.Deferred[_R]:
     """
     Run a function in a thread and return the result as a Deferred.
 
@@ -63,7 +83,9 @@ def deferToThread(f, *args, **kwargs):
     """
     from twisted.internet import reactor
 
-    return deferToThreadPool(reactor, reactor.getThreadPool(), f, *args, **kwargs)
+    reactor_ = cast(IReactorThreads, reactor)
+
+    return deferToThreadPool(reactor_, reactor_.getThreadPool(), f, *args, **kwargs)
 
 
 def _runMultiple(tupleList):
@@ -85,7 +107,12 @@ def callMultipleInThread(tupleList):
     reactor.callInThread(_runMultiple, tupleList)
 
 
-def blockingCallFromThread(reactor, f, *a, **kw):
+def blockingCallFromThread(
+    reactor: IReactorFromThreads,
+    f: Union[Callable[_P, _R], Callable[_P, defer.Deferred[_R]]],
+    *a: _P.args,
+    **kw: _P.kwargs,
+) -> _R:
     """
     Run a function in the reactor from a thread, and wait for the result
     synchronously.  If the function returns a L{Deferred}, wait for its
@@ -107,7 +134,7 @@ def blockingCallFromThread(reactor, f, *a, **kw):
         C{blockingCallFromThread} will raise that failure's exception (see
         L{Failure.raiseException}).
     """
-    queue = Queue.Queue()
+    queue: Queue.Queue[_R] = Queue.Queue()
 
     def _callFromThread():
         result = defer.maybeDeferred(f, *a, **kw)

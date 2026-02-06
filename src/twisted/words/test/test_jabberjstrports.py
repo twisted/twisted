@@ -6,10 +6,9 @@ Tests for L{twisted.words.protocols.jabber.jstrports}.
 """
 
 
-from twisted.trial import unittest
-
-from twisted.words.protocols.jabber import jstrports
 from twisted.application.internet import TCPClient
+from twisted.trial import unittest
+from twisted.words.protocols.jabber import jstrports
 
 
 class JabberStrPortsPlaceHolderTests(unittest.TestCase):

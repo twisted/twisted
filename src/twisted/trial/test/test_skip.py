@@ -6,8 +6,9 @@
 Tests for L{twisted.trial.util}
 """
 
-from twisted.trial.unittest import TestCase
 from unittest import skipIf
+
+from twisted.trial.unittest import TestCase
 
 
 @skipIf(True, "Skip all tests when @skipIf is used on a class")
@@ -17,10 +18,10 @@ class SkipDecoratorUsedOnClass(TestCase):
     this class.
     """
 
-    def test_shouldNeverRun_1(self):
+    def test_shouldNeverRun_1(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldNeverRun_2(self):
+    def test_shouldNeverRun_2(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -31,10 +32,10 @@ class SkipDecoratorUsedOnClassWithEmptyReason(TestCase):
     this class, even if the reason is an empty string
     """
 
-    def test_shouldNeverRun_1(self):
+    def test_shouldNeverRun_1(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldNeverRun_2(self):
+    def test_shouldNeverRun_2(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -44,22 +45,22 @@ class SkipDecoratorUsedOnMethods(TestCase):
     """
 
     @skipIf(True, "skipIf decorator used so skip test")
-    def test_shouldNeverRun(self):
+    def test_shouldNeverRun(self) -> None:
         raise Exception("Test should skip and never reach here")
 
     @skipIf(True, "")
-    def test_shouldNeverRunWithEmptyReason(self):
+    def test_shouldNeverRunWithEmptyReason(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_shouldShouldRun(self):
+    def test_shouldShouldRun(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
     @skipIf(False, "should not skip")
-    def test_shouldShouldRunWithSkipIfFalse(self):
+    def test_shouldShouldRunWithSkipIfFalse(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
     @skipIf(False, "")
-    def test_shouldShouldRunWithSkipIfFalseEmptyReason(self):
+    def test_shouldShouldRunWithSkipIfFalseEmptyReason(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")
 
 
@@ -71,10 +72,10 @@ class SkipAttributeOnClass(TestCase):
 
     skip = "'skip' attribute set on this class, so skip all tests"
 
-    def test_one(self):
+    def test_one(self) -> None:
         raise Exception("Test should skip and never reach here")
 
-    def test_two(self):
+    def test_two(self) -> None:
         raise Exception("Test should skip and never reach here")
 
 
@@ -83,10 +84,10 @@ class SkipAttributeOnMethods(TestCase):
     Only methods where @skipIf decorator is used should be skipped.
     """
 
-    def test_one(self):
+    def test_one(self) -> None:
         raise Exception("Should never reach here")
 
     test_one.skip = "skip test, skip attribute set on method"  # type: ignore[attr-defined]
 
-    def test_shouldNotSkip(self):
+    def test_shouldNotSkip(self) -> None:
         self.assertTrue(True, "Test should run and not be skipped")

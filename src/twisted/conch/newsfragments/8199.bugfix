@@ -1,1 +1,0 @@
-twisted.conch now uses constant-time comparisons for MACs.

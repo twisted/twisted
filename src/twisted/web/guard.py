@@ -8,10 +8,11 @@ authentication and authorization of HTTP requests.
 """
 
 
-# Expose HTTP authentication classes here.
-from twisted.web._auth.wrapper import HTTPAuthSessionWrapper
 from twisted.web._auth.basic import BasicCredentialFactory
 from twisted.web._auth.digest import DigestCredentialFactory
+
+# Expose HTTP authentication classes here.
+from twisted.web._auth.wrapper import HTTPAuthSessionWrapper
 
 __all__ = [
     "HTTPAuthSessionWrapper",

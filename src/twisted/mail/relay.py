@@ -6,12 +6,12 @@
 Support for relaying mail.
 """
 
-from twisted.mail import smtp
-from twisted.python import log
-from twisted.internet.address import UNIXAddress
-
 import os
 import pickle
+
+from twisted.internet.address import UNIXAddress
+from twisted.mail import smtp
+from twisted.python import log
 
 
 class DomainQueuer:
@@ -74,7 +74,6 @@ class DomainQueuer:
 
 
 class RelayerMixin:
-
     # XXX - This is -totally- bogus
     # It opens about a -hundred- -billion- files
     # and -leaves- them open!

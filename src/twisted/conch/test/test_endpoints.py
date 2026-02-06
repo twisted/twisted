@@ -6,67 +6,70 @@ Tests for L{twisted.conch.endpoints}.
 """
 
 import os.path
+from io import BytesIO
 from struct import pack
-from errno import ENOSYS
+from typing import IO
+
+from zope.interface import implementer
+from zope.interface.verify import verifyClass, verifyObject
 
 import hamcrest
 
-from zope.interface.verify import verifyObject, verifyClass
-from zope.interface import implementer
-
-from twisted.logger import globalLogPublisher, LogLevel
+from twisted.conch.error import ConchError, HostKeyChanged, UserRejectedKey
+from twisted.conch.interfaces import IConchUser
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.portal import Portal
+from twisted.internet.address import IPv4Address
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
+from twisted.internet.error import (
+    ConnectingCancelledError,
+    ConnectionDone,
+    ConnectionRefusedError,
+    ProcessTerminated,
+)
+from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.testing import (
+    EventLoggingObserver,
+    MemoryReactorClock,
+    StringTransport,
+)
+from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.log import msg
 from twisted.python.reflect import requireModule
-from twisted.internet.interfaces import IAddress, IStreamClientEndpoint
-from twisted.internet.protocol import Factory, Protocol
-from twisted.internet.defer import CancelledError, Deferred, succeed, fail
-from twisted.internet.error import ConnectionDone, ConnectionRefusedError
-from twisted.internet.address import IPv4Address
 from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import EventLoggingObserver, MemoryReactorClock
-from twisted.internet.error import ProcessTerminated, ConnectingCancelledError
 
-from twisted.cred.portal import Portal
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-
-from twisted.conch.interfaces import IConchUser
-from twisted.conch.error import ConchError, UserRejectedKey, HostKeyChanged
-
-if requireModule("cryptography") and requireModule("pyasn1.type"):
-    from twisted.conch.ssh import common
-    from twisted.conch.ssh.factory import SSHFactory
-    from twisted.conch.ssh.userauth import SSHUserAuthServer
-    from twisted.conch.ssh.connection import SSHConnection
-    from twisted.conch.ssh.keys import Key
-    from twisted.conch.ssh.channel import SSHChannel
-    from twisted.conch.ssh.agent import SSHAgentServer
-    from twisted.conch.client.knownhosts import KnownHostsFile, ConsoleUI
-    from twisted.conch.checkers import SSHPublicKeyChecker, InMemorySSHKeyDB
+if requireModule("cryptography"):
     from twisted.conch.avatar import ConchUser
-
-    from twisted.conch.test.keydata import (
-        publicRSA_openssh,
-        privateRSA_openssh,
-        privateRSA_openssh_encrypted_aes,
-        privateDSA_openssh,
-    )
-
+    from twisted.conch.checkers import InMemorySSHKeyDB, SSHPublicKeyChecker
+    from twisted.conch.client.knownhosts import ConsoleUI, KnownHostsFile
     from twisted.conch.endpoints import (
-        _ISSHConnectionCreator,
         AuthenticationFailed,
         SSHCommandAddress,
         SSHCommandClientEndpoint,
-        _ReadFile,
-        _NewConnectionHelper,
         _ExistingConnectionHelper,
+        _ISSHConnectionCreator,
+        _NewConnectionHelper,
     )
-
+    from twisted.conch.ssh import common
+    from twisted.conch.ssh.agent import SSHAgentServer
+    from twisted.conch.ssh.channel import SSHChannel
+    from twisted.conch.ssh.connection import SSHConnection
+    from twisted.conch.ssh.factory import SSHFactory
+    from twisted.conch.ssh.keys import Key
     from twisted.conch.ssh.transport import SSHClientTransport
+    from twisted.conch.ssh.userauth import SSHUserAuthServer
+    from twisted.conch.test.keydata import (
+        privateDSA_openssh,
+        privateRSA_openssh,
+        privateRSA_openssh_encrypted_aes,
+        publicRSA_openssh,
+    )
 else:
-    skip = "can't run w/o cryptography and pyasn1"
+    skip = "can't run w/o cryptography"
     SSHFactory = object  # type: ignore[assignment,misc]
     SSHUserAuthServer = object  # type: ignore[assignment,misc]
     SSHConnection = object  # type: ignore[assignment,misc]
@@ -77,7 +80,6 @@ else:
     SSHPublicKeyChecker = object  # type: ignore[assignment,misc]
     ConchUser = object  # type: ignore[assignment,misc]
 
-from twisted.test.proto_helpers import StringTransport
 from twisted.test.iosim import FakeTransport, connect
 
 
@@ -182,7 +184,6 @@ class FixedResponseUI:
 
 
 class FakeClockSSHUserAuthServer(SSHUserAuthServer):
-
     # Delegate this setting to the factory to simplify tweaking it
     @property
     def attemptsBeforeDisconnect(self):
@@ -1434,31 +1435,37 @@ class ExistingConnectionHelperTests(TestCase):
         helper.cleanupConnection(object(), True)
 
 
+class _WriteDiscarder(BytesIO):
+    def write(self, data: object, /) -> int:
+        """
+        Discard writes because we are emulating a console object, where they'd
+        go to the screen, not back into the buffer to be read like an a+ file.
+        """
+        return 0
+
+
 class _PTYPath:
     """
     A L{FilePath}-like object which can be opened to create a L{_ReadFile} with
     certain contents.
     """
 
-    def __init__(self, contents):
+    def __init__(self, contents: bytes) -> None:
         """
         @param contents: L{bytes} which will be the contents of the
             L{_ReadFile} this path can open.
         """
         self.contents = contents
 
-    def open(self, mode):
+    def open(self, mode: str) -> IO[bytes]:
         """
-        If the mode is r+, return a L{_ReadFile} with the contents given to
-        this path's initializer.
+        If the mode is r+, return a file with the given contents as a line.
 
-        @raise OSError: If the mode is unsupported.
-
-        @return: A L{_ReadFile} instance
+        @return: a buffer of the given contents, which will discard any writes
+            given to it.
         """
-        if mode == "rb+":
-            return _ReadFile(self.contents)
-        raise OSError(ENOSYS, "Function not implemented")
+        assert mode == "r+"
+        return _WriteDiscarder(self.contents)
 
 
 class NewConnectionHelperTests(TestCase):
@@ -1478,16 +1485,25 @@ class NewConnectionHelperTests(TestCase):
         """
         self.assertEqual("~/.ssh/known_hosts", _NewConnectionHelper._KNOWN_HOSTS)
 
-    def test_defaultKnownHosts(self):
+    def test_defaultKnownHosts(self) -> None:
         """
         L{_NewConnectionHelper._knownHosts} is used to create a
         L{KnownHostsFile} if one is not passed to the initializer.
         """
         result = object()
-        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls: result)
+        self.patch(_NewConnectionHelper, "_knownHosts", lambda cls, ignored: result)
 
         helper = _NewConnectionHelper(
-            None, None, None, None, None, None, None, None, None, None
+            None,
+            None,  # type:ignore[arg-type]
+            None,
+            None,  # type:ignore[arg-type]
+            None,  # type:ignore[arg-type]
+            None,
+            None,
+            None,
+            None,
+            None,
         )
 
         self.assertIs(result, helper.knownHosts)

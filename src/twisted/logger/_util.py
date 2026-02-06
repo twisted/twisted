@@ -26,7 +26,7 @@ def formatTrace(trace: LogTrace) -> str:
 
     def formatWithName(obj: object) -> str:
         if hasattr(obj, "name"):
-            return f"{obj} ({obj.name})"  # type: ignore[attr-defined]
+            return f"{obj} ({obj.name})"
         else:
             return f"{obj}"
 

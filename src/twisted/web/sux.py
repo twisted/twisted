@@ -24,7 +24,6 @@ does not:
 from twisted.internet.protocol import Protocol
 from twisted.python.reflect import prefixedMethodNames
 
-
 # Elements of the three-tuples in the state table.
 BEGIN_HANDLER = 0
 DO_HANDLER = 1
@@ -80,7 +79,6 @@ class ParseError(Exception):
 
 
 class XMLParser(Protocol):
-
     state = None
     encodings = None
     filename = "<xml />"

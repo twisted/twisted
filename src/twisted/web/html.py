@@ -9,9 +9,10 @@
 from html import escape
 from io import StringIO
 
+from incremental import Version
+
 from twisted.python import log
 from twisted.python.deprecate import deprecated
-from incremental import Version
 
 
 @deprecated(Version("Twisted", 15, 3, 0), replacement="twisted.web.template")

@@ -22,7 +22,7 @@ cumbersome.
 """
 
 
-from inspect import isgenerator, iscoroutine
+from inspect import iscoroutine, isgenerator
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from warnings import warn
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from twisted.web.template import Flattenable
 
 
-@attr.s(hash=False, eq=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, auto_attribs=True)
 class slot:
     """
     Marker for markup insertion in a template.
@@ -82,7 +82,7 @@ class slot:
     """
 
 
-@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class Tag:
     """
     A L{Tag} represents an XML tags with a tag name, attributes, and children.
@@ -218,14 +218,14 @@ class Tag:
         @return: a clone of C{obj}.
         """
         if hasattr(obj, "clone"):
-            return obj.clone(deep)  # type: ignore[union-attr]
+            return obj.clone(deep)
         elif isinstance(obj, (list, tuple)):
             return [self._clone(x, deep) for x in obj]
         elif isgenerator(obj):
             warn(
                 "Cloning a Tag which contains a generator is unsafe, "
                 "since the generator can be consumed only once; "
-                "this is deprecated since Twisted NEXT and will raise "
+                "this is deprecated since Twisted 21.7.0 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )
@@ -234,7 +234,7 @@ class Tag:
             warn(
                 "Cloning a Tag which contains a coroutine is unsafe, "
                 "since the coroutine can run only once; "
-                "this is deprecated since Twisted NEXT and will raise "
+                "this is deprecated since Twisted 21.7.0 and will raise "
                 "an exception in the future",
                 DeprecationWarning,
             )
@@ -314,7 +314,7 @@ voidElements = (
 )
 
 
-@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class CDATA:
     """
     A C{<![CDATA[]]>} block from a template.  Given a separate representation in
@@ -329,7 +329,7 @@ class CDATA:
         return f"CDATA({self.data!r})"
 
 
-@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class Comment:
     """
     A C{<!-- -->} comment from a template.  Given a separate representation in
@@ -344,7 +344,7 @@ class Comment:
         return f"Comment({self.data!r})"
 
 
-@attr.s(hash=False, eq=False, repr=False, auto_attribs=True)
+@attr.s(unsafe_hash=False, eq=False, repr=False, auto_attribs=True)
 class CharRef:
     """
     A numeric character reference.  Given a separate representation in the DOM

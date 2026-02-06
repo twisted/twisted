@@ -3,10 +3,12 @@
 # See LICENSE for details.
 
 
-from twisted.python import log
-from twisted.application import app, service, internet
+import os
+import sys
+
 from twisted import copyright
-import sys, os
+from twisted.application import app, internet, service
+from twisted.python import log
 
 
 class ServerOptions(app.ServerOptions):

@@ -9,22 +9,26 @@ asyncio-based reactor implementation.
 
 import errno
 import sys
-
+from asyncio import (
+    AbstractEventLoop,
+    get_running_loop,
+    new_event_loop,
+    set_event_loop,
+    tasks,
+)
 from typing import Dict, Optional, Type
 
 from zope.interface import implementer
 
-from twisted.logger import Logger
-from twisted.internet.posixbase import (
-    PosixReactorBase,
-    _NO_FILEDESC,
-    _ContinuousPolling,
-)
-from twisted.python.log import callWithLogger
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
-
-from asyncio import get_event_loop, tasks, AbstractEventLoop
+from twisted.internet.posixbase import (
+    _NO_FILEDESC,
+    PosixReactorBase,
+    _ContinuousPolling,
+)
+from twisted.logger import Logger
+from twisted.python.log import callWithLogger
 
 try:
     from contextvars import copy_context
@@ -72,9 +76,13 @@ class AsyncioSelectorReactor(PosixReactorBase):
 
     def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
         if eventloop is None:
-            _eventloop: AbstractEventLoop = get_event_loop()
-            if current_async_library_cvar is not None:
-                _eventloop.set_task_factory(factory=sniffioTaskFactory)
+            try:
+                _eventloop: AbstractEventLoop = get_running_loop()
+                if current_async_library_cvar is not None:
+                    _eventloop.set_task_factory(factory=sniffioTaskFactory)
+            except RuntimeError:
+                _eventloop = new_event_loop()
+            set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
 
@@ -213,7 +221,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
             raise
 
     def removeReader(self, reader):
-
         # First, see if they're trying to remove a reader that we don't have.
         if not (
             reader in self._readers.keys() or self._continuousPolling.isReading(reader)
@@ -237,7 +244,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop.remove_reader(fd)
 
     def removeWriter(self, writer):
-
         # First, see if they're trying to remove a writer that we don't have.
         if not (
             writer in self._writers.keys() or self._continuousPolling.isWriting(writer)

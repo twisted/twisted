@@ -7,18 +7,16 @@ Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 
 
 import os
-import sys
 import socket
+import sys
 from unittest import skipIf
 
-from twisted.internet import interfaces, reactor, protocol, error, address
-from twisted.internet import defer, utils
+from twisted.internet import address, defer, error, interfaces, protocol, reactor, utils
 from twisted.python import lockfile
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
+from twisted.test.test_tcp import MyClientFactory, MyServerFactory
 from twisted.trial import unittest
-
-from twisted.test.test_tcp import MyServerFactory, MyClientFactory
 
 
 class FailedConnectionClientFactory(protocol.ClientFactory):

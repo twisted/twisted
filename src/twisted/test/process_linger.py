@@ -2,7 +2,9 @@
 quitting. This serves to make sure SIGCHLD is actually being noticed.
 """
 
-import os, sys, time
+import os
+import sys
+import time
 
 print("here is some text")
 time.sleep(1)

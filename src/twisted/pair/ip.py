@@ -7,17 +7,17 @@
 
 """Support for working directly with IP packets"""
 
-import struct
 import socket
+import struct
+
+from zope.interface import implementer
 
 from twisted.internet import protocol
 from twisted.pair import raw
-from zope.interface import implementer
 
 
 class IPHeader:
     def __init__(self, data):
-
         (
             ihlversion,
             self.tos,
@@ -39,7 +39,7 @@ class IPHeader:
         self.more_fragments = frag_off & 0x2000 != 0
 
 
-MAX_SIZE = 2 ** 32
+MAX_SIZE = 2**32
 
 
 @implementer(raw.IRawPacketProtocol)

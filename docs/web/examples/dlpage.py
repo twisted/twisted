@@ -10,10 +10,11 @@ Usage:
 Don't forget the http:// when you type a URL!
 """
 
-from twisted.internet import reactor
-from twisted.web.client import downloadPage
-from twisted.python.util import println
 import sys
+
+from twisted.internet import reactor
+from twisted.python.util import println
+from twisted.web.client import downloadPage
 
 # The function downloads a page and saves it to a file, in this case, it saves
 # the page to "foo".

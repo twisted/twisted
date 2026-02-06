@@ -3,17 +3,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import sys
+
+from zope.interface import implementer
+
+from twisted.conch import avatar
+from twisted.conch.checkers import InMemorySSHKeyDB, SSHPublicKeyChecker
+from twisted.conch.ssh import connection, factory, keys, session, userauth
+from twisted.conch.ssh.transport import SSHServerTransport
 from twisted.cred import portal
 from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.conch import avatar
-from twisted.conch.checkers import SSHPublicKeyChecker, InMemorySSHKeyDB
-from twisted.conch.ssh import factory, userauth, connection, keys, session
-from twisted.conch.ssh.transport import SSHServerTransport
-from twisted.internet import reactor, protocol
-from twisted.python import log
-from twisted.python import components
-from zope.interface import implementer
-import sys
+from twisted.internet import protocol, reactor
+from twisted.python import components, log
 
 log.startLogging(sys.stderr)
 
@@ -250,11 +251,6 @@ class ExampleFactory(factory.SSHFactory):
     """
 
     protocol = SSHServerTransport
-    # Server's host keys.
-    # To simplify the example this server is defined only with a host key of
-    # type RSA.
-    publicKeys = {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PUBLIC)}
-    privateKeys = {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PRIVATE)}
     # Service handlers.
     services = {
         b"ssh-userauth": userauth.SSHUserAuthServer,
@@ -267,6 +263,22 @@ class ExampleFactory(factory.SSHFactory):
             InMemorySSHKeyDB({b"user": [keys.Key.fromFile(CLIENT_RSA_PUBLIC)]})
         )
         self.portal = portal.Portal(ExampleRealm(), [passwdDB, sshDB])
+
+    # Server's host keys.
+    # To simplify the example this server is defined only with a host key of
+    # type RSA.
+
+    def getPublicKeys(self):
+        """
+        See: L{factory.SSHFactory}
+        """
+        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PUBLIC)}
+
+    def getPrivateKeys(self):
+        """
+        See: L{factory.SSHFactory}
+        """
+        return {b"ssh-rsa": keys.Key.fromFile(SERVER_RSA_PRIVATE)}
 
     def getPrimes(self):
         """

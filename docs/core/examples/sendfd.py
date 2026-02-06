@@ -25,11 +25,11 @@ if __name__ == "__main__":
 
 import sys
 
-from twisted.python.log import startLogging
-from twisted.python.filepath import FilePath
+from twisted.internet import reactor
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineOnlyReceiver
-from twisted.internet import reactor
+from twisted.python.filepath import FilePath
+from twisted.python.log import startLogging
 
 
 class SendFDProtocol(LineOnlyReceiver):

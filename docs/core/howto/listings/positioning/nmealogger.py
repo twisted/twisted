@@ -6,6 +6,7 @@ Connects to an NMEA device, logs beacon information and position.
 """
 
 import sys
+
 from twisted.internet import reactor, serialport
 from twisted.positioning import base, nmea
 from twisted.python import log, usage

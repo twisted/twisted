@@ -8,31 +8,41 @@ See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 
 Maintainer: Paul Swartz
 """
-
-
-from twisted.internet import protocol
-from twisted.logger import Logger
-
-from twisted.conch import error
-from twisted.conch.ssh import _kex, transport, userauth, connection
+from __future__ import annotations
 
 import random
+from itertools import chain
+from typing import Any, Dict, List, Optional, Tuple
+
+from twisted.conch import error
+from twisted.conch.ssh import _kex, connection, transport, userauth
+from twisted.internet import protocol
+from twisted.internet.interfaces import IAddress
+from twisted.logger import Logger
+
+# Note: type hint here is slightly wonky. Possibly a mypy bug? We ought to be
+# able to say SSHServerTransport here, but it doesn't conform to
+# _ProtoWithFactory. When we try to investigaate why, its factory attribute
+# doesn't supply Factory[SSHServerTransport]. But then when we try to figure
+# out its factory attribute, we're back here again...
 
 
-class SSHFactory(protocol.Factory):
+class SSHFactory(protocol.Factory[Any]):
     """
     A Factory for SSH servers.
     """
 
+    primes: Optional[Dict[int, List[Tuple[int, int]]]]
+
     _log = Logger()
-    protocol = transport.SSHServerTransport
+    protocol: Any = transport.SSHServerTransport
 
     services = {
         b"ssh-userauth": userauth.SSHUserAuthServer,
         b"ssh-connection": connection.SSHConnection,
     }
 
-    def startFactory(self):
+    def startFactory(self) -> None:
         """
         Check for public and private keys.
         """
@@ -45,7 +55,7 @@ class SSHFactory(protocol.Factory):
         if not hasattr(self, "primes"):
             self.primes = self.getPrimes()
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress | None) -> transport.SSHServerTransport:
         """
         Create an instance of the server side of the SSH protocol.
 
@@ -55,8 +65,13 @@ class SSHFactory(protocol.Factory):
         @rtype: L{twisted.conch.ssh.transport.SSHServerTransport}
         @return: The built transport.
         """
-        t = protocol.Factory.buildProtocol(self, addr)
-        t.supportedPublicKeys = self.privateKeys.keys()
+        t: transport.SSHServerTransport | None = super().buildProtocol(addr)
+        assert t is not None
+        t.supportedPublicKeys = list(
+            chain.from_iterable(
+                key.supportedSignatureAlgorithms() for key in self.privateKeys.values()
+            )
+        )
         if not self.primes:
             self._log.info(
                 "disabling non-fixed-group key exchange algorithms "
@@ -89,24 +104,24 @@ class SSHFactory(protocol.Factory):
         """
         raise NotImplementedError("getPrivateKeys unimplemented")
 
-    def getPrimes(self):
+    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
         """
         Called when the factory is started to get Diffie-Hellman generators and
-        primes to use.  Returns a dictionary mapping number of bits to lists
-        of tuple of (generator, prime).
-
-        @rtype: L{dict}
+        primes to use.  Returns a dictionary mapping number of bits to lists of
+        tuple of (generator, prime).
         """
 
-    def getDHPrime(self, bits):
+    def getDHPrime(self, bits: int) -> Tuple[int, int]:
         """
         Return a tuple of (g, p) for a Diffe-Hellman process, with p being as
-        close to bits bits as possible.
-
-        @type bits: L{int}
-        @rtype:     L{tuple}
+        close to C{bits} bits as possible.
         """
-        primesKeys = sorted(self.primes.keys(), key=lambda i: abs(i - bits))
+
+        def keyfunc(i: int) -> int:
+            return abs(i - bits)
+
+        assert self.primes is not None, "Factory should have been started by now."
+        primesKeys = sorted(self.primes.keys(), key=keyfunc)
         realBits = primesKeys[0]
         return random.choice(self.primes[realBits])
 

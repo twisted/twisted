@@ -5,19 +5,19 @@
 Tests for L{twisted.web.twcgi}.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 from io import BytesIO
 
-from twisted.trial import unittest
-from twisted.internet import address, reactor, interfaces, error
+from twisted.internet import address, error, interfaces, reactor
 from twisted.internet.error import ConnectionLost
-from twisted.python import util, failure, log
-from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, http, twcgi, server, resource, http_headers
+from twisted.python import failure, log, util
+from twisted.trial import unittest
+from twisted.web import client, http, http_headers, resource, server, twcgi
+from twisted.web.http import INTERNAL_SERVER_ERROR, NOT_FOUND
 from twisted.web.test._util import _render
-from twisted.web.test.requesthelper import DummyRequest, DummyChannel
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 DUMMY_CGI = """\
 print("Header: OK")
@@ -87,9 +87,8 @@ print(json.dumps(vals))
 """
 
 URL_PARAMETER_CGI = """\
-import cgi
-fs = cgi.FieldStorage()
-param = fs.getvalue("param")
+import os
+param = str(os.environ['QUERY_STRING'])
 print("Header: OK")
 print("")
 print(param)
@@ -384,7 +383,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         return d
 
     def _test_urlParameters_1(self, res):
-        expected = f"1234{os.linesep}"
+        expected = f"param=1234{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 

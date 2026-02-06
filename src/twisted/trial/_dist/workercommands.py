@@ -7,7 +7,7 @@ Commands for telling a worker to load tests or run tests.
 @since: 12.3
 """
 
-from twisted.protocols.amp import Command, Boolean, Unicode
+from twisted.protocols.amp import Boolean, Command, Unicode
 
 NativeString = Unicode
 

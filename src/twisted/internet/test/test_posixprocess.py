@@ -9,8 +9,9 @@ Tests for POSIX-based L{IReactorProcess} implementations.
 import errno
 import os
 import sys
-from unittest import skipIf
+from typing import Optional
 
+platformSkip: Optional[str]
 try:
     import fcntl
 except ImportError:
@@ -18,7 +19,7 @@ except ImportError:
 else:
     from twisted.internet import process
 
-    platformSkip = ""
+    platformSkip = None
 
 from twisted.trial.unittest import TestCase
 
@@ -64,7 +65,6 @@ class FakeResourceModule:
         return [123, 456]
 
 
-@skipIf(platformSkip, platformSkip)
 class FDDetectorTests(TestCase):
     """
     Tests for _FDDetector class in twisted.internet.process, which detects
@@ -79,6 +79,8 @@ class FDDetectorTests(TestCase):
     @ivar procfs: A flag indicating whether the filesystem fake will indicate
         that /proc/<pid>/fd exists.
     """
+
+    skip = platformSkip
 
     devfs = False
     accurateDevFDResults = False
@@ -278,11 +280,12 @@ class FDDetectorTests(TestCase):
         )
 
 
-@skipIf(platformSkip, platformSkip)
 class FileDescriptorTests(TestCase):
     """
     Tests for L{twisted.internet.process._listOpenFDs}
     """
+
+    skip = platformSkip
 
     def test_openFDs(self):
         """

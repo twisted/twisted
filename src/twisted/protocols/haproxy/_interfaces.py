@@ -5,7 +5,8 @@
 """
 Interfaces used by the PROXY protocol modules.
 """
-from typing import Union, Tuple
+from typing import Tuple, Union
+
 import zope.interface
 
 

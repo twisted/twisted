@@ -11,7 +11,7 @@ required.
 
 import ctypes
 import ctypes.util
-from typing import cast
+from typing import Any, cast
 
 from twisted.python.filepath import FilePath
 
@@ -32,7 +32,7 @@ def init() -> int:
     return fd
 
 
-def add(fd: int, path: FilePath, mask: int) -> int:
+def add(fd: int, path: FilePath[Any], mask: int) -> int:
     """
     Add a watch for the given path to the inotify file descriptor, and return
     the watch descriptor.

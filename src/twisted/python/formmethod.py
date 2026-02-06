@@ -203,7 +203,6 @@ class IntegerRange(Integer):
 
 
 class Float(Argument):
-
     defaultDefault: Optional[float] = None
 
     def __init__(

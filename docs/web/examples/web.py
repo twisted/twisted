@@ -15,7 +15,7 @@ Usage:
 """
 
 from twisted.internet import reactor
-from twisted.web import static, server, vhost, twcgi, script
+from twisted.web import script, server, static, twcgi, vhost
 
 root = static.File("static")
 root.processors = {

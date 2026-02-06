@@ -13,20 +13,18 @@ the recipient and sends on the message.
 
 import email.utils
 import os
-import time
 import pickle
+import time
 from typing import Type
 
-from twisted.python import log
-from twisted.python.failure import Failure
-from twisted.mail import relay
-from twisted.mail import bounce
+from twisted.application import internet
 from twisted.internet import protocol
-from twisted.internet.protocol import connectionDone
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import DNSLookupError
-from twisted.mail import smtp
-from twisted.application import internet
+from twisted.internet.protocol import connectionDone
+from twisted.mail import bounce, relay, smtp
+from twisted.python import log
+from twisted.python.failure import Failure
 
 
 class ManagedRelayerMixin:
@@ -62,7 +60,7 @@ class ManagedRelayerMixin:
         del self.messages[0]
         del self.names[0]
 
-    def connectionLost(self, reason: Failure = connectionDone):
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
         """
         called when connection is broken
 
@@ -71,7 +69,7 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 
-class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignore[misc]
+class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
     """
     An SMTP managed relayer.
 
@@ -102,7 +100,7 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignor
         relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 
-class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):  # type: ignore[misc]
+class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
     """
     An ESMTP managed relayer.
 
@@ -770,7 +768,7 @@ class SmartHostSMTPRelayingManager:
             self.mxcalc = MXCalculator()
 
         relays = []
-        for (domain, msgs) in exchanges.iteritems():
+        for domain, msgs in exchanges.iteritems():
             manager = _AttemptManager(self, self.queue.noisy)
             factory = self.factory(msgs, manager, *self.fArgs, **self.fKwArgs)
             self.managed[factory] = map(os.path.basename, msgs)
@@ -1044,14 +1042,12 @@ class MXCalculator:
 
             # If it's a CNAME, we'll need to do some more processing
             if record.TYPE == dns.CNAME:
-
                 # Remember that this name was an alias.
                 seenAliases.add(domain)
 
                 canonicalName = str(record.name)
                 # See if we have some local records which might be relevant.
                 if canonicalName in answers:
-
                     # Make sure it isn't a loop contained entirely within the
                     # results we have here.
                     if canonicalName in seenAliases:
@@ -1073,7 +1069,7 @@ class MXCalculator:
 
         if exchanges:
             exchanges.sort()
-            for (preference, record) in exchanges:
+            for preference, record in exchanges:
                 host = str(record.name)
                 if host not in self.badMXs:
                     return record
@@ -1112,7 +1108,7 @@ class MXCalculator:
             fallback to domain option is in effect but no address for the
             domain could be found.
         """
-        from twisted.names import error, dns
+        from twisted.names import dns, error
 
         if self.fallbackToDomain:
             failure.trap(error.DNSNameError)

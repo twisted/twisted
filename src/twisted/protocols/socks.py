@@ -6,14 +6,15 @@
 Implementation of the SOCKSv4 protocol.
 """
 
+import socket
+import string
+
 # python imports
 import struct
-import string
-import socket
 import time
 
 # twisted imports
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 
 

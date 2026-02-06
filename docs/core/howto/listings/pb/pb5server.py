@@ -6,9 +6,9 @@
 
 from zope.interface import implementer
 
-from twisted.spread import pb
 from twisted.cred import checkers, portal
 from twisted.internet import reactor
+from twisted.spread import pb
 
 
 class MyPerspective(pb.Avatar):

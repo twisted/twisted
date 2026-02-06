@@ -1,5 +1,5 @@
-from sys import argv
 from pprint import pformat
+from sys import argv
 
 from twisted.internet.task import react
 from twisted.web.client import Agent, readBody

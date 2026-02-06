@@ -5,9 +5,8 @@ from twisted.application import service
 application = service.Application("SMTP Client Tutorial")
 
 from twisted.application import internet
-from twisted.internet import protocol
-from twisted.internet import defer
-from twisted.mail import smtp, relaymanager
+from twisted.internet import defer, protocol
+from twisted.mail import relaymanager, smtp
 
 
 class SMTPTutorialClient(smtp.ESMTPClient):

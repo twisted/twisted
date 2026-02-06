@@ -4,9 +4,9 @@
 # See LICENSE for details.
 
 
-from twisted.internet import protocol
-
 from io import BytesIO
+
+from twisted.internet import protocol
 
 
 class StatefulProtocol(protocol.Protocol):

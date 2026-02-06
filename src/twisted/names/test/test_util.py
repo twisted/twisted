@@ -13,8 +13,8 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import succeed
-from twisted.internet.task import Clock
 from twisted.internet.interfaces import IReactorUDP, IUDPTransport
+from twisted.internet.task import Clock
 
 
 @implementer(IUDPTransport)
@@ -115,7 +115,7 @@ class MemoryReactor(Clock):
         """
         if port == 0:
             while True:
-                port = randrange(1, 2 ** 16)
+                port = randrange(1, 2**16)
                 if port not in self.udpPorts:
                     break
         if port in self.udpPorts:

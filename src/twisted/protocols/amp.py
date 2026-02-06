@@ -24,17 +24,11 @@ implementation of Deferreds.  AMP provides the following base-level features:
     - Command dispatching (like HTTP Verbs): the protocol is extensible, and
       multiple AMP sub-protocols can be grouped together easily.
 
-The protocol implementation also provides a few additional features which are
-not part of the core wire protocol, but are nevertheless very useful:
-
-    - Tight TLS integration, with an included StartTLS command.
-
-    - Handshaking to other protocols: because AMP has well-defined message
-      boundaries and maintains all incoming and outgoing requests for you, you
-      can start a connection over AMP and then switch to another protocol.
-      This makes it ideal for firewall-traversal applications where you may
-      have only one forwarded port but multiple applications that want to use
-      it.
+You can also use AMP to tunnel other protocols: because AMP has well-defined
+message boundaries and maintains all incoming and outgoing requests for you,
+you can start a connection over AMP and then switch to another protocol.  This
+makes it ideal for firewall-traversal applications where you may have only one
+forwarded port but multiple applications that want to use it.
 
 Using AMP with Twisted is simple.  Each message is a command, with a response.
 You begin by defining a command type.  Commands specify their input and output
@@ -65,8 +59,8 @@ a L{Deferred} which will fire with the result::
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
-Command responders may also return Deferreds, causing the response to be
-sent only once the Deferred fires::
+Command responders may also return Deferreds, causing the response to be sent
+only once the Deferred fires::
 
     class DelayedSum(amp.AMP):
         def slowSum(self, a, b):
@@ -192,31 +186,42 @@ has several features:
     error.
 @type ERROR_DESCRIPTION: L{bytes}
 """
-
+from __future__ import annotations
 
 import datetime
 import decimal
+import warnings
 from functools import partial
 from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
-import warnings
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from zope.interface import Interface, implementer
 
-from twisted.internet.defer import Deferred, maybeDeferred, fail
-from twisted.internet.error import ConnectionClosed
-from twisted.internet.error import PeerVerifyError, ConnectionLost
+from twisted.internet.defer import Deferred, fail, maybeDeferred
+from twisted.internet.error import ConnectionClosed, ConnectionLost, PeerVerifyError
 from twisted.internet.interfaces import IFileDescriptorReceiver
 from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
+from twisted.logger import Logger
 from twisted.protocols.basic import Int16StringReceiver, StatefulStringProtocol
-from twisted.python import log, filepath
+from twisted.python import filepath
 from twisted.python._tzhelper import (
-    FixedOffsetTimeZone as _FixedOffsetTZInfo,
     UTC as utc,
+    FixedOffsetTimeZone as _FixedOffsetTZInfo,
 )
 from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
@@ -226,7 +231,7 @@ try:
     from twisted.internet import ssl as _ssl
 
     if _ssl.supported:
-        from twisted.internet.ssl import CertificateOptions, Certificate, DN, KeyPair
+        from twisted.internet.ssl import DN, Certificate, CertificateOptions, KeyPair
     else:
         ssl = None
 except ImportError:
@@ -290,6 +295,9 @@ __all__ = [
     "parse",
     "parseString",
 ]
+
+_log = Logger()
+_T_Callable = TypeVar("_T_Callable", bound=Callable[..., object])
 
 
 ASK = b"_ask"
@@ -608,7 +616,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(dict):
+class AmpBox(Dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -984,7 +992,8 @@ class BoxDispatcher:
             answerBox[ANSWER] = box[ASK]
             return answerBox
 
-        def formatError(error):
+        def formatError(error: Failure) -> AmpBox:
+            errorBox: AmpBox
             if error.check(RemoteAmpError):
                 code = error.value.errorCode
                 desc = error.value.description
@@ -996,7 +1005,7 @@ class BoxDispatcher:
                     errorBox = AmpBox()
             else:
                 errorBox = QuitBox()
-                log.err(error)  # here is where server-side logging happens
+                _log.failure("while receiving response to command", error)
                 # if the error isn't handled
                 code = UNKNOWN_ERROR_CODE
                 desc = b"Unknown Error"
@@ -1082,7 +1091,7 @@ class _CommandLocatorMeta(type):
     metaclass.
     """
 
-    _currentClassCommands: "List[Tuple[Command, Callable]]" = []
+    _currentClassCommands: "list[tuple[type[Command], Callable[..., Any]]]" = []
 
     def __new__(cls, name, bases, attrs):
         commands = cls._currentClassCommands[:]
@@ -1684,18 +1693,23 @@ class Descriptor(Integer):
         return outString
 
 
+_Self = TypeVar("_Self")
+
+
 class _CommandMeta(type):
     """
     Metaclass hack to establish reverse-mappings for 'errors' and
     'fatalErrors' as class vars.
     """
 
-    def __new__(cls, name, bases, attrs):
+    def __new__(
+        cls: type[_Self], name: str, bases: tuple[type], attrs: dict[str, object]
+    ) -> Type[Command]:
         reverseErrors = attrs["reverseErrors"] = {}
         er = attrs["allErrors"] = {}
         if "commandName" not in attrs:
             attrs["commandName"] = name.encode("ascii")
-        newtype = type.__new__(cls, name, bases, attrs)
+        newtype: Type[Command] = type.__new__(cls, name, bases, attrs)  # type:ignore
 
         if not isinstance(newtype.commandName, bytes):
             raise TypeError(
@@ -1703,12 +1717,12 @@ class _CommandMeta(type):
                     newtype.commandName
                 )
             )
-        for name, _ in newtype.arguments:
-            if not isinstance(name, bytes):
-                raise TypeError(f"Argument names must be byte strings, got: {name!r}")
-        for name, _ in newtype.response:
-            if not isinstance(name, bytes):
-                raise TypeError(f"Response names must be byte strings, got: {name!r}")
+        for bname, _ in newtype.arguments:
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Argument names must be byte strings, got: {bname!r}")
+        for bname, _ in newtype.response:
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Response names must be byte strings, got: {bname!r}")
 
         errors: Dict[Type[Exception], bytes] = {}
         fatalErrors: Dict[Type[Exception], bytes] = {}
@@ -1716,9 +1730,9 @@ class _CommandMeta(type):
         accumulateClassDict(newtype, "fatalErrors", fatalErrors)
 
         if not isinstance(newtype.errors, dict):
-            newtype.errors = dict(newtype.errors)
+            newtype.errors = dict(newtype.errors)  # type:ignore[unreachable]
         if not isinstance(newtype.fatalErrors, dict):
-            newtype.fatalErrors = dict(newtype.fatalErrors)
+            newtype.fatalErrors = dict(newtype.fatalErrors)  # type:ignore[unreachable]
 
         for v, k in errors.items():
             reverseErrors[k] = v
@@ -1727,13 +1741,13 @@ class _CommandMeta(type):
             reverseErrors[k] = v
             er[v] = k
 
-        for _, name in newtype.errors.items():
-            if not isinstance(name, bytes):
-                raise TypeError(f"Error names must be byte strings, got: {name!r}")
-        for _, name in newtype.fatalErrors.items():
-            if not isinstance(name, bytes):
+        for _, bname in newtype.errors.items():
+            if not isinstance(bname, bytes):
+                raise TypeError(f"Error names must be byte strings, got: {bname!r}")
+        for _, bname in newtype.fatalErrors.items():
+            if not isinstance(bname, bytes):
                 raise TypeError(
-                    f"Fatal error names must be byte strings, got: {name!r}"
+                    f"Fatal error names must be byte strings, got: {bname!r}"
                 )
 
         return newtype
@@ -1782,14 +1796,15 @@ class Command(metaclass=_CommandMeta):
     want one.
     """
 
-    arguments: List[Tuple[bytes, Argument]] = []
-    response: List[Tuple[bytes, Argument]] = []
-    extra: List[Any] = []
-    errors: Dict[Type[Exception], bytes] = {}
-    fatalErrors: Dict[Type[Exception], bytes] = {}
+    commandName: ClassVar[bytes]
+    arguments: ClassVar[List[Tuple[bytes, Argument]]] = []
+    response: ClassVar[List[Tuple[bytes, Argument]]] = []
+    extra: ClassVar[List[Any]] = []
+    errors: ClassVar[Dict[Type[Exception], bytes]] = {}
+    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}
 
-    commandType: "Union[Type[Command], Type[Box]]" = Box
-    responseType: Type[AmpBox] = Box
+    commandType: "ClassVar[Union[Type[Command], Type[Box]]]" = Box
+    responseType: ClassVar[Type[AmpBox]] = Box
 
     requiresAnswer = True
 
@@ -1859,7 +1874,7 @@ class Command(metaclass=_CommandMeta):
         @return: An instance of this L{Command}'s C{commandType}.
         """
         allowedNames = set()
-        for (argName, ignored) in cls.arguments:
+        for argName, ignored in cls.arguments:
             allowedNames.add(_wireNameToPythonIdentifier(argName))
 
         for intendedArg in objects:
@@ -1897,7 +1912,7 @@ class Command(metaclass=_CommandMeta):
         return _stringsToObjects(box, cls.arguments, protocol)
 
     @classmethod
-    def responder(cls, methodfunc):
+    def responder(cls, methodfunc: _T_Callable) -> _T_Callable:
         """
         Declare a method to be a responder for a particular command.
 
@@ -2062,18 +2077,28 @@ class _LocalArgument(String):
 
 class StartTLS(Command):
     """
-    Use, or subclass, me to implement a command that starts TLS.
+    If your protocol requires a complex plaintext preamble to begin a secure
+    connection, and you are I{ABSOLUTELY SURE} that you understand the
+    consequences of sending that data insecurely, you can use, or subclass,
+    L{StartTLS} to define a command that switches from an unencrypted
+    connection to a TLS connection.
+
+    In general, you should prefer using TLS endpoints as defined by
+    L{twisted.internet.endpoints.wrapClientTLS} and
+    L{twisted.internet.endpoints.wrapServerTLS}, and using server hostname
+    indication and/or application layer protocol negotiation to negotiate the
+    parameters of the TLS connection.
 
     Callers of StartTLS may pass several special arguments, which affect the
     TLS negotiation:
 
         - tls_localCertificate: This is a
-        twisted.internet.ssl.PrivateCertificate which will be used to secure
-        the side of the connection it is returned on.
+          twisted.internet.ssl.PrivateCertificate which will be used to secure
+          the side of the connection it is returned on.
 
         - tls_verifyAuthorities: This is a list of
-        twisted.internet.ssl.Certificate objects that will be used as the
-        certificate authorities to verify our peer's certificate.
+          twisted.internet.ssl.Certificate objects that will be used as the
+          certificate authorities to verify our peer's certificate.
 
     Each of those special parameters may also be present as a key in the
     response dictionary.
@@ -2493,16 +2518,16 @@ class BinaryBoxProtocol(
             return None
         return Certificate.peerFromTransport(self.transport)
 
-    def unhandledError(self, failure):
+    def unhandledError(self, failure: Failure) -> None:
         """
         The buck stops here.  This error was completely unhandled, time to
         terminate the connection.
         """
-        log.err(
-            failure,
+        _log.failure(
             "Amp server or network failure unhandled by client application.  "
             "Dropping connection!  To avoid, add errbacks to ALL remote "
             "commands!",
+            failure,
         )
         if self.transport is not None:
             self.transport.loseConnection()
@@ -2581,9 +2606,11 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         # Save these so we can emit a similar log message in L{connectionLost}.
         self._transportPeer = transport.getPeer()
         self._transportHost = transport.getHost()
-        log.msg(
-            "%s connection established (HOST:%s PEER:%s)"
-            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        _log.info(
+            "{cls} connection established (HOST:{host} PEER:{peer})",
+            cls=self.__class__.__name__,
+            host=self._transportHost,
+            peer=self._transportPeer,
         )
         BinaryBoxProtocol.makeConnection(self, transport)
 
@@ -2591,9 +2618,11 @@ class AMP(BinaryBoxProtocol, BoxDispatcher, CommandLocator, SimpleStringLocator)
         """
         Emit a helpful log message when the connection is lost.
         """
-        log.msg(
-            "%s connection lost (HOST:%s PEER:%s)"
-            % (self.__class__.__name__, self._transportHost, self._transportPeer)
+        _log.info(
+            "{cls} connection lost (HOST:{host} PEER:{peer})",
+            cls=self.__class__.__name__,
+            host=self._transportHost,
+            peer=self._transportPeer,
         )
         BinaryBoxProtocol.connectionLost(self, reason)
         self.transport = None

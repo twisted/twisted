@@ -10,6 +10,7 @@ I hold resource classes and helper classes that deal with CGI scripts.
 # System Imports
 import os
 import urllib
+from typing import AnyStr
 
 # Twisted Imports
 from twisted.internet import protocol
@@ -19,7 +20,7 @@ from twisted.spread import pb
 from twisted.web import http, resource, server, static
 
 
-class CGIDirectory(resource.Resource, filepath.FilePath):
+class CGIDirectory(resource.Resource, filepath.FilePath[AnyStr]):
     def __init__(self, pathname):
         resource.Resource.__init__(self)
         filepath.FilePath.__init__(self, pathname)

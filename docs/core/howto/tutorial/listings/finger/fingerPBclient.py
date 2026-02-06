@@ -3,8 +3,8 @@
 # the first example in howto/pb-usage
 
 
+from twisted.internet import endpoints, reactor
 from twisted.spread import pb
-from twisted.internet import reactor, endpoints
 
 
 def gotObject(object):

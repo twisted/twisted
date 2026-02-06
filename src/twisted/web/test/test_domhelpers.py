@@ -5,9 +5,9 @@
 """
 Specific tests for (some of) the methods in L{twisted.web.domhelpers}.
 """
-
-from xml.dom import minidom
+from importlib import reload
 from typing import Any, Optional
+from xml.dom import minidom
 
 from twisted.trial.unittest import TestCase
 from twisted.web import domhelpers, microdom
@@ -109,14 +109,14 @@ class DOMHelpersTestsMixin:
         doc1 = self.dom.parseString("<a><b><c><d/></c></b></a>")
         a_node = doc1.documentElement
         domhelpers.clearNode(a_node)
-        self.assertEqual(a_node.toxml(), self.dom.Element("a").toxml())
+        self.assertEqual(a_node.toxml(), doc1.createElement("a").toxml())
 
         doc2 = self.dom.parseString("<a><b><c><d/></c></b></a>")
         b_node = doc2.documentElement.childNodes[0]
         domhelpers.clearNode(b_node)
         actual = doc2.documentElement.toxml()
-        expected = self.dom.Element("a")
-        expected.appendChild(self.dom.Element("b"))
+        expected = doc2.createElement("a")
+        expected.appendChild(doc2.createElement("b"))
         self.assertEqual(actual, expected.toxml())
 
     def test_get(self):
@@ -259,6 +259,18 @@ class MicroDOMHelpersTests(DOMHelpersTestsMixin, TestCase):
         self.assertEqual(actual, expected)
         actual = domhelpers.gatherTextNodes(doc5.documentElement)
         self.assertEqual(actual, expected)
+
+    def test_deprecation(self):
+        """
+        An import will raise the deprecation warning.
+        """
+        reload(domhelpers)
+        warnings = self.flushWarnings([self.test_deprecation])
+        self.assertEqual(1, len(warnings))
+        self.assertEqual(
+            "twisted.web.domhelpers was deprecated at Twisted 23.10.0",
+            warnings[0]["message"],
+        )
 
 
 class MiniDOMHelpersTests(DOMHelpersTestsMixin, TestCase):

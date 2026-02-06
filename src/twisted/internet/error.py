@@ -8,8 +8,9 @@ Exceptions and errors for use in twisted.internet modules.
 
 import socket
 
-from twisted.python import deprecate
 from incremental import Version
+
+from twisted.python import deprecate
 
 
 class BindError(Exception):
@@ -160,7 +161,7 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
         errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]
 except ImportError:
     errnoMapping = {}

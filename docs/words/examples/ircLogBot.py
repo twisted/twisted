@@ -27,13 +27,16 @@ To run the script:
 """
 
 
-# twisted imports
-from twisted.words.protocols import irc
-from twisted.internet import reactor, protocol
-from twisted.python import log
+import sys
 
 # system imports
-import time, sys
+import time
+
+from twisted.internet import protocol, reactor
+from twisted.python import log
+
+# twisted imports
+from twisted.words.protocols import irc
 
 
 class MessageLogger:

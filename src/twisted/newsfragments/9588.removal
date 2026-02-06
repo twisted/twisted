@@ -1,0 +1,2 @@
+Support for the obsolete TLS "Next Protocol Negotiation" has been removed from
+twisted.protocols.tls.

@@ -7,7 +7,7 @@ test_file_match = "process_test.log.*"
 test_file = "process_test.log.%d" % os.getpid()
 
 
-def main():
+def main() -> None:
     f = open(test_file, "wb")
 
     stdin = sys.stdin.buffer

@@ -25,8 +25,8 @@ class MyChat(basic.LineReceiver):
         self.transport.write(message + b"\n")
 
 
+from twisted.application import internet, service
 from twisted.internet import protocol
-from twisted.application import service, internet
 
 factory = protocol.ServerFactory()
 factory.protocol = MyChat

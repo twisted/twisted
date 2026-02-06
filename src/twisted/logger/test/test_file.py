@@ -7,14 +7,13 @@ Test cases for L{twisted.logger._file}.
 
 from io import StringIO
 from types import TracebackType
-from typing import Any, AnyStr, IO, Optional, Type, cast
+from typing import IO, Any, AnyStr, Optional, Type, cast
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.trial.unittest import TestCase
-
 from twisted.python.failure import Failure
+from twisted.trial.unittest import TestCase
 from .._file import FileLogObserver, textFileLogObserver
 from .._interfaces import ILogObserver
 

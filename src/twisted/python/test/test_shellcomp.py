@@ -10,10 +10,9 @@ import sys
 from io import BytesIO
 from typing import List, Optional
 
+from twisted.python import _shellcomp, reflect, usage
+from twisted.python.usage import CompleteFiles, CompleteList, Completer, Completions
 from twisted.trial import unittest
-from twisted.python import _shellcomp, usage, reflect
-from twisted.python.usage import Completions, Completer, CompleteFiles
-from twisted.python.usage import CompleteList
 
 
 class ZshScriptTestMeta(type):
@@ -100,7 +99,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
 
     # now, if it has sub commands, we have to test those too
     if hasattr(o, "subCommands"):
-        for (cmd, short, parser, doc) in o.subCommands:
+        for cmd, short, parser, doc in o.subCommands:
             try:
                 o.parseOptions([cmd, "", "--_shell-completion", "zsh:3"])
             except ImportError as e:

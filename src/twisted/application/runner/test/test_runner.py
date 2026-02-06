@@ -11,8 +11,10 @@ from signal import SIGTERM
 from types import TracebackType
 from typing import Any, Iterable, List, Optional, TextIO, Tuple, Type, Union, cast
 
-from attr import attrib, attrs, Factory
+from attr import Factory, attrib, attrs
 
+import twisted.trial.unittest
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import (
     FileLogObserver,
     FilteringLogObserver,
@@ -22,15 +24,11 @@ from twisted.logger import (
     LogLevelFilterPredicate,
     LogPublisher,
 )
-from twisted.internet.testing import MemoryReactor
 from twisted.python.filepath import FilePath
-
 from ...runner import _runner
 from .._exit import ExitStatus
-from .._pidfile import PIDFile, NonePIDFile
+from .._pidfile import NonePIDFile, PIDFile
 from .._runner import Runner
-
-import twisted.trial.unittest
 
 
 class RunnerTests(twisted.trial.unittest.TestCase):
@@ -38,7 +36,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
     Tests for L{Runner}.
     """
 
-    def filePath(self, content: Optional[bytes] = None) -> FilePath:
+    def filePath(self, content: Optional[bytes] = None) -> FilePath[str]:
         filePath = FilePath(self.mktemp())
         if content is not None:
             filePath.setContent(content)
@@ -57,7 +55,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch getpid so we get a known result
 
         self.pid = 1337
-        self.pidFileContent = f"{self.pid}\n".encode("utf-8")
+        self.pidFileContent = f"{self.pid}\n".encode()
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -118,7 +116,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         PID file.
         """
         pidFile = PIDFile(self.filePath(self.pidFileContent))
-        pidFile.isRunning = lambda: True  # type: ignore[assignment]
+        pidFile.isRunning = lambda: True  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
         runner.run()
@@ -173,7 +171,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         def read() -> int:
             raise OSError(errno.EACCES, "Permission denied")
 
-        pidFile.read = read  # type: ignore[assignment]
+        pidFile.read = read  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
@@ -235,7 +233,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
                 observer: ILogObserver,
                 predicates: Iterable[LogLevelFilterPredicate],
                 negativeObserver: ILogObserver = cast(ILogObserver, lambda event: None),
-            ):
+            ) -> None:
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = list(predicates)
                 FilteringLogObserver.__init__(

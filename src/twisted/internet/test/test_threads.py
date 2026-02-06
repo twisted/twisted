@@ -6,13 +6,15 @@ Tests for implementations of L{IReactorThreads}.
 """
 
 
+import gc
+import threading
 from weakref import ref
-import gc, threading
 
-from twisted.python.threadable import isInIOThread
-from twisted.internet.test.reactormixins import ReactorBuilder
-from twisted.python.threadpool import ThreadPool
 from twisted.internet.interfaces import IReactorThreads
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.threadable import isInIOThread
+from twisted.python.threadpool import ThreadPool
+from twisted.python.versions import Version
 
 
 class ThreadTestsBuilder(ReactorBuilder):
@@ -108,13 +110,13 @@ class ThreadTestsBuilder(ReactorBuilder):
         result = []
 
         def threadCall():
-            result.append(threading.currentThread())
+            result.append(threading.current_thread())
             reactor.stop()
 
         reactor.callLater(0, reactor.callInThread, reactor.callFromThread, threadCall)
         self.runReactor(reactor, 5)
 
-        self.assertEqual(result, [threading.currentThread()])
+        self.assertEqual(result, [threading.current_thread()])
 
     def test_stopThreadPool(self):
         """
@@ -170,20 +172,8 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor = self.buildReactor()
         threadPoolRef = ref(reactor.getThreadPool())
         reactor.fireSystemEvent("shutdown")
-
-        if reactor.__class__.__name__ == "AsyncioSelectorReactor":
-            self.assertIsNone(reactor.threadpool)
-            # ReactorBase.__init__ sets self.crash as a 'shutdown'
-            # event, which in turn calls stop on the underlying
-            # asyncio event loop, which in turn sets a _stopping
-            # attribute on it that's only unset after an iteration of
-            # the loop.  Subsequent tests can only reuse the asyncio
-            # loop if it's allowed to run and unset that _stopping
-            # attribute.
-            self.runReactor(reactor)
-        else:
-            gc.collect()
-            self.assertIsNone(threadPoolRef())
+        gc.collect()
+        self.assertIsNone(threadPoolRef())
 
     def test_isInIOThread(self):
         """
@@ -218,6 +208,15 @@ class ThreadTestsBuilder(ReactorBuilder):
         reactor.callInThread(check)
         self.runReactor(reactor)
         self.assertEqual([False], results)
+
+    def test_threadPoolCurrentThreadDeprecated(self):
+        self.callDeprecated(
+            version=(
+                Version("Twisted", 22, 1, 0),
+                "threading.current_thread",
+            ),
+            f=ThreadPool.currentThread,
+        )
 
 
 globals().update(ThreadTestsBuilder.makeTestCaseClasses())

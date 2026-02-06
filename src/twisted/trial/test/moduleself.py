@@ -3,5 +3,5 @@ from twisted.trial import unittest
 
 
 class Foo(unittest.SynchronousTestCase):
-    def testFoo(self):
+    def testFoo(self) -> None:
         pass

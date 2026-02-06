@@ -1,1 +1,0 @@
-Calling twisted.web.server.Site now registers its expiration timeout using the reactor associated with its twisted.web.server.Site. Site now a reactor attribute via its superclass, twisted.web.http.HTTPFactory.

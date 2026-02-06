@@ -12,9 +12,9 @@ Maintainer: Paul Swartz
 
 from zope.interface import implementer
 
-from twisted.python import log
 from twisted.internet import interfaces
 from twisted.logger import Logger
+from twisted.python import log
 
 
 @implementer(interfaces.ITransport)
@@ -142,7 +142,7 @@ class SSHChannel(log.Logger):
         if self.extBuf:
             b = self.extBuf
             self.extBuf = []
-            for (type, data) in b:
+            for type, data in b:
                 self.writeExtended(type, data)
 
     def requestReceived(self, requestType, data):

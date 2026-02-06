@@ -1,6 +1,7 @@
-from twisted.logger import globalLogPublisher
-from analyze import analyze
 from ad_hoc import AdHoc
+from analyze import analyze
+
+from twisted.logger import globalLogPublisher
 
 globalLogPublisher.addObserver(analyze)
 

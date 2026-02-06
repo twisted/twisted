@@ -4,8 +4,8 @@
 
 """PB interop server."""
 
-from twisted.spread import pb, flavors
 from twisted.internet import reactor
+from twisted.spread import flavors, pb
 
 
 class Interop(pb.Root):

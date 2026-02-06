@@ -7,7 +7,6 @@ Tests for L{twisted.words.protocols.jabber.client}
 
 
 from hashlib import sha1
-
 from unittest import skipIf
 
 from twisted.internet import defer

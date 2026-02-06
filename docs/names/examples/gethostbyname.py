@@ -18,8 +18,8 @@ resolver, a chained resolver, which attempts to lookup a name from:
 
 import sys
 
-from twisted.names import client, error
 from twisted.internet.task import react
+from twisted.names import client, error
 from twisted.python import usage
 
 

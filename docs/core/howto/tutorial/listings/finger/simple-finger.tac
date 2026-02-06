@@ -1,9 +1,9 @@
 # simple-finger.tac
 # eg:  twistd -ny simple-finger.tac
 
-from twisted.application import service
-
 import finger
+
+from twisted.application import service
 
 options = {
     "file": "/etc/users",

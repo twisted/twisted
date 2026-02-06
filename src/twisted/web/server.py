@@ -13,33 +13,34 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
-
 import copy
 import os
 import re
+import zlib
+from binascii import hexlify
 from html import escape
 from typing import List, Optional
 from urllib.parse import quote as _quote
 
-import zlib
-from binascii import hexlify
-
 from zope.interface import implementer
 
-from twisted.python.compat import networkString, nativeString
-from twisted.spread.pb import Copyable, ViewPoint
+from twisted import copyright
 from twisted.internet import address, interfaces
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from twisted.web import iweb, http, util
-from twisted.web.http import unquote
-from twisted.python import reflect, failure, components
-from twisted import copyright
-from twisted.web import resource
-from twisted.web.error import UnsupportedMethod
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.logger import Logger
+from twisted.python import components, failure, reflect
+from twisted.python.compat import nativeString, networkString
+from twisted.spread.pb import Copyable, ViewPoint
+from twisted.web import http, iweb, resource, util
+from twisted.web.error import UnsupportedMethod
+from twisted.web.http import (
+    NO_CONTENT,
+    NOT_MODIFIED,
+    HTTPFactory,
+    Request as _HTTPRequest,
+    datetimeToString,
+    unquote,
+)
 
 NOT_DONE_YET = 1
 
@@ -52,23 +53,6 @@ __all__ = [
     "NOT_DONE_YET",
     "GzipEncoderFactory",
 ]
-
-
-# backwards compatibility
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.datetimeToString instead",
-    "twisted.web.server",
-    "date_time_string",
-)
-deprecatedModuleAttribute(
-    Version("Twisted", 12, 1, 0),
-    "Please use twisted.web.http.stringToDatetime instead",
-    "twisted.web.server",
-    "string_date_time",
-)
-date_time_string = http.datetimeToString
-string_date_time = http.stringToDatetime
 
 # Support for other methods may be implemented on a per-resource basis.
 supportedMethods = (b"GET", b"HEAD", b"POST")
@@ -103,8 +87,7 @@ class Request(Copyable, http.Request, components.Componentized):
         will be transmitted only over HTTPS.
     """
 
-    defaultContentType = b"text/html"
-
+    defaultContentType: Optional[bytes] = b"text/html"
     site = None
     appRootURL = None
     prepath: Optional[List[bytes]] = None
@@ -114,8 +97,23 @@ class Request(Copyable, http.Request, components.Componentized):
     _encoder = None
     _log = Logger()
 
-    def __init__(self, *args, **kw):
-        http.Request.__init__(self, *args, **kw)
+    def __init__(self, channel, *args, parsePOSTFormSubmission=None, **kw):
+        """
+        @param parsePOSTFormSubmission: By default, get this setting from the L{Site}, but
+            can also be set explicitly. If C{False}, don't parse HTTP bodies.
+        @type parsePOSTFormSubmission: C{None} or C{bool}
+        """
+        if parsePOSTFormSubmission is None:
+            parsePOSTFormSubmissionBool = channel.site._parsePOSTFormSubmission
+        else:
+            parsePOSTFormSubmissionBool = parsePOSTFormSubmission
+        _HTTPRequest.__init__(
+            self,
+            channel,
+            *args,
+            parsePOSTFormSubmission=parsePOSTFormSubmissionBool,
+            **kw,
+        )
         components.Componentized.__init__(self)
 
     def getStateToCopyFor(self, issuer):
@@ -190,7 +188,7 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             getContentFile = self.channel.site.getContentFile
         except AttributeError:
-            http.Request.gotLength(self, length)
+            _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
@@ -208,8 +206,8 @@ class Request(Copyable, http.Request, components.Componentized):
         self.site = self.channel.site
 
         # set various default headers
-        self.setHeader(b"server", version)
-        self.setHeader(b"date", http.datetimeToString())
+        self.setHeader(b"Server", version)
+        self.setHeader(b"Date", datetimeToString())
 
         # Resource Identification
         self.prepath = []
@@ -243,9 +241,9 @@ class Request(Copyable, http.Request, components.Componentized):
             # NOT_MODIFIED and NO_CONTENT responses. We also omit it if there
             # is a Content-Length header set to 0, as empty bodies don't need
             # a content-type.
-            needsCT = self.code not in (http.NOT_MODIFIED, http.NO_CONTENT)
-            contentType = self.responseHeaders.getRawHeaders(b"content-type")
-            contentLength = self.responseHeaders.getRawHeaders(b"content-length")
+            needsCT = self.code not in (NOT_MODIFIED, NO_CONTENT)
+            contentType = self.responseHeaders.getRawHeaders(b"Content-Type")
+            contentLength = self.responseHeaders.getRawHeaders(b"Content-Length")
             contentLengthZero = contentLength and (contentLength[0] == b"0")
 
             if (
@@ -255,7 +253,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 and not contentLengthZero
             ):
                 self.responseHeaders.setRawHeaders(
-                    b"content-type", [self.defaultContentType]
+                    b"Content-Type", [self.defaultContentType]
                 )
 
         # Only let the write happen if we're not generating a HEAD response by
@@ -266,17 +264,17 @@ class Request(Copyable, http.Request, components.Componentized):
         if not self._inFakeHead:
             if self._encoder:
                 data = self._encoder.encode(data)
-            http.Request.write(self, data)
+            _HTTPRequest.write(self, data)
 
     def finish(self):
         """
-        Override C{http.Request.finish} for possible encoding.
+        Override L{twisted.web.http.Request.finish} for possible encoding.
         """
         if self._encoder:
             data = self._encoder.finish()
             if data:
-                http.Request.write(self, data)
-        return http.Request.finish(self)
+                _HTTPRequest.write(self, data)
+        return _HTTPRequest.finish(self)
 
     def render(self, resrc):
         """
@@ -314,7 +312,7 @@ class Request(Copyable, http.Request, components.Componentized):
                     )
                     # Oh well, I guess we won't include the content length.
                 else:
-                    self.setHeader(b"content-length", b"%d" % (len(body),))
+                    self.setHeader(b"Content-Length", b"%d" % (len(body),))
 
                 self._inFakeHead = False
                 self.method = b"HEAD"
@@ -337,10 +335,12 @@ class Request(Copyable, http.Request, components.Componentized):
                         "allowed": ", ".join([nativeString(x) for x in allowedMethods]),
                     }
                 )
-                epage = resource.ErrorPage(http.NOT_ALLOWED, "Method Not Allowed", s)
+                epage = resource._UnsafeErrorPage(
+                    http.NOT_ALLOWED, "Method Not Allowed", s
+                )
                 body = epage.render(self)
             else:
-                epage = resource.ErrorPage(
+                epage = resource._UnsafeErrorPage(
                     http.NOT_IMPLEMENTED,
                     "Huh?",
                     "I don't know how to treat a %s request."
@@ -352,10 +352,11 @@ class Request(Copyable, http.Request, components.Componentized):
         if body is NOT_DONE_YET:
             return
         if not isinstance(body, bytes):
-            body = resource.ErrorPage(
+            body = resource._UnsafeErrorPage(
                 http.INTERNAL_SERVER_ERROR,
                 "Request did not return bytes",
                 "Request: "
+                # GHSA-vg46-2rrj-3647 note: _PRE does HTML-escape the input.
                 + util._PRE(reflect.safe_repr(self))
                 + "<br />"
                 + "Resource: "
@@ -374,10 +375,10 @@ class Request(Copyable, http.Request, components.Componentized):
                     slf=self,
                     resrc=resrc,
                 )
-                self.setHeader(b"content-length", b"%d" % (len(body),))
+                self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(b"")
         else:
-            self.setHeader(b"content-length", b"%d" % (len(body),))
+            self.setHeader(b"Content-Length", b"%d" % (len(body),))
             self.write(body)
         self.finish()
 
@@ -410,8 +411,8 @@ class Request(Copyable, http.Request, components.Componentized):
             )
 
         self.setResponseCode(http.INTERNAL_SERVER_ERROR)
-        self.setHeader(b"content-type", b"text/html")
-        self.setHeader(b"content-length", b"%d" % (len(body),))
+        self.setHeader(b"Content-Type", b"text/html")
+        self.setHeader(b"Content-Length", b"%d" % (len(body),))
         self.write(body)
         self.finish()
         return reason
@@ -609,7 +610,7 @@ class GzipEncoderFactory:
     @since: 12.3
     """
 
-    _gzipCheckRegex = re.compile(br"(:?^|[\s,])gzip(:?$|[\s,])")
+    _gzipCheckRegex = re.compile(rb"(:?^|[\s,])gzip(:?$|[\s,])")
     compressLevel = 9
 
     def encoderForRequest(self, request):
@@ -618,16 +619,16 @@ class GzipEncoderFactory:
         request if so.
         """
         acceptHeaders = b",".join(
-            request.requestHeaders.getRawHeaders(b"accept-encoding", [])
+            request.requestHeaders.getRawHeaders(b"Accept-Encoding", [])
         )
         if self._gzipCheckRegex.search(acceptHeaders):
-            encoding = request.responseHeaders.getRawHeaders(b"content-encoding")
+            encoding = request.responseHeaders.getRawHeaders(b"Content-Encoding")
             if encoding:
                 encoding = b",".join(encoding + [b"gzip"])
             else:
                 encoding = b"gzip"
 
-            request.responseHeaders.setRawHeaders(b"content-encoding", [encoding])
+            request.responseHeaders.setRawHeaders(b"Content-Encoding", [encoding])
             return _GzipEncoder(self.compressLevel, request)
 
 
@@ -659,7 +660,7 @@ class _GzipEncoder:
         if not self._request.startedWriting:
             # Remove the content-length header, we can't honor it
             # because we compress on the fly.
-            self._request.responseHeaders.removeHeader(b"content-length")
+            self._request.responseHeaders.removeHeader(b"Content-Length")
         return self._zlibCompressor.compress(data)
 
     def finish(self):
@@ -702,7 +703,7 @@ class Session(components.Componentized):
     @ivar lastModified: Time the C{touch()} method was last called (or time the
         session was created). A UNIX timestamp as returned by
         L{IReactorTime.seconds()}.
-    @type lastModified L{float}
+    @type lastModified: L{float}
     """
 
     sessionTimeout = 900
@@ -768,7 +769,7 @@ version = networkString(f"TwistedWeb/{copyright.version}")
 
 
 @implementer(interfaces.IProtocolNegotiationFactory)
-class Site(http.HTTPFactory):
+class Site(HTTPFactory):
     """
     A web site: manage log, sessions, and resources.
 
@@ -798,8 +799,16 @@ class Site(http.HTTPFactory):
     sessionFactory = Session
     sessionCheckTime = 1800
     _entropy = os.urandom
+    _parsePOSTFormSubmission: bool
 
-    def __init__(self, resource, requestFactory=None, *args, **kwargs):
+    def __init__(
+        self,
+        resource,
+        requestFactory=None,
+        *args,
+        parsePOSTFormSubmission=True,
+        **kwargs,
+    ):
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
@@ -808,6 +817,11 @@ class Site(http.HTTPFactory):
         @param requestFactory: Overwrite for default requestFactory.
         @type requestFactory: C{callable} or C{class}.
 
+        @param parsePOSTFormSubmission: If C{True}, the default, parse MIME multipart and
+            URL-encoded body uploads into C{request.args}. This can use large
+            amounts of memory for large uploads.
+        @type parsePOSTFormSubmission: C{bool}
+
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
         super().__init__(*args, **kwargs)
@@ -815,6 +829,7 @@ class Site(http.HTTPFactory):
         self.resource = resource
         if requestFactory is not None:
             self.requestFactory = requestFactory
+        self._parsePOSTFormSubmission = parsePOSTFormSubmission
 
     def _openLogFile(self, path):
         from twisted.python import logfile

@@ -119,7 +119,7 @@ class SMTPClientError(SMTPError):
         if isinstance(resp, str):  # type: ignore[unreachable]
             resp = resp.encode("utf-8")  # type: ignore[unreachable]
 
-        if isinstance(log, str):  # type: ignore[unreachable]
+        if isinstance(log, str):
             log = log.encode("utf-8")  # type: ignore[unreachable]
 
         self.code = code
@@ -134,7 +134,7 @@ class SMTPClientError(SMTPError):
 
     def __bytes__(self) -> bytes:
         if self.code > 0:
-            res = [f"{self.code:03d} ".encode("utf-8") + self.resp]
+            res = [f"{self.code:03d} ".encode() + self.resp]
         else:
             res = [self.resp]
         if self.log:

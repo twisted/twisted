@@ -276,6 +276,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         L{server.DNSServerFactory.resolver} contains an ordered list of
         authorities, caches and clients.
         """
+
         # Use classes here so that we can see meaningful names in test results
         class DummyAuthority:
             pass

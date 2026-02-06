@@ -18,16 +18,15 @@ Test running processes.
 """
 
 
-import gzip
-import os
-import sys
-import signal
 import errno
 import gc
-import stat
+import gzip
 import operator
-
-from unittest import skipIf
+import os
+import signal
+import stat
+import sys
+from unittest import SkipTest, skipIf
 
 try:
     import fcntl
@@ -45,17 +44,16 @@ except ImportError:
 else:
     process = _process
 
-from zope.interface.verify import verifyObject
-
 from io import BytesIO
 
-from twisted.python.log import msg
-from twisted.internet import reactor, protocol, error, interfaces, defer
-from twisted.trial import unittest
-from twisted.python import runtime, procutils
+from zope.interface.verify import verifyObject
+
+from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.python import procutils, runtime
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
-
+from twisted.python.log import msg
+from twisted.trial import unittest
 
 # Get the current Python executable as a bytestring.
 pyExe = FilePath(sys.executable).path
@@ -248,7 +246,6 @@ class TestProcessProtocol(protocol.ProcessProtocol):
 
 
 class EchoProtocol(protocol.ProcessProtocol):
-
     s = b"1234567" * 1001
     n = 10
     finished = 0
@@ -583,8 +580,7 @@ class ProcessTests(unittest.TestCase):
 
     @skipIf(
         os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
+        and runtime.platform.getType() == "win32",
         "See https://twistedmatrix.com/trac/ticket/10014",
     )
     def test_process(self):
@@ -609,7 +605,9 @@ class ProcessTests(unittest.TestCase):
                 error.ProcessExitedAlready, p.transport.signalProcess, "INT"
             )
             try:
-                import process_tester, glob  # type: ignore[import]
+                import glob
+
+                import process_tester  # type: ignore[import-not-found]
 
                 for f in glob.glob(process_tester.test_file_match):
                     os.remove(f)
@@ -620,10 +618,8 @@ class ProcessTests(unittest.TestCase):
         return d
 
     @skipIf(
-        os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32"
-        and sys.version_info[0:2] in [(3, 7), (3, 8), (3, 9)],
-        "See https://twistedmatrix.com/trac/ticket/10014",
+        runtime.platform.getType() == "win32",
+        "See https://github.com/twisted/twisted/issues/12522",
     )
     def test_manyProcesses(self):
         def _check(results, protocols):
@@ -678,11 +674,11 @@ class ProcessTests(unittest.TestCase):
 
     def test_commandLine(self):
         args = [
-            br"a\"b ",
-            br"a\b ",
-            br' a\\"b',
-            br" a\\b",
-            br'"foo bar" "',
+            rb"a\"b ",
+            rb"a\b ",
+            rb' a\\"b',
+            rb" a\\b",
+            rb'"foo bar" "',
             b"\tab",
             b'"\\',
             b'a"b',
@@ -980,15 +976,20 @@ class PosixProcessBase:
         Return the path of the shell command named C{commandName}, looking at
         common locations.
         """
+        for loc in procutils.which(commandName):
+            return FilePath(loc).asBytesMode().path
+
         binLoc = FilePath("/bin").child(commandName)
         usrbinLoc = FilePath("/usr/bin").child(commandName)
 
         if binLoc.exists():
-            return binLoc._asBytesPath()
+            return binLoc.asBytesMode().path
         elif usrbinLoc.exists():
-            return usrbinLoc._asBytesPath()
+            return usrbinLoc.asBytesMode().path
         else:
-            raise RuntimeError(f"{commandName} not found in /bin or /usr/bin")
+            raise RuntimeError(
+                f"{commandName} found in neither standard location nor on PATH ({os.environ['PATH']})"
+            )
 
     def test_normalTermination(self):
         cmd = self.getCommand("true")
@@ -1108,11 +1109,13 @@ class PosixProcessBase:
         # Now do the test.
         return self._testSignal(signal.SIGUSR1)
 
-    @skipIf(runtime.platform.isMacOSX(), "Test is flaky from a Darwin bug. See #8840.")
     def test_executionError(self):
         """
         Raise an error during execvpe to check error management.
         """
+        if runtime.platform.isMacOSX() and self.usePTY:
+            raise SkipTest("Test is flaky from a Darwin bug. See #8840.")
+
         cmd = self.getCommand("false")
 
         d = defer.Deferred()
@@ -1123,6 +1126,9 @@ class PosixProcessBase:
 
         oldexecvpe = os.execvpe
         os.execvpe = buggyexecvpe
+        # This implementation detail only matters / is worth testing if we
+        # aren't using posix_spawnp().
+        reactor._neverUseSpawn = True
         try:
             reactor.spawnProcess(p, cmd, [b"false"], env=None, usePTY=self.usePTY)
 
@@ -1298,10 +1304,18 @@ class MockOS:
         self.O_RDWR = -1
         self.O_NOCTTY = -2
         self.WNOHANG = -4
+        self.F_GETFD = 1001
+        self.FD_CLOEXEC = 1002
         self.WEXITSTATUS = lambda x: 0
         self.WIFEXITED = lambda x: 1
         self.seteuidCalls = []
         self.setegidCalls = []
+
+    def fcntl(self, op, fl, arg):
+        """
+        Fake fcntl.fcntl for CLOEXEC file descriptor enumeration.
+        """
+        return 0
 
     def open(self, dev, flags):
         """
@@ -1385,6 +1399,25 @@ class MockOS:
         self.actions.append("exec")
         if self.raiseExec:
             raise RuntimeError("Bar")
+
+    def posix_spawnp(
+        self,
+        path,
+        argv,
+        env,
+        *,
+        file_actions=None,
+        setpgroup=None,
+        resetids=False,
+        setsid=False,
+        setsigmask=(),
+        setsigdef=(),
+        scheduler=None,
+    ):
+        """
+        Fake C{os.posix_spawnp}. Save the action.
+        """
+        self.actions.append("posix_spawnp")
 
     def pipe(self):
         """
@@ -1612,6 +1645,15 @@ class DumbPTYProcess(PTYProcess):
         """
 
 
+class ForkOrSpawn:
+    def __eq__(self, other):
+        if other == ("fork", False):
+            return True
+        if other == "posix_spawnp":
+            return True
+        return False
+
+
 class MockProcessTests(unittest.TestCase):
     """
     Mock a process runner to test forked child code path.
@@ -1639,6 +1681,7 @@ class MockProcessTests(unittest.TestCase):
         self.patch(process, "fdesc", self.mockos)
         self.patch(process.Process, "processReaderFactory", DumbProcessReader)
         self.patch(process.Process, "processWriterFactory", DumbProcessWriter)
+        self.patch(process.Process, "_trySpawnInsteadOfFork", lambda *a, **k: False)
         self.patch(process, "pty", self.mockos)
 
         self.mocksig = MockSignal()
@@ -1649,6 +1692,13 @@ class MockProcessTests(unittest.TestCase):
         Reset processes registered for reap.
         """
         process.reapProcessHandlers = {}
+
+    def assertProcessLaunched(self):
+        """
+        A process should have been launched, but I don't care whether it was
+        with fork() or posix_spawnp().
+        """
+        self.assertEqual(self.mockos.actions, [ForkOrSpawn(), "waitpid"])
 
     def test_mockFork(self):
         """
@@ -1688,7 +1738,7 @@ class MockProcessTests(unittest.TestCase):
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
         # It should close the first read pipe, and the 2 last write pipes
         self.assertEqual(set(self.mockos.closed), {-1, -4, -6})
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertProcessLaunched()
 
     def test_mockForkInParentGarbageCollectorEnabled(self):
         """
@@ -1885,7 +1935,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False, uid=8080)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertProcessLaunched()
 
     def test_mockPTYSetUid(self):
         """
@@ -1933,7 +1983,7 @@ class MockProcessTests(unittest.TestCase):
             reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=True, uid=8080)
         finally:
             process.PTYProcess = oldPTYProcess
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
+        self.assertProcessLaunched()
 
     def test_mockWithWaitError(self):
         """
@@ -1946,8 +1996,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
         self.mockos.raiseWaitPid = OSError()
         proc.reapProcess()
         errors = self.flushLoggedErrors()
@@ -1966,8 +2015,7 @@ class MockProcessTests(unittest.TestCase):
         d = defer.Deferred()
         p = TrivialProcessProtocol(d)
         proc = reactor.spawnProcess(p, cmd, [b"ouch"], env=None, usePTY=False)
-        self.assertEqual(self.mockos.actions, [("fork", False), "waitpid"])
-
+        self.assertProcessLaunched()
         self.mockos.raiseWaitPid = OSError()
         self.mockos.raiseWaitPid.errno = errno.ECHILD
         # This should not produce any errors
@@ -2217,7 +2265,7 @@ class Win32ProcessTests(unittest.TestCase):
         """
         Pass L{bytes} args to L{_test_stdinReader}.
         """
-        import win32api  # type: ignore[import]
+        import win32api
 
         pyExe = FilePath(sys.executable)._asBytesPath()
         args = [pyExe, b"-u", b"-m", b"twisted.test.process_stdinreader"]

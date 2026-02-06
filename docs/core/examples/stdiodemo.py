@@ -12,7 +12,7 @@ a telnet server instead; see the comments for details.
 Based on an example by Abe Fettig.
 """
 
-from twisted.internet import stdio, reactor
+from twisted.internet import reactor, stdio
 from twisted.protocols import basic
 from twisted.web import client
 

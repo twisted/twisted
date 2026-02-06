@@ -3,11 +3,9 @@
 
 from zope.interface import provider
 
-from twisted.plugin import IPlugin
-
 from twisted.application.service import ServiceMaker
+from twisted.plugin import IPlugin
 from twisted.words import iwords
-
 
 NewTwistedWords = ServiceMaker(
     "New Twisted Words", "twisted.words.tap", "A modern words server", "words"
@@ -20,7 +18,6 @@ TwistedXMPPRouter = ServiceMaker(
 
 @provider(IPlugin, iwords.IProtocolPlugin)
 class RelayChatInterface:
-
     name = "irc"
 
     @classmethod
@@ -32,7 +29,6 @@ class RelayChatInterface:
 
 @provider(IPlugin, iwords.IProtocolPlugin)
 class PBChatInterface:
-
     name = "pb"
 
     @classmethod

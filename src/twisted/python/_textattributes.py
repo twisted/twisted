@@ -22,6 +22,7 @@ Serializing a formatting structure is done with L{flatten}.
 
 
 from typing import ClassVar, List, Sequence
+
 from twisted.python.util import FancyEqMixin
 
 

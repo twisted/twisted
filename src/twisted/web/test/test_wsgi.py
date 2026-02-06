@@ -5,29 +5,29 @@
 Tests for L{twisted.web.wsgi}.
 """
 
-from sys import exc_info
-from urllib.parse import quote as urlquote
 import tempfile
 import traceback
 import warnings
+from sys import exc_info
+from urllib.parse import quote as urlquote
 
 from zope.interface.verify import verifyObject
 
+from twisted.internet import reactor
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.error import ConnectionLost
+from twisted.internet.testing import EventLoggingObserver
+from twisted.logger import Logger, globalLogPublisher
 from twisted.python.failure import Failure
 from twisted.python.threadable import getThreadID
 from twisted.python.threadpool import ThreadPool
-from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet import reactor
-from twisted.internet.error import ConnectionLost
-from twisted.trial.unittest import TestCase, SkipTest
-from twisted.web import http
+from twisted.trial.unittest import TestCase
+from twisted.web import server
 from twisted.web.resource import IResource, Resource
 from twisted.web.server import Request, Site, version
-from twisted.web.wsgi import WSGIResource
 from twisted.web.test.test_web import DummyChannel
-from twisted.logger import globalLogPublisher, Logger
-from twisted.test.proto_helpers import EventLoggingObserver
-from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.web.wsgi import WSGIResource
 
 
 class SynchronousThreadPool:
@@ -180,7 +180,7 @@ class WSGIResourceTests(TestCase):
         )
 
         self.resource.render(FinishThrowingRequest(DummyChannel(), False))
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         f = logObserver[0]["log_failure"]
         self.assertIsInstance(f.value, ArbitraryError)
         self.flushLoggedErrors(ArbitraryError)
@@ -715,7 +715,11 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'REMOTE_ADDR'} key of the C{environ} C{dict} passed to the
         application contains the address of the client making the request.
         """
-        d = self.render("GET", "1.1", [], [""])
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "192.168.1.1"))
 
         return d
@@ -732,6 +736,20 @@ class EnvironTests(WSGITestsMixin, TestCase):
 
         d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
         d.addCallback(self.environKeyEqual("REMOTE_ADDR", "::1"))
+
+        return d
+
+    def test_remotePort(self):
+        """
+        The C{'REMOTE_PORT'} key of the C{environ} C{dict} passed to the
+        application contains the port of the client making the request.
+        """
+
+        def channelFactory():
+            return DummyChannel(peer=IPv4Address("TCP", "192.168.1.1", 12344))
+
+        d = self.render("GET", "1.1", [], [""], channelFactory=channelFactory)
+        d.addCallback(self.environKeyEqual("REMOTE_PORT", "12344"))
 
         return d
 
@@ -806,6 +824,7 @@ class EnvironTests(WSGITestsMixin, TestCase):
         The C{'wsgi.url_scheme'} key of the C{environ} C{dict} passed to the
         application has the request URL scheme.
         """
+
         # XXX Does this need to be different if the request is for an absolute
         # URL?
         def channelFactory():
@@ -1164,40 +1183,6 @@ class InputStreamTestMixin(WSGITestsMixin):
         return d
 
 
-class InputStreamStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{StringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from StringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("StringIO.StringIO is not available.")
-        else:
-            return StringIO
-
-
-class InputStreamCStringIOTests(InputStreamTestMixin, TestCase):
-    """
-    Tests for L{_InputStream} when it is wrapped around a
-    L{cStringIO.StringIO}.
-
-    This is only available in Python 2.
-    """
-
-    def getFileType(self):
-        try:
-            from cStringIO import StringIO  # type: ignore[import]
-        except ImportError:
-            raise SkipTest("cStringIO.StringIO is not available.")
-        else:
-            return StringIO
-
-
 class InputStreamBytesIOTests(InputStreamTestMixin, TestCase):
     """
     Tests for L{_InputStream} when it is wrapped around an L{io.BytesIO}.
@@ -1290,7 +1275,7 @@ class StartResponseTests(WSGITestsMixin, TestCase):
         included in the response.
         """
         # Make the Date header value deterministic
-        self.patch(http, "datetimeToString", lambda: "Tuesday")
+        self.patch(server, "datetimeToString", lambda: "Tuesday")
 
         channel = DummyChannel()
 
@@ -2180,7 +2165,7 @@ class ApplicationTests(WSGITestsMixin, TestCase):
             return requests[-1]
 
         def ebRendered(ignored):
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             event = logObserver[0]
             f = event["log_failure"]
             self.assertIsInstance(f.value, RuntimeError)

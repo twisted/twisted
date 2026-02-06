@@ -8,23 +8,24 @@
 Tests for L{twisted.conch.manhole}.
 """
 
+import sys
 import traceback
 from typing import Optional
 
 ssh: Optional[bool] = None
 
-from twisted.trial import unittest
-from twisted.internet import error, defer
-from twisted.test.proto_helpers import StringTransport
-from twisted.conch.test.test_recvline import (
-    _TelnetMixin,
-    _SSHMixin,
-    _StdioMixin,
-    stdio,
-    ssh,
-)
 from twisted.conch import manhole
 from twisted.conch.insults import insults
+from twisted.conch.test.test_recvline import (
+    _SSHMixin,
+    _StdioMixin,
+    _TelnetMixin,
+    ssh,
+    stdio,
+)
+from twisted.internet import defer, error
+from twisted.internet.testing import StringTransport
+from twisted.trial import unittest
 
 
 def determineDefaultFunctionName():
@@ -148,9 +149,6 @@ class WriterTests(unittest.TestCase):
 class ManholeLoopbackMixin:
     serverProtocol = manhole.ColoredManhole
 
-    def wfd(self, d):
-        return defer.waitForDeferred(d)
-
     def test_SimpleExpression(self):
         """
         Evaluate simple expression.
@@ -244,10 +242,21 @@ class ManholeLoopbackMixin:
                     + defaultFunctionName.encode("utf-8"),
                     b"Exception: foo bar baz",
                     b">>> done",
-                ]
+                ],
             )
 
-        return done.addCallback(finished)
+        done.addCallback(finished)
+        return done
+
+    def test_ExceptionWithCustomExcepthook(
+        self,
+    ):
+        """
+        Raised exceptions are handled the same way even if L{sys.excepthook}
+        has been modified from its original value.
+        """
+        self.patch(sys, "excepthook", lambda *args: None)
+        return self.test_Exception()
 
     def test_ControlC(self):
         """
@@ -314,11 +323,11 @@ class ManholeLoopbackMixin:
         but at the beginning of a line it does.
         """
         self._testwrite(b"1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_D + b" + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
         self._testwrite(b"\n")
@@ -339,11 +348,11 @@ class ManholeLoopbackMixin:
         # Start off with a newline so that when we clear the display we can
         # tell by looking for the missing first empty prompt line.
         self._testwrite(b"\n1 + 1")
-        yield self.recvlineClient.expect(br"\+ 1")
+        yield self.recvlineClient.expect(rb"\+ 1")
         self._assertBuffer([b">>> ", b">>> 1 + 1"])
 
         self._testwrite(manhole.CTRL_L + b" + 1")
-        yield self.recvlineClient.expect(br"1 \+ 1 \+ 1")
+        yield self.recvlineClient.expect(rb"1 \+ 1 \+ 1")
         self._assertBuffer([b">>> 1 + 1 + 1"])
 
     def test_controlA(self):

@@ -4,17 +4,20 @@ parallel = True
 source = twisted
 omit =
     .tox/*/tmp/_trial_temp/*
+    */twisted/internet/gtk2reactor.py
 
 [paths]
 source=
    src/twisted
+   */src/twisted
    */site-packages/twisted
-   *\site-packages\twisted
+   benchmarks
 
 [report]
 precision = 2
 ignore_errors = True
 exclude_lines =
+    pragma: no cover
     if TYPE_CHECKING
     \s*\.\.\.$
     raise NotImplementedError

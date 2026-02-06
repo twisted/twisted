@@ -11,8 +11,8 @@ Lookup the reverse DNS pointer records for one or more IP addresses.
 
 IPADDRESS: An IPv4 or IPv6 address.
 """
-import sys
 import socket
+import sys
 
 from twisted.internet import defer, task
 from twisted.names import client

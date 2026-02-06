@@ -5,23 +5,22 @@
 Tests for L{twisted.application.twist._options}.
 """
 
-from sys import stdout, stderr
+from sys import stderr, stdout
 from typing import Callable, Dict, List, Optional, TextIO, Tuple
 
-from ...reactors import NoSuchReactor
+import twisted.trial.unittest
 from twisted.copyright import version
 from twisted.internet import reactor
 from twisted.internet.interfaces import IReactorCore
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import (
     FileLogObserver,
     LogLevel,
-    textFileLogObserver,
     jsonFileLogObserver,
+    textFileLogObserver,
 )
 from twisted.python.usage import UsageError
-from twisted.test.proto_helpers import MemoryReactor
-import twisted.trial.unittest
-
+from ...reactors import NoSuchReactor
 from ...runner._exit import ExitStatus
 from ...runner.test.test_runner import DummyExit
 from ...service import ServiceMaker
@@ -91,8 +90,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_version()
 
-        self.assertEquals(self.exit.status, ExitStatus.EX_OK)  # type: ignore[unreachable]
-        self.assertEquals(self.exit.message, version)
+        self.assertEqual(self.exit.status, ExitStatus.EX_OK)  # type: ignore[unreachable]
+        self.assertEqual(self.exit.message, version)
 
     def test_reactor(self) -> None:
         """
@@ -105,7 +104,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_reactor("fusion")
 
         self.assertEqual(set(self.installedReactors), {"fusion"})
-        self.assertEquals(options["reactorName"], "fusion")
+        self.assertEqual(options["reactorName"], "fusion")
 
     def test_installCorrectReactor(self) -> None:
         """
@@ -202,7 +201,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_log_file("nocanopen")
 
-        self.assertEquals(self.exit.status, ExitStatus.EX_IOERR)
+        self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
         self.assertIsNotNone(self.exit.message)
         self.assertTrue(
             self.exit.message.startswith(  # type: ignore[union-attr]

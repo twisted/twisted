@@ -8,20 +8,19 @@ with Python's reflection capabilities.
 """
 
 
-from collections import deque
-from io import IOBase, StringIO
 import os
 import pickle
 import re
 import sys
 import traceback
 import types
-from typing import Type, Union
 import weakref
+from collections import deque
+from io import IOBase, StringIO
+from typing import Type, Union
 
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-
 
 RegexType = type(re.compile(""))
 
@@ -349,7 +348,7 @@ def filenameToModuleName(fn):
     return modName
 
 
-def qual(clazz):
+def qual(clazz: Type[object]) -> str:
     """
     Return full import path of a class.
     """

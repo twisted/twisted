@@ -11,14 +11,17 @@ import socket
 
 from zope.interface import implementer
 
-from twisted.names import dns
-from twisted.names.error import DNSFormatError, DNSServerError, DNSNameError
-from twisted.names.error import DNSNotImplementedError, DNSQueryRefusedError
-from twisted.names.error import DNSUnknownError
-
 from twisted.internet import defer, error, interfaces
-
 from twisted.logger import Logger
+from twisted.names import dns
+from twisted.names.error import (
+    DNSFormatError,
+    DNSNameError,
+    DNSNotImplementedError,
+    DNSQueryRefusedError,
+    DNSServerError,
+    DNSUnknownError,
+)
 
 # Helpers for indexing the three-tuples that get thrown around by this code a
 # lot.
@@ -51,7 +54,7 @@ class ResolverBase:
 
     def __init__(self):
         self.typeToMethod = {}
-        for (k, v) in typeToMethod.items():
+        for k, v in typeToMethod.items():
             self.typeToMethod[k] = getattr(self, v)
 
     def exceptionForCode(self, responseCode):

@@ -1,7 +1,7 @@
-from twisted.mail.smtp import sendmail
-from twisted.internet.task import react
-
 from email.mime.text import MIMEText
+
+from twisted.internet.task import react
+from twisted.mail.smtp import sendmail
 
 
 def main(reactor):

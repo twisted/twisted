@@ -15,13 +15,13 @@ Maintainer: Moshe Zadka
 """
 
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import Attribute, Interface, implementer
 
-from twisted.persisted import sob
-from twisted.python.reflect import namedAny
-from twisted.python import components
 from twisted.internet import defer
+from twisted.persisted import sob
 from twisted.plugin import IPlugin
+from twisted.python import components
+from twisted.python.reflect import namedAny
 
 
 class IServiceMaker(Interface):

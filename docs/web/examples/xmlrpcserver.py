@@ -24,9 +24,10 @@ An example session (assuming the server is running):
 
 """
 
-from twisted.web import xmlrpc
-from twisted.internet import defer
 from xmlrpc.client import Fault
+
+from twisted.internet import defer
+from twisted.web import xmlrpc
 
 
 class Echoer(xmlrpc.XMLRPC):

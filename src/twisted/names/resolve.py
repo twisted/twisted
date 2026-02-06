@@ -13,7 +13,7 @@ the query, or someway to specify (authority|ttl|cache behavior|more?)
 from zope.interface import implementer
 
 from twisted.internet import defer, interfaces
-from twisted.names import dns, common, error
+from twisted.names import common, dns, error
 
 
 class FailureHandler:

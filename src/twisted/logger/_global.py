@@ -8,12 +8,11 @@ and implementation of logic for managing that global state.
 """
 
 import sys
-from typing import Any, IO, Iterable, Optional, Type
 import warnings
+from typing import IO, Any, Iterable, Optional, Type
 
 from twisted.python.compat import currentframe
 from twisted.python.reflect import qual
-
 from ._buffer import LimitedHistoryLogObserver
 from ._file import FileLogObserver
 from ._filter import FilteringLogObserver, LogLevelFilterPredicate
@@ -23,7 +22,6 @@ from ._io import LoggingFile
 from ._levels import LogLevel
 from ._logger import Logger
 from ._observer import LogPublisher
-
 
 MORE_THAN_ONCE_WARNING = (
     "Warning: primary log target selected twice at <{fileNow}:{lineNow}> - "
@@ -175,7 +173,7 @@ class LogBeginner:
         else:
             streams = []
 
-        for (stream, level) in streams:
+        for stream, level in streams:
             oldStream = getattr(self._stdio, stream)
             loggingFile = LoggingFile(
                 logger=Logger(namespace=stream, observer=self._publisher),

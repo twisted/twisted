@@ -6,25 +6,26 @@ Tests for L{twisted.internet.asyncioreactor}.
 """
 import gc
 import sys
-from unittest import skipIf
-
-from twisted.internet import defer
-from twisted.python.reflect import requireModule
-from twisted.python.runtime import platform
-from twisted.trial.unittest import SynchronousTestCase
-from .reactormixins import ReactorBuilder
-
-from twisted.internet.asyncioreactor import AsyncioSelectorReactor
 from asyncio import (
+    AbstractEventLoop,
+    AbstractEventLoopPolicy,
+    DefaultEventLoopPolicy,
+    Future,
+    SelectorEventLoop,
     ensure_future,
     get_event_loop,
     get_event_loop_policy,
     set_event_loop,
     set_event_loop_policy,
-    DefaultEventLoopPolicy,
-    Future,
-    SelectorEventLoop,
 )
+from unittest import skipIf
+
+from twisted.internet import defer
+from twisted.internet.asyncioreactor import AsyncioSelectorReactor
+from twisted.python.reflect import requireModule
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SynchronousTestCase
+from .reactormixins import ReactorBuilder
 
 hasWindowsProactorEventLoopPolicy = False
 hasWindowsSelectorEventLoopPolicy = False
@@ -42,16 +43,14 @@ except ImportError:
     pass
 
 
-contextvars = requireModule("contextvars")
-if contextvars:
-    contextvarsSkip = None
-else:
-    contextvarsSkip = "contextvars is not available"
+_defaultEventLoop = DefaultEventLoopPolicy().new_event_loop()
+_defaultEventLoopIsSelector = isinstance(_defaultEventLoop, SelectorEventLoop)
+_defaultEventLoop.close()
 
 
 sniffio = requireModule("sniffio")
 if sniffio:
-    sniffioSkip = contextvarsSkip
+    sniffioSkip = False
 else:
     sniffioSkip = "sniffio is not available"
 
@@ -60,9 +59,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     """
     L{AsyncioSelectorReactor} tests.
     """
-
-    _defaultEventLoop = DefaultEventLoopPolicy().new_event_loop()
-    _defaultEventLoopIsSelector = isinstance(_defaultEventLoop, SelectorEventLoop)
 
     def assertReactorWorksWithAsyncioFuture(self, reactor):
         """
@@ -82,6 +78,23 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         self.assertEqual(result, [])
         self.runReactor(reactor, timeout=1)
         self.assertEqual(result, [True])
+
+    def newLoop(self, policy: AbstractEventLoopPolicy) -> AbstractEventLoop:
+        """
+        Make a new asyncio loop from a policy for use with a reactor, and add
+        appropriate cleanup to restore any global state.
+        """
+        existingLoop = get_event_loop()
+        existingPolicy = get_event_loop_policy()
+        result = policy.new_event_loop()
+
+        @self.addCleanup
+        def cleanUp():
+            result.close()
+            set_event_loop(existingLoop)
+            set_event_loop_policy(existingPolicy)
+
+        return result
 
     @skipIf(
         not _defaultEventLoopIsSelector,
@@ -119,11 +132,10 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         and then pass that event loop to a new L{AsyncioSelectorReactor},
         this reactor should work properly with L{asyncio.Future}.
         """
-        event_loop = DefaultEventLoopPolicy().new_event_loop()
+        event_loop = self.newLoop(DefaultEventLoopPolicy())
         reactor = AsyncioSelectorReactor(event_loop)
         set_event_loop(event_loop)
         self.assertReactorWorksWithAsyncioFuture(reactor)
-        set_event_loop_policy(None)
 
     @skipIf(
         _defaultEventLoopIsSelector,
@@ -155,7 +167,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         L{AsyncioSelectorReactor} will raise a L{TypeError}
         if instantiated with a L{asyncio.WindowsProactorEventLoop}
         """
-        event_loop = WindowsProactorEventLoopPolicy().new_event_loop()
+        event_loop = self.newLoop(WindowsProactorEventLoopPolicy())
         self.assertRaises(TypeError, AsyncioSelectorReactor, event_loop)
 
     @skipIf(
@@ -166,11 +178,10 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         """
         L{WindowsSelectorEventLoop} works with L{AsyncioSelectorReactor}
         """
-        event_loop = WindowsSelectorEventLoopPolicy().new_event_loop()
+        event_loop = self.newLoop(WindowsSelectorEventLoopPolicy())
         reactor = AsyncioSelectorReactor(event_loop)
         set_event_loop(event_loop)
         self.assertReactorWorksWithAsyncioFuture(reactor)
-        set_event_loop_policy(None)
 
     @skipIf(
         not hasWindowsProactorEventLoopPolicy,
@@ -182,9 +193,9 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         if L{asyncio.WindowsProactorEventLoopPolicy} is default.
         """
         set_event_loop_policy(WindowsProactorEventLoopPolicy())
+        self.addCleanup(lambda: set_event_loop_policy(None))
         with self.assertRaises(TypeError):
             AsyncioSelectorReactor()
-        set_event_loop_policy(None)
 
     @skipIf(
         not hasWindowsSelectorEventLoopPolicy,
@@ -196,14 +207,15 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         if L{asyncio.WindowsSelectorEventLoopPolicy} is default.
         """
         set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+        self.addCleanup(lambda: set_event_loop_policy(None))
         reactor = AsyncioSelectorReactor()
         self.assertReactorWorksWithAsyncioFuture(reactor)
-        set_event_loop_policy(None)
 
     def test_seconds(self):
         """L{seconds} should return a plausible epoch time."""
         if hasWindowsSelectorEventLoopPolicy:
             set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+            self.addCleanup(lambda: set_event_loop_policy(None))
         reactor = AsyncioSelectorReactor()
         result = reactor.seconds()
 
@@ -212,8 +224,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
         # less than 2120-01-01
         self.assertLess(result, 4733510400)
-        if hasWindowsSelectorEventLoopPolicy:
-            set_event_loop_policy(None)
 
     def test_delayedCallResetToLater(self):
         """
@@ -221,6 +231,7 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         """
         if hasWindowsSelectorEventLoopPolicy:
             set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+            self.addCleanup(lambda: set_event_loop_policy(None))
 
         reactor = AsyncioSelectorReactor()
 
@@ -237,8 +248,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
         self.assertIsNotNone(timer_called_at[0])
         self.assertGreater(timer_called_at[0] - start_time, 0.4)
-        if hasWindowsSelectorEventLoopPolicy:
-            set_event_loop_policy(None)
 
     def test_delayedCallResetToEarlier(self):
         """
@@ -298,7 +307,6 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
 
 
 class AsyncioSelectorReactorSniffioTests(ReactorBuilder, SynchronousTestCase):
-
     skip = sniffioSkip
 
     def setUp(self):

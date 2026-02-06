@@ -1,1 +1,0 @@
-The server-side HTTP/1.1 chunking implementation no longer performs quadratic work when input arrives in small chunks, preventing CPU exhaustion.

@@ -8,7 +8,6 @@ the code in C{twisted/__init__.py}.
 
 
 import sys
-
 from types import ModuleType
 
 from twisted.trial.unittest import TestCase
@@ -108,7 +107,7 @@ def _makePackages(parent, attributes, result):
     @see: L{_install}.
     """
     attrs = {}
-    for (name, value) in list(attributes.items()):
+    for name, value in list(attributes.items()):
         if parent is None:
             if isinstance(value, dict):
                 module = ModuleType(name)

@@ -10,27 +10,23 @@ Windows Process Management, used with reactor.spawnProcess
 import os
 import sys
 
-# Win32 imports
-import win32api  # type: ignore[import]
-import win32con  # type: ignore[import]
-import win32event  # type: ignore[import]
-import win32file  # type: ignore[import]
-import win32pipe  # type: ignore[import]
-import win32process  # type: ignore[import]
-import win32security  # type: ignore[import]
-
-import pywintypes  # type: ignore[import]
-
 from zope.interface import implementer
-from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
 
-from twisted.python.win32 import quoteArguments
+import pywintypes
 
-from twisted.internet import error
+# Win32 imports
+import win32api
+import win32con
+import win32event
+import win32file
+import win32pipe
+import win32process
+import win32security
 
-from twisted.internet import _pollingfile
+from twisted.internet import _pollingfile, error
 from twisted.internet._baseprocess import BaseProcess
-
+from twisted.internet.interfaces import IConsumer, IProcessTransport, IProducer
+from twisted.python.win32 import quoteArguments
 
 # Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()

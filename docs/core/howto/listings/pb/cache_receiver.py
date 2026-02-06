@@ -4,10 +4,11 @@
 # See LICENSE for details.
 
 
-from twisted.application import service, internet
+import cache_classes
+
+from twisted.application import internet, service
 from twisted.internet import reactor
 from twisted.spread import pb
-import cache_classes
 
 
 class Receiver(pb.Root):

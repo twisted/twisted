@@ -7,16 +7,14 @@ L{twisted.words} support for Instance Messenger.
 """
 
 
-from twisted.internet import defer
-from twisted.internet import error
+from zope.interface import implementer
+
+from twisted.internet import defer, error
 from twisted.python import log
 from twisted.python.failure import Failure
 from twisted.spread import pb
-
-from twisted.words.im.locals import ONLINE, OFFLINE, AWAY
-
 from twisted.words.im import basesupport, interfaces
-from zope.interface import implementer
+from twisted.words.im.locals import AWAY, OFFLINE, ONLINE
 
 
 class TwistedWordsPerson(basesupport.AbstractPerson):

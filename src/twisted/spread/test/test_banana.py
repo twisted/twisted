@@ -6,13 +6,12 @@ import sys
 from functools import partial
 from io import BytesIO
 
-from twisted.trial.unittest import TestCase
-from twisted.spread import banana
+from twisted.internet import main, protocol
+from twisted.internet.testing import StringTransport
 from twisted.python import failure
 from twisted.python.compat import iterbytes
-from twisted.internet import protocol, main
-from twisted.test.proto_helpers import StringTransport
-
+from twisted.spread import banana
+from twisted.trial.unittest import TestCase
 
 _maxint = 9223372036854775807
 
@@ -23,7 +22,7 @@ class MathTests(TestCase):
             list(range(0, 100))
             + list(range(1000, 1100))
             + list(range(1000000, 1000100))
-            + [1024 ** 10]
+            + [1024**10]
         )
         for i in funkylist:
             x = BytesIO()
@@ -168,7 +167,7 @@ class BananaTests(BananaTestBase):
         # base-128 representation.
         bits = bytes * 7
         # The largest number we _should_ be able to encode
-        largest = 2 ** bits - 1
+        largest = 2**bits - 1
         # The smallest number we _shouldn't_ be able to encode
         smallest = largest + 1
         return smallest

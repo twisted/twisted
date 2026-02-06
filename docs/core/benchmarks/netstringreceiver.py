@@ -1,14 +1,15 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import gc
+import math
+import os
+import sys
+import time
+
 from twisted.protocols.test import test_basic
 from twisted.python.compat import range, raw_input
 from twisted.test import proto_helpers
-import math
-import time
-import sys
-import os
-import gc
 
 NETSTRING_POSTFIX = b","
 USAGE = """\
@@ -157,7 +158,7 @@ class NetstringPerformanceTester(PerformanceTester):
             chunks to be checked.
         @type number: C{int}
         """
-        chunkSize = 2 ** number
+        chunkSize = 2**number
         numberOfChunks = chunkSize
         while numberOfChunks:
             self.testCombination(chunkSize, numberOfChunks)

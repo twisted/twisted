@@ -8,8 +8,8 @@ testing purposes.
 
 
 from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
 
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 # Known module-level attributes.
 DEPRECATED_ATTRIBUTE = 42

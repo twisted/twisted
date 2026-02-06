@@ -7,34 +7,29 @@ Logging and metrics infrastructure.
 """
 
 
-from abc import ABC, abstractmethod
-from datetime import datetime
 import sys
 import time
-from typing import Any, BinaryIO, Dict, Optional, cast
 import warnings
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
+from typing import Any, BinaryIO, Dict, Optional, cast
 
 from zope.interface import Interface
 
-from twisted.python import context
-from twisted.python import reflect
-from twisted.python import util
-from twisted.python import failure
-from twisted.python.threadable import synchronize
 from twisted.logger import (
-    Logger as NewLogger,
-    LogLevel as NewLogLevel,
-    STDLibLogObserver as NewSTDLibLogObserver,
     LegacyLogObserverWrapper,
+    Logger as NewLogger,
     LoggingFile,
+    LogLevel as NewLogLevel,
     LogPublisher as NewPublisher,
-    globalLogPublisher as newGlobalLogPublisher,
+    STDLibLogObserver as NewSTDLibLogObserver,
     globalLogBeginner as newGlobalLogBeginner,
+    globalLogPublisher as newGlobalLogPublisher,
 )
-
 from twisted.logger._global import LogBeginner
 from twisted.logger._legacy import publishToNewObserver as _publishNew
-
+from twisted.python import context, failure, reflect, util
+from twisted.python.threadable import synchronize
 
 EventDict = Dict[str, Any]
 
@@ -495,7 +490,9 @@ class FileLogObserver(_GlobalStartStopObserver):
         @return: The number of seconds offset from UTC.  West is positive,
         east is negative.
         """
-        offset = datetime.utcfromtimestamp(when) - datetime.fromtimestamp(when)
+        offset = datetime.fromtimestamp(when, timezone.utc).replace(
+            tzinfo=None
+        ) - datetime.fromtimestamp(when)
         return offset.days * (60 * 60 * 24) + offset.seconds
 
     def formatTime(self, when):
@@ -517,7 +514,9 @@ class FileLogObserver(_GlobalStartStopObserver):
             return datetime.fromtimestamp(when).strftime(self.timeFormat)
 
         tzOffset = -self.getTimezoneOffset(when)
-        when = datetime.utcfromtimestamp(when + tzOffset)
+        when = datetime.fromtimestamp(when + tzOffset, timezone.utc).replace(
+            tzinfo=None
+        )
         tzHour = abs(int(tzOffset / 60 / 60))
         tzMin = abs(int(tzOffset / 60 % 60))
         if tzOffset < 0:

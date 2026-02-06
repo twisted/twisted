@@ -10,6 +10,7 @@ Implementation of RFC2617: HTTP Digest Authentication
 
 
 from zope.interface import implementer
+
 from twisted.cred import credentials
 from twisted.web.iweb import ICredentialFactory
 

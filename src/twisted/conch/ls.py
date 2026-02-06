@@ -4,8 +4,7 @@
 
 import array
 import stat
-
-from time import time, strftime, localtime
+from time import localtime, strftime, time
 
 # Locale-independent month names to use instead of strftime's
 _MONTH_NAMES = dict(

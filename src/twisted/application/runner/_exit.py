@@ -6,11 +6,10 @@
 System exit support.
 """
 
-from enum import IntEnum
-from sys import stdout, stderr, exit as sysexit
 import typing
+from enum import IntEnum
+from sys import exit as sysexit, stderr, stdout
 from typing import Union
-
 
 try:
     import posix as Status

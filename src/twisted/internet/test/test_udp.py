@@ -12,49 +12,23 @@ import socket
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import context
-from twisted.python.log import ILogContext, err
-from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.internet import defer, error
+from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.internet.interfaces import (
-    ILoggingContext,
     IListeningPort,
-    IReactorUDP,
+    ILoggingContext,
     IReactorSocket,
+    IReactorUDP,
 )
-from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.protocol import DatagramProtocol
-
 from twisted.internet.test.connectionmixins import LogObserverMixin, findFreePort
-from twisted.internet import defer, error
-from twisted.test.test_udp import Server, GoodClient
+from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python import context
+from twisted.python.log import ILogContext, err
+from twisted.test.test_udp import GoodClient, Server
+from twisted.test.testutils import skipWithoutIPv6
 from twisted.trial.unittest import SkipTest
-
-
-def _has_ipv6():
-    """Returns True if the system can bind an IPv6 address."""
-    sock = None
-    has_ipv6 = False
-
-    try:
-        sock = socket.socket(socket.AF_INET6)
-        sock.bind(("::1", 0))
-        has_ipv6 = True
-    except OSError:
-        pass
-
-    if sock:
-        sock.close()
-    return has_ipv6
-
-
-HAS_IPV6 = _has_ipv6()
-
-
-def skipWithoutIPv6(f):
-    if not HAS_IPV6:
-        f.skip = "Does not work on systems without IPv6 support."
-    return f
 
 
 class DatagramTransportTestsMixin(LogObserverMixin):
@@ -111,7 +85,6 @@ class DatagramTransportTestsMixin(LogObserverMixin):
         """
 
         class DisconnectingProtocol(DatagramProtocol):
-
             started = False
             stopped = False
             inStartProtocol = False

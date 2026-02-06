@@ -5,17 +5,16 @@
 Shiny new words service maker
 """
 
-import sys
 import socket
+import sys
 from typing import List, Optional, Sequence
 
+from twisted import plugin
 from twisted.application import strports
 from twisted.application.service import MultiService
-from twisted.python import usage
-from twisted import plugin
-
-from twisted.words import iwords, service
 from twisted.cred import checkers, credentials, portal, strcred
+from twisted.python import usage
+from twisted.words import iwords, service
 
 
 class Options(usage.Options, strcred.AuthOptionMixin):

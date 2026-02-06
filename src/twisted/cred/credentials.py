@@ -7,25 +7,26 @@ This module defines L{ICredentials}, an interface for objects that represent
 authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
-
-
-from zope.interface import implementer, Interface
+from __future__ import annotations
 
 import base64
 import hmac
 import random
 import re
 import time
-
 from binascii import hexlify
 from hashlib import md5
+from typing import TYPE_CHECKING
 
+from zope.interface import Attribute, Interface, implementer
+
+from twisted.cred import error
+from twisted.cred._digest import calcHA1, calcHA2, calcResponse
+from twisted.internet.defer import Deferred
+from twisted.python.compat import nativeString, networkString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.randbytes import secureRandom
-from twisted.python.compat import networkString, nativeString
 from twisted.python.versions import Version
-from twisted.cred._digest import calcResponse, calcHA1, calcHA2
-from twisted.cred import error
 
 
 class ICredentials(Interface):
@@ -62,10 +63,25 @@ class IUsernameHashedPassword(ICredentials):
     kind of credential must store the passwords in plaintext (or as
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
-
-    @type username: L{bytes}
-    @ivar username: The username associated with these credentials.
     """
+
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IUsernameHashedPassword does not have any particular requirement
+            upon its constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
+
+    username: bytes = Attribute(
+        """
+        The username associated with these credentials.
+        """
+    )
 
     def checkPassword(password):
         """
@@ -99,18 +115,19 @@ class IUsernamePassword(ICredentials):
     @ivar password: The password associated with these credentials.
     """
 
-    def checkPassword(password):
+    username: bytes
+    password: bytes
+
+    def checkPassword(password: bytes) -> bool | Deferred[bool]:
         """
         Validate these credentials against the correct password.
 
-        @type password: L{bytes}
         @param password: The correct, plaintext password against which to
-        check.
+            check.
 
-        @rtype: C{bool} or L{Deferred}
-        @return: C{True} if the credentials represented by this object match the
-            given password, C{False} if they do not, or a L{Deferred} which will
-            be called back with one of these values.
+        @return: C{True} if the credentials represented by this object match
+            the given password, C{False} if they do not, or a L{Deferred} which
+            will be called back with one of these values.
         """
 
 
@@ -339,7 +356,6 @@ class DigestCredentialFactory:
             int(self._getTime()) - when
             > DigestCredentialFactory.CHALLENGE_LIFETIME_SECS
         ):
-
             raise error.LoginFailed(
                 "Invalid response, incompatible opaque/nonce too old"
             )
@@ -374,7 +390,7 @@ class DigestCredentialFactory:
         response = b" ".join(response.splitlines())
         parts = self._parseparts.findall(response)
         auth = {}
-        for (key, bare, quoted) in parts:
+        for key, bare, quoted in parts:
             value = (quoted or bare).strip()
             auth[nativeString(key.strip())] = value
 
@@ -444,7 +460,6 @@ class CramMD5Credentials:
 
 @implementer(IUsernameHashedPassword)
 class UsernameHashedPassword:
-
     deprecatedModuleAttribute(
         Version("Twisted", 21, 2, 0),
         "Use twisted.cred.credentials.UsernamePassword instead.",
@@ -462,11 +477,19 @@ class UsernameHashedPassword:
 
 @implementer(IUsernamePassword)
 class UsernamePassword:
-    def __init__(self, username, password):
+    """
+    A trivial implementation of L{IUsernamePassword}, containing a username and
+    a password.
+    """
+
+    username: bytes
+    password: bytes
+
+    def __init__(self, username: bytes, password: bytes) -> None:
         self.username = username
         self.password = password
 
-    def checkPassword(self, password):
+    def checkPassword(self, password: bytes) -> bool:
         return self.password == password
 
 

@@ -8,26 +8,24 @@ Tests for L{twisted.application.runner._pidfile}.
 import errno
 from functools import wraps
 from os import getpid, name as SYSTEM_NAME
-from typing import Any, Callable, Optional
+from typing import Any, Callable, NoReturn, Optional
 
 from zope.interface.verify import verifyObject
 
+import twisted.trial.unittest
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
-
+from twisted.trial.unittest import SkipTest
 from ...runner import _pidfile
 from .._pidfile import (
-    IPIDFile,
-    PIDFile,
-    NonePIDFile,
     AlreadyRunningError,
     InvalidPIDFileError,
-    StalePIDFileError,
+    IPIDFile,
+    NonePIDFile,
     NoPIDFound,
+    PIDFile,
+    StalePIDFileError,
 )
-
-import twisted.trial.unittest
-from twisted.trial.unittest import SkipTest
 
 
 def ifPlatformSupported(f: Callable[..., Any]) -> Callable[..., Any]:
@@ -73,7 +71,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
     Tests for L{PIDFile}.
     """
 
-    def filePath(self, content: Optional[bytes] = None) -> FilePath:
+    def filePath(self, content: Optional[bytes] = None) -> FilePath[str]:
         filePath = FilePath(self.mktemp())
         if content is not None:
             filePath.setContent(content)
@@ -140,7 +138,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
         anything other than L{errno.ENOENT}.
         """
 
-        def oops(mode: str = "r") -> FilePath:
+        def oops(mode: str = "r") -> NoReturn:
             raise OSError(errno.EIO, "I/O error")
 
         self.patch(FilePath, "open", oops)

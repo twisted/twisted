@@ -5,8 +5,8 @@
 Chop up shoutcast stream into MP3s and metadata, if available.
 """
 
-from twisted.web import http
 from twisted import copyright
+from twisted.web import http
 
 
 class ShoutcastClient(http.HTTPClient):

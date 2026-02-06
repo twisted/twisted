@@ -14,37 +14,35 @@ This API is currently considered private because it's in early draft form. When
 it has stabilised, it'll be made public.
 """
 
-
 import io
-
 from collections import deque
 from typing import List
 
 from zope.interface import implementer
 
-import priority  # type: ignore[import]
-import h2.config  # type: ignore[import]
-import h2.connection  # type: ignore[import]
-import h2.errors  # type: ignore[import]
-import h2.events  # type: ignore[import]
-import h2.exceptions  # type: ignore[import]
+import h2.config
+import h2.connection
+import h2.errors
+import h2.events
+import h2.exceptions
+import priority
 
+from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
-    IProtocol,
-    ITransport,
     IConsumer,
+    IProtocol,
     IPushProducer,
     ISSLTransport,
+    ITCPTransport,
+    ITransport,
 )
-from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
 from twisted.python.failure import Failure
 from twisted.web.error import ExcessiveBufferingError
-
 
 # This API is currently considered private.
 __all__: List[str] = []
@@ -65,7 +63,7 @@ class H2Connection(Protocol, TimeoutMixin):
     interface between the two objects that allows them to work hand-in-hand here.
 
     @ivar conn: The HTTP/2 connection state machine.
-    @type conn: L{h2.connection.H2Connection}
+    @type conn: C{h2.connection.H2Connection}
 
     @ivar streams: A mapping of stream IDs to L{H2Stream} objects, used to call
         specific methods on streams when events occur.
@@ -146,6 +144,8 @@ class H2Connection(Protocol, TimeoutMixin):
         by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
         to HTTP/2.
         """
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self.conn.initiate_connection()
         self.transport.write(self.conn.data_to_send())
@@ -437,7 +437,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received request.
-        @type event: L{h2.events.RequestReceived}
+        @type event: C{h2.events.RequestReceived}
         """
         stream = H2Stream(
             event.stream_id,
@@ -469,7 +469,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received data.
-        @type event: L{h2.events.DataReceived}
+        @type event: C{h2.events.DataReceived}
         """
         stream = self.streams[event.stream_id]
         stream.receiveDataChunk(event.data, event.flow_controlled_length)
@@ -481,7 +481,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             completed stream.
-        @type event: L{h2.events.StreamEnded}
+        @type event: C{h2.events.StreamEnded}
         """
         stream = self.streams[event.stream_id]
         stream.requestComplete()
@@ -492,7 +492,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             reset stream.
-        @type event: L{h2.events.StreamReset}
+        @type event: C{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
         stream.connectionLost(
@@ -506,7 +506,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             stream reprioritization.
-        @type event: L{h2.events.PriorityUpdated}
+        @type event: C{h2.events.PriorityUpdated}
         """
         try:
             self.priority.reprioritize(
@@ -659,7 +659,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             flow control window change.
-        @type event: L{h2.events.WindowUpdated}
+        @type event: C{h2.events.WindowUpdated}
         """
         streamID = event.stream_id
 
@@ -974,7 +974,7 @@ class H2Stream:
                 self._request.gotLength(None)
 
         self._request.parseCookies()
-        expectContinue = self._request.requestHeaders.getRawHeaders(b"expect")
+        expectContinue = self._request.requestHeaders.getRawHeaders(b"Expect")
         if expectContinue and expectContinue[0].lower() == b"100-continue":
             self._send100Continue()
 
@@ -1075,10 +1075,15 @@ class H2Stream:
         @type reason: L{bytes}
 
         @param headers: The HTTP response headers.
-        @type headers: Any iterable of two-tuples of L{bytes}, representing header
-            names and header values.
+        @type headers: L{twisted.web.http_headers.Headers}
         """
-        self._conn.writeHeaders(version, code, reason, headers, self.streamID)
+        self._conn.writeHeaders(
+            version,
+            code,
+            reason,
+            [(k, v) for (k, values) in headers.getAllRawHeaders() for v in values],
+            self.streamID,
+        )
 
     def requestDone(self, request):
         """

@@ -6,11 +6,10 @@ Tests for L{twisted.application.strports}.
 """
 
 
-from twisted.trial.unittest import TestCase
-from twisted.application import strports
-from twisted.application import internet
-from twisted.internet.protocol import Factory
+from twisted.application import internet, strports
 from twisted.internet.endpoints import TCP4ServerEndpoint
+from twisted.internet.protocol import Factory
+from twisted.trial.unittest import TestCase
 
 
 class ServiceTests(TestCase):

@@ -9,28 +9,26 @@ Test cases for twisted.names.
 import copy
 import operator
 import socket
-
-from io import BytesIO
 from functools import partial, reduce
+from io import BytesIO
 from struct import pack
 
-from twisted.trial import unittest
-
-from twisted.internet import reactor, defer, error
+from twisted.internet import defer, error, reactor
 from twisted.internet.defer import succeed
-from twisted.names import client, server, common, authority, dns
-from twisted.names.dns import SOA, Message, RRHeader, Record_A, Record_SOA, Query
-from twisted.names.error import DomainError
-from twisted.names.client import Resolver
-from twisted.names.secondary import SecondaryAuthorityService, SecondaryAuthority
-from twisted.python.compat import nativeString
-from twisted.python.filepath import FilePath
-
-from twisted.test.proto_helpers import (
-    StringTransport,
+from twisted.internet.testing import (
     MemoryReactorClock,
+    StringTransport,
     waitUntilAllDisconnected,
 )
+from twisted.names import authority, client, common, dns, server
+from twisted.names.authority import BindAuthority
+from twisted.names.client import Resolver
+from twisted.names.dns import SOA, Message, Query, Record_A, Record_SOA, RRHeader
+from twisted.names.error import DomainError
+from twisted.names.secondary import SecondaryAuthority, SecondaryAuthorityService
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
+from twisted.trial import unittest
 
 
 def justPayload(results):
@@ -1214,23 +1212,58 @@ class BindAuthorityTests(unittest.TestCase):
     Tests for L{twisted.names.authority.BindAuthority}.
     """
 
-    def loadBindString(self, s):
+    def loadBindString(self, s: bytes, asText: bool = True) -> authority.BindAuthority:
         """
         Create a new L{twisted.names.authority.BindAuthority} from C{s}.
 
         @param s: A string with BIND zone data.
-        @type s: bytes
+        @type s: L{bytes}
+
+        @param asText: If True, treat path as text file, else as binary.
+        @type asText: L{bool}
 
         @return: a new bind authority
         @rtype: L{twisted.names.authority.BindAuthority}
         """
-        fp = FilePath(self.mktemp().encode("ascii"))
+        if asText:
+            path = self.mktemp()
+        else:
+            path = FilePath(self.mktemp()).asBytesMode().path
+        # Convert path to FilePath which handles both str and bytes
+        fp = FilePath(path)
         fp.setContent(s)
 
         return authority.BindAuthority(fp.path)
 
-    def setUp(self):
-        self.auth = self.loadBindString(sampleBindZone)
+    def setUp(self) -> None:
+        self.auth = self.loadBindString(sampleBindZone, asText=True)
+
+    def test_loadBindZonePathAsString(self) -> None:
+        """
+        L{BindAuthority} loads a BIND zone with filepath as type string.
+        """
+        authority = self.loadBindString(sampleBindZone, asText=True)
+        self.assertIsInstance(
+            authority, BindAuthority, "Loaded object is not a BindAuthority"
+        )
+
+        self.assertTrue(authority.records, "No records were loaded from the BIND zone")
+
+        self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
+
+    def test_loadBindZonePathAsBytes(self) -> None:
+        """
+        L{BindAuthority} loads a BIND zone with filepath as type bytes.
+        """
+        authority = self.loadBindString(sampleBindZone, asText=False)
+
+        self.assertIsInstance(
+            authority, BindAuthority, "Loaded object is not a BindAuthority"
+        )
+
+        self.assertTrue(authority.records, "No records were loaded from the BIND zone")
+
+        self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
 
     def test_ttl(self):
         """

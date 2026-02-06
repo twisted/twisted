@@ -1,10 +1,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-from twisted.trial import unittest
-
-from twisted.python import components
-from twisted.pair import ethernet, raw
 from zope.interface import implementer
+
+from twisted.pair import ethernet, raw
+from twisted.python import components
+from twisted.trial import unittest
 
 
 @implementer(raw.IRawPacketProtocol)
@@ -232,7 +232,7 @@ class EthernetTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = ethernet.EthernetProtocol()
         try:
-            e.addProto(2 ** 16, MyProtocol([]))
+            e.addProto(2**16, MyProtocol([]))
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass
@@ -245,7 +245,7 @@ class EthernetTests(unittest.TestCase):
         """Adding a protocol with a number >=2**16 raises an exception."""
         e = ethernet.EthernetProtocol()
         try:
-            e.addProto(2 ** 16 + 1, MyProtocol([]))
+            e.addProto(2**16 + 1, MyProtocol([]))
         except TypeError as e:
             if e.args == ("Added protocol must fit in 16 bits",):
                 pass
