@@ -50,7 +50,7 @@ _defaultEventLoop.close()
 
 sniffio = requireModule("sniffio")
 if sniffio:
-    sniffioSkip = False
+    sniffioSkip = None
 else:
     sniffioSkip = "sniffio is not available"
 
