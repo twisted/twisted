@@ -6,7 +6,6 @@
 asyncio-based reactor implementation.
 """
 
-
 import errno
 import sys
 from asyncio import (
@@ -78,10 +77,10 @@ class AsyncioSelectorReactor(PosixReactorBase):
         if eventloop is None:
             try:
                 _eventloop: AbstractEventLoop = get_running_loop()
-                if current_async_library_cvar is not None:
-                    _eventloop.set_task_factory(factory=sniffioTaskFactory)
             except RuntimeError:
                 _eventloop = new_event_loop()
+            if current_async_library_cvar is not None:
+                _eventloop.set_task_factory(factory=sniffioTaskFactory)
             set_event_loop(_eventloop)
         else:
             _eventloop = eventloop

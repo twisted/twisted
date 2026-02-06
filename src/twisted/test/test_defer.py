@@ -4059,7 +4059,7 @@ class InlineCallbackTests(unittest.SynchronousTestCase):
         self.assertIsNone(funcDWeakRef())
 
 
-class CoroutineSniffioTests(unittest.TestCase):
+class CoroutineSniffioTests(unittest.SynchronousTestCase):
     skip = sniffioSkip
 
     def testNotFoundWhenOutside(self) -> None:
