@@ -121,9 +121,6 @@ class WorkerProtocol(AMP):
     ) -> RunResult:
         """
         Process the results of reporting test outcomes to the manager.
-
-        For any reporting failures, attempt fallback error reporting
-        sequentially, logging locally on failure.
         """
         allSucceeded = True
         for success, result in results:
@@ -147,14 +144,13 @@ class WorkerProtocol(AMP):
             try:
                 await self._result.addErrorFallible(
                     testCase,
-                    # The DeferredList type annotation assumes all results
-                    # succeed
+                    # The DeferredList type annotation assumes all results succeed
                     result,  # type: ignore[arg-type]
                 )
             except BaseException:
                 # We failed to report the failure to the peer.  It doesn't
-                # seem very likely that reporting this new failure to the
-                # peer will succeed so just log it locally.
+                # seem very likely that reporting this new failure to the peer
+                # will succeed so just log it locally.
                 self.logger.failure(
                     "Additionally, reporting the reporting failure failed."
                 )
