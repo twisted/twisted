@@ -28,7 +28,7 @@ from zope.interface import implementer
 from attrs import frozen
 from typing_extensions import TypedDict
 
-from twisted.internet.defer import Deferred, DeferredList, succeed
+from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import ProcessDone
 from twisted.internet.interfaces import IAddress, ITransport
 from twisted.internet.protocol import ProcessProtocol
@@ -107,14 +107,18 @@ class WorkerProtocol(AMP):
             suite.run(self._result)
 
         d: Deferred[object] = DeferredList(results, consumeErrors=True)
-        d.addCallback(self._processRunResults, testCase)
+        d.addCallback(
+            lambda results: Deferred.fromCoroutine(
+                self._processRunResults(results, testCase)
+            )
+        )
         return d  # type: ignore[return-value]
 
-    def _processRunResults(
+    async def _processRunResults(
         self,
         results: list,
         testCase: str,
-    ) -> "Deferred[RunResult]":
+    ) -> RunResult:
         """
         Process the results of reporting test outcomes to the manager.
 
@@ -122,8 +126,6 @@ class WorkerProtocol(AMP):
         sequentially, logging locally on failure.
         """
         allSucceeded = True
-        chain: Deferred[object] = succeed(None)
-
         for success, result in results:
             if success:
                 # Nothing to do here, proceed to the next result.
@@ -142,29 +144,22 @@ class WorkerProtocol(AMP):
                 failure=result,  # type: ignore[arg-type]
                 id=testCase,
             )
-
-            chain.addCallback(
-                lambda _, r=result: Deferred.fromCoroutine(
-                    self._result.addErrorFallible(
-                        testCase,
-                        # The DeferredList type annotation assumes all
-                        # results succeed
-                        r,  # type: ignore[arg-type]
-                    )
+            try:
+                await self._result.addErrorFallible(
+                    testCase,
+                    # The DeferredList type annotation assumes all results
+                    # succeed
+                    result,  # type: ignore[arg-type]
                 )
-            )
-            chain.addErrback(
+            except BaseException:
                 # We failed to report the failure to the peer.  It doesn't
                 # seem very likely that reporting this new failure to the
                 # peer will succeed so just log it locally.
-                lambda f: self.logger.failure(
-                    "Additionally, reporting the reporting failure failed.",
-                    failure=f,
+                self.logger.failure(
+                    "Additionally, reporting the reporting failure failed."
                 )
-            )
 
-        chain.addCallback(lambda _: {"success": allSucceeded})
-        return chain  # type: ignore[return-value]
+        return {"success": allSucceeded}
 
     @workercommands.Start.responder
     def start(self, directory):
