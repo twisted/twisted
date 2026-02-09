@@ -354,18 +354,14 @@ TCP (IPv6)
 
    For example, ``tcp6:port=80:interface=2001\:0DB8\:f00e\:eb00\:\:1``.
 
-SSL
-   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``extraCertChain``, ``sslmethod``, and ``dhParameters``.
-   ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
-   ``privateKey`` gives a filesystem path to a private key (PEM format).
-   ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
-   ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_3_METHOD``).
-   ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
-   Since the this is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
-   Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
-   Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
+TLS
+    The ``tls:`` string endpoint is a wrapper, that wraps a TCP endpoint.
+    By default, it wraps ``tcp:443``.
+    Its first argument is a path to a directory where you keep your PEM-format certificate and private key files.
+    It will automatically match keys, certificates, and intermediate certificate bundles up with each other for you, and determine which ones to use based on the server name identification sent by the client.
+    The remaining arguments are all arguments to the ``tcp`` endpoint type.
 
-   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
+    For example, ``tls:/etc/ssl/private:443:interface=1.2.3.4``.
 
 UNIX
    Supported arguments: ``address``, ``mode``, ``backlog``, ``lockfile``.
@@ -393,3 +389,20 @@ PROXY
   For example, ``haproxy:tcp:port=80:interface=192.168.1.1`` or ``haproxy:ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.
 
   The PROXY protocol provides a way for load balancers and reverse proxies to send down the real IP of a connection's source and destination without relying on X-Forwarded-For headers. A Twisted service using this endpoint wrapper must run behind a service that sends valid PROXY protocol headers. For more on the protocol see `the formal specification <http://www.haproxy.org/download/1.5/doc/proxy-protocol.txt>`_. Both version one and two of the protocol are currently supported.
+
+SSL (deprecated)
+   The ``ssl:`` string endpoint wraps the ``tcp:`` endpoint type, and allows you to specify one SSL certificate manually.
+   It's much less flexible and more difficult to configure than the ``tls:`` type, and is thus deprecated.
+   You probably want to use that one.
+
+   All TCP arguments are supported, plus: ``certKey``, ``privateKey``, ``extraCertChain``, ``sslmethod``, and ``dhParameters``.
+   ``certKey`` (optional, defaults to the value of privateKey) gives a filesystem path to a certificate (PEM format).
+   ``privateKey`` gives a filesystem path to a private key (PEM format).
+   ``extraCertChain`` gives a filesystem path to a file with one or more concatenated certificates in PEM format that establish the chain from a root CA to the one that signed your certificate.
+   ``sslmethod`` indicates which SSL/TLS version to use (a value like ``TLSv1_3_METHOD``).
+   ``dhParameters`` gives a filesystem path to a file in PEM format with parameters that are required for Diffie-Hellman key exchange.
+   Since the this is required for the ``DHE``-family of ciphers that offer perfect forward secrecy (PFS), it is recommended to specify one.
+   Such a file can be created using ``openssl dhparam -out dh_param_1024.pem -2 1024``.
+   Please refer to `OpenSSL's documentation on dhparam <http://www.openssl.org/docs/apps/dhparam.html>`_ for further details.
+
+   For example, ``ssl:port=443:privateKey=/etc/ssl/server.pem:extraCertChain=/etc/ssl/chain.pem:sslmethod=SSLv3_METHOD:dhParameters=dh_param_1024.pem``.

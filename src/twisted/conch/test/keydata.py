@@ -105,6 +105,18 @@ ECDatanistp256 = {
     "curve": b"ecdsa-sha2-nistp256",
 }
 
+SKECDatanistp256 = {
+    "x": int(
+        "239399367768747020111880335553299826848360860410053166887934464"
+        "83115637049597"
+    ),
+    "y": int(
+        "114119006635761413192818806701564910719235784173643448381780025"
+        "223832906554748"
+    ),
+    "curve": b"sk-ecdsa-sha2-nistp256@openssh.com",
+}
+
 ECDatanistp384 = {
     "privateValue": int(
         "280814107134858470598753916394807521398239633534281"
@@ -146,6 +158,17 @@ Ed25519Data = {
     "a": (
         b"\xf1\x16\xd1\x15J\x1e\x15\x0e\x19^\x19F\xb5\xf2D\r\xb2R\xa0\xae*k"
         b"#\x13sE\xfd@\xd9W{\x8b"
+    ),
+    "k": (
+        b"7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U"
+        b"\xbb\xc9DX"
+    ),
+}
+
+SKEd25519Data = {
+    "a": (
+        b"\x08}'U\xd2i\x04\x11\xea\x01~+\x165iRM\xdd\xe6R\x7f\xd3\xaf\\\xa8p"
+        b"\xa0LL\xe5\x8a\xa0"
     ),
     "k": (
         b"7/%\xda\x8d\xd4\xa8\x9ax|a\xf0\x98\x01\xc6\xf4^mg\x05i17Li\r\x05U"
@@ -213,6 +236,30 @@ publicECDSA_openssh = (
     b"ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABB"
     b"BKimX1DZ7+Qj0SpfePMbo1pb6yGkAb5l7duC1l855yD7tEfQfqk7bc7v46We1hLMyz6ObUBY"
     b"gkN/34n42F4vpeA= comment"
+)
+
+publicSKECDSA_openssh = (
+    b"sk-ecdsa-sha2-nistp256@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3"
+    b"BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBDTthidmBSzlQiO8aZPfLmUDOS2TSRevW8IrHPK"
+    b"IhYj9/E0RnTyvPIB1eWQx4rQl5iO1mihuBz+u4LkjwVEU3XwAAAAUc3NoOmVjZHNhLWZpZG8y"
+    b"LXRlc3Q= comment"
+)
+
+publicSKEd25519_openssh = (
+    b"sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
+    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
+)
+
+publicSKECDSA_cert_openssh = (
+    b"sk-ecdsa-sha2-nistp256-cert-v01@openssh.com AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3"
+    b"BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBDTthidmBSzlQiO8aZPfLmUDOS2TSRevW8IrHPK"
+    b"IhYj9/E0RnTyvPIB1eWQx4rQl5iO1mihuBz+u4LkjwVEU3XwAAAAUc3NoOmVjZHNhLWZpZG8y"
+    b"LXRlc3Q= comment"
+)
+
+publicSKEd25519_cert_openssh = (
+    b"sk-ssh-ed25519-cert-v01@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIA"
+    b"h9J1XSaQQR6gF+KxY1aVJN3eZSf9OvXKhwoExM5YqgAAAABHNzaDo= comment"
 )
 
 privateECDSA_openssh = b"""-----BEGIN EC PRIVATE KEY-----

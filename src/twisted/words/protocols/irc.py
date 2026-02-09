@@ -2851,7 +2851,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
 
 
 class DccSendFactory(protocol.Factory):
-    protocol = DccSendProtocol  # type: ignore[assignment]
+    protocol = DccSendProtocol
 
     def __init__(self, file):
         self.file = file
@@ -2963,7 +2963,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
 
 class DccChatFactory(protocol.ClientFactory):
-    protocol = DccChat  # type: ignore[assignment]
+    protocol = DccChat
     noisy = False
 
     def __init__(self, client, queryData):

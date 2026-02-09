@@ -1183,7 +1183,7 @@ class ForwardTraceBackTests(SynchronousTestCase):
         Note that the previous test is testing the simple case, and this one is
         testing the deep recursion case.
 
-        That case needs specific code in failure.py to accomodate to stack
+        That case needs specific code in failure.py to accommodate to stack
         breakage introduced by throwExceptionIntoGenerator.
 
         Hence we keep the two tests in order to sort out which code we
@@ -1553,7 +1553,7 @@ class CancellationTests(SynchronousTestCase):
         if firstDeferred:
             firstDeferred.callback(1)
         d.cancel()
-        self.assertEquals(results, [4320])
+        self.assertEqual(results, [4320])
 
     def test_ErrorToSuccessTranslation(self):
         self.doErrorToSuccessTranslation(CancellationTestsStackedType.NOT_STACKED)

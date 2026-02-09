@@ -107,11 +107,12 @@ import math
 import os
 import re
 import tempfile
-import time
 import warnings
+from collections import defaultdict
 from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
+from time import gmtime, time
 from typing import (
     AnyStr,
     Callable,
@@ -134,8 +135,13 @@ from incremental import Version
 from twisted.internet import address, interfaces, protocol
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IAddress, IDelayedCall, IProtocol, IReactorTime
-from twisted.internet.protocol import Protocol
+from twisted.internet.interfaces import (
+    IAddress,
+    IDelayedCall,
+    IProtocol,
+    IReactorTime,
+    ITCPTransport,
+)
 from twisted.logger import Logger
 from twisted.protocols import basic, policies
 from twisted.python import log
@@ -223,8 +229,7 @@ responses = RESPONSES
 
 # datetime parsing and formatting
 weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-monthname = [
-    None,
+_months = [
     "Jan",
     "Feb",
     "Mar",
@@ -238,22 +243,25 @@ monthname = [
     "Nov",
     "Dec",
 ]
+monthname = [None] + _months
+_weekdaynameBytes = [s.encode("ascii") for s in weekdayname]
+_monthnameBytes = [None] + [s.encode("ascii") for s in _months]
 weekdayname_lower = [name.lower() for name in weekdayname]
 monthname_lower = [name and name.lower() for name in monthname]
 
 
 def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
     """
-    Parse an HTTP request line, which looks like:
+    Parse an HTTP request line, which looks like::
 
         GET /foo/bar HTTP/1.1
 
     This function attempts to validate the well-formedness of
-    the line. RFC 9112 section 3 provides this ABNF:
+    the line. RFC 9112 section 3 provides this ABNF::
 
         request-line   = method SP request-target SP HTTP-version
 
-    We allow any method that is a valid token:
+    We allow any method that is a valid token::
 
         method         = token
         token          = 1*tchar
@@ -264,7 +272,7 @@ def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
     We allow any non-empty request-target that contains only printable
     ASCII characters (no whitespace).
 
-    The RFC defines HTTP-version like this:
+    The RFC defines HTTP-version like this::
 
         HTTP-version  = HTTP-name "/" DIGIT "." DIGIT
         HTTP-name     = %s"HTTP"
@@ -275,7 +283,7 @@ def _parseRequestLine(line: bytes) -> tuple[bytes, bytes, bytes]:
 
     @returns: C{(method, request, version)} three-tuple
 
-    @raises: L{ValueError} when malformed
+    @raises ValueError: when malformed
     """
     method, request, version = line.split(b" ")
 
@@ -315,7 +323,7 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     """
     Parse the content of a multipart/form-data request.
     """
-    result = {}
+    result = defaultdict(list)
     multiPartHeaders = b"MIME-Version: 1.0\r\n" + b"Content-Type: " + ctype + b"\r\n"
     msg = message_from_bytes(multiPartHeaders + content)
     if not msg.is_multipart():
@@ -331,7 +339,7 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
         if not name:
             continue
         payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
-        result[name.encode("utf8")] = [payload]
+        result[name.encode("utf8")].append(payload)
     return result
 
 
@@ -397,14 +405,18 @@ def datetimeToString(msSinceEpoch=None):
 
     @rtype: C{bytes}
     """
-    if msSinceEpoch == None:
-        msSinceEpoch = time.time()
-    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
-    s = networkString(
-        "%s, %02d %3s %4d %02d:%02d:%02d GMT"
-        % (weekdayname[wd], day, monthname[month], year, hh, mm, ss)
+    year, month, day, hh, mm, ss, wd, _, _ = (
+        gmtime() if msSinceEpoch is None else gmtime(msSinceEpoch)
     )
-    return s
+    return b"%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
+        _weekdaynameBytes[wd],
+        day,
+        _monthnameBytes[month],
+        year,
+        hh,
+        mm,
+        ss,
+    )
 
 
 def datetimeToLogString(msSinceEpoch=None):
@@ -414,8 +426,9 @@ def datetimeToLogString(msSinceEpoch=None):
     @rtype: C{str}
     """
     if msSinceEpoch == None:
-        msSinceEpoch = time.time()
-    year, month, day, hh, mm, ss, wd, y, z = time.gmtime(msSinceEpoch)
+        # This code path is apparently never used in practice inside Twisted.
+        msSinceEpoch = time()  # pragma: no cover
+    year, month, day, hh, mm, ss, wd, y, z = gmtime(msSinceEpoch)
     s = "[%02d/%3s/%4d:%02d:%02d:%02d +0000]" % (
         day,
         monthname[month],
@@ -908,17 +921,26 @@ class Request:
     etag = None
     lastModified = None
     args = None
-    path = None
+    path: bytes = None  # type:ignore[assignment]
     content = None
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
+    _parsePOSTFormSubmission: bool
 
-    def __init__(self, channel: HTTPChannel, queued: object = _QUEUED_SENTINEL) -> None:
+    def __init__(
+        self,
+        channel: HTTPChannel,
+        queued: object = _QUEUED_SENTINEL,
+        parsePOSTFormSubmission: bool = True,
+    ) -> None:
         """
         @param channel: the channel we're connected to.
         @param queued: (deprecated) are we in the request queue, or can we
             start writing to the transport?
+        @param parsePOSTFormSubmission: If C{True}, the default, parse MIME multipart and
+            URL-encoded body uploads into C{request.args}. This can use large
+            amounts of memory for large uploads.
         """
         self.notifications: List[Deferred[None]] = []
         self.channel = channel
@@ -939,6 +961,7 @@ class Request:
             queued = False
 
         self.queued = queued
+        self._parsePOSTFormSubmission = parsePOSTFormSubmission
 
     def _cleanup(self):
         """
@@ -1056,7 +1079,12 @@ class Request:
         if ctype is not None:
             ctype = ctype[0]
 
-        if self.method == b"POST" and ctype and clength:
+        if (
+            self.method == b"POST"
+            and ctype
+            and clength
+            and self._parsePOSTFormSubmission
+        ):
             mfd = b"multipart/form-data"
             key = _parseContentType(ctype)
             if key == b"application/x-www-form-urlencoded":
@@ -1349,10 +1377,9 @@ class Request:
             other than HTTP (and HTTPS) requests
         @type httpOnly: L{bool}
 
-        @param sameSite: One of L{None} (default), C{'lax'} or C{'strict'}.
-            Direct browsers not to send this cookie on cross-origin requests.
-            Please see:
-            U{https://tools.ietf.org/html/draft-west-first-party-cookies-07}
+        @param sameSite: One of L{None} (default), C{'lax'}, C{'none'} or C{'strict'}.
+        Direct browsers not to send this cookie on cross-origin requests.
+        See: U{https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value}
         @type sameSite: L{None}, L{bytes} or L{str}
 
         @raise ValueError: If the value for C{sameSite} is not supported.
@@ -1403,7 +1430,15 @@ class Request:
             cookie = cookie + b"; HttpOnly"
         if sameSite:
             sameSite = _ensureBytes(sameSite).lower()
-            if sameSite not in [b"lax", b"strict"]:
+            # See more info about sameSite usage here
+            # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+            if not secure and sameSite == b"none":
+                raise ValueError(
+                    "Invalid value for sameSite: "
+                    + repr(sameSite)
+                    + '. Missing the "secure" attribute'
+                )
+            if sameSite not in [b"lax", b"strict", b"none"]:
                 raise ValueError("Invalid value for sameSite: " + repr(sameSite))
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
@@ -1793,6 +1828,8 @@ class _IdentityTransferDecoder:
         which were delivered to this protocol which came after the terminal
         chunk.
     """
+
+    __slots__ = ["contentLength", "dataCallback", "finishCallback"]
 
     def __init__(self, contentLength, dataCallback, finishCallback):
         self.contentLength = contentLength
@@ -2290,7 +2327,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     totalHeadersSize = 16384
     abortTimeout = 15
 
-    length = 0
+    length: Optional[int] = 0
     persistent = 1
     __header = b""
     __first_line = 1
@@ -2317,6 +2354,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._transferDecoder = None
 
     def connectionMade(self):
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
         self._networkProducer = interfaces.IPushProducer(
             self.transport, _NoPushProducer()
@@ -2397,6 +2436,14 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._dataBuffer.append(data)
         self.allContentReceived()
 
+    def _failChooseTransferDecoder(self) -> bool:
+        """
+        Utility to indicate failure to choose a decoder.
+        """
+        self._respondToBadRequestAndDisconnect()
+        self.length = None
+        return False
+
     def _maybeChooseTransferDecoder(self, header, data):
         """
         If the provided header is C{content-length} or
@@ -2404,20 +2451,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         Returns L{True} if the request can proceed and L{False} if not.
         """
-
-        def fail():
-            self._respondToBadRequestAndDisconnect()
-            self.length = None
-            return False
-
         # Can this header determine the length?
         if header == b"Content-Length":
             if not data.isdigit():
-                return fail()
-            try:
-                length = int(data)
-            except ValueError:
-                return fail()
+                return self._failChooseTransferDecoder()
+            length = int(data)
             newTransferDecoder = _IdentityTransferDecoder(
                 length, self.requests[-1].handleContentChunk, self._finishRequestBody
             )
@@ -2432,13 +2470,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             elif data.lower() == b"identity":
                 return True
             else:
-                return fail()
+                return self._failChooseTransferDecoder()
         else:
             # It's not a length related header, so exit
             return True
 
         if self._transferDecoder is not None:
-            return fail()
+            return self._failChooseTransferDecoder()
         else:
             self.length = length
             self._transferDecoder = newTransferDecoder
@@ -2514,6 +2552,29 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         req = self.requests[-1]
         req.requestReceived(command, path, version)
 
+    def _protocolUpgradeForWebsockets(self, protocol: IProtocol) -> None:
+        """
+        Monkeypatch the C{dataReceived} and C{connectionLost} methods on this
+        L{HTTPChannel} to deliver data to a websocket protocol implementation.
+
+        This API is used by Twisted's own websocket implementation in
+        L{twisted.web.websocket} and is tested with the same, but is
+        intentionally NOT publicly exposed yet, and would need to be tested for
+        a bunch of additional edge cases (in particular, being invoked in other
+        parts of the request lifecycle and delivering sensible errors) if it
+        were going to be.
+
+        @param protocol: The byte-level protocol implementing a websocket
+            transport, which will fully handle all delivered data for this
+            channel.
+        """
+        self.dataReceived = protocol.dataReceived  # type:ignore[method-assign]
+        self.connectionLost = protocol.connectionLost  # type:ignore[method-assign]
+        assert (
+            self.transport is not None
+        ), "websocket upgraded attempted on disconnected HTTP channel"
+        protocol.makeConnection(self.transport)
+
     def rawDataReceived(self, data: bytes) -> None:
         """
         This is called when this HTTP/1.1 parser is in raw mode rather than
@@ -2536,7 +2597,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             L{HTTPChannel} from a custom data source, call C{dataReceived} on
             it directly.
 
-        @see: L{LineReceive.rawDataReceived}
+        @see: L{LineReceiver.rawDataReceived}
         """
         if self._handlingRequest:
             self._dataBuffer.append(data)
@@ -3053,16 +3114,15 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
     A proxy object that wraps one of the HTTP protocol objects, and switches
     between them depending on TLS negotiated protocol.
 
-    @ivar _negotiatedProtocol: The protocol negotiated with ALPN or NPN, if
-        any.
+    @ivar _negotiatedProtocol: The protocol negotiated with ALPN, if any.
     @type _negotiatedProtocol: Either a bytestring containing the ALPN token
         for the negotiated protocol, or L{None} if no protocol has yet been
         negotiated.
 
     @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
-        is backing this object. By default this is a L{HTTPChannel}, but if a
+        is backing this object.  By default this is a L{HTTPChannel}, but if a
         HTTP protocol upgrade takes place this may be a different channel
-        object. Must implement L{IProtocol}.
+        object.  Must implement L{IProtocol}.
     @type _channel: L{HTTPChannel}
 
     @ivar _requestFactory: A callable to use to build L{IRequest} objects.
@@ -3237,7 +3297,9 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         return self._channel.dataReceived(data)
 
 
-def _genericHTTPChannelProtocolFactory(self):
+def _genericHTTPChannelProtocolFactory(
+    self: HTTPFactory,
+) -> _GenericHTTPChannelProtocol:
     """
     Returns an appropriately initialized _GenericHTTPChannelProtocol.
     """
@@ -3259,7 +3321,7 @@ class _MinimalLogFile(TypingProtocol):
 value: type[_MinimalLogFile] = TextIOWrapper
 
 
-class HTTPFactory(protocol.ServerFactory):
+class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
     """
     Factory for HTTP server.
 
@@ -3286,7 +3348,7 @@ class HTTPFactory(protocol.ServerFactory):
     # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
     # to a Protocol, instead of a concrete Protocol object, as expected in
     # the protocol.Factory interface
-    protocol = _genericHTTPChannelProtocolFactory  # type: ignore[assignment]
+    protocol = _genericHTTPChannelProtocolFactory
 
     logPath = None
     _logFile: _MinimalLogFile | None = None
@@ -3372,8 +3434,10 @@ class HTTPFactory(protocol.ServerFactory):
         self._logDateTime = datetimeToLogString(self.reactor.seconds())
         self._logDateTimeCall = self.reactor.callLater(1, self._updateLogDateTime)
 
-    def buildProtocol(self, addr: IAddress) -> Protocol | None:
-        p = protocol.ServerFactory.buildProtocol(self, addr)
+    def buildProtocol(
+        self, addr: IAddress | None
+    ) -> _GenericHTTPChannelProtocol | None:
+        p = super().buildProtocol(addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts
         # occur on the same reactor as the one we're using here. This could

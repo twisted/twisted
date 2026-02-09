@@ -8,9 +8,7 @@ import io
 import pickle
 import sys
 import textwrap
-from typing import Any, Callable, List, Tuple
-
-from typing_extensions import NoReturn
+from typing import Any, Callable, List, NoReturn, Tuple
 
 # Twisted Imports
 from twisted.persisted import aot, crefutil, styles

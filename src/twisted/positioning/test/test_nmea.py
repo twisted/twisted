@@ -7,12 +7,11 @@ from __future__ import annotations
 
 import datetime
 from operator import attrgetter
-from typing import Callable, Iterable, TypedDict
+from typing import Callable, Iterable, Literal, Protocol, TypedDict
 
 from zope.interface import implementer
 
 from constantly import NamedConstant
-from typing_extensions import Literal, Protocol
 
 from twisted.positioning import base, ipositioning, nmea
 from twisted.positioning.base import Angles

@@ -218,6 +218,18 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.callbackResults, (("hello",), {}))
         self.assertEqual(self.callback2Results, (("hello",), {}))
 
+    def test_callbacksAttributeDeprecated(self) -> None:
+        deferred: Deferred[str] = Deferred()
+        deferred.callbacks
+
+        warnings = self.flushWarnings()
+        self.assertEqual(1, len(warnings))
+        self.assertIs(DeprecationWarning, warnings[0]["category"])
+        self.assertIn(
+            "twisted.internet.defer.Deferred.callbacks was deprecated in Twisted",
+            warnings[0]["message"],
+        )
+
     def test_addCallbacksNoneErrback(self) -> None:
         """
         If given None for an errback, addCallbacks uses a pass-through.
@@ -657,7 +669,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         d2.unpause()
         self.assertIsNotNone(self.callbackResults, "Should have been called now")
         assert self.callbackResults is not None, "make that legible to the type checker"
-        self.assertEquals(
+        self.assertEqual(
             self.callbackResults[0][0],
             2,
             "Result should have been from second deferred:{}".format(

@@ -7,10 +7,14 @@ are ssh-userauth and ssh-connection.
 
 Maintainer: Paul Swartz
 """
+from __future__ import annotations
 
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from twisted.logger import Logger
+
+if TYPE_CHECKING:
+    from twisted.conch.ssh.transport import SSHTransportBase
 
 
 class SSHService:
@@ -18,7 +22,7 @@ class SSHService:
     name: bytes = None  # type:ignore[assignment]
 
     protocolMessages: Dict[int, str] = {}  # map #'s -> protocol names
-    transport = None  # gets set later
+    transport: SSHTransportBase | None = None  # gets set later
 
     _log = Logger()
 

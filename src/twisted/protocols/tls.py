@@ -42,19 +42,16 @@ from typing import Callable, Iterable, Optional, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
-from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroReturnError
+from OpenSSL.SSL import Error, SysCallError, WantReadError, ZeroReturnError
 
 from twisted.internet._producer_helpers import _PullToPush
-from twisted.internet._sslverify import _setAcceptableProtocols
 from twisted.internet.interfaces import (
     IDelayedCall,
     IHandshakeListener,
     ILoggingContext,
     INegotiated,
-    IOpenSSLClientConnectionCreator,
-    IOpenSSLServerConnectionCreator,
     IProtocol,
-    IProtocolNegotiationFactory,
+    IProtocolFactory,
     IPushProducer,
     IReactorTime,
     ISystemHandle,
@@ -64,6 +61,7 @@ from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python.failure import Failure
+from ._tls_legacy import SomeConnectionCreator, _convertToAppropriateFactory
 
 
 @implementer(IPushProducer)
@@ -188,6 +186,15 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
     _producer = None
     _aborted = False
 
+    # we are a ProtocolWrapper and thus ->Protocol. in order LSP substitute to
+    # Protocol, self.factory must be (invariant: the attribute is read/write!)
+    # Factory[Self] | None. Thus, constraining it to TLSMemoryBIOFactory like
+    # this is invalid; a client of Protocol looking at an instance of
+    # TLSMemoryBIOProtocol might want to assign some arbitrary .factory and
+    # that would be wrong.
+
+    factory: TLSMemoryBIOFactory
+
     def __init__(self, factory, wrappedProtocol, _connectWrapped=True):
         ProtocolWrapper.__init__(self, factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
@@ -209,7 +216,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        self._tlsConnection = self.factory._createConnection(self)
+        self._tlsConnection = self.factory._creatorCallable(self)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -554,31 +561,19 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         return self._tlsConnection.get_peer_certificate()
 
     @property
-    def negotiatedProtocol(self):
+    def negotiatedProtocol(self) -> bytes | None:
         """
         @see: L{INegotiated.negotiatedProtocol}
         """
-        protocolName = None
-
-        try:
-            # If ALPN is not implemented that's ok, NPN might be.
-            protocolName = self._tlsConnection.get_alpn_proto_negotiated()
-        except (NotImplementedError, AttributeError):
-            pass
-
-        if protocolName not in (b"", None):
-            # A protocol was selected using ALPN.
-            return protocolName
-
-        try:
-            protocolName = self._tlsConnection.get_next_proto_negotiated()
-        except (NotImplementedError, AttributeError):
-            pass
-
-        if protocolName != b"":
-            return protocolName
-
-        return None
+        tc = self._tlsConnection
+        if tc is None:
+            # We have not yet established a TLS connection, so no application
+            # layer protocol has been negotiated.
+            return None
+        protocolName: bytes | None = tc.get_alpn_proto_negotiated()
+        if protocolName == b"":
+            return None
+        return protocolName
 
     def registerProducer(self, producer, streaming):
         # If we've already disconnected, nothing to do here:
@@ -613,81 +608,6 @@ class TLSMemoryBIOProtocol(ProtocolWrapper):
         self.transport.unregisterProducer()
         if self.disconnecting and not self._appSendBuffer:
             self._shutdownTLS()
-
-
-@implementer(IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator)
-class _ContextFactoryToConnectionFactory:
-    """
-    Adapter wrapping a L{twisted.internet.interfaces.IOpenSSLContextFactory}
-    into a L{IOpenSSLClientConnectionCreator} or
-    L{IOpenSSLServerConnectionCreator}.
-
-    See U{https://twistedmatrix.com/trac/ticket/7215} for work that should make
-    this unnecessary.
-    """
-
-    def __init__(self, oldStyleContextFactory):
-        """
-        Construct a L{_ContextFactoryToConnectionFactory} with a
-        L{twisted.internet.interfaces.IOpenSSLContextFactory}.
-
-        Immediately call C{getContext} on C{oldStyleContextFactory} in order to
-        force advance parameter checking, since old-style context factories
-        don't actually check that their arguments to L{OpenSSL} are correct.
-
-        @param oldStyleContextFactory: A factory that can produce contexts.
-        @type oldStyleContextFactory:
-            L{twisted.internet.interfaces.IOpenSSLContextFactory}
-        """
-        oldStyleContextFactory.getContext()
-        self._oldStyleContextFactory = oldStyleContextFactory
-
-    def _connectionForTLS(self, protocol):
-        """
-        Create an L{OpenSSL.SSL.Connection} object.
-
-        @param protocol: The protocol initiating a TLS connection.
-        @type protocol: L{TLSMemoryBIOProtocol}
-
-        @return: a connection
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        context = self._oldStyleContextFactory.getContext()
-        return Connection(context, None)
-
-    def serverConnectionForTLS(self, protocol):
-        """
-        Construct an OpenSSL server connection from the wrapped old-style
-        context factory.
-
-        @note: Since old-style context factories don't distinguish between
-            clients and servers, this is exactly the same as
-            L{_ContextFactoryToConnectionFactory.clientConnectionForTLS}.
-
-        @param protocol: The protocol initiating a TLS connection.
-        @type protocol: L{TLSMemoryBIOProtocol}
-
-        @return: a connection
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        return self._connectionForTLS(protocol)
-
-    def clientConnectionForTLS(self, protocol):
-        """
-        Construct an OpenSSL server connection from the wrapped old-style
-        context factory.
-
-        @note: Since old-style context factories don't distinguish between
-            clients and servers, this is exactly the same as
-            L{_ContextFactoryToConnectionFactory.serverConnectionForTLS}.
-
-        @param protocol: The protocol initiating a TLS connection.
-        @type protocol: L{TLSMemoryBIOProtocol}
-
-        @return: a connection
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        return self._connectionForTLS(protocol)
 
 
 class _AggregateSmallWrites:
@@ -805,27 +725,21 @@ class TLSMemoryBIOFactory(WrappingFactory):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _creatorInterface: the interface which L{_connectionCreator} is
-        expected to implement.
-    @type _creatorInterface: L{zope.interface.interfaces.IInterface}
-
-    @ivar _connectionCreator: a callable which creates an OpenSSL Connection
-        object.
-    @type _connectionCreator: 1-argument callable taking
-        L{TLSMemoryBIOProtocol} and returning L{OpenSSL.SSL.Connection}.
+    @ivar _creatorCallable: A callable for creating an
+        L{OpenSSL.SSL.Connection} from a L{TLSMemoryBIOProtocol}.
     """
 
-    protocol = BufferingTLSTransport
+    protocol: type[TLSMemoryBIOProtocol] = BufferingTLSTransport
 
     noisy = False  # disable unnecessary logging.
 
     def __init__(
         self,
-        contextFactory,
-        isClient,
-        wrappedFactory,
-        clock=None,
-    ):
+        contextFactory: SomeConnectionCreator,
+        isClient: bool,
+        wrappedFactory: IProtocolFactory,
+        clock: Optional[IReactorTime] = None,
+    ) -> None:
         """
         Create a L{TLSMemoryBIOFactory}.
 
@@ -868,15 +782,9 @@ class TLSMemoryBIOFactory(WrappingFactory):
             application-level protocol.
         @type wrappedFactory: L{twisted.internet.interfaces.IProtocolFactory}
         """
-        WrappingFactory.__init__(self, wrappedFactory)
-        if isClient:
-            creatorInterface = IOpenSSLClientConnectionCreator
-        else:
-            creatorInterface = IOpenSSLServerConnectionCreator
-        self._creatorInterface = creatorInterface
-        if not creatorInterface.providedBy(contextFactory):
-            contextFactory = _ContextFactoryToConnectionFactory(contextFactory)
-        self._connectionCreator = contextFactory
+        super().__init__(wrappedFactory)
+
+        self._creatorCallable = _convertToAppropriateFactory(isClient, contextFactory)
 
         if clock is None:
             clock = _get_default_clock()
@@ -894,43 +802,3 @@ class TLSMemoryBIOFactory(WrappingFactory):
         else:
             logPrefix = self.wrappedFactory.__class__.__name__
         return f"{logPrefix} (TLS)"
-
-    def _applyProtocolNegotiation(self, connection):
-        """
-        Applies ALPN/NPN protocol neogitation to the connection, if the factory
-        supports it.
-
-        @param connection: The OpenSSL connection object to have ALPN/NPN added
-            to it.
-        @type connection: L{OpenSSL.SSL.Connection}
-
-        @return: Nothing
-        @rtype: L{None}
-        """
-        if IProtocolNegotiationFactory.providedBy(self.wrappedFactory):
-            protocols = self.wrappedFactory.acceptableProtocols()
-            context = connection.get_context()
-            _setAcceptableProtocols(context, protocols)
-
-        return
-
-    def _createConnection(self, tlsProtocol):
-        """
-        Create an OpenSSL connection and set it up good.
-
-        @param tlsProtocol: The protocol which is establishing the connection.
-        @type tlsProtocol: L{TLSMemoryBIOProtocol}
-
-        @return: an OpenSSL connection object for C{tlsProtocol} to use
-        @rtype: L{OpenSSL.SSL.Connection}
-        """
-        connectionCreator = self._connectionCreator
-        if self._creatorInterface is IOpenSSLClientConnectionCreator:
-            connection = connectionCreator.clientConnectionForTLS(tlsProtocol)
-            self._applyProtocolNegotiation(connection)
-            connection.set_connect_state()
-        else:
-            connection = connectionCreator.serverConnectionForTLS(tlsProtocol)
-            self._applyProtocolNegotiation(connection)
-            connection.set_accept_state()
-        return connection

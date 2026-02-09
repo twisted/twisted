@@ -100,8 +100,9 @@ class HelperTests(TestCase):
         passed to it does not match the encrypted password passed to it.
         """
         password = "string secret"
+        salt = "somesalt"
         wrong = "secret string"
-        crypted = crypt.crypt(password, password)
+        crypted = crypt.crypt(password, salt)
         self.assertFalse(
             checkers.verifyCryptedPassword(crypted, wrong),
             "{!r} not supposed to be valid encrypted password for {}".format(

@@ -13,9 +13,10 @@ import unicodedata
 import warnings
 from base64 import b64encode, decodebytes, encodebytes
 from hashlib import md5, sha256
-from typing import Any
+from typing import Any, Literal
 
 import bcrypt
+from constantly import NamedConstant, Names
 from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -26,13 +27,11 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
-from typing_extensions import Literal
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, nativeString
-from twisted.python.constants import NamedConstant, Names
 from twisted.python.deprecate import _mutuallyExclusiveArguments
 
 try:
@@ -99,11 +98,11 @@ class FingerprintFormats(Names):
 
     @cvar MD5_HEX: Named constant representing fingerprint format generated
         using md5[RFC1321] algorithm in hexadecimal encoding.
-    @type MD5_HEX: L{twisted.python.constants.NamedConstant}
+    @type MD5_HEX: L{constantly.NamedConstant}
 
     @cvar SHA256_BASE64: Named constant representing fingerprint format
         generated using sha256[RFC4634] algorithm in base64 encoding
-    @type SHA256_BASE64: L{twisted.python.constants.NamedConstant}
+    @type SHA256_BASE64: L{constantly.NamedConstant}
     """
 
     MD5_HEX = NamedConstant()
@@ -235,15 +234,31 @@ class Key:
             integer y
 
         The format of ECDSA-SHA2-* public key blob is::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name.
+        Where 'identifier' is the standard NIST curve name.
 
         The format of an Ed25519 public key blob is::
             string 'ssh-ed25519'
             string a
+
+        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is::
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        The format of a sk-ssh-ed25519@openssh.com public key is::
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
 
         @type blob: L{bytes}
         @param blob: The key data.
@@ -256,24 +271,47 @@ class Key:
         if keyType == b"ssh-rsa":
             e, n, rest = common.getMP(rest, 2)
             return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
-        elif keyType == b"ssh-dss":
+
+        if keyType == b"ssh-dss":
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(
                 dsa.DSAPublicNumbers(
                     y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g)
                 ).public_key(default_backend())
             )
-        elif keyType in _curveTable:
+
+        if keyType in _curveTable:
             return cls(
                 ec.EllipticCurvePublicKey.from_encoded_point(
                     _curveTable[keyType], common.getNS(rest, 2)[1]
                 )
             )
-        elif keyType == b"ssh-ed25519":
+
+        if keyType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            _, encodedPoint, application, rest = common.getNS(rest, 3)
+            keyObject = cls._fromECEncodedPoint(
+                encodedPoint=encodedPoint,
+                curve=b"ecdsa-sha2-nistp256",
+            )
+            keyObject._sk = True
+            keyObject.application = application
+            return keyObject
+
+        if keyType == b"sk-ssh-ed25519@openssh.com":
+            a, application, rest = common.getNS(rest, 2)
+            keyObject = cls._fromEd25519Components(a)
+            keyObject._sk = True
+            keyObject.application = application
+
+            return keyObject
+
+        if keyType in [b"ssh-ed25519"]:
             a, rest = common.getNS(rest)
-            return cls._fromEd25519Components(a)
-        else:
-            raise BadKeyError(f"unknown blob type: {keyType}")
+            keyObject = cls._fromEd25519Components(a)
+
+            return keyObject
+
+        raise BadKeyError(f"unknown blob type: {keyType}")
 
     @classmethod
     def _fromString_PRIVATE_BLOB(cls, blob):
@@ -676,16 +714,37 @@ class Key:
         """
         if data.startswith(b"ssh-") or data.startswith(b"ecdsa-sha2-"):
             return "public_openssh"
-        elif data.startswith(b"-----BEGIN"):
+
+        # Twisted doesn't support certificate based keys yet.
+        # https://github.com/openssh/openssh-portable/blob/05f2b141cfcc60c7cdedf9450d2b9d390c19eaad/PROTOCOL.u2f#L96C1-L97C31
+        if data.startswith(b"sk-ecdsa-sha2-nistp256-cert-v01") or data.startswith(
+            b"sk-ssh-ed25519-cert-v01"
+        ):
+            raise BadKeyError("certificate based keys are not supported")
+
+        if data.startswith(b"sk-ecdsa-sha2-nistp256") or data.startswith(
+            b"sk-ssh-ed25519"
+        ):
+            # OpenSSH FIDO2 security keys have similar public format.
+            # They have the extra "application" string,
+            # which for now is ignored.
+            return "public_openssh"
+
+        if data.startswith(b"-----BEGIN"):
             return "private_openssh"
-        elif data.startswith(b"{"):
+
+        if data.startswith(b"{"):
             return "public_lsh"
-        elif data.startswith(b"("):
+
+        if data.startswith(b"("):
             return "private_lsh"
-        elif (
+
+        if (
             data.startswith(b"\x00\x00\x00\x07ssh-")
             or data.startswith(b"\x00\x00\x00\x13ecdsa-")
             or data.startswith(b"\x00\x00\x00\x0bssh-ed25519")
+            or data.startswith(b'\x00\x00\x00"sk-ecdsa-sha2-nistp256@openssh.com')
+            or data.startswith(b"\x00\x00\x00\x1ask-ssh-ed25519@openssh.com")
         ):
             ignored, rest = common.getNS(data)
             count = 0
@@ -869,6 +928,9 @@ class Key:
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        # Only used for OpenSSH sk ssh keys
+        self._sk = False
+        self._application = None
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1029,16 +1091,25 @@ class Key:
         @return: The key type format.
         @rtype: L{bytes}
         """
+        if self._sk:
+            if self.type() == "EC":
+                return b"sk-ecdsa-sha2-nistp256@openssh.com"
+            # FIXME: https://github.com/twisted/twisted/issues/12304
+            # We only support 2 key types,
+            # so if the key was loaded with success and it's
+            # not ECDSA, it must be an ED25519 key.
+            return b"sk-ssh-ed25519@openssh.com"
+
         if self.type() == "EC":
             return (
                 b"ecdsa-sha2-" + _secToNist[self._keyObject.curve.name.encode("ascii")]
             )
-        else:
-            return {
-                "RSA": b"ssh-rsa",
-                "DSA": b"ssh-dss",
-                "Ed25519": b"ssh-ed25519",
-            }[self.type()]
+
+        return {
+            "RSA": b"ssh-rsa",
+            "DSA": b"ssh-dss",
+            "Ed25519": b"ssh-ed25519",
+        }[self.type()]
 
     def supportedSignatureAlgorithms(self):
         """
@@ -1070,14 +1141,16 @@ class Key:
                     return hashes.SHA512()
             else:
                 return None
-        else:
-            return {
-                ("RSA", b"ssh-rsa"): hashes.SHA1(),
-                ("RSA", b"rsa-sha2-256"): hashes.SHA256(),
-                ("RSA", b"rsa-sha2-512"): hashes.SHA512(),
-                ("DSA", b"ssh-dss"): hashes.SHA1(),
-                ("Ed25519", b"ssh-ed25519"): hashes.SHA512(),
-            }.get((self.type(), signatureType))
+
+        if self.type() == "Ed25519":
+            return hashes.SHA512()
+
+        return {
+            ("RSA", b"ssh-rsa"): hashes.SHA1(),
+            ("RSA", b"rsa-sha2-256"): hashes.SHA256(),
+            ("RSA", b"rsa-sha2-512"): hashes.SHA512(),
+            ("DSA", b"ssh-dss"): hashes.SHA1(),
+        }.get((self.type(), signatureType))
 
     def size(self):
         """
@@ -1172,17 +1245,19 @@ class Key:
 
     def blob(self):
         """
-        Return the public key blob for this key. The blob is the
-        over-the-wire format for public keys.
+        Return the public key blob for this key.  The blob is the over-the-wire
+        format for public keys.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
         RSA keys::
+
             string 'ssh-rsa'
             integer e
             integer n
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1190,15 +1265,33 @@ class Key:
             integer y
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name
+        Where 'identifier' is the standard NIST curve name.
 
         Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
+
+        sk-ecdsa-sha2-nistp256@openssh.com keys::
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        sk-ssh-ed25519@openssh.com keys::
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at
+        U{https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f}.
 
         @rtype: L{bytes}
         """
@@ -1216,17 +1309,31 @@ class Key:
             )
         elif type == "EC":
             byteLength = (self._keyObject.curve.key_size + 7) // 8
-            return (
-                common.NS(data["curve"])
-                + common.NS(data["curve"][-8:])
+            curve = data["curve"][-8:]
+            if self._sk:
+                # We convert the curve name.
+                # The curve name is only `nistpNNN` part.
+                # Format example:
+                # "ecdsa-sha2-nistp256" -> "nistp256"
+                # "sk-ecdsa-sha2-nistp256@openssh.com" -> "nistp256"
+                curve = data["curve"][-20:-12]
+            blob = (
+                common.NS(self.sshType())
+                + common.NS(curve)
                 + common.NS(
                     b"\x04"
                     + utils.int_to_bytes(data["x"], byteLength)
                     + utils.int_to_bytes(data["y"], byteLength)
                 )
             )
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         elif type == "Ed25519":
-            return common.NS(b"ssh-ed25519") + common.NS(data["a"])
+            blob = common.NS(self.sshType()) + common.NS(data["a"])
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         else:
             raise BadKeyError(f"unknown key type: {type}")
 
@@ -1315,8 +1422,8 @@ class Key:
 
     @_mutuallyExclusiveArguments(
         [
-            ["extra", "comment"],
-            ["extra", "passphrase"],
+            ("extra", "comment"),
+            ("extra", "passphrase"),
         ]
     )
     def toString(self, type, extra=None, subtype=None, comment=None, passphrase=None):
@@ -1628,20 +1735,17 @@ class Key:
                 values = (data["p"], data["q"], data["g"], data["y"], data["x"])
             return common.NS(self.sshType()) + b"".join(map(common.MP, values))
 
-    def sign(self, data, signatureType=None):
+    def sign(self, data: bytes, signatureType: bytes | None = None) -> bytes:
         """
         Sign some data with this key.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
-        @type data: L{bytes}
         @param data: The data to sign.
 
-        @type signatureType: L{bytes}
         @param signatureType: The SSH public key algorithm name to sign this
-        data with, or L{None} to use a reasonable default for the key.
+            data with, or L{None} to use a reasonable default for the key.
 
-        @rtype: L{bytes}
         @return: A signature for the given data.
         """
         keyType = self.type()
@@ -1655,7 +1759,7 @@ class Key:
         hashAlgorithm = self._getHashAlgorithm(signatureType)
         if hashAlgorithm is None:
             raise BadSignatureAlgorithmError(
-                f"public key signature algorithm {signatureType} is not "
+                f"public key signature algorithm {signatureType!r} is not "
                 f"defined for {keyType} keys"
             )
 
@@ -1679,21 +1783,13 @@ class Key:
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)
 
-            # Int_to_bytes returns rb[0] as a str in python2
-            # and an as int in python3
-            if type(rb[0]) is str:
-                rcomp = ord(rb[0])
-            else:
-                rcomp = rb[0]
+            rcomp = rb[0]
 
             # If the MSB is set, prepend a null byte for correct formatting.
             if rcomp & 0x80:
                 rb = b"\x00" + rb
 
-            if type(sb[0]) is str:
-                scomp = ord(sb[0])
-            else:
-                scomp = sb[0]
+            scomp = sb[0]
 
             if scomp & 0x80:
                 sb = b"\x00" + sb
@@ -1773,6 +1869,30 @@ class Key:
             return False
         else:
             return True
+
+    def isSecurityKey(self):
+        """
+        Return True if key is an OpenSSH security key.
+        """
+        return self.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
+    @property
+    def application(self):
+        """
+        Returns the application value for OpenSSH sk SSH keys
+        and None for other key types.
+        """
+        return self._application
+
+    @application.setter
+    def application(self, value):
+        """
+        Modifies the application value for OpenSSH sk SSH key types.
+        """
+        self._application = value
 
 
 def _getPersistentRSAKey(location, keySize=4096):

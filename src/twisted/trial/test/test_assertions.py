@@ -1607,7 +1607,7 @@ class CallDeprecatedTests(unittest.SynchronousTestCase):
         self.assertIn("please use newMethod instead", str(exception))
 
 
-@deprecated(CallDeprecatedTests.version)
+@deprecated(Version("Twisted", 8, 0, 0))
 def oldMethod(x):
     """
     Deprecated method for testing.
@@ -1615,7 +1615,7 @@ def oldMethod(x):
     return x
 
 
-@deprecated(CallDeprecatedTests.version, replacement="newMethod")
+@deprecated(Version("Twisted", 8, 0, 0), replacement="newMethod")
 def oldMethodReplaced(x):
     """
     Another deprecated method, which has been deprecated in favor of the

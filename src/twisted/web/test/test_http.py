@@ -8,6 +8,7 @@ Test HTTP support.
 import base64
 import calendar
 import random
+from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Sequence, Union
@@ -337,7 +338,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         self.assertIn("Timing out client: {peer}", event["log_format"])
 
@@ -348,9 +349,9 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
         self.assertTrue(transport.disconnected)
-        self.assertEquals(2, len(logObserver))
+        self.assertEqual(2, len(logObserver))
         event = logObserver[1]
-        self.assertEquals("Forcibly timing out client: {peer}", event["log_format"])
+        self.assertEqual("Forcibly timing out client: {peer}", event["log_format"])
 
     def test_transportNotAbortedAfterConnectionLost(self):
         """
@@ -738,7 +739,7 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
                 ),
             )
         a.dataReceived(self.requests)
-        self.assertEquals(b.producerState, "paused")
+        self.assertEqual(b.producerState, "paused")
 
 
 class ShutdownTests(unittest.TestCase):
@@ -1719,8 +1720,6 @@ class ChunkingTests(unittest.TestCase, ResponseTestMixin):
 
         This is essentially a copy of ParsingTests.test_multipartFormData,
         just with chunking put in.
-
-        This fails as of twisted version 18.9.0 because of bug #9678.
         """
         processed = []
 
@@ -2543,11 +2542,20 @@ abasdfg
         self.assertEqual(len(processed), 1)
         self.assertEqual(processed[0].args, {b"text": [b"abasdfg"]})
 
-    def test_multipartFileData(self):
+        # Now check the disabled case:
+        channel = self.runRequest(
+            req, partial(MyRequest, parsePOSTFormSubmission=False), success=False
+        )
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
+
+    def test_multipartFilesData(self):
         """
-        If the request has a Content-Type of C{multipart/form-data},
-        and the form data is parseable and contains files, the file
-        portions will be added to the request's args.
+        If the request has a Content-Type of C{multipart/form-data}, the
+        C{Request} is told to parse the body, if the form data is parseable
+        and contains files, each of the file portions will be added to the
+        request's args in the same order.
         """
         processed = []
 
@@ -2558,10 +2566,14 @@ abasdfg
                 self.finish()
 
         body = b"""-----------------------------738837029596785559389649595
-Content-Disposition: form-data; name="uploadedfile"; filename="test"
+Content-Disposition: form-data; name="uploadedfiles"; filename="testC"
 Content-Type: application/octet-stream
 
 abasdfg
+-----------------------------738837029596785559389649595
+Content-Disposition: form-data; name="uploadedfiles"; filename="testB"
+
+qwerty
 -----------------------------738837029596785559389649595--
 """
 
@@ -2579,7 +2591,17 @@ Content-Length: """
         channel = self.runRequest(req.encode("ascii") + body, MyRequest, success=False)
         self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
         self.assertEqual(len(processed), 1)
-        self.assertEqual(processed[0].args, {b"uploadedfile": [b"abasdfg"]})
+        self.assertEqual(processed[0].args, {b"uploadedfiles": [b"abasdfg", b"qwerty"]})
+
+        # Now check the disabled case:
+        channel = self.runRequest(
+            req.encode("ascii") + body,
+            partial(MyRequest, parsePOSTFormSubmission=False),
+            success=False,
+        )
+        self.assertEqual(channel.transport.value(), b"HTTP/1.0 200 OK\r\n\r\ndone")
+        self.assertEqual(len(processed), 2)
+        self.assertEqual(processed[1].args, {})
 
     def test_chunkedEncoding(self):
         """
@@ -2680,7 +2702,7 @@ Hello,
         self.runRequest(f, Request, 0)
         req = requests.pop()
         self.assertEqual((b"", b""), req.credentials)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, AttributeError)
@@ -3406,6 +3428,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     def test_addCookieSameSite(self):
         """
         L{http.Request.setCookie} supports a C{sameSite} argument.
+        It will set the cookie with samesite=lax and samesite=strict values.
         """
         self._checkCookie(b"foo=bar; SameSite=lax", b"foo", b"bar", sameSite="lax")
         self._checkCookie(b"foo=bar; SameSite=lax", b"foo", b"bar", sameSite="Lax")
@@ -3413,8 +3436,65 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
             b"foo=bar; SameSite=strict", b"foo", b"bar", sameSite="strict"
         )
 
-        self.assertRaises(
+    def test_addCookieSameSiteNoneSecure(self):
+        """
+        L{http.Request.setCookie} supports the C{sameSite} argument together with secure.
+        It will set the cookie with samesite=none and secure attributes to be sure that
+        all values of samesite are supported. secure attribute is a necessary condition
+        if the samesite is none
+        """
+        self._checkCookie(
+            b"foo=bar; Secure; SameSite=none",
+            b"foo",
+            b"bar",
+            sameSite="None",
+            secure=True,
+        )
+        self._checkCookie(
+            b"foo=bar; Secure; SameSite=none",
+            b"foo",
+            b"bar",
+            sameSite="none",
+            secure=True,
+        )
+        self._checkCookie(
+            b"foo=bar; Secure; SameSite=none",
+            b"foo",
+            b"bar",
+            sameSite=b"none",
+            secure=True,
+        )
+
+    def test_addCookieWrongValues(self):
+        """
+        Raises an exception when setting the cookie with not supported samesite value and without a necessary
+        secure attribute for the samesite=none cookie.
+        """
+        error = self.assertRaises(
             ValueError, self._checkCookie, b"", b"foo", b"bar", sameSite="anything-else"
+        )
+        self.assertEqual("Invalid value for sameSite: b'anything-else'", error.args[0])
+
+        error = self.assertRaises(
+            ValueError,
+            self._checkCookie,
+            b"",
+            b"foo",
+            b"bar",
+            sameSite="none",
+            secure=False,
+        )
+        self.assertEqual(
+            "Invalid value for sameSite: b'none'. Missing the \"secure\" attribute",
+            error.args[0],
+        )
+
+        error = self.assertRaises(
+            ValueError, self._checkCookie, b"", b"foo", b"bar", sameSite="none"
+        )
+        self.assertEqual(
+            "Invalid value for sameSite: b'none'. Missing the \"secure\" attribute",
+            error.args[0],
         )
 
     def test_firstWrite(self):
@@ -3528,9 +3608,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                 )
             ],
         )
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(
+        self.assertEqual(
             "Warning: last-modified specified both in"
             " header list and lastModified attribute.",
             event["log_format"],
@@ -3865,7 +3945,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a text-based I/O (i.e.: anything other than an
         # io.BufferedBase) it stays exactly the same, no modification.
         self.assertIs(getBackLogFile, factory.logFile)
-        proto = factory.buildProtocol(None)  # type:ignore
+        proto = factory.buildProtocol(None)
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
@@ -3876,7 +3956,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()  # type:ignore
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
@@ -4009,7 +4089,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(DummyChannel(), False)
         request.registerProducer(DummyProducer(), True)
         request.finish()
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, RuntimeError)

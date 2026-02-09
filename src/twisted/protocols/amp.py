@@ -24,17 +24,11 @@ implementation of Deferreds.  AMP provides the following base-level features:
     - Command dispatching (like HTTP Verbs): the protocol is extensible, and
       multiple AMP sub-protocols can be grouped together easily.
 
-The protocol implementation also provides a few additional features which are
-not part of the core wire protocol, but are nevertheless very useful:
-
-    - Tight TLS integration, with an included StartTLS command.
-
-    - Handshaking to other protocols: because AMP has well-defined message
-      boundaries and maintains all incoming and outgoing requests for you, you
-      can start a connection over AMP and then switch to another protocol.
-      This makes it ideal for firewall-traversal applications where you may
-      have only one forwarded port but multiple applications that want to use
-      it.
+You can also use AMP to tunnel other protocols: because AMP has well-defined
+message boundaries and maintains all incoming and outgoing requests for you,
+you can start a connection over AMP and then switch to another protocol.  This
+makes it ideal for firewall-traversal applications where you may have only one
+forwarded port but multiple applications that want to use it.
 
 Using AMP with Twisted is simple.  Each message is a command, with a response.
 You begin by defining a command type.  Commands specify their input and output
@@ -65,8 +59,8 @@ a L{Deferred} which will fire with the result::
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
-Command responders may also return Deferreds, causing the response to be
-sent only once the Deferred fires::
+Command responders may also return Deferreds, causing the response to be sent
+only once the Deferred fires::
 
     class DelayedSum(amp.AMP):
         def slowSum(self, a, b):
@@ -2083,18 +2077,28 @@ class _LocalArgument(String):
 
 class StartTLS(Command):
     """
-    Use, or subclass, me to implement a command that starts TLS.
+    If your protocol requires a complex plaintext preamble to begin a secure
+    connection, and you are I{ABSOLUTELY SURE} that you understand the
+    consequences of sending that data insecurely, you can use, or subclass,
+    L{StartTLS} to define a command that switches from an unencrypted
+    connection to a TLS connection.
+
+    In general, you should prefer using TLS endpoints as defined by
+    L{twisted.internet.endpoints.wrapClientTLS} and
+    L{twisted.internet.endpoints.wrapServerTLS}, and using server hostname
+    indication and/or application layer protocol negotiation to negotiate the
+    parameters of the TLS connection.
 
     Callers of StartTLS may pass several special arguments, which affect the
     TLS negotiation:
 
         - tls_localCertificate: This is a
-        twisted.internet.ssl.PrivateCertificate which will be used to secure
-        the side of the connection it is returned on.
+          twisted.internet.ssl.PrivateCertificate which will be used to secure
+          the side of the connection it is returned on.
 
         - tls_verifyAuthorities: This is a list of
-        twisted.internet.ssl.Certificate objects that will be used as the
-        certificate authorities to verify our peer's certificate.
+          twisted.internet.ssl.Certificate objects that will be used as the
+          certificate authorities to verify our peer's certificate.
 
     Each of those special parameters may also be present as a key in the
     response dictionary.

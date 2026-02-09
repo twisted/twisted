@@ -7,8 +7,7 @@ Tests for C{await} support in Deferreds.
 """
 
 import types
-
-from typing_extensions import NoReturn
+from typing import NoReturn
 
 from twisted.internet.defer import (
     Deferred,

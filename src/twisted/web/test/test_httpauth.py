@@ -588,7 +588,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = getChildForRequest(self.wrapper, request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         self.assertIsInstance(logObserver[0]["log_failure"].value, UnexpectedException)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 
@@ -614,7 +614,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
         child = self._authorizedBasicLogin(request)
         request.render(child)
         self.assertEqual(request.responseCode, 500)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         self.assertIsInstance(logObserver[0]["log_failure"].value, UnexpectedException)
         self.assertEqual(len(self.flushLoggedErrors(UnexpectedException)), 1)
 

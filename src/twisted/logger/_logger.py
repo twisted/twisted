@@ -431,9 +431,9 @@ class Logger:
         corrective guidance can be offered to an user/administrator, and the
         impact of the condition is unknown.
 
-        @param format: a message format using new-style (PEP 3101) formatting.
-            The logging event (which is a L{dict}) is used to render this
-            format string.
+        @param staticMessage: a message format using new-style (PEP 3101)
+            formatting.  The logging event (which is a L{dict}) is used to
+            render this format string.
 
         @param level: a L{LogLevel} to use.
 

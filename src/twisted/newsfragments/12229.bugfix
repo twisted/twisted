@@ -1,0 +1,1 @@
+Trial no longer emits the error `RuntimeWarning: TestResult has no addDuration method` when running PyUnit tests.

@@ -1,0 +1,1 @@
+twisted.conch.ssh.SSHUserAuthServer now supports the security key ssh types "sk-ecdsa-sha2-nistp256@openssh.com" and "sk-ssh-ed25519@openssh.com" and extracting the `application` property from these new key types.

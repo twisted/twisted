@@ -695,13 +695,15 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.buf = self.transport.value()
         self.assertEqual(proto.getPacket(), b"ABCDEFG")
 
-    def test_ciphersAreValid(self):
+    def test_ciphersAreValid(self) -> None:
         """
         Test that all the supportedCiphers are valid.
         """
         ciphers = transport.SSHCiphers(b"A", b"B", b"C", b"D")
-        iv = key = b"\x00" * 16
+
         for cipName in self.proto.supportedCiphers:
+            _, keySize, _ = ciphers.cipherMap[cipName]
+            iv = key = b"\x00" * keySize
             self.assertTrue(ciphers._getCipher(cipName, iv, key))
 
     def test_sendKexInit(self):

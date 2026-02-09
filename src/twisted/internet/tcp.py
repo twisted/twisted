@@ -14,12 +14,12 @@ import os
 import socket
 import struct
 import sys
-from typing import Callable, ClassVar, List, Optional, Union
+import typing
+from typing import Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
 import attr
-import typing_extensions
 
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
@@ -29,9 +29,9 @@ from twisted.internet.interfaces import (
     ISystemHandle,
     ITCPTransport,
 )
+from twisted.internet.protocol import ClientFactory
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python import deprecate, versions
-from twisted.python.compat import lazyByteSlice
 from twisted.python.runtime import platformType
 
 try:
@@ -57,11 +57,27 @@ except ImportError:
         pass
 
 
-if platformType == "win32":
+if platformType != "win32":
+    from errno import (
+        EAGAIN,
+        EALREADY,
+        ECONNABORTED,
+        EINPROGRESS,
+        EINVAL,
+        EISCONN,
+        EMFILE,
+        ENFILE,
+        ENOBUFS,
+        ENOMEM,
+        EPERM,
+        EWOULDBLOCK,
+    )
+    from os import strerror
+else:
     # no such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
-    EPERM = object()
-    from errno import (  # type: ignore[attr-defined]
+    EPERM = object()  # type:ignore[assignment]
+    from errno import (  # type: ignore[no-redef,attr-defined]
         WSAEALREADY as EALREADY,
         WSAEINPROGRESS as EINPROGRESS,
         WSAEINVAL as EINVAL,
@@ -72,28 +88,13 @@ if platformType == "win32":
     )
 
     # No such thing as WSAENFILE, either.
-    ENFILE = object()
+    ENFILE = object()  # type:ignore[assignment]
     # Nor ENOMEM
-    ENOMEM = object()
+    ENOMEM = object()  # type:ignore[assignment]
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[attr-defined]
+    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[no-redef,attr-defined]
 
     from twisted.python.win32 import formatError as strerror
-else:
-    from errno import EPERM
-    from errno import EINVAL
-    from errno import EWOULDBLOCK
-    from errno import EINPROGRESS
-    from errno import EALREADY
-    from errno import EISCONN
-    from errno import ENOBUFS
-    from errno import EMFILE
-    from errno import ENFILE
-    from errno import ENOMEM
-    from errno import EAGAIN
-    from errno import ECONNABORTED
-
-    from os import strerror
 
 from errno import errorcode
 
@@ -275,7 +276,7 @@ class Connection(
         """
         # Limit length of buffer to try to send, because some OSes are too
         # stupid to do so themselves (ahem windows)
-        limitedData = lazyByteSlice(data, 0, self.SEND_LIMIT)
+        limitedData = memoryview(data)[: self.SEND_LIMIT]
 
         try:
             return untilConcludes(self.socket.send, limitedData)
@@ -337,7 +338,18 @@ class Connection(
         return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
     def setTcpNoDelay(self, enabled):
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        try:
+            # There are bug reports about failures when setting TCP_NODELAY under certain conditions
+            # on macOS: https://github.com/thespianpy/Thespian/issues/70,
+            # https://github.com/envoyproxy/envoy/issues/1446.
+            #
+            # It is reasonable to simply eat errors coming from setting TCP_NODELAY because
+            # TCP_NODELAY is relatively small performance optimization. In almost all cases the
+            # caller will not be able to do anything to remedy the situation and will simply
+            # continue.
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, enabled)
+        except OSError as e:  # pragma: no cover
+            log.err(e, "got error when setting TCP_NODELAY on TCP socket")
 
     def getTcpKeepAlive(self):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
@@ -727,6 +739,7 @@ class _BaseTCPClient:
             whenDone = None
         if whenDone and bindAddress is not None:
             try:
+                assert type(bindAddress) == tuple
                 if abstract.isIPv6Address(bindAddress[0]):
                     bindinfo = _resolveIPv6(*bindAddress)
                 else:
@@ -948,7 +961,7 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
-class _HasClose(typing_extensions.Protocol):
+class _HasClose(typing.Protocol):
     def close(self) -> object:
         ...
 
@@ -1505,9 +1518,17 @@ class Connector(base.BaseConnector):
     @type _addressType: C{type}
     """
 
-    _addressType = address.IPv4Address
+    _addressType: type[address.IPv4Address | address.IPv6Address] = address.IPv4Address
 
-    def __init__(self, host, port, factory, timeout, bindAddress, reactor=None):
+    def __init__(
+        self,
+        host: str,
+        port: int | str,
+        factory: ClientFactory,
+        timeout: float,
+        bindAddress: str | tuple[str, int] | None,
+        reactor: Any = None,
+    ) -> None:
         if isinstance(port, str):
             try:
                 port = socket.getservbyname(port, "tcp")
@@ -1519,7 +1540,7 @@ class Connector(base.BaseConnector):
         self.bindAddress = bindAddress
         base.BaseConnector.__init__(self, factory, timeout, reactor)
 
-    def _makeTransport(self):
+    def _makeTransport(self) -> Client:
         """
         Create a L{Client} bound to this L{Connector}.
 

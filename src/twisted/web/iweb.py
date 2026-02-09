@@ -724,6 +724,18 @@ class IAgent(Interface):
         doSomeRequests(cache)
     """
 
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IAgent does not have any particular requirement upon its
+            constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
+
     def request(
         method: bytes,
         uri: bytes,

@@ -11,9 +11,16 @@ from typing import Literal
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.protocol import Protocol
+from twisted.internet.protocol import ClientFactory, Factory, Protocol
 from twisted.internet.task import Clock
-from twisted.test.iosim import FakeTransport, connect, connectedServerAndClient
+from twisted.internet.testing import MemoryReactor
+from twisted.test.iosim import (
+    ConnectionCompleter,
+    FakeTransport,
+    IOPump,
+    connect,
+    connectedServerAndClient,
+)
 from twisted.trial.unittest import TestCase
 
 
@@ -312,3 +319,29 @@ class IOPumpTests(TestCase):
         self.assertFalse(time_passed)
         pump.pump()
         self.assertTrue(time_passed)
+
+
+class ConnectionCompleterTests(TestCase):
+    """
+    L{ConnectionCompleter} can connect a connecting client and a listening
+    server in a L{MemoryReactor}.
+    """
+
+    def test_noConnection(self) -> None:
+        """
+        When no connection for its reactor is pending,
+        L{ConnectionCompleter.succeedOnce} returns C{None}.
+        """
+        cc = ConnectionCompleter(MemoryReactor())
+        self.assertIs(cc.succeedOnce(), None)
+
+    def test_someConnection(self) -> None:
+        """
+        When a connection to a matched host and port is pending,
+        L{ConnectionCompleter} returns an L{IOPump} connecting them.
+        """
+        mem = MemoryReactor()
+        mem.listenTCP(80, Factory.forProtocol(Protocol))
+        mem.connectTCP("127.0.0.1", 80, ClientFactory.forProtocol(Protocol))
+        cc = ConnectionCompleter(mem)
+        self.assertIsInstance(cc.succeedOnce(), IOPump)

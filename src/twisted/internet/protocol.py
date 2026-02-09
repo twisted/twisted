@@ -8,21 +8,74 @@ Standard implementations of Twisted protocol-related interfaces.
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
-
+from __future__ import annotations
 
 import random
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Generic, Optional, Protocol as TypingProtocol
 
 from zope.interface import implementer
 
+from typing_extensions import ParamSpec, Self, TypeVar
+
 from twisted.internet import defer, error, interfaces
-from twisted.internet.interfaces import IAddress, ITransport
+from twisted.internet.interfaces import (
+    IAddress,
+    IConnector,
+    IMulticastTransport,
+    ITransport,
+    IUDPTransport,
+)
 from twisted.logger import _loggerFor
 from twisted.python import components, failure, log
+from twisted.python.failure import Failure
+
+P = TypeVar("P", bound="_ProtoWithFactory", default="_ProtoWithFactory")
+SomeProtocol = TypeVar("SomeProtocol")
+_FactoryParams = ParamSpec("_FactoryParams")
+R = TypeVar("R", bound="Factory")
+_Value = TypeVar("_Value", covariant=True)
+
+
+class _LSPViolationHelper(Generic[_Value]):
+    def __get__(  # type:ignore[empty-body]
+        self, instance: object, owner: type[object] | None = None
+    ) -> _Value:
+        ...
+
+    def __set__(self, instance: object, value: Any) -> None:
+        ...
+
+    def __delete__(self, instance: object) -> None:
+        ...
+
+
+@implementer(interfaces.IProtocol)
+class _ProtoWithFactory(TypingProtocol):
+    # factory: _LSPViolationHelper[Factory[Self]]
+
+    @property
+    def factory(self) -> Factory[Self]:
+        ...
+
+    @factory.setter
+    def factory(self, value: Any) -> None:
+        ...
+
+    def dataReceived(self, data: bytes) -> None:
+        ...
+
+    def connectionLost(self, reason: Failure) -> None:
+        ...
+
+    def makeConnection(self, transport: "ITransport") -> None:
+        ...
+
+    def connectionMade(self) -> None:
+        ...
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
-class Factory:
+class Factory(Generic[P]):
     """
     This is a factory which produces protocols.
 
@@ -30,13 +83,18 @@ class Factory:
     self.protocol.
     """
 
-    protocol: "Optional[Callable[[], Protocol]]" = None
+    protocol: "Optional[Callable[..., P]]" = None
 
     numPorts = 0
     noisy = True
 
     @classmethod
-    def forProtocol(cls, protocol, *args, **kwargs):
+    def forProtocol(
+        cls: Callable[_FactoryParams, R],
+        protocol: Callable[[], P],
+        *args: _FactoryParams.args,
+        **kwargs: _FactoryParams.kwargs,
+    ) -> Factory[P]:
         """
         Create a factory for the given protocol.
 
@@ -53,7 +111,7 @@ class Factory:
         """
         factory = cls(*args, **kwargs)
         factory.protocol = protocol
-        return factory
+        return factory  # type:ignore[return-value]
 
     def logPrefix(self):
         """
@@ -113,7 +171,7 @@ class Factory:
         directly.
         """
 
-    def buildProtocol(self, addr: IAddress) -> "Optional[Protocol]":
+    def buildProtocol(self, addr: IAddress | None) -> "Optional[P]":
         """
         Create an instance of a subclass of Protocol.
 
@@ -134,7 +192,7 @@ class Factory:
         return p
 
 
-class ClientFactory(Factory):
+class ClientFactory(Factory[P]):
     """
     A Protocol factory for clients.
 
@@ -142,7 +200,7 @@ class ClientFactory(Factory):
     reactors.
     """
 
-    def startedConnecting(self, connector):
+    def startedConnecting(self, connector: IConnector) -> None:
         """
         Called when a connection has been started.
 
@@ -151,22 +209,18 @@ class ClientFactory(Factory):
         @param connector: a Connector object.
         """
 
-    def clientConnectionFailed(self, connector, reason):
+    def clientConnectionFailed(self, connector: IConnector, reason: Failure) -> None:
         """
         Called when a connection has failed to connect.
 
         It may be useful to call connector.connect() - this will reconnect.
-
-        @type reason: L{twisted.python.failure.Failure}
         """
 
-    def clientConnectionLost(self, connector, reason):
+    def clientConnectionLost(self, connector: IConnector, reason: Failure) -> None:
         """
         Called when an established connection is lost.
 
         It may be useful to call connector.connect() - this will reconnect.
-
-        @type reason: L{twisted.python.failure.Failure}
         """
 
 
@@ -410,7 +464,6 @@ class ReconnectingClientFactory(ClientFactory):
                 log.msg("Abandoning %s after %d retries." % (connector, self.retries))
             return
 
-        self.delay = min(self.delay * self.factor, self.maxDelay)
         if self.jitter:
             self.delay = random.normalvariate(self.delay, self.delay * self.jitter)
 
@@ -432,6 +485,8 @@ class ReconnectingClientFactory(ClientFactory):
 
             self.clock = reactor
         self._callID = self.clock.callLater(self.delay, reconnector)
+
+        self.delay = min(self.delay * self.factor, self.maxDelay)
 
     def stopTrying(self):
         """
@@ -479,7 +534,7 @@ class ReconnectingClientFactory(ClientFactory):
         return state
 
 
-class ServerFactory(Factory):
+class ServerFactory(Factory[P]):
     """
     Subclass this to indicate that your protocol.Factory is only usable for servers.
     """
@@ -544,7 +599,7 @@ class Protocol(BaseProtocol):
     see the L{twisted.protocols.basic} module for a few of them.
     """
 
-    factory: Optional[Factory] = None
+    factory: Any = None
 
     def logPrefix(self):
         """
@@ -686,7 +741,7 @@ class AbstractDatagramProtocol:
     UDP.
     """
 
-    transport = None
+    transport: IUDPTransport | IMulticastTransport | None = None
     numPorts = 0
     noisy = True
 
@@ -735,7 +790,7 @@ class AbstractDatagramProtocol:
         Will only be called once, after all ports are disconnected.
         """
 
-    def makeConnection(self, transport):
+    def makeConnection(self, transport: IUDPTransport) -> None:
         """
         Make a connection to a transport and a server.
 

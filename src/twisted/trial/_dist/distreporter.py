@@ -18,13 +18,13 @@ from zope.interface import implementer
 
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from ..itrial import IReporter, ITestCase
+from ..itrial import IReporterWithDurations, ITestCase
 
 ReporterFailure = Union[Failure, Tuple[type, Exception, TracebackType]]
 
 
-@implementer(IReporter)
-class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
+@implementer(IReporterWithDurations)
+class DistReporter(proxyForInterface(IReporterWithDurations)):  # type: ignore[misc]
     """
     See module docstring.
     """

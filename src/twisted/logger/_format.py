@@ -173,7 +173,7 @@ def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     of C{get} first, before wrapping it up.
 
     @param key: The last dotted segment of a formatting key, as parsed by
-        L{Formatter.vformat}, which may end in C{()}.
+        L{string.Formatter.vformat}, which may end in C{()}.
 
     @param getter: A function which takes a string and returns some other
         object, to be formatted and stringified for a log.
@@ -199,7 +199,7 @@ class PotentialCallWrapper(object):
         self._wrapped = wrapped
 
     def __getattr__(self, name: str) -> object:
-        return keycall(name, self._wrapped.__getattribute__)
+        return keycall(name, lambda name_: getattr(self._wrapped, name_))
 
     def __getitem__(self, name: str) -> object:
         # The sub-object may not be indexable, but if it isn't, that's the
@@ -208,13 +208,13 @@ class PotentialCallWrapper(object):
         return PotentialCallWrapper(value)
 
     def __format__(self, format_spec: str) -> str:
-        return self._wrapped.__format__(format_spec)
+        return format(self._wrapped, format_spec)
 
     def __repr__(self) -> str:
-        return self._wrapped.__repr__()
+        return repr(self._wrapped)
 
     def __str__(self) -> str:
-        return self._wrapped.__str__()
+        return str(self._wrapped)
 
 
 class CallMapping(Mapping[str, Any]):

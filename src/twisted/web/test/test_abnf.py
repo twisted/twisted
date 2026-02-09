@@ -18,6 +18,7 @@ class IsTokenTests(unittest.SynchronousTestCase):
         for b in (
             b"GET",
             b"Cache-Control",
+            b"&",
         ):
             self.assertTrue(_istoken(b))
 

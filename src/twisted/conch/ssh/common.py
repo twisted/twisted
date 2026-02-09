@@ -4,12 +4,11 @@
 
 """
 Common functions for the SSH classes.
-
-Maintainer: Paul Swartz
 """
-
+from __future__ import annotations
 
 import struct
+from typing import Sequence, overload
 
 from cryptography.utils import int_to_bytes
 
@@ -19,7 +18,7 @@ from twisted.python.versions import Version
 __all__ = ["NS", "getNS", "MP", "getMP", "ffs"]
 
 
-def NS(t):
+def NS(t: bytes | str) -> bytes:
     """
     net string
     """
@@ -28,7 +27,7 @@ def NS(t):
     return struct.pack("!L", len(t)) + t
 
 
-def getNS(s, count=1):
+def getNS(s: bytes, count: int = 1) -> Sequence[bytes]:
     """
     get net string
     """
@@ -41,7 +40,7 @@ def getNS(s, count=1):
     return tuple(ns) + (s[c:],)
 
 
-def MP(number):
+def MP(number: int) -> bytes:
     if number == 0:
         return b"\000" * 4
     assert number > 0
@@ -51,7 +50,17 @@ def MP(number):
     return struct.pack(">L", len(bn)) + bn
 
 
-def getMP(data, count=1):
+@overload
+def getMP(data: bytes) -> tuple[int, bytes]:
+    ...
+
+
+@overload
+def getMP(data: bytes, count: int) -> Sequence[int | bytes]:
+    ...
+
+
+def getMP(data: bytes, count: int = 1) -> Sequence[int | bytes]:
     """
     Get multiple precision integer out of the string.  A multiple precision
     integer is stored as a 4-byte length followed by length bytes of the

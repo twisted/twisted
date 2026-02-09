@@ -28,12 +28,11 @@ def test_deferred_await_unfired(benchmark):
         result = ensureDeferred(_run(deferreds))
         for i in range(20):
             deferreds[i].callback(i)
-        return result
+        results = []
+        result.addCallback(results.append)
+        assert results[0] == sum(range(20))
 
-    d = benchmark(go)
-    result = []
-    d.addCallback(result.append)
-    assert result[0] == sum(range(20))
+    benchmark(go)
 
 
 def f(x: int, a: int) -> int:
@@ -117,12 +116,11 @@ def test_deferred_chained_already_fired(benchmark):
         d.addCallback(lambda _: d2)
         d.addCallback(lambda _: d3)
         d.callback(123)
-        return d
+        result = []
+        d.addCallback(result.append)
+        assert result == [456]
 
-    d = benchmark(go)
-    result = []
-    d.addCallback(result.append)
-    assert result == [456]
+    benchmark(go)
 
 
 def test_deferred_chained_not_fired(benchmark):
@@ -144,9 +142,8 @@ def test_deferred_chained_not_fired(benchmark):
         d2.callback(123)
         d4.callback(57)
         d.callback(7)
-        return d
+        result = []
+        d.addCallback(result.append)
+        assert result == [57]
 
-    d = benchmark(go)
-    result = []
-    d.addCallback(result.append)
-    assert result == [57]
+    benchmark(go)

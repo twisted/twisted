@@ -203,14 +203,14 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     """
     Set the factory to construct a remote instance of a type::
 
-      jellier.setUnjellyableFactoryForClass('module.package.Class', MyFactory)
+        jellier.setUnjellyableFactoryForClass('module.package.Class', MyFactory)
 
     Call this at the module level immediately after its class definition.
     C{copyFactory} should return an instance or subclass of
     L{RemoteCopy<pb.RemoteCopy>}.
 
-    Similar to L{setUnjellyableForClass} except it uses a factory instead
-    of creating an instance.
+    Similar to L{twisted.spread.jelly.setUnjellyableForClass} except it uses a
+    factory instead of creating an instance.
     """
 
     global unjellyableFactoryRegistry

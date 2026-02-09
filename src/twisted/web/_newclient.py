@@ -35,7 +35,7 @@ from zope.interface import implementer
 
 from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.interfaces import IConsumer, IPushProducer, ITCPTransport
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.basic import LineReceiver
@@ -610,12 +610,12 @@ def _contentLength(connHeaders: Headers) -> Optional[int]:
     """
     Parse the I{Content-Length} connection header.
 
-    Two forms of duplicates are permitted. Header repetition:
+    Two forms of duplicates are permitted. Header repetition::
 
         Content-Length: 42
         Content-Length: 42
 
-    And field value repetition:
+    And field value repetition::
 
         Content-Length: 42, 42
 
@@ -1488,21 +1488,25 @@ class HTTP11ClientProtocol(Protocol):
 
     _state = "QUIESCENT"
     _parser: HTTPClientParser | None = None
-    _finishedRequest: Deferred[Response] | None = None
+    _finishedRequest: Deferred[IResponse] | None = None
     _currentRequest: Request | None = None
     _transportProxy = None
-    _responseDeferred: Deferred[Response] | None = None
+    _responseDeferred: Deferred[IResponse] | None = None
     _log = Logger()
 
     def __init__(self, quiescentCallback=lambda c: None):
         self._quiescentCallback = quiescentCallback
         self._abortDeferreds = []
 
+    def connectionMade(self) -> None:
+        if ITCPTransport.providedBy(self.transport):
+            self.transport.setTcpNoDelay(True)
+
     @property
     def state(self):
         return self._state
 
-    def request(self, request):
+    def request(self, request: Request) -> Deferred[IResponse]:
         """
         Issue C{request} over C{self.transport} and return a L{Deferred} which
         will fire with a L{Response} instance or an error.
@@ -1539,7 +1543,7 @@ class HTTP11ClientProtocol(Protocol):
                 self.transport.abortConnection()
                 self._disconnectParser(Failure(CancelledError()))
 
-        self._finishedRequest = Deferred(cancelRequest)
+        self._finishedRequest: Deferred[IResponse] = Deferred(cancelRequest)
 
         # Keep track of the Request object in case we need to call stopWriting
         # on it.

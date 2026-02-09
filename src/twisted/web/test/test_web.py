@@ -612,12 +612,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -640,12 +640,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -670,7 +670,7 @@ class RequestTests(unittest.TestCase):
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -956,6 +956,28 @@ class RequestTests(unittest.TestCase):
         request.gotLength(12345)
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
+
+    def test_parsePOSTFormSubmissionSetFromSite(self) -> None:
+        """
+        C{Request._parsePOSTFormSubmission} is set to match C{Site._parsePOSTFormSubmission}.
+        """
+        site = server.Site(resource.Resource())
+        self.assertEqual(site._parsePOSTFormSubmission, True)
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
+
+        site = server.Site(resource.Resource(), parsePOSTFormSubmission=False)
+        self.assertEqual(site._parsePOSTFormSubmission, False)
+        channel.site = site
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, False)
+
+        # Can also set it directly:
+        request = server.Request(channel, parsePOSTFormSubmission=True)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
 
 
 class GzipEncoderTests(unittest.TestCase):
@@ -1279,9 +1301,9 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 200)
         self.assertEqual(-1, req.transport.written.getvalue().find(b"hi hi"))
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_level"], LogLevel.info)
+        self.assertEqual(event["log_level"], LogLevel.info)
 
     def test_unsupportedHeadWrite(self):
         """
