@@ -874,6 +874,7 @@ class HostnameEndpoint:
         threads.deferToThread
     )
     _DEFAULT_ATTEMPT_DELAY = 0.3
+    _bindAddress: tuple[str, int] | None
 
     def __init__(
         self,
@@ -938,13 +939,21 @@ class HostnameEndpoint:
         )
         self._port = port
         self._timeout = timeout
+        toBind: tuple[str, int] | None
+        if bindAddress is None:
+            toBind = bindAddress
+        else:
+            if isinstance(bindAddress, (str, bytes)):
+                maybeHost = bindAddress
+                bindPort = 0
+            else:
+                maybeHost, bindPort = bindAddress
+            toBind = (
+                maybeHost if isinstance(maybeHost, str) else maybeHost.decode(),
+                bindPort,
+            )
+        self._bindAddress = toBind
 
-        if bindAddress is not None:
-            if isinstance(bindAddress, (bytes, str)):
-                bindAddress = (bindAddress, 0)
-            if isinstance(bindAddress[0], bytes):
-                bindAddress = (bindAddress[0].decode(), bindAddress[1])
-        self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
