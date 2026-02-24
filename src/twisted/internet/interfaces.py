@@ -17,13 +17,15 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Protocol as TypingProtocol,
     Sequence,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
-from zope.interface import Attribute, Interface
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.failure import Failure
 
@@ -57,6 +59,9 @@ if TYPE_CHECKING:
         from twisted.python.threadpool import ThreadPool
     else:
         ThreadPool = object  # type: ignore[misc, assignment]
+
+
+_ABindAddress = tuple[str, int] | None
 
 
 class IAddress(Interface):
@@ -716,7 +721,7 @@ class IReactorTCP(Interface):
         port: int,
         factory: "ClientFactory",
         timeout: float = 30.0,
-        bindAddress: Optional[Tuple[str, int]] = None,
+        bindAddress: _ABindAddress = None,
     ) -> IConnector:
         """
         Connect a TCP client.
@@ -744,7 +749,7 @@ class IReactorSSL(Interface):
         factory: "ClientFactory",
         contextFactory: "ClientContextFactory",
         timeout: float,
-        bindAddress: Optional[Tuple[str, int]],
+        bindAddress: _ABindAddress,
     ) -> IConnector:
         """
         Connect a client Protocol to a remote SSL socket.
@@ -839,7 +844,7 @@ class IReactorUNIXDatagram(Interface):
         protocol: "ConnectedDatagramProtocol",
         maxPacketSize: int,
         mode: int,
-        bindAddress: Optional[Tuple[str, int]],
+        bindAddress: _ABindAddress,
     ) -> IConnector:
         """
         Connect a client protocol to a datagram UNIX socket.
@@ -2341,7 +2346,7 @@ class ITLSTransport(ITCPTransport):
     def startTLS(
         contextFactory: Union[
             IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator
-        ]
+        ],
     ) -> None:
         """
         Initiate TLS negotiation.
@@ -2515,7 +2520,7 @@ class IUDPTransport(Interface):
     Transport for UDP DatagramProtocols.
     """
 
-    def write(packet: bytes, addr: Optional[Tuple[str, int]]) -> None:
+    def write(packet: bytes, addr: _ABindAddress) -> None:
         """
         Write packet to given address.
 
@@ -2662,6 +2667,25 @@ class IMulticastTransport(IUDPTransport):
         """
 
 
+SomeProtocol = TypeVar(
+    "SomeProtocol",
+    bound=IProtocol,
+    covariant=True,
+)
+
+
+@implementer(IProtocolFactory)
+class SomeProtocolFactory(TypingProtocol[SomeProtocol]):
+    def buildProtocol(self, addr: IAddress) -> SomeProtocol:
+        ...
+
+    def doStart(self) -> None:
+        ...
+
+    def doStop(self) -> None:
+        ...
+
+
 class IStreamClientEndpoint(Interface):
     """
     A stream client endpoint is a place that L{ClientFactory} can connect to.
@@ -2670,7 +2694,9 @@ class IStreamClientEndpoint(Interface):
     @since: 10.1
     """
 
-    def connect(protocolFactory: IProtocolFactory) -> "Deferred[IProtocol]":
+    def connect(
+        protocolFactory: SomeProtocolFactory[SomeProtocol],
+    ) -> "Deferred[SomeProtocol]":
         """
         Connect the C{protocolFactory} to the location specified by this
         L{IStreamClientEndpoint} provider.

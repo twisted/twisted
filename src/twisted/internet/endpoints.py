@@ -22,6 +22,7 @@ from typing import (
     Any,
     Callable,
     ClassVar,
+    Generic,
     Iterable,
     List,
     Optional,
@@ -53,6 +54,7 @@ from twisted.internet.interfaces import (
     IHostnameResolver,
     IHostResolution,
     IOpenSSLClientConnectionCreator,
+    IOpenSSLContextFactory,
     IOpenSSLServerConnectionCreator,
     IProtocol,
     IProtocolFactory,
@@ -65,8 +67,17 @@ from twisted.internet.interfaces import (
     IStreamClientEndpointStringParserWithReactor,
     IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
+    SomeProtocol,
+    SomeProtocolFactory,
+    _ABindAddress,
 )
-from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
+from twisted.internet.protocol import (
+    ClientFactory,
+    Factory,
+    ProcessProtocol,
+    Protocol,
+    _ProtoWithFactory,
+)
 
 try:
     from twisted.internet.stdio import PipeAddress, StandardIO
@@ -80,6 +91,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.task import LoopingCall
 from twisted.logger import Logger
 from twisted.plugin import IPlugin, getPlugins
+from twisted.protocols.policies import WrappingFactory
 from twisted.python import deprecate, log
 from twisted.python.compat import _matchingString, iterbytes, nativeString
 from twisted.python.components import proxyForInterface
@@ -136,6 +148,32 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 
+_InBindAddress = bytes | str | tuple[bytes | str, int] | None
+"""
+A somewhat looser interpretation of a bind address which endpoint constructors
+take.
+"""
+
+
+def _handleBindAddress(inAddress: _InBindAddress) -> _ABindAddress:
+    """
+    Convert from the maybe-str/maybe-bytes/maybe-tuples input that endpoints
+    take into the more formal C{(host:str, port:int)}-or-C{None} type required
+    by the underlying reactor interfaces.
+    """
+    if inAddress is None:
+        return None
+    if isinstance(inAddress, (str, bytes)):
+        maybeHost = inAddress
+        bindPort = 0
+    else:
+        maybeHost, bindPort = inAddress
+    return (
+        maybeHost if isinstance(maybeHost, str) else maybeHost.decode(),
+        bindPort,
+    )
+
+
 class _DeferToThreadFunction(TypingProtocol):
     def __call__(
         self, f: Callable[_P, _R], *args: _P.args, **kwds: _P.kwargs
@@ -159,13 +197,15 @@ def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:
     return staticmethod(f)
 
 
-class _WrappingProtocol(Protocol):
+class _WrappingProtocol(Protocol, Generic[SomeProtocol]):
     """
     Wrap another protocol in order to notify my user when a connection has
     been made.
     """
 
-    def __init__(self, connectedDeferred, wrappedProtocol):
+    def __init__(
+        self, connectedDeferred: Deferred[SomeProtocol], wrappedProtocol: SomeProtocol
+    ) -> None:
         """
         @param connectedDeferred: The L{Deferred} that will callback
             with the C{wrappedProtocol} when it is connected.
@@ -240,12 +280,21 @@ class _WrappingProtocol(Protocol):
         self._wrappedProtocol.handshakeCompleted()
 
 
-class _WrappingFactory(ClientFactory):
-    """
-    Wrap a factory in order to wrap the protocols it builds.
+_SomeProtoWithFactory = TypeVar("_SomeProtoWithFactory", bound=_ProtoWithFactory)
 
-    @ivar _wrappedFactory: A provider of I{IProtocolFactory} whose buildProtocol
-        method will be called and whose resulting protocol will be wrapped.
+SomeProtocolInv = TypeVar("SomeProtocolInv", bound=IProtocol)
+
+
+class _WrappingFactory(
+    ClientFactory[_WrappingProtocol[SomeProtocol]],
+    Generic[SomeProtocol],
+):
+    """
+    Wrap a client factory in order to wrap the protocols it builds.
+
+    @ivar _wrappedFactory: A provider of I{IProtocolFactory} whose
+        buildProtocol method will be called and whose resulting protocol will
+        be wrapped.
 
     @ivar _onConnection: A L{Deferred} that fires when the protocol is
         connected
@@ -256,16 +305,20 @@ class _WrappingFactory(ClientFactory):
 
     # Type is wrong.  See https://twistedmatrix.com/trac/ticket/10005#ticket
 
-    protocol = _WrappingProtocol
+    protocol: Callable[
+        [defer.Deferred[SomeProtocol], SomeProtocol],
+        _WrappingProtocol[SomeProtocol],
+    ]
+    protocol = _WrappingProtocol[SomeProtocol]
 
-    def __init__(self, wrappedFactory: IProtocolFactory) -> None:
+    def __init__(self, wrappedFactory: SomeProtocolFactory[SomeProtocol]) -> None:
         """
         @param wrappedFactory: A provider of I{IProtocolFactory} whose
             buildProtocol method will be called and whose resulting protocol
             will be wrapped.
         """
         self._wrappedFactory = wrappedFactory
-        self._onConnection: defer.Deferred[IProtocol] = defer.Deferred(
+        self._onConnection: defer.Deferred[SomeProtocol] = defer.Deferred(
             canceller=self._canceller
         )
 
@@ -626,13 +679,15 @@ class TCP4ClientEndpoint:
     TCP client endpoint with an IPv4 configuration.
     """
 
+    _bindAddress: _ABindAddress
+
     def __init__(
         self,
         reactor: Any,
         host: str,
         port: int,
         timeout: float = 30,
-        bindAddress: str | tuple[bytes | str, int] | None = None,
+        bindAddress: _InBindAddress = None,
     ) -> None:
         """
         @param reactor: An L{IReactorTCP} provider
@@ -655,9 +710,11 @@ class TCP4ClientEndpoint:
         self._host = host
         self._port = port
         self._timeout = timeout
-        self._bindAddress = bindAddress
+        self._bindAddress = _handleBindAddress(bindAddress)
 
-    def connect(self, protocolFactory: IProtocolFactory) -> Deferred[IProtocol]:
+    def connect(
+        self, protocolFactory: SomeProtocolFactory[SomeProtocol]
+    ) -> Deferred[SomeProtocol]:
         """
         Implement L{IStreamClientEndpoint.connect} to connect via TCP.
         """
@@ -697,8 +754,16 @@ class TCP6ClientEndpoint:
     )
     _GAI_ADDRESS = 4
     _GAI_ADDRESS_HOST = 0
+    _bindAddress: _ABindAddress
 
-    def __init__(self, reactor, host, port, timeout=30, bindAddress=None):
+    def __init__(
+        self,
+        reactor: Any,
+        host: str | bytes,
+        port: int,
+        timeout: float = 30,
+        bindAddress: _InBindAddress = None,
+    ):
         """
         @param host: An IPv6 address literal or a hostname with an
             IPv6 address
@@ -709,7 +774,7 @@ class TCP6ClientEndpoint:
         self._host = host
         self._port = port
         self._timeout = timeout
-        self._bindAddress = bindAddress
+        self._bindAddress = _handleBindAddress(bindAddress)
 
     def connect(self, protocolFactory):
         """
@@ -734,8 +799,10 @@ class TCP6ClientEndpoint:
         return self._deferToThread(self._getaddrinfo, host, 0, socket.AF_INET6)
 
     def _resolvedHostConnect(
-        self, resolvedHost: str, protocolFactory: IProtocolFactory
-    ) -> Deferred[IProtocol]:
+        self,
+        resolvedHost: str,
+        protocolFactory: SomeProtocolFactory[SomeProtocol],
+    ) -> Deferred[SomeProtocol]:
         """
         Connect to the server using the resolved hostname.
         """
@@ -882,7 +949,7 @@ class HostnameEndpoint:
         host: str | bytes,
         port: int,
         timeout: float = 30,
-        bindAddress: bytes | str | tuple[bytes | str, int] | None = None,
+        bindAddress: _InBindAddress = None,
         attemptDelay: float | None = None,
     ) -> None:
         """
@@ -902,18 +969,17 @@ class HostnameEndpoint:
             seconds to wait before assuming the connection has failed.
         @type timeout: L{float} or L{int}
 
-        @param bindAddress: The client socket normally uses whatever
-            local interface (eth0, en0, lo, etc) is best suited for the
-            target address, and a randomly-assigned port. This argument
-            allows that local address/port to be overridden. Providing
-            just an address (as a str) will bind the client socket to
-            whichever interface is assigned that address. Providing a
-            tuple of (str, int) will bind it to both an interface and a
-            specific local port. To bind the port, but leave the
-            interface unbound, use a tuple of ("", port), or ("0.0.0.0",
-            port) for IPv4, or ("::0", port) for IPv6. To leave both
-            interface and port unbound, just use None.
-        @type bindAddress: L{str}, L{tuple}, or None
+        @param bindAddress: The client socket normally uses whatever local
+            interface (eth0, en0, lo, etc) is best suited for the target
+            address, and a randomly-assigned port.  This argument allows that
+            local address/port to be overridden.  Providing just an address (as
+            a str) will bind the client socket to whichever interface is
+            assigned that address.  Providing a tuple of (str, int) will bind
+            it to both an interface and a specific local port.  To bind the
+            port, but leave the interface unbound, use a tuple of ("", port),
+            or ("0.0.0.0", port) for IPv4, or ("::0", port) for IPv6.  To leave
+            both interface and port unbound, just use None.  (While C{bytes}
+            will be accepted, passing C{str} is preferred.)
 
         @param attemptDelay: The number of seconds to delay between connection
             attempts.
@@ -939,20 +1005,7 @@ class HostnameEndpoint:
         )
         self._port = port
         self._timeout = timeout
-        toBind: tuple[str, int] | None
-        if bindAddress is None:
-            toBind = bindAddress
-        else:
-            if isinstance(bindAddress, (str, bytes)):
-                maybeHost = bindAddress
-                bindPort = 0
-            else:
-                maybeHost, bindPort = bindAddress
-            toBind = (
-                maybeHost if isinstance(maybeHost, str) else maybeHost.decode(),
-                bindPort,
-            )
-        self._bindAddress = toBind
+        self._bindAddress = _handleBindAddress(bindAddress)
 
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
@@ -1051,7 +1104,9 @@ class HostnameEndpoint:
             hostText = hostBytes.decode("ascii")
         return invalid, hostBytes, hostText
 
-    def connect(self, protocolFactory: IProtocolFactory) -> Deferred[IProtocol]:
+    def connect(
+        self, protocolFactory: SomeProtocolFactory[SomeProtocolInv]
+    ) -> Deferred[SomeProtocolInv]:
         """
         Attempts a connection to each resolved address, and returns a
         connection which is established first.
@@ -1134,7 +1189,7 @@ class HostnameEndpoint:
 
         def startConnectionAttempts(
             endpoints: list[TCP6ClientEndpoint | TCP4ClientEndpoint],
-        ) -> Deferred[IProtocol]:
+        ) -> Deferred[SomeProtocolInv]:
             """
             Given a sequence of endpoints obtained via name resolution, start
             connecting to a new one every C{self._attemptDelay} seconds until
@@ -1157,9 +1212,11 @@ class HostnameEndpoint:
                     f"no results for hostname lookup: {self._hostText}"
                 )
             iterEndpoints = iter(endpoints)
-            pending: list[defer.Deferred[IProtocol]] = []
+            pending: list[defer.Deferred[SomeProtocolInv]] = []
             failures: list[Failure] = []
-            winner: defer.Deferred[IProtocol] = defer.Deferred(canceller=_canceller)
+            winner: defer.Deferred[SomeProtocolInv] = defer.Deferred(
+                canceller=_canceller
+            )
 
             checkDoneCompleted = False
             checkDoneEndpointsLeft = True
@@ -1182,13 +1239,15 @@ class HostnameEndpoint:
                 eachAttempt = endpoint.connect(protocolFactory)
                 pending.append(eachAttempt)
 
-                def noLongerPending(result: IProtocol | Failure) -> IProtocol | Failure:
+                def noLongerPending(
+                    result: SomeProtocolInv | Failure,
+                ) -> SomeProtocolInv | Failure:
                     pending.remove(eachAttempt)
                     return result
 
                 successState = eachAttempt.addBoth(noLongerPending)
 
-                def succeeded(result: IProtocol) -> None:
+                def succeeded(result: SomeProtocolInv) -> None:
                     winner.callback(result)
 
                 successState.addCallback(succeeded)
@@ -1203,8 +1262,8 @@ class HostnameEndpoint:
             iterateEndpoint.start(self._attemptDelay)
 
             def cancelRemainingPending(
-                result: IProtocol | Failure,
-            ) -> IProtocol | Failure:
+                result: SomeProtocolInv | Failure,
+            ) -> SomeProtocolInv | Failure:
                 nonlocal checkDoneCompleted
                 checkDoneCompleted = True
                 for remaining in pending[:]:
@@ -1239,15 +1298,22 @@ class SSL4ServerEndpoint:
     SSL secured TCP server endpoint with an IPv4 configuration.
     """
 
-    def __init__(self, reactor, port, sslContextFactory, backlog=50, interface=""):
+    def __init__(
+        self,
+        reactor: Any,
+        port: int,
+        sslContextFactory: IOpenSSLContextFactory | IOpenSSLServerConnectionCreator,
+        backlog: int = 50,
+        interface: str = "",
+    ):
         """
         @param reactor: An L{IReactorSSL} provider.
 
         @param port: The port number used for listening
         @type port: int
 
-        @param sslContextFactory: An instance of
-            L{interfaces.IOpenSSLContextFactory}.
+        @param sslContextFactory: An object that can create an OpenSSL context
+            to configure the TLS connection.
 
         @param backlog: Size of the listen queue
         @type backlog: int
@@ -1282,35 +1348,39 @@ class SSL4ClientEndpoint:
     SSL secured TCP client endpoint with an IPv4 configuration
     """
 
+    _bindAddress: _ABindAddress
+
     def __init__(
-        self, reactor, host, port, sslContextFactory, timeout=30, bindAddress=None
+        self,
+        reactor: Any,
+        host: str,
+        port: int,
+        sslContextFactory: IOpenSSLContextFactory | IOpenSSLClientConnectionCreator,
+        timeout: float = 30,
+        bindAddress: _InBindAddress = None,
     ):
         """
         @param reactor: An L{IReactorSSL} provider.
 
-        @param host: A hostname, used when connecting
-        @type host: str
+        @param host: A hostname, used when connecting.
 
-        @param port: The port number, used when connecting
-        @type port: int
+        @param port: The port number, used when connecting.
 
-        @param sslContextFactory: SSL Configuration information as an instance
-            of L{interfaces.IOpenSSLContextFactory}.
+        @param sslContextFactory: An object that can create an OpenSSL context
+            to configure the TLS connection.
 
         @param timeout: Number of seconds to wait before assuming the
             connection has failed.
-        @type timeout: int
 
         @param bindAddress: A (host, port) tuple of local address to bind to,
             or None.
-        @type bindAddress: tuple
         """
         self._reactor = reactor
         self._host = host
         self._port = port
         self._sslContextFactory = sslContextFactory
         self._timeout = timeout
-        self._bindAddress = bindAddress
+        self._bindAddress = _handleBindAddress(bindAddress)
 
     def connect(self, protocolFactory):
         """
@@ -2305,14 +2375,20 @@ class _WrapperEndpoint:
     An endpoint that wraps another endpoint.
     """
 
-    def __init__(self, wrappedEndpoint, wrapperFactory):
+    def __init__(
+        self,
+        wrappedEndpoint: IStreamClientEndpoint,
+        wrapperFactory: Callable[[IProtocolFactory], WrappingFactory],
+    ) -> None:
         """
         Construct a L{_WrapperEndpoint}.
         """
         self._wrappedEndpoint = wrappedEndpoint
         self._wrapperFactory = wrapperFactory
 
-    def connect(self, protocolFactory):
+    def connect(
+        self, protocolFactory: SomeProtocolFactory[SomeProtocol]
+    ) -> Deferred[SomeProtocol]:
         """
         Connect the given protocol factory and unwrap its result.
         """
