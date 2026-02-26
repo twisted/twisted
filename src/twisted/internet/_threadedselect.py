@@ -266,7 +266,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             self.writes.remove(writer)
 
     def removeAll(self) -> list[IReadDescriptor | IWriteDescriptor]:
-        return self._removeAll(self.reads, self.writes)  # type:ignore[no-any-return]
+        return self._removeAll(self.reads, self.writes)
 
     def getReaders(self) -> list[IReadDescriptor]:
         return list(self.reads)

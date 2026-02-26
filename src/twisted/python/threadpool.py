@@ -283,7 +283,10 @@ class ThreadPool:
         # manage their lifecycle.  See
         # test_threadCreationArgumentsCallInThreadWithCallback.
         inContext.theWork = lambda: context.call(  # type: ignore[attr-defined]
-            ctx, func, *args, **kw
+            ctx,
+            func,
+            *args,
+            **kw,
         )
         inContext.onResult = onResult  # type: ignore[attr-defined]
 

@@ -6,13 +6,14 @@
 Logging and metrics infrastructure.
 """
 
+from __future__ import annotations
 
 import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, BinaryIO, Dict, Optional, cast
+from typing import Any, BinaryIO, Callable, Dict, Optional, ParamSpec, TypeVar, cast
 
 from zope.interface import Interface
 
@@ -73,20 +74,27 @@ class ILogObserver(Interface):
 
 context.setDefault(ILogContext, {"system": "-"})
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def callWithContext(ctx, func, *args, **kw):
-    newCtx = context.get(ILogContext).copy()
+
+def callWithContext(
+    ctx: dict[Any, Any], func: Callable[P, R], *args: P.args, **kw: P.kwargs
+) -> R:
+    newCtx: dict[object, object] = context.get(ILogContext).copy()
     newCtx.update(ctx)
     return context.call({ILogContext: newCtx}, func, *args, **kw)
 
 
-def callWithLogger(logger, func, *args, **kw):
+def callWithLogger(
+    logger: Logger | object, func: Callable[P, R], *args: P.args, **kw: P.kwargs
+) -> R | None:
     """
     Utility method which wraps a function in a try:/except:, logs a failure if
     one occurs, and uses the system's logPrefix.
     """
     try:
-        lp = logger.logPrefix()
+        lp: str = logger.logPrefix()  # type:ignore[union-attr]
     except KeyboardInterrupt:
         raise
     except BaseException:
@@ -98,6 +106,7 @@ def callWithLogger(logger, func, *args, **kw):
         raise
     except BaseException:
         err(system=lp)
+    return None
 
 
 def err(_stuff=None, _why=None, **kw):
