@@ -406,12 +406,12 @@ using ``inlineCallbacks``, we can write this as:
 
 .. code-block:: python
 
-    from twisted.internet.defer import inlineCallbacks, returnValue
+    from twisted.internet.defer import inlineCallbacks
 
     @inlineCallbacks
     def getUsers(self):
         responseBody = yield makeRequest("GET", "/users")
-        returnValue(json.loads(responseBody))
+        return json.loads(responseBody)
 
 a couple of things are happening here:
 
@@ -451,9 +451,9 @@ With ``inlineCallbacks``, we can rewrite this as:
             responseBody = yield makeRequest("GET", "/users")
         except ConnectionError:
            log.failure("makeRequest failed due to connection error")
-           returnValue([])
+           return []
 
-        returnValue(json.loads(responseBody))
+        return json.loads(responseBody)
 
 Our exception handling is simplified because we can use Python's familiar ``try`` / ``except`` syntax for handling ``ConnectionError``\ s.
 

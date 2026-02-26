@@ -19,7 +19,6 @@ from twisted.internet.defer import (
     Failure,
     fail,
     inlineCallbacks,
-    returnValue,
     succeed,
 )
 from twisted.python.compat import _PYPY
@@ -111,7 +110,7 @@ class BasicTests(TestCase):
                 yield getDivisionFailureCoro("OMG")
             except ZeroDivisionError as e:
                 self.assertEqual(str(e), "OMG")
-                returnValue("WOOSH")
+                return "WOOSH"
 
         return _genBasics().addCallback(self.assertEqual, "WOOSH")
 
@@ -254,26 +253,6 @@ class BasicTests(TestCase):
 
         return _noReturn().addCallback(self.assertEqual, None)
 
-    def testReturnValueDeprecated(self):
-        """C{returnValue} is now deprecated but continues to be available."""
-
-        @inlineCallbacks
-        def _return():
-            yield 5
-            returnValue(6)
-
-        d = _return()
-
-        warnings = self.flushWarnings()
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]["category"])
-        self.assertIn(
-            "twisted.internet.defer.returnValue was deprecated in Twisted",
-            warnings[0]["message"],
-        )
-
-        return d.addCallback(self.assertEqual, 6)
-
     def test_nonGeneratorReturn(self):
         """
         Ensure that C{TypeError} with a message about L{inlineCallbacks} is
@@ -287,73 +266,11 @@ class BasicTests(TestCase):
 
         self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
 
-    def test_nonGeneratorReturnValue(self):
-        """
-        Ensure that C{TypeError} with a message about L{inlineCallbacks} is
-        raised when a non-generator calls L{returnValue}.
-        """
-
-        def _noYield():
-            returnValue(5)
-
-        _noYield = inlineCallbacks(_noYield)
-
-        self.assertIn("inlineCallbacks", str(self.assertRaises(TypeError, _noYield)))
-
-    def test_internalDefGenReturnValueDoesntLeak(self):
-        """
-        When one inlineCallbacks calls another, the internal L{_DefGen_Return}
-        flow control exception raised by calling L{defer.returnValue} doesn't
-        leak into tracebacks captured in the caller.
-        """
-        clock = task.Clock()
-
-        @inlineCallbacks
-        def _returns():
-            """
-            This is the inner function using returnValue.
-            """
-            yield task.deferLater(clock, 0)
-            returnValue("actual-value-not-used-for-the-test")
-
-        @inlineCallbacks
-        def _raises():
-            try:
-                yield _returns()
-                raise TerminalException("boom returnValue")
-            except TerminalException:
-                return traceback.format_exc()
-
-        d = _raises()
-        clock.advance(0)
-        tb = self.successResultOf(d)
-
-        warnings = self.flushWarnings()
-        self.assertEqual(1, len(warnings))
-        self.assertIs(DeprecationWarning, warnings[0]["category"])
-        self.assertIn(
-            "twisted.internet.defer.returnValue was deprecated in Twisted",
-            warnings[0]["message"],
-        )
-
-        # The internal exception is not in the traceback.
-        self.assertNotIn("_DefGen_Return", tb)
-        # No other extra exception is in the traceback.
-        self.assertNotIn(
-            "During handling of the above exception, another exception occurred", tb
-        )
-        # Our targeted exception is in the traceback
-        self.assertIn("test_inlinecb.TerminalException: boom returnValue", tb)
-
     def test_internalStopIterationDoesntLeak(self):
         """
         When one inlineCallbacks calls another, the internal L{StopIteration}
         flow control exception generated when the inner generator returns
         doesn't leak into tracebacks captured in the caller.
-
-        This is similar to C{test_internalDefGenReturnValueDoesntLeak} but the
-        inner function uses the "normal" return statemement rather than the
-        C{returnValue} helper.
         """
         clock = task.Clock()
 
@@ -547,7 +464,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         async def f2(x):
             expectations.append(("f2 enter", x))
@@ -566,7 +483,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         self.runCallbacksOnDeferreds(deferredList)
@@ -689,7 +606,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 1
 
             expectations.append(("f1 exit", x))
-            returnValue(x)
+            return x
 
         async def f2(x):
             expectations.append(("f2 enter", x))
@@ -712,7 +629,7 @@ class StackedInlineCallbacksTests(TestCase):
             x += 4
 
             expectations.append(("f3 exit", x))
-            returnValue(x)
+            return x
 
         res = f3(1)
         for d, x in deferredList:
@@ -1038,87 +955,6 @@ class StackedInlineCallbacksTests(TestCase):
                 ("f3 exit", 6),
             ],
         )
-
-
-class NonLocalExitTests(TestCase):
-    """
-    It's possible for L{returnValue} to be (accidentally) invoked at a stack
-    level below the L{inlineCallbacks}-decorated function which it is exiting.
-    If this happens, L{returnValue} should report useful errors.
-
-    If L{returnValue} is invoked from a function not decorated by
-    L{inlineCallbacks}, it will emit a warning if it causes an
-    L{inlineCallbacks} function further up the stack to exit.
-    """
-
-    def mistakenMethod(self):
-        """
-        This method mistakenly invokes L{returnValue}, despite the fact that it
-        is not decorated with L{inlineCallbacks}.
-        """
-        returnValue(1)
-
-    def assertMistakenMethodWarning(self, resultList):
-        """
-        Flush the current warnings and assert that we have been told that
-        C{mistakenMethod} was invoked, and that the result from the Deferred
-        that was fired (appended to the given list) is C{mistakenMethod}'s
-        result.  The warning should indicate that an inlineCallbacks function
-        called 'inline' was made to exit.
-        """
-        self.assertEqual(resultList, [1])
-        warnings = self.flushWarnings(offendingFunctions=[self.mistakenMethod])
-        self.assertEqual(len(warnings), 2)
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(warnings[1]["category"], DeprecationWarning)
-        self.assertIn(
-            "twisted.internet.defer.returnValue was deprecated in Twisted",
-            warnings[0]["message"],
-        )
-        self.assertEqual(
-            warnings[1]["message"],
-            "returnValue() in 'mistakenMethod' causing 'inline' to exit: "
-            "returnValue should only be invoked by functions decorated with "
-            "inlineCallbacks",
-        )
-
-    def test_returnValueNonLocalWarning(self):
-        """
-        L{returnValue} will emit a non-local exit warning in the simplest case,
-        where the offending function is invoked immediately.
-        """
-
-        @inlineCallbacks
-        def inline():
-            self.mistakenMethod()
-            returnValue(2)
-            yield 0
-
-        d = inline()
-        results = []
-        d.addCallback(results.append)
-        self.assertMistakenMethodWarning(results)
-
-    def test_returnValueNonLocalDeferred(self):
-        """
-        L{returnValue} will emit a non-local warning in the case where the
-        L{inlineCallbacks}-decorated function has already yielded a Deferred
-        and therefore moved its generator function along.
-        """
-        cause = Deferred()
-
-        @inlineCallbacks
-        def inline():
-            yield cause
-            self.mistakenMethod()
-            returnValue(2)
-
-        effect = inline()
-        results = []
-        effect.addCallback(results.append)
-        self.assertEqual(results, [])
-        cause.callback(1)
-        self.assertMistakenMethodWarning(results)
 
 
 class ForwardTraceBackTests(SynchronousTestCase):
