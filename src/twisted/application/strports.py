@@ -74,10 +74,7 @@ def listen(
     """
     from twisted.internet import reactor
 
-    name, args, kw = endpoints._parseServer(description, factory)
-    return cast(
-        interfaces.IListeningPort, getattr(reactor, "listen" + name)(*args, **kw)
-    )
+    return endpoints.serverFromString(reactor, description).listen(factory)
 
 
 __all__ = ["service", "listen"]
