@@ -573,6 +573,142 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
 
 
+  # Run tests under FIPS-enabled OpenSSL.
+  # Tests known to fail under FIPS are excluded below. As FIPS-incompatible
+  # code is fixed, remove the corresponding entries from the excluded set.
+  # See https://github.com/twisted/twisted/pull/12585
+  fips-testing:
+    name: ${{ matrix.python-version }}-FIPS OpenSSL
+    runs-on: ubuntu-22.04
+    container:
+      image: quay.io/centos/centos:stream9
+      env:
+        OPENSSL_FORCE_FIPS_MODE: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.14']
+        include:
+          - python-version: '3.9'
+            dnf-pkg-suffix: '3'
+          - python-version: '3.14'
+            dnf-pkg-suffix: '3.14'
+
+    steps:
+    - name: Install system dependencies
+      run: |
+        dnf install -y git python${{ matrix.dnf-pkg-suffix }}-pip python${{ matrix.dnf-pkg-suffix }}-devel gcc libffi-devel openssl-devel
+
+    - uses: actions/checkout@v4
+
+    - name: Verify FIPS mode is active
+      run: |
+        openssl version
+        python${{ matrix.python-version }} -c "
+        import _hashlib
+        mode = _hashlib.get_fips_mode()
+        assert mode, f'FIPS mode not active (get_fips_mode() returned {mode})'
+        print(f'FIPS mode confirmed: get_fips_mode() = {mode}')
+        "
+
+    - name: Install Python dependencies
+      run: |
+        python${{ matrix.python-version }} -m pip install --upgrade pip tox~=3.0
+
+    - name: Test
+      env:
+        TOXENV: alldeps-nocov-posix
+        TRIAL_ARGS: '-j 4'
+      run: |
+        tox -- $(python${{ matrix.python-version }} -c "
+        import glob
+        excluded = {
+            'twisted.conch.test.test_cftp',
+            'twisted.conch.test.test_checkers',
+            'twisted.conch.test.test_ckeygen',
+            'twisted.conch.test.test_conch',
+            'twisted.conch.test.test_default',
+            'twisted.conch.test.test_endpoints',
+            'twisted.conch.test.test_forwarding',
+            'twisted.conch.test.test_keys',
+            'twisted.conch.test.test_manhole',
+            'twisted.conch.test.test_openssh_compat',
+            'twisted.conch.test.test_recvline',
+            'twisted.conch.test.test_scripts',
+            'twisted.conch.test.test_ssh',
+            'twisted.conch.test.test_transport',
+            'twisted.cred.test.test_cramauth',
+            'twisted.cred.test.test_digestauth',
+            'twisted.internet.test.test_asyncioreactor',
+            'twisted.internet.test.test_base',
+            'twisted.internet.test.test_cfreactor',
+            'twisted.internet.test.test_core',
+            'twisted.internet.test.test_endpoints',
+            'twisted.internet.test.test_fdset',
+            'twisted.internet.test.test_gireactor',
+            'twisted.internet.test.test_glibbase',
+            'twisted.internet.test.test_iocp',
+            'twisted.internet.test.test_kqueuereactor',
+            'twisted.internet.test.test_newtls',
+            'twisted.internet.test.test_pollingfile',
+            'twisted.internet.test.test_process',
+            'twisted.internet.test.test_socket',
+            'twisted.internet.test.test_stdio',
+            'twisted.internet.test.test_tcp',
+            'twisted.internet.test.test_threads',
+            'twisted.internet.test.test_time',
+            'twisted.internet.test.test_tls',
+            'twisted.internet.test.test_udp',
+            'twisted.internet.test.test_unix',
+            'twisted.internet.test.test_win32events',
+            'twisted.internet.test.test_win32serialport',
+            'twisted.mail.test.test_imap',
+            'twisted.mail.test.test_mail',
+            'twisted.mail.test.test_pop3',
+            'twisted.mail.test.test_pop3client',
+            'twisted.mail.test.test_scripts',
+            'twisted.mail.test.test_smtp',
+            'twisted.pair.test.test_tuntap',
+            'twisted.protocols.test.test_tls',
+            'twisted.python.test.test_zipstream',
+            'twisted.scripts.test.test_scripts',
+            'twisted.spread.test.test_pb',
+            'twisted.test.test_amp',
+            'twisted.test.test_adbapi',
+            'twisted.test.test_application',
+            'twisted.test.test_lockfile',
+            'twisted.test.test_logfile',
+            'twisted.test.test_paths',
+            'twisted.test.test_plugin',
+            'twisted.test.test_process',
+            'twisted.test.test_shortcut',
+            'twisted.test.test_sni',
+            'twisted.test.test_ssl',
+            'twisted.test.test_sslverify',
+            'twisted.test.test_strerror',
+            'twisted.trial.test.test_skip',
+            'twisted.trial.test.test_loader',
+            'twisted.trial.test.test_reporter',
+            'twisted.trial.test.test_script',
+            'twisted.trial.test.test_util',
+            'twisted.web.test.test_http',
+            'twisted.web.test.test_http2',
+            'twisted.web.test.test_httpauth',
+            'twisted.web.test.test_static',
+            'twisted.web.test.test_agent',
+            'twisted.web.test.test_tap',
+            'twisted.words.test.test_jabbersaslmechanisms',
+            'twisted.words.test.test_service',
+        }
+        modules = []
+        for p in sorted(glob.glob('src/twisted/**/test/test_*.py', recursive=True)):
+            mod = p[4:].replace('/', '.').removesuffix('.py')
+            if mod not in excluded:
+                modules.append(mod)
+        print(' '.join(modules))
+        ")
+
+
   # We have this job so that the PR can be blocked on a single job.
   # In this way, each time a job is modified,
   # we don't have to go to GitHub UI and reconfigure branch protection.
@@ -587,6 +723,7 @@ jobs:
     needs:
       - benchmarks
       - testing
+      - fips-testing
       - narrativedocs
       - apidocs
       - static-checks
