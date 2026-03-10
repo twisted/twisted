@@ -14,12 +14,15 @@ from typing import (
     Union,
 )
 
+from zope.interface import implementer
+
 from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
 from twisted.internet.defer import CancelledError, Deferred, succeed
 from twisted.internet.error import ConnectingCancelledError, DNSLookupError
 from twisted.internet.interfaces import (
     IProtocolFactory,
     IReactorTime,
+    IResolutionReceiver,
     IStreamClientEndpoint,
 )
 from twisted.internet.task import deferLater
@@ -54,7 +57,7 @@ def push2aiter() -> tuple[Callable[[T], None], Callable[[], None], AsyncIterable
         while True:
             if not q:
                 assert 0
-                q.append(Deferred())
+                q.append(Deferred())  # type:ignore[unreachable]
             out = await q.pop(0)
             if out is DoneSentinel.Done:
                 return
@@ -197,7 +200,12 @@ class MultiFirer(Generic[T]):
             self.activeTimeout.cancel()
             self.activeTimeout = None
             it, self.waiting = self.waiting, None
-            it.callback((actuallyDone, value))
+            assert actuallyDone or value is None
+            result: tuple[Literal[True], T] | tuple[Literal[False], None] = (
+                actuallyDone,
+                value,
+            )  # type:ignore[assignment]
+            it.callback(result)
 
 
 async def _start(
@@ -214,6 +222,7 @@ async def _start(
 
     p, s, ai = push2aiter()
 
+    @implementer(IResolutionReceiver)
     class res:
         def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
             pass
@@ -226,7 +235,7 @@ async def _start(
 
     reactor = endpoint._reactor
     resolver = endpoint._getNameResolverAndMaybeWarn(reactor)
-    resolver.resolveHostName(res(), endpoint._hostStr, portNumber=endpoint._port)
+    resolver.resolveHostName(res(), endpoint._hostText, portNumber=endpoint._port)
 
     mf: MultiFirer[TwistedProtocol] = MultiFirer()
     try:
@@ -242,7 +251,9 @@ async def _start(
                 assert result is not None
                 return result
         if not attempts:
-            raise DNSLookupError(f"no results for hostname lookup: {endpoint._hostStr}")
+            raise DNSLookupError(
+                f"no results for hostname lookup: {endpoint._hostText}"
+            )
         return await mf.end()
     finally:
         ty, v, tb = exc_info()
