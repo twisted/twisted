@@ -3,34 +3,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from itertools import count
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Dict,
-    FrozenSet,
-    Generic,
-    Iterator,
-    List,
-    Optional,
-    Set,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from zope.interface import implementer
 
 from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
-from twisted.internet.defer import CancelledError, Deferred
+from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectingCancelledError, DNSLookupError
 from twisted.internet.interfaces import (
     IAddress,
     IDelayedCall,
     IHostResolution,
+    IProtocol,
     IProtocolFactory,
     IReactorTime,
     IResolutionReceiver,
     IStreamClientEndpoint,
-    IStreamServerEndpoint,
 )
 from twisted.internet.protocol import Protocol as TwistedProtocol
 from twisted.python.failure import Failure
@@ -120,13 +108,11 @@ class Attempts:
     established: Callable[[TwistedProtocol], None]
     lastAttemptTime: float | None = None
     delayedCall: IDelayedCall | None = None
-    attemptsInProgress: Outstanding[TwistedProtocol] = field(
-        default_factory=Outstanding
-    )
+    attemptsInProgress: Outstanding[IProtocol] = field(default_factory=Outstanding)
     endpointQueue: list[IStreamClientEndpoint] = field(default_factory=list)
     failures: list[Failure] = field(default_factory=list)
 
-    def invariants(self):
+    def invariants(self) -> None:
         C = ConnectionFailedParts
         self.failer.check(
             [
@@ -201,12 +187,12 @@ def start(
     d: Deferred[TwistedProtocol]
     resolution: Resolution
 
-    def determineFailure() -> Failure:
+    def determineFailure() -> Failure | Exception:
         if attempts.failures:
             return attempts.failures[0]
         else:
             return DNSLookupError(
-                f"no results for hostname lookup: {hostnameEndpoint._hostStr}"
+                f"no results for hostname lookup: {hostnameEndpoint._hostText}"
             )
 
     failer: CallWhenAll[ConnectionFailedParts] = CallWhenAll(
@@ -257,7 +243,7 @@ def start(
 
     resolution = Resolution(failer, enq)
 
-    hostnameEndpoint._nameResolver.resolveHostName(
+    hostnameEndpoint._getNameResolverAndMaybeWarn(attempts.clock).resolveHostName(
         resolution,
         hostnameEndpoint._hostText,
         portNumber=hostnameEndpoint._port,
