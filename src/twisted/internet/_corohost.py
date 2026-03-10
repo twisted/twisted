@@ -8,22 +8,15 @@ from typing import (
     AsyncIterable,
     Callable,
     Generic,
-    List,
     Literal,
-    Optional,
     Tuple,
     TypeVar,
     Union,
 )
 
 from twisted.internet.address import HostnameAddress, IPv4Address, IPv6Address
-from twisted.internet.defer import CancelledError, Deferred, DeferredList, succeed
-from twisted.internet.error import (
-    ConnectError,
-    ConnectingCancelledError,
-    DNSLookupError,
-    TimeoutError,
-)
+from twisted.internet.defer import CancelledError, Deferred, succeed
+from twisted.internet.error import ConnectingCancelledError, DNSLookupError
 from twisted.internet.interfaces import (
     IProtocolFactory,
     IReactorTime,
@@ -106,7 +99,9 @@ def addr2endpoint(
 class MultiFirer(Generic[T]):
     deferreds: Outstanding[T] = field(default_factory=Outstanding)
     activeTimeout: Union[Deferred[None], None] = None
-    waiting: Union[Deferred[tuple[bool, Union[T, None]]], None] = None
+    waiting: Union[
+        Deferred[Union[tuple[Literal[True], T], tuple[Literal[False], None]]], None
+    ] = None
     hasResult: bool = False
     hasFailure: bool = False
     finalResult: Union[T, None] = None
@@ -229,8 +224,8 @@ async def _start(
         def resolutionComplete(self) -> None:
             s()
 
-    resolver = endpoint._nameResolver
     reactor = endpoint._reactor
+    resolver = endpoint._getNameResolverAndMaybeWarn(reactor)
     resolver.resolveHostName(res(), endpoint._hostStr, portNumber=endpoint._port)
 
     mf: MultiFirer[TwistedProtocol] = MultiFirer()

@@ -1058,7 +1058,7 @@ class HostnameEndpoint:
         """
         if self._badHostname:
             return defer.fail(ValueError(f"invalid hostname: {self._hostText}"))
-        return start(self, protocolFactory)  # type:ignore[return-value]
+        return start(self, protocolFactory)
 
         resolved: Deferred[list[IAddress]] = Deferred()  # type:ignore[unreachable]
         addresses: list[IAddress] = []
