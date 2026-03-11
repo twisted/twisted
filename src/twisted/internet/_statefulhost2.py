@@ -226,6 +226,9 @@ justPending = ConnectionAttemptImpl.state("justPending")
 "There are no queued connections right now, but there are pending ones."
 justQueued = ConnectionAttemptImpl.state("justQueued")
 "There are no pending connections right now, but there are queued ones."
+resolvingWithPendingAndQueued = ConnectionAttemptImpl.state(
+    "resolvingWithPendingAndQueued"
+)
 
 
 @idle.upon(ConnectionAttempt.start).to(awaitingResolution)
@@ -256,11 +259,21 @@ def resolutionBegan(
 
 
 @noNamesYet.upon(ConnectionAttempt.addressResolved).to(resolvingWithPending)
-def addressResolved(
+def addressResolvedInProgress(
     attempt: ConnectionAttempt,
     core: ConnectionAttemptCore,
     resolutionInProgress: IHostResolution,
     address: IAddress,
+) -> None:
+    core.queueOneAttempt(address)
+    core.doOneAttempt()
+
+
+@resolvingWithPending.upon(ConnectionAttempt.addressResolved).to(
+    resolvingWithPendingAndQueued
+)
+def addressResolved(
+    attempt: ConnectionAttempt, core: ConnectionAttemptCore, address: IAddress
 ) -> None:
     core.queueOneAttempt(address)
     core.doOneAttempt()
@@ -292,47 +305,21 @@ def resolvedWhileResolving(
     core.doOneAttempt()
 
 
-@resolvingNames.upon(
-    ConnectionAttempt.resolutionComplete,
-    enter=lambda: Done,
-)
-def resolutionComplete(self) -> None:
-    self.core.connectionFailure()
+resolvingNames.upon(ConnectionAttempt.resolutionComplete).to(done).returns(None)
+
+resolvingWithPending.upon(ConnectionAttempt.noPendingConnections).to(
+    resolvingNames
+).returns(None)
+"No pending connections remain. Transition to Resolving only."
 
 
-@ConnectionAttemptImpl.state
-class ResolvingWithPending:
-    """
-    We are in the middle of resolving names, and also we have several pending
-    connections.
-    """
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.noPendingConnections,
-        enter=lambda: ResolvingNames,
-    )
-    def noPendingConnections(self) -> None:
-        """
-        No pending connections remain. Transition to Resolving only.
-        """
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.addressResolved,
-        enter=lambda: ResolvingWithPendingAndQueued,
-    )
-    def addressResolved(self, address: IAddress) -> None:
-        self.core.queueOneAttempt(address)
-        self.core.doOneAttempt()
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.endpointQueueEmpty,
-        enter=lambda: ResolvingWithPending,
-    )
-    def endpointQueueEmpty(self) -> None:
-        """
-        Endpoint queue empty; transition to resolving-with-pending only and do
-        nothing.
-        """
+resolvingWithPending.upon(ConnectionAttempt.endpointQueueEmpty).to(
+    resolvingWithPending
+).returns(None)
+"""
+Endpoint queue empty; transition to resolving-with-pending only and do
+nothing.
+"""
 
 
 justPending.upon(
