@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Protocol, TypeVar
 
 from zope.interface import implementer
 
-from automat import TypicalMachine
+from automat import TypeMachineBuilder
 
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred
@@ -12,6 +12,8 @@ from twisted.internet.interfaces import (
     IAddress,
     IDelayedCall,
     IHostResolution,
+    IProtocol,
+    IProtocolFactory,
     IResolutionReceiver,
     IStreamClientEndpoint,
 )
@@ -21,12 +23,14 @@ from twisted.python.failure import Failure
 if TYPE_CHECKING:
     from twisted.internet.endpoints import HostnameEndpoint
 
+T = TypeVar("T")
+
 
 @implementer(IResolutionReceiver)
 class ConnectionAttempt(Protocol):
     """ """
 
-    def start(self) -> None:
+    def start(self) -> Deferred[IProtocol]:
         """
         Begin the connection attempt.
         """
@@ -55,17 +59,17 @@ class ConnectionAttempt(Protocol):
     def established(self, protocol: TwistedProtocol) -> None:
         """ """
 
-    def oneAttemptFailed(self, reason):
+    def oneAttemptFailed(self, reason: Failure) -> None:
         """
         A connection cannot be established
         """
 
-    def endpointQueueEmpty(self):
+    def endpointQueueEmpty(self) -> None:
         """
         There are no more endpoints in the outbound queue.
         """
 
-    def noPendingConnections(self):
+    def noPendingConnections(self) -> None:
         """
         The last pending connection has terminated, in either success or
         failure.
@@ -77,21 +81,20 @@ class ConnectionAttempt(Protocol):
     #     """
     # now handled by .cancel()
 
-    def attemptDelayExpired(self):
+    def attemptDelayExpired(self) -> None:
         """
         It's time to unqueue the next connection attempt.
         """
 
-    def moreQueuedEndpoints(self):
+    def moreQueuedEndpoints(self) -> None:
         """
         More endpoints remain in the queue.
         """
 
 
-def addr2endpoint(
-    hostnameEndpoint: HostnameEndpoint,
-    address: IAddress,
-) -> None:
+def addr2endpoints(
+    hostnameEndpoint: HostnameEndpoint, address: IAddress
+) -> Iterable[IStreamClientEndpoint]:
     """
     Convert an address into an endpoint
     """
@@ -103,35 +106,41 @@ def addr2endpoint(
     bindAddress = hostnameEndpoint._bindAddress
 
     if isinstance(address, IPv6Address):
-        return TCP6ClientEndpoint(
+        yield TCP6ClientEndpoint(
             reactor, address.host, address.port, timeout, bindAddress
         )
     if isinstance(address, IPv4Address):
-        return TCP4ClientEndpoint(
+        yield TCP4ClientEndpoint(
             reactor, address.host, address.port, timeout, bindAddress
         )
-    return None
 
 
+@dataclass
 class ConnectionAttemptCore:
-    """ """
+    """
+    Automat state core for a single in-progress call to HostnameEndpoint.connect()
+    """
 
     # this is only ever un-set in Idle state. Should this even be a state,
     # then, or just a construction parameter?
-    deferred: Deferred[TwistedProtocol]
+    deferred: Deferred[IProtocol]
 
     # provide for feedback.  TODO: can the framework do this and auto-populate
     # such an annotation?
     machine: ConnectionAttempt
 
-    # populated by _cooperateWithNew's argument
     endpoint: HostnameEndpoint
-
-    # constructed by _cooperateWithNew
-    endpointQueue: List[IStreamClientEndpoint]
-    pendingConnectionAttempts: List[Deferred[TwistedProtocol]]
+    endpointQueue: list[IStreamClientEndpoint]
+    pendingConnectionAttempts: List[Deferred[IProtocol]]
     lastAttemptTime: float
+    protocolFactory: IProtocolFactory
+    failures: list[Failure]
     nextAttemptCall: Optional[IDelayedCall] = None
+    resolutionInProgress: IHostResolution | None = None
+
+    @property
+    def reactor(self) -> Any:
+        return self.endpoint._reactor
 
     def oneAttemptLater(self) -> None:
         assert self.nextAttemptCall is None
@@ -147,161 +156,148 @@ class ConnectionAttemptCore:
         )
 
     def resolutionFailure(self) -> None:
-        """ """
+        """
+        Name resolution failed.
+        """
         self.deferred.errback(
             Failure(
                 DNSLookupError(
-                    f"no results for hostname lookup: {self.endpoint._hostStr}"
+                    f"no results for hostname lookup: {self.endpoint._hostText}"
                 )
             )
         )
 
-    def queueOneAttempt(self, address: IStreamClientEndpoint) -> None:
+    def queueOneAttempt(self, address: IAddress) -> None:
         """
         Add an endpoint to the list of endpoints that we should still use.
         """
-        self._endpointQueue.append(addr2endpoint(self.endpoint, address))
+        self.endpointQueue.extend(addr2endpoints(self.endpoint, address))
 
     def doOneAttempt(self) -> None:
         """
         Perform an attempt, draining the queue.
         """
         self.lastAttemptTime = self.endpoint._reactor.seconds()
-        endpoint = self._endpointQueue.pop(0)
-        if not self._endpointQueue:
+        endpoint = self.endpointQueue.pop(0)
+        if not self.endpointQueue:
             self.machine.endpointQueueEmpty()
         else:
             self.machine.moreQueuedEndpoints()
         connected = endpoint.connect(self.protocolFactory)
-        self._pendingConnectionAttempts.append(connected)
+        self.pendingConnectionAttempts.append(connected)
 
-        def removePending(result):
-            self._pendingConnectionAttempts.remove(connected)
+        def removePending(result: T) -> T:
+            self.pendingConnectionAttempts.remove(connected)
             return result
 
         connected.addBoth(removePending)
-        connected.addCallbacks(self.established, self.failures.append)
+        connected.addCallbacks(self.machine.established, self.failures.append)
 
-        def maybeNoMoreConnections(result):
-            if not self._pendingConnectionAttempts:
-                self.noPendingConnections()
+        def maybeNoMoreConnections(result: object) -> None:
+            if not self.pendingConnectionAttempts:
+                self.machine.noPendingConnections()
 
         connected.addBoth(maybeNoMoreConnections)
 
 
-def _cooperateWithNew(
-    capture: List[ConnectionAttemptCore], endpoint: HostnameEndpoint
-) -> ConnectionAttemptCore:
-    """ """
-    self = ConnectionAttemptCore()
-    self.endpoint = endpoint
-    self.endpointQueue = []
-    self.pendingConnectionAttempts = []
-    capture.append(self)
-    return self
-
-
-ConnectionAttemptImpl: TypicalMachine[
+ConnectionAttemptImpl: TypeMachineBuilder[
     ConnectionAttempt, ConnectionAttemptCore
-] = TypicalMachine(_cooperateWithNew)
+] = TypeMachineBuilder(ConnectionAttempt, ConnectionAttemptCore)
 
 
-def new(hostnameEndpoint: HostnameEndpoint):
-    """ """
-    x = []
-    # TODO: typecheck `build`?
-    impl = ConnectionAttemptImpl.build(x, hostnameEndpoint)
-    x[0].machine = impl
-    return impl
+idle = ConnectionAttemptImpl.state("idle")
+awaitingResolution = ConnectionAttemptImpl.state("awaitingResolution")
 
 
-@ConnectionAttemptImpl.state
-class Idle:
+def rememberResolution(
+    attempt: ConnectionAttempt,
+    core: ConnectionAttemptCore,
+    resolutionInProgress: IHostResolution,
+) -> IHostResolution:
+    return resolutionInProgress
+
+
+noNamesYet = ConnectionAttemptImpl.state("noNamesYet", rememberResolution)
+resolvingWithPending = ConnectionAttemptImpl.state("resolvingWithPending")
+done = ConnectionAttemptImpl.state("done")
+justPending = ConnectionAttemptImpl.state("justPending")
+resolvingNames = ConnectionAttemptImpl.state("resolvingNames")
+justPending = ConnectionAttemptImpl.state("justPending")
+"There are no queued connections right now, but there are pending ones."
+justQueued = ConnectionAttemptImpl.state("justQueued")
+"There are no pending connections right now, but there are queued ones."
+
+
+@idle.upon(ConnectionAttempt.start).to(awaitingResolution)
+def start(
+    attempt: ConnectionAttempt, core: ConnectionAttemptCore
+) -> Deferred[IProtocol]:
     """
-    We are idling, nothing has started yet.
+    Start the resolution process.
     """
-
-    core: ConnectionAttemptCore
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.start, enter=lambda: AwaitingResolution
+    core.endpoint._getNameResolverAndMaybeWarn(core.reactor).resolveHostName(
+        core.machine,
+        core.endpoint._hostText,
+        portNumber=core.endpoint._port,
     )
-    def start(self) -> Deferred[TwistedProtocol]:
-        """
-        Start the resolution process.
-        """
-        self.core.resolutionInProgress = (
-            self.core.hostnameEndpoint._nameResolver.resolveHostName(
-                self.core.machine,
-                self.core.hostnameEndpoint._hostText,
-                portNumber=self.core.hostnameEndpoint._port,
-            )
-        )
-        it = self.core.deferred = Deferred()
-        return it
+    core.deferred = Deferred()
+    return core.deferred
 
 
-@ConnectionAttemptImpl.state
-class AwaitingResolution:
-    """
-    We just started, and now we're waiting for hostnames to begin.
-    """
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.resolutionBegan, enter=lambda: NoNamesYet
-    )
-    def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
-        """
-        Resolution began, we don't need to do anything.
-        """
+awaitingResolution.upon(ConnectionAttempt.resolutionBegan).to(noNamesYet).returns(None)
 
 
-@dataclass
-@ConnectionAttemptImpl.state
-class NoNamesYet:
-    """ """
-
-    core: ConnectionAttemptCore
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.addressResolved, enter=lambda: ResolvingWithPending
-    )
-    def addressResolved(self, address: IAddress) -> None:
-        self.core.queueOneAttempt(address)
-        self.core.doOneAttempt()
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.resolutionComplete,
-        enter=lambda: Done,
-    )
-    def resolutionComplete(self) -> None:
-        return self.core.resolutionFailure()
-
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.cancel,
-        enter=lambda: Done,
-    )
-    def cancel(self) -> None:
-        self.core.resolutionInProgress.cancel()
+def resolutionBegan(
+    attempt: ConnectionAttempt,
+    core: ConnectionAttemptCore,
+    resolutionInProgress: IHostResolution,
+) -> None:
+    "Resolution began, we don't need to do anything."
 
 
-@ConnectionAttemptImpl.state
-class ResolvingNames:
-    """ """
+@noNamesYet.upon(ConnectionAttempt.addressResolved).to(resolvingWithPending)
+def addressResolved(
+    attempt: ConnectionAttempt,
+    core: ConnectionAttemptCore,
+    resolutionInProgress: IHostResolution,
+    address: IAddress,
+) -> None:
+    core.queueOneAttempt(address)
+    core.doOneAttempt()
 
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.addressResolved, enter=lambda: ResolvingWithPending
-    )
-    def addressResolved(self, address: IAddress) -> None:
-        self.core.queueOneAttempt(address)
-        self.core.doOneAttempt()
 
-    @ConnectionAttemptImpl.handle(
-        ConnectionAttempt.resolutionComplete,
-        enter=lambda: Done,
-    )
-    def resolutionComplete(self) -> None:
-        self.core.connectionFailure()
+@noNamesYet.upon(ConnectionAttempt.resolutionComplete).to(done)
+def resolutionComplete(
+    attempt: ConnectionAttempt,
+    core: ConnectionAttemptCore,
+    resolutionInProgress: IHostResolution,
+) -> None:
+    core.resolutionFailure()
+
+
+@noNamesYet.upon(ConnectionAttempt.cancel).to(done)
+def cancel(
+    attempt: ConnectionAttempt,
+    core: ConnectionAttemptCore,
+    resolutionInProgress: IHostResolution,
+) -> None:
+    resolutionInProgress.cancel()
+
+
+@resolvingNames.upon(ConnectionAttempt.addressResolved).to(resolvingNames)
+def resolvedWhileResolving(
+    attempt: ConnectionAttempt, core: ConnectionAttemptCore, address: IAddress
+) -> None:
+    core.queueOneAttempt(address)
+    core.doOneAttempt()
+
+
+@resolvingNames.upon(
+    ConnectionAttempt.resolutionComplete,
+    enter=lambda: Done,
+)
+def resolutionComplete(self) -> None:
+    self.core.connectionFailure()
 
 
 @ConnectionAttemptImpl.state
@@ -339,53 +335,33 @@ class ResolvingWithPending:
         """
 
 
-@ConnectionAttemptImpl.state
-class JustPending:
-    """
-    Name resolution is done, but there are pending connection attempts.
-    """
+justPending.upon(
+    endpointQueueEmpty.input,
+    enter=justPending,
+    outputs=[],
+)
+justPending.upon(
+    noPendingConnections.input,
+    enter=_done,
+    outputs=[connectionFailure],
+    collector=list,
+)
 
-    # _justPending.upon(
-    #     moreQueuedEndpoints.input,
-    #     enter=_pendingAndQueued,
-    #     outputs=[
-    #         oneAttemptLater0,
-    #     ],
-    # )
-    def moreQueuedEndpoints(self) -> None:
-        """ """
-
-    _justPending.upon(
-        endpointQueueEmpty.input,
-        enter=_justPending,
-        outputs=[],
-    )
-    _justPending.upon(
-        noPendingConnections.input,
-        enter=_done,
-        outputs=[connectionFailure],
-        collector=list,
-    )
-
-    _justPending.upon(
-        userCancellation.input,
-        enter=_done,
-        outputs=[cancelOtherPending0, connectionFailure],
-    )
-    _justPending.upon(
-        established.input,
-        enter=_done,
-        outputs=[cancelOtherPending1, complete],
-        collector=list,
-    )
+justPending.upon(
+    userCancellation.input,
+    enter=_done,
+    outputs=[cancelOtherPending0, connectionFailure],
+)
+justPending.upon(
+    established.input,
+    enter=_done,
+    outputs=[cancelOtherPending1, complete],
+    collector=list,
+)
 
 
 @ConnectionAttemptImpl.state
 class JustQueued:
-    """
-    There are no pending connections right now, but there are queued ones.
-    """
-
     _justQueued.upon(
         moreQueuedEndpoints.input,
         enter=_pendingAndQueued,
@@ -395,7 +371,7 @@ class JustQueued:
     _justQueued.upon(
         noPendingConnections.input, enter=_justQueued, outputs=[doOneAttempt0]
     )
-    _justQueued.upon(endpointQueueEmpty.input, enter=_justPending, outputs=[])
+    _justQueued.upon(endpointQueueEmpty.input, enter=justPending, outputs=[])
 
 
 @ConnectionAttemptImpl.state
@@ -442,3 +418,11 @@ class Done:
     """
 
     _done.upon(noPendingConnections.input, enter=_done, outputs=[], collector=list)
+
+
+ConnectionAttempter = ConnectionAttemptImpl.build()
+
+
+def new(hostnameEndpoint: HostnameEndpoint) -> ConnectionAttempt:
+    """ """
+    return ConnectionAttempter(ConnectionAttemptCore())
