@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.internet.posixbase} and supporting code.
 """
+
 import os
 
 from twisted.internet.defer import Deferred
@@ -45,17 +46,18 @@ class WarningCheckerTestCase(TestCase):
             super().tearDown()
         finally:
             warnings = self.flushWarnings()
-            if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
-                # FIXME:
-                # https://twistedmatrix.com/trac/ticket/10332
-                # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
-                # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
-                # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
-                # the warnings can be generated while another test is running.
-                return
-            self.assertEqual(
-                len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
-            )
+
+        # FIXME:
+        # https://twistedmatrix.com/trac/ticket/10332
+        # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
+        # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
+        # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
+        # the warnings can be generated while another test is running.
+        if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+            return
+        self.assertEqual(
+            len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
+        )
 
 
 class TrivialReactor(PosixReactorBase):
