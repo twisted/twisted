@@ -1,0 +1,1 @@
+twisted.internet.test.test_posixbase.WarningCheckerTestCase.tearDown no longer uses a ``return`` statement inside a ``finally`` block, which produced a ``SyntaxWarning`` on Python 3.14 and would have become a ``SyntaxError`` on Python 3.15.
