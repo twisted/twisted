@@ -597,14 +597,15 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         """
         raise NotImplementedError
 
-    def sendLine(self, line):
+    def sendLine(self, line: bytes) -> None:
         """
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
         @type line: C{bytes}
         """
-        return self.transport.write(line + self.delimiter)
+        assert self.transport is not None
+        self.transport.write(line + self.delimiter)
 
     def lineLengthExceeded(self, line):
         """

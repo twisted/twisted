@@ -83,10 +83,10 @@ class Factory(Generic[P]):
     self.protocol.
     """
 
-    protocol: "Optional[Callable[..., P]]" = None
+    protocol: Callable[..., P] | None = None
 
-    numPorts = 0
-    noisy = True
+    numPorts: int = 0
+    noisy: bool = True
 
     @classmethod
     def forProtocol(
@@ -549,10 +549,10 @@ class BaseProtocol:
     interesting, L{Protocol} and L{ProcessProtocol}.
     """
 
-    connected = 0
-    transport: Optional[ITransport] = None
+    connected: int = 0
+    transport: ITransport | None = None
 
-    def makeConnection(self, transport):
+    def makeConnection(self, transport: ITransport) -> None:
         """
         Make a connection to a transport and a server.
 
@@ -560,10 +560,10 @@ class BaseProtocol:
         connectionMade() callback.
         """
         self.connected = 1
-        self.transport = transport
+        self.transport: ITransport | None = transport
         self.connectionMade()
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         """
         Called when a connection is made.
 
