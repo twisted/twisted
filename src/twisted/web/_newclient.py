@@ -29,13 +29,18 @@ Various other classes in this module support this usage:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from zope.interface import implementer
 
 from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone
-from twisted.internet.interfaces import IConsumer, IPushProducer, ITCPTransport
+from twisted.internet.interfaces import (
+    IConsumer,
+    IPushProducer,
+    ITCPTransport,
+    ITransport,
+)
 from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.protocols.basic import LineReceiver
@@ -1551,7 +1556,8 @@ class HTTP11ClientProtocol(Protocol):
 
         self._transportProxy = TransportProxyProducer(self.transport)
         self._parser = HTTPClientParser(request, self._finishResponse)
-        self._parser.makeConnection(self._transportProxy)
+        # TransportProxyProducer is a duck-typed shim, not a full ITransport
+        self._parser.makeConnection(cast(ITransport, self._transportProxy))
         self._responseDeferred = self._parser._responseDeferred
 
         def cbRequestWritten(ignored):

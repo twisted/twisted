@@ -7,7 +7,7 @@ Support for starting, monitoring, and restarting child process.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import attr
 import incremental
@@ -19,6 +19,7 @@ from twisted.internet.interfaces import (
     IProcessTransport,
     IReactorProcess,
     IReactorTime,
+    ITransport,
 )
 from twisted.logger import Logger
 from twisted.protocols import basic
@@ -127,8 +128,9 @@ class LoggingProtocol(protocol.ProcessProtocol):
         self._error.service = self.service
         self._errorEmpty = True
 
-        self._output.makeConnection(transport)
-        self._error.makeConnection(transport)
+        # DummyTransport is a duck-typed shim, not a full ITransport
+        self._output.makeConnection(cast(ITransport, transport))
+        self._error.makeConnection(cast(ITransport, transport))
 
     def outReceived(self, data: bytes) -> None:
         self._output.dataReceived(data)
