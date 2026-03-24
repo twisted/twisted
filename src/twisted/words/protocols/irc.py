@@ -33,6 +33,7 @@ Test coverage needs to be better.
 @see: U{The Client-To-Client-Protocol
 <http://www.irchelp.org/irchelp/rfc/ctcpspec.html>}
 """
+from __future__ import annotations
 
 import errno
 import operator
