@@ -8,7 +8,6 @@ Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 from __future__ import annotations
 
-
 import math
 
 # System imports
