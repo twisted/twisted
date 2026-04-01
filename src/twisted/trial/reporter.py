@@ -390,6 +390,19 @@ class _AdaptedReporter(TestResultDecorator):
         """
         return self._originalReporter.stopTest(self.testAdapter(test))
 
+    def addSubTest(self, test, subtest, outcome):
+        """
+        See L{unittest.TestResult.addSubTest}.
+
+        Called by the doctest runner in Python 3.15+ when reporting sub-test results.
+        """
+        test = self.testAdapter(test)
+        if hasattr(self._originalReporter, "addSubTest"):
+            return self._originalReporter.addSubTest(test, subtest, outcome)
+        # If the underlying reporter doesn't support subtests, treat as error/success
+        if outcome is not None:
+            return self._originalReporter.addError(test, outcome)
+
 
 @implementer(itrial.IReporter)
 class Reporter(TestResult):

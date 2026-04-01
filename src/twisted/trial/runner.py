@@ -760,7 +760,11 @@ class TestLoader:
         """
         name = reflect.filenameToModuleName(fileName)
         try:
-            module = SourceFileLoader(name, fileName).load_module()
+            loader = SourceFileLoader(name, fileName)
+            spec = importlib.util.spec_from_loader(name, loader)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
             return self.loadAnything(module, recurse=recurse)
         except OSError:
             raise ValueError(f"{fileName} is not a Python file.")
