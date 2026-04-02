@@ -7,8 +7,10 @@ try:
     # the tests.
     import msvcrt
 
+    # These attributes only exist on Windows.
     msvcrt.setmode(  # type:ignore[attr-defined]
-        sys.stdout.fileno(), os.O_BINARY
+        sys.stdout.fileno(),
+        os.O_BINARY,  # type:ignore[attr-defined]
     )
 except ImportError:
     pass

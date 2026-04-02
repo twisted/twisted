@@ -97,8 +97,11 @@ class TestResult(pyunit.TestResult):
     # Used when no todo provided to addExpectedFailure or addUnexpectedSuccess.
     _DEFAULT_TODO = "Test expected to fail"
 
+    errors: list[
+        tuple[itrial.ITestCase | pyunit.TestCase, str | Failure]
+    ]  # type:ignore[assignment]
     skips: List[Tuple[itrial.ITestCase, str]]
-    expectedFailures: List[Tuple[itrial.ITestCase, str, "Todo"]]  # type: ignore[assignment]
+    expectedFailures: List[Tuple[itrial.ITestCase, str | Failure, "Todo"]]  # type: ignore[assignment]
     unexpectedSuccesses: List[Tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
     successes: int
     _testStarted: Optional[int]
@@ -171,7 +174,13 @@ class TestResult(pyunit.TestResult):
         """
         self.failures.append((test, self._getFailure(fail)))
 
-    def addError(self, test, error):
+    def addError(
+        self,
+        test: pyunit.TestCase,
+        error: Failure
+        | tuple[type[BaseException], BaseException, TracebackType]
+        | tuple[None, None, None],
+    ) -> None:
         """
         Report an error that occurred while running the given test.
 

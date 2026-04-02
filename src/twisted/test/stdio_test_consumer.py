@@ -41,4 +41,4 @@ if __name__ == "__main__":
     from twisted.internet import reactor
 
     stdio.StandardIO(ConsumerChild(sys.argv[2]))
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()

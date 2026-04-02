@@ -55,7 +55,7 @@ from twisted.internet.interfaces import (
     IWriteDescriptor,
     _ISupportsExitSignalCapturing,
 )
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, P
 from twisted.logger import Logger
 from twisted.python import reflect
 from twisted.python.failure import Failure
@@ -1235,7 +1235,7 @@ class BaseConnector(ABC):
     factoryStarted = 0
 
     def __init__(
-        self, factory: ClientFactory, timeout: float, reactor: ReactorBase
+        self, factory: ClientFactory[P], timeout: float, reactor: ReactorBase
     ) -> None:
         self.state = "disconnected"
         self.reactor = reactor

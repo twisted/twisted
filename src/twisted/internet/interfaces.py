@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         ConnectedDatagramProtocol,
         DatagramProtocol,
         Factory,
+        P,
         ServerFactory,
     )
     from twisted.internet.ssl import ClientContextFactory
@@ -714,7 +715,7 @@ class IReactorTCP(Interface):
     def connectTCP(
         host: str,
         port: int,
-        factory: "ClientFactory",
+        factory: "ClientFactory[P]",
         timeout: float = 30.0,
         bindAddress: Optional[Tuple[str, int]] = None,
     ) -> IConnector:
@@ -741,7 +742,7 @@ class IReactorSSL(Interface):
     def connectSSL(
         host: str,
         port: int,
-        factory: "ClientFactory",
+        factory: "ClientFactory[P]",
         contextFactory: "ClientContextFactory",
         timeout: float,
         bindAddress: Optional[Tuple[str, int]],
@@ -763,10 +764,10 @@ class IReactorSSL(Interface):
 
     def listenSSL(
         port: int,
-        factory: "ServerFactory",
+        factory: "ServerFactory[P]",
         contextFactory: "IOpenSSLContextFactory",
-        backlog: int,
-        interface: str,
+        backlog: int = 50,
+        interface: str = "",
     ) -> "IListeningPort":
         """
         Connects a given protocol factory to the given numeric TCP/IP port.
@@ -2341,7 +2342,7 @@ class ITLSTransport(ITCPTransport):
     def startTLS(
         contextFactory: Union[
             IOpenSSLClientConnectionCreator, IOpenSSLServerConnectionCreator
-        ]
+        ],
     ) -> None:
         """
         Initiate TLS negotiation.

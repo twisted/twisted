@@ -25,8 +25,9 @@ from twisted.trial.unittest import TestCase
 try:
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
-    ClientTLSContext = None  # type: ignore[assignment,misc]
-    ServerTLSContext = None  # type: ignore[assignment,misc]
+    noOpenSSL = True
+else:
+    noOpenSSL = False
 
 
 class StringTransportWithConnectionLosing(StringTransport):
@@ -503,7 +504,7 @@ class TLSServerFactory(protocol.ServerFactory):
                 self.transport.startTLS(self.context)
 
 
-@skipIf(not ClientTLSContext, "OpenSSL not present")
+@skipIf(noOpenSSL, "OpenSSL not present")
 @skipIf(not interfaces.IReactorSSL(reactor, None), "OpenSSL not present")
 class POP3TLSTests(TestCase):
     """

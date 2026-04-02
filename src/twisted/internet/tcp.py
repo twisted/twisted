@@ -15,7 +15,7 @@ import socket
 import struct
 import sys
 import typing
-from typing import Any, Callable, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union
 
 from zope.interface import Interface, implementer
 
@@ -29,7 +29,7 @@ from twisted.internet.interfaces import (
     ISystemHandle,
     ITCPTransport,
 )
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, P
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python import deprecate, versions
 from twisted.python.runtime import platformType
@@ -73,8 +73,11 @@ if platformType != "win32":
         EWOULDBLOCK,
     )
     from os import strerror
-else:
-    # no such thing as WSAEPERM or error code 10001
+elif not TYPE_CHECKING:  # pragma: no branch
+    # Need a coverage annotation here because we will never fall through this
+    # branch as TYPE_CHECKING is always False.
+
+    # No such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
     EPERM = object()  # type:ignore[assignment]
     from errno import (  # type: ignore[no-redef,attr-defined]
@@ -1524,7 +1527,7 @@ class Connector(base.BaseConnector):
         self,
         host: str,
         port: int | str,
-        factory: ClientFactory,
+        factory: ClientFactory[P],
         timeout: float,
         bindAddress: str | tuple[str, int] | None,
         reactor: Any = None,

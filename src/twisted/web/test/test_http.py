@@ -3937,7 +3937,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
         # get back a TextIOWrapper, wrapping our BytesIO.
         logFile = factory.logFile = BytesIO()
-        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+        getBackLogFile: TextIOWrapper = factory.logFile
 
         # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
         # now, even though the property's signature is such that it isn't.

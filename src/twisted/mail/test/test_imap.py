@@ -7118,7 +7118,7 @@ class CopyWorkerTests(TestCase):
         return d.addCallback(cbCopy)
 
 
-@skipIf(not ClientTLSContext, "OpenSSL not present")
+@skipIf(not ClientTLSContext, "OpenSSL not present")  # type:ignore[truthy-function]
 @skipIf(not interfaces.IReactorSSL(reactor, None), "Reactor doesn't support SSL")
 class TLSTests(IMAP4HelperMixin, TestCase):
     serverCTX = None

@@ -794,7 +794,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
     passivePortRange = range(0, 1)
 
-    listenFactory = reactor.listenTCP  # type: ignore[attr-defined]
+    listenFactory = reactor.listenTCP
     _encoding = "latin-1"
 
     def reply(self, key, *args):
@@ -2885,7 +2885,7 @@ class FTPClient(FTPClientBasic):
     @ivar passive: See description in __init__.
     """
 
-    connectFactory = reactor.connectTCP  # type: ignore[attr-defined]
+    connectFactory = reactor.connectTCP
 
     def __init__(
         self, username="anonymous", password="twisted@twistedmatrix.com", passive=1

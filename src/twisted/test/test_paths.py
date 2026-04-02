@@ -14,6 +14,7 @@ import pickle
 import stat
 import sys
 import time
+from functools import total_ordering
 from pprint import pformat
 from typing import (
     IO,
@@ -38,6 +39,15 @@ from twisted.python.win32 import ERROR_DIRECTORY
 from twisted.trial.unittest import SynchronousTestCase as TestCase
 
 symlinkSkip = not platform._supportsSymlinks()
+
+
+@total_ordering
+class LessThanEverything:
+    def __lt__(self, other: object) -> bool:
+        return True
+
+    def __eq__(self, other: object) -> bool:
+        return False
 
 
 class BytesTestCase(TestCase):
@@ -886,8 +896,16 @@ class FilePathTests(AbstractFilePathTests):
         self.assertTrue(filepath.FilePath(b"a") <= filepath.FilePath(b"z"))
         self.assertTrue(filepath.FilePath(b"a") != filepath.FilePath(b"z"))
         self.assertTrue(filepath.FilePath(b"z") != filepath.FilePath(b"a"))
-
         self.assertFalse(filepath.FilePath(b"z") != filepath.FilePath(b"z"))
+
+    def test_foreignComparison(self) -> None:
+        """
+        FilePath delegates its comparison to other objects.
+        """
+        custom = LessThanEverything()
+        self.assertFalse(filepath.FilePath("a") < custom)
+        self.assertFalse(filepath.FilePath("a") == custom)
+        self.assertTrue(filepath.FilePath("a") > custom)
 
     def test_descendantOnly(self) -> None:
         """

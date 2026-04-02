@@ -37,7 +37,8 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
             self.udpProtos[num] = []
         self.udpProtos[num].append(proto)
 
-    def datagramReceived(
+    # This never really should have subclassed AbstractDatagramProtocol
+    def datagramReceived(  # type:ignore[override]
         self,
         data,
         partial,

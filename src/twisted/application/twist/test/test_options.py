@@ -5,8 +5,13 @@
 Tests for L{twisted.application.twist._options}.
 """
 
+from __future__ import annotations
+
 from sys import stderr, stdout
-from typing import Callable, Dict, List, Optional, TextIO, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, TextIO, Tuple
+
+if TYPE_CHECKING:
+    from types import NotImplementedType
 
 import twisted.trial.unittest
 from twisted.copyright import version
@@ -46,12 +51,15 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         self.opened: List[Tuple[str, Optional[str]]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
+        def fakeOpen(
+            name: str, mode: Optional[str] = None
+        ) -> TextIO | NotImplementedType:
             if name == "nocanopen":
                 raise OSError(None, None, name)
 
             self.opened.append((name, mode))
-            return NotImplemented
+            # https://github.com/python/mypy/issues/18914
+            return NotImplemented  # type:ignore[no-any-return]
 
         self.patch(_options, "openFile", fakeOpen)
 

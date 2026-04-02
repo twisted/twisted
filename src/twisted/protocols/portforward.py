@@ -97,7 +97,7 @@ class ProxyServer(Proxy):
         self.reactor.connectTCP(self.factory.host, self.factory.port, client)
 
 
-class ProxyFactory(protocol.Factory[ProxyServer]):  # type:ignore[type-var]
+class ProxyFactory(protocol.Factory[ProxyServer]):
     """
     Factory for port forwarder.
     """

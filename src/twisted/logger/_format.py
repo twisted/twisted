@@ -12,8 +12,6 @@ from collections.abc import Iterator, Mapping
 from datetime import datetime as DateTime
 from typing import Any, Callable, Optional, Union, cast
 
-from constantly import NamedConstant
-
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
 from twisted.python.reflect import safe_repr
@@ -338,7 +336,7 @@ def _formatSystem(event: LogEvent) -> str:
     """
     system = cast(Optional[str], event.get("log_system", None))
     if system is None:
-        level = cast(Optional[NamedConstant], event.get("log_level", None))
+        level = event.get("log_level", None)
         if level is None:
             levelName = "-"
         else:

@@ -206,7 +206,7 @@ class ProcessMonitor(service.Service):
 
     def __init__(
         self,
-        reactor: IReactorProcess = _reactor,  # type:ignore
+        reactor: IReactorProcess = _reactor,
     ) -> None:
         self._reactor = reactor
         self._clock = IReactorTime(reactor)

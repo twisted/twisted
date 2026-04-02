@@ -75,7 +75,8 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
 
     def __cmp__(self, other: object) -> int:
         if not isinstance(other, ZipPath):
-            return NotImplemented
+            # https://github.com/python/mypy/issues/18914
+            return NotImplemented  # type:ignore[no-any-return]
         return cmp(
             (self.archive, self.pathInArchive), (other.archive, other.pathInArchive)
         )
@@ -298,7 +299,8 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
 
     def __cmp__(self, other: object) -> int:
         if not isinstance(other, ZipArchive):
-            return NotImplemented
+            # https://github.com/python/mypy/issues/18914
+            return NotImplemented  # type:ignore[no-any-return]
         return cmp(self.path, other.path)
 
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, AnyStr]:

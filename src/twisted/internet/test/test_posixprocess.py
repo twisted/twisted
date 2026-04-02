@@ -327,9 +327,8 @@ class FileDescriptorTests(TestCase):
         # to catch that internal descriptor and make the assertion about a
         # different closed file descriptor.
 
-        # This gets allocated a file descriptor larger than f's, since nothing
-        # has been closed since we opened f.
-        fd = os.dup(f.fileno())
+        # Ask for the duplicate to be allocated above the original descriptor
+        fd = fcntl.fcntl(f.fileno(), fcntl.F_DUPFD, f.fileno() + 1)
 
         # But sanity check that; if it fails the test is invalid.
         self.assertTrue(

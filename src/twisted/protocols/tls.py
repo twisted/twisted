@@ -721,7 +721,7 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         super().loseConnection()
 
 
-class TLSMemoryBIOFactory(WrappingFactory):
+class TLSMemoryBIOFactory(WrappingFactory[TLSMemoryBIOProtocol]):
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 

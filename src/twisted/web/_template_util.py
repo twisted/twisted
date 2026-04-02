@@ -423,7 +423,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
     def startElementNS(
         self,
-        namespaceAndName: tuple[str, str],
+        namespaceAndName: tuple[str | None, str],
         qname: str | None,
         attrs: AttributesNSImpl,
     ) -> None:
@@ -551,7 +551,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             return
         self.current.append(ch)
 
-    def endElementNS(self, name: tuple[str, str], qname: str | None) -> None:
+    def endElementNS(self, name: tuple[str | None, str], qname: str | None) -> None:
         """
         A namespace tag is closed.  Pop the stack, if there's anything left in
         it, otherwise return to the document's namespace.

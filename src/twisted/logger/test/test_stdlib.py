@@ -257,7 +257,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertIn("ZeroDivisionError", output)
 
 
-def handlerAndBytesIO() -> tuple[StreamHandler[TextIOWrapper], BytesIO]:
+def handlerAndBytesIO() -> tuple[StreamHandler[TextIOWrapper[BytesIO]], BytesIO]:
     """
     Construct a 2-tuple of C{(StreamHandler, BytesIO)} for testing interaction
     with the 'logging' module.

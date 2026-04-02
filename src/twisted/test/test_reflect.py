@@ -390,7 +390,7 @@ BTBase = BrokenType("BTBase", (Breakable,), {"breakRepr": True, "breakStr": True
 
 
 class NoClassAttr(Breakable):
-    __class__ = property(lambda x: x.not_class)  # type: ignore[assignment]
+    __class__ = property(lambda x: x.not_class)
 
 
 class SafeReprTests(TestCase):

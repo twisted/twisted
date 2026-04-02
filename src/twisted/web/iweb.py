@@ -18,7 +18,7 @@ from zope.interface import Attribute, Interface
 
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IPushProducer
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator, IPushProducer
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
@@ -783,7 +783,7 @@ class IPolicyForHTTPS(Interface):
     @since: 14.0
     """
 
-    def creatorForNetloc(hostname, port):
+    def creatorForNetloc(hostname: bytes, port: int) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
@@ -791,15 +791,11 @@ class IPolicyForHTTPS(Interface):
         pair.
 
         @param hostname: The name of the requested remote host.
-        @type hostname: L{bytes}
 
         @param port: The number of the requested remote port.
-        @type port: L{int}
 
         @return: A client connection creator expressing the security
             requirements for the given remote host.
-        @rtype: L{client connection creator
-            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
         """
 
 

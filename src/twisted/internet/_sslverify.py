@@ -973,7 +973,9 @@ class ClientTLSOptions:
     Private implementation type (not exposed to applications) for public
     L{optionsForClientTLS} API.
 
-    @ivar _ctx: The context to use for new connections.
+    @ivar _createConnection: A callable that creates a mostly-configured
+        OpenSSL connection, modulo the hostname stuff that L{ClientTLSOptions}
+        is responsible for.
 
     @ivar _hostname: The hostname to verify, as specified by the application,
         as some human-readable text.
@@ -998,7 +1000,7 @@ class ClientTLSOptions:
         <https://www.rfc-editor.org/rfc/rfc3546#section-3.1>} extension.
     """
 
-    _ctx: Optional[SSL.Context]
+    _createConnection: Callable[[TLSMemoryBIOProtocol], SSL.Connection]
     _hostname: str
     _hostnameASCII: str
     _hostnameIsDnsName: bool
@@ -1007,25 +1009,25 @@ class ClientTLSOptions:
 
     def __init__(
         self,
+        createConnection: Callable[[TLSMemoryBIOProtocol], SSL.Connection],
         hostname: str,
-        context: Optional[SSL.Context],
-        createContext: Callable[[], SSL.Context],
         sendServerName: bool | None = None,
     ) -> None:
         """
         Initialize L{ClientTLSOptions}.
 
-        @param hostname: The hostname to verify as input by a human.
+        @param createConnection: A callable which can create a
+            mostly-configured L{SSL.Connection}, modulo hostname verification.
 
-        @param createContext: A function that will create an SSL context.
+        @param hostname: The hostname to verify as input by a human.
 
         @param sendServerName: Should the server name be sent to the peer?
             C{None} means "follow the specification", which will send it if
             it's a valid DNS name and refrain from sending it if it's an IP
             address; C{True} means always send, and C{False} means never send.
         """
-        self._createContext = createContext
         self._hostname = hostname
+        self._createConnection = createConnection
 
         if isIPAddress(hostname) or isIPv6Address(hostname):
             self._hostnameBytes = hostname.encode("ascii")
@@ -1035,8 +1037,6 @@ class ClientTLSOptions:
             self._hostnameIsDnsName = True
 
         self._hostnameASCII = self._hostnameBytes.decode("ascii")
-        self._ctx = context
-        self._createContext = createContext
         if sendServerName is None:
             sendServerName = self._hostnameIsDnsName
         self._sendServerName = sendServerName
@@ -1049,12 +1049,9 @@ class ClientTLSOptions:
 
         @return: the configured client connection.
         """
-        if self._ctx is None:
-            self._ctx = self._createContext()
-        context = self._ctx
-        connection = SSL.Connection(context, None)
-        # Literal IPv4 and IPv6 addresses are not permitted
-        # as host names according to the RFCs
+        connection = self._createConnection(tlsProtocol)
+        # Literal IPv4 and IPv6 addresses are not permitted as host names
+        # according to the RFCs
         if self._sendServerName:
             connection.set_tlsext_host_name(self._hostnameBytes)
         callback = _verifyCB(tlsProtocol, self._hostnameIsDnsName, self._hostnameASCII)
@@ -1110,7 +1107,7 @@ def optionsForClientTLS(
     *,
     extraCertificateOptions: Optional[dict[str, Any]] = None,
     sendServerName: bool | None = None,
-) -> ClientTLSOptions:
+) -> IOpenSSLClientConnectionCreator:
     """
     Create a L{client connection creator <IOpenSSLClientConnectionCreator>} for
     use with APIs such as L{SSL4ClientEndpoint
@@ -1180,7 +1177,7 @@ def optionsForClientTLS(
     )
 
     return ClientTLSOptions(
-        hostname, None, certificateOptions._makeContext, sendServerName
+        certificateOptions._makeTLSConnection, hostname, sendServerName
     )
 
 

@@ -191,7 +191,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if not reactor:
             from twisted.internet import reactor as _reactor
 
-            reactor = _reactor  # type: ignore[assignment]
+            reactor = _reactor
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
         self._tempDataBuffer: List[bytes] = []

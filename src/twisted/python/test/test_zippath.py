@@ -11,7 +11,7 @@ import zipfile
 
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.zippath import ZipArchive, ZipPath
-from twisted.test.test_paths import AbstractFilePathTests
+from twisted.test.test_paths import AbstractFilePathTests, LessThanEverything
 
 
 def zipit(dirname: str | bytes, zfname: str | bytes) -> None:
@@ -49,6 +49,20 @@ class ZipFilePathTests(AbstractFilePathTests):
         self.path = ZipArchive(self.cmn + b".zip")
         self.root = self.path
         self.all = [x.replace(self.cmn, self.cmn + b".zip") for x in self.all]
+
+    def test_foreignComparison(self) -> None:
+        """
+        ZipPath compares to other objects according to their rules.
+        """
+        custom = LessThanEverything()
+        a = self.path.child("a")
+        self.assertFalse(a < custom)
+        self.assertFalse(a == custom)
+        self.assertTrue(a > custom)
+        b = self.path
+        self.assertFalse(b < custom)
+        self.assertFalse(b == custom)
+        self.assertTrue(b > custom)
 
     def test_sibling(self) -> None:
         """

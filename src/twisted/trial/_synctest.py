@@ -429,10 +429,13 @@ class _Assertions(pyunit.TestCase):
 
         return context._handle(lambda: f(*args, **kwargs))
 
-    # unittest.TestCase.assertRaises() is defined with 4 arguments
-    # but we define it with 5 arguments.  So we need to tell mypy
-    # to ignore the following assignment to failUnlessRaises
-    failUnlessRaises = assertRaises  # type: ignore[assignment]
+    # The type-ignore below is present to address the evolving incompatible
+    # signature between assertRaises and failUnlessRaises in the stdlib.
+    # Depending on which version of Python you are developing with you might
+    # get a spurious error here *or not* which is why there's also the
+    # unused-ignore ignore here; in upstream unittest this method is now
+    # entirely removed, since Python 3.12, so there's nothing to conflict with.
+    failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
         """
@@ -545,8 +548,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertNotAlmostEquals = assertNotAlmostEqual  # type:ignore[assignment]
-    failIfAlmostEqual = assertNotAlmostEqual  # type:ignore[assignment]
+    assertNotAlmostEquals = assertNotAlmostEqual
+    failIfAlmostEqual = assertNotAlmostEqual
     failIfAlmostEquals = assertNotAlmostEqual
 
     def assertAlmostEqual(self, first, second, places=7, msg=None, delta=None):
@@ -567,8 +570,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertAlmostEquals = assertAlmostEqual  # type:ignore[assignment]
-    failUnlessAlmostEqual = assertAlmostEqual  # type:ignore[assignment]
+    assertAlmostEquals = assertAlmostEqual
+    failUnlessAlmostEqual = assertAlmostEqual
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         """

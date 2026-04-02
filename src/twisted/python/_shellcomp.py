@@ -210,7 +210,7 @@ class ZshSubcommandBuilder(ZshBuilder):
         self.subOptions = subOptions
         ZshBuilder.__init__(self, *args)
 
-    def write(self):
+    def write(self, genSubs=True):
         """
         Generate the completion function and write it to the output file
         @return: L{None}

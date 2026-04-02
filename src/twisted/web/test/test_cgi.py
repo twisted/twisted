@@ -10,7 +10,7 @@ import os
 import sys
 from io import BytesIO
 
-from twisted.internet import address, error, interfaces, reactor
+from twisted.internet import address, error, reactor
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, util
 from twisted.trial import unittest
@@ -123,9 +123,6 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
     Tests for L{twcgi.FilteredScript}.
     """
-
-    if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
 
     def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)

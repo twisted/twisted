@@ -54,6 +54,9 @@ from typing import (
     overload,
 )
 
+if TYPE_CHECKING:
+    from types import NotImplementedType
+
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.python.compat import cmp, comparable
@@ -1567,9 +1570,10 @@ class FilePath(AbstractFilePath[AnyStr]):
             os.unlink(self.path)
         os.rename(sib.path, self.asBytesMode().path)
 
-    def __cmp__(self, other: object) -> int:
+    def __cmp__(self, other: object) -> int | NotImplementedType:
         if not isinstance(other, FilePath):
-            return NotImplemented
+            # https://github.com/python/mypy/issues/18914
+            return NotImplemented  # type:ignore[no-any-return]
         return cmp(self.path, other.path)
 
     def createDirectory(self) -> None:

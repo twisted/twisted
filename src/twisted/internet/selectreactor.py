@@ -153,7 +153,7 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
             for selectable in selectables:
                 # if this was disconnected in another thread, kill it.
                 # ^^^^ --- what the !@#*?  serious!  -exarkun
-                if selectable not in fdset:  # type:ignore[operator]
+                if selectable not in fdset:
                     continue
                 # This for pausing input when we're not ready for more.
                 _logrun(selectable, _drdw, selectable, method)

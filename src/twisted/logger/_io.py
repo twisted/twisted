@@ -32,6 +32,7 @@ class LoggingFile:
     """
 
     _softspace = 0
+    _encoding: str
 
     @deprecatedProperty(Version("Twisted", 21, 2, 0))
     def softspace(self):

@@ -13,6 +13,7 @@ import httpx
 
 from twisted.internet import defer, error, reactor, task
 from twisted.internet.address import IPv4Address
+from twisted.internet.interfaces import IReactorSSL
 from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.internet.threads import deferToThread
 from twisted.python import failure
@@ -2942,8 +2943,9 @@ class EndToEndTests(unittest.TestCase):
         _, serverCert = certificatesForAuthorityAndServer("test.local")
         resource = Data(b"hello world", "application/octet-stream")
         resource.isLeaf = True
-        port = reactor.listenSSL(0, Site(resource), serverCert.options())  # type: ignore[attr-defined]
-        portNum = port.getHost().port
+        port = IReactorSSL(reactor).listenSSL(0, Site(resource), serverCert.options())
+        hostAddress: IPv4Address = port.getHost()  # type:ignore[assignment]
+        portNum = hostAddress.port
         self.addCleanup(port.stopListening)
 
         def run_http2_query():

@@ -25,6 +25,7 @@ from twisted.internet._idna import _idnaText
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import CertificateError, ConnectionClosed, ConnectionLost
 from twisted.internet.interfaces import (
+    IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
     IProtocolNegotiationFactory,
@@ -440,6 +441,7 @@ def loopbackTLSConnectionInMemory(
     serverProtocols: list[bytes] | None = None,
     clientProtocols: list[bytes] | None = None,
     viaFactory: bool = False,
+    clientOptionsHost: str | None = None,
 ) -> tuple[
     TLSMemoryBIOProtocol, TLSMemoryBIOProtocol, GreetingServer, ListeningClient, IOPump
 ]:
@@ -471,10 +473,18 @@ def loopbackTLSConnectionInMemory(
     @return: 5-tuple of server-tls-protocol, client-tls-protocol,
         server-app-protocol, client-app-protocol, L{IOPump}
     """
-    clientCertOpts = sslverify.OpenSSLCertificateOptions(
-        trustRoot=trustRoot,
-        acceptableProtocols=clientProtocols if not viaFactory else None,
-    )
+    clientCertOpts: IOpenSSLClientConnectionCreator
+    if clientOptionsHost is not None:
+        clientCertOpts = sslverify.optionsForClientTLS(
+            clientOptionsHost,
+            trustRoot=trustRoot,
+            acceptableProtocols=clientProtocols if not viaFactory else None,
+        )
+    else:
+        clientCertOpts = sslverify.OpenSSLCertificateOptions(
+            trustRoot=trustRoot,
+            acceptableProtocols=clientProtocols if not viaFactory else None,
+        )
     serverCertOpts = sslverify.OpenSSLCertificateOptions(
         privateKey=privateKey,
         certificate=serverCertificate,
@@ -2560,6 +2570,7 @@ def negotiateProtocol(
     serverProtocols: list[bytes],
     clientProtocols: list[bytes],
     viaFactory: bool = False,
+    clientHostname: str | None = None,
 ) -> tuple[bytes | None, Failure | None]:
     """
     Create the TLS connection and negotiate a next protocol.
@@ -2584,6 +2595,7 @@ def negotiateProtocol(
         clientProtocols=clientProtocols,
         serverProtocols=serverProtocols,
         viaFactory=viaFactory,
+        clientOptionsHost=clientHostname,
     )
     pump.flush()
 
@@ -2601,7 +2613,15 @@ class ALPNTests(TestCase):
     if skipSSL:
         skip = skipSSL
 
-    def test_nextProtocolMechanismsALPNIsSupported(self):
+    def negotiateProtocol(
+        self,
+        serverProtocols: list[bytes],
+        clientProtocols: list[bytes],
+        viaFactory: bool = False,
+    ) -> tuple[bytes | None, Failure | None]:
+        return negotiateProtocol(serverProtocols, clientProtocols, viaFactory)
+
+    def test_nextProtocolMechanismsALPNIsSupported(self) -> None:
         """
         When ALPN is available on a platform, protocolNegotiationMechanisms
         includes ALPN in the suported protocols.
@@ -2611,7 +2631,7 @@ class ALPNTests(TestCase):
 
     def test_connectionCreatorNegotiation(self) -> None:
         protocols = [b"a", b"b"]
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             clientProtocols=protocols,
             serverProtocols=protocols,
         )
@@ -2620,7 +2640,7 @@ class ALPNTests(TestCase):
 
     def test_factoryNegotiation(self) -> None:
         protocols = [b"a", b"b"]
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             clientProtocols=protocols,
             serverProtocols=protocols,
             viaFactory=True,
@@ -2633,7 +2653,7 @@ class ALPNTests(TestCase):
         When negotiating with an empty acceptable protocols list, no protocol
         is assigned but the connection is not lost.
         """
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             serverProtocols=[], clientProtocols=[]
         )
         self.assertIs(negotiatedProtocol, None)
@@ -2644,11 +2664,23 @@ class ALPNTests(TestCase):
         When negotiating with an empty acceptable protocols list, no protocol
         is assigned but the connection is not lost.
         """
-        negotiatedProtocol, lostReason = negotiateProtocol(
+        negotiatedProtocol, lostReason = self.negotiateProtocol(
             serverProtocols=[b"server-only"], clientProtocols=[b"client-only"]
         )
         self.assertIs(negotiatedProtocol, None)
         self.assertIsNot(lostReason, None)
+
+
+class ALPNOptionsForClientTLSTests(ALPNTests):
+    def negotiateProtocol(
+        self,
+        serverProtocols: list[bytes],
+        clientProtocols: list[bytes],
+        viaFactory: bool = False,
+    ) -> tuple[bytes | None, Failure | None]:
+        return negotiateProtocol(
+            serverProtocols, clientProtocols, viaFactory, clientHostname="example.com"
+        )
 
 
 class _NotSSLTransport:

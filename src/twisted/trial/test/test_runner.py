@@ -987,7 +987,7 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
         without deprecations.
         """
 
-        done = None
+        done = None  # type:ignore[assignment]
         separator = None
         stream = None
 
