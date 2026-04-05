@@ -1,12 +1,12 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Protocol, TypeVar
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, List, Protocol, TypeVar
 
 from zope.interface import implementer
 
 from automat import TypeMachineBuilder
 
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred as D
 from twisted.internet.error import DNSLookupError
 from twisted.internet.interfaces import (
     IAddress,
@@ -27,389 +27,196 @@ T = TypeVar("T")
 
 
 @implementer(IResolutionReceiver)
-class ConnectionAttempt(Protocol):
-    """ """
-
-    def start(self) -> Deferred[IProtocol]:
-        """
-        Begin the connection attempt.
-        """
-
-    def cancel(self) -> None:
-        """
-        A user requested cancellation
-        """
-
-    def attemptTimeoutExpired(self) -> None:
-        """
-        We have been attempting to connect for too long.
-        """
-
+class CxnTry(Protocol):
     # IResolutionReceiver
     def resolutionBegan(self, resolutionInProgress: IHostResolution) -> None:
-        """ """
+        ...
 
     def addressResolved(self, address: IAddress) -> None:
-        # endpointResolved skipped because we're handling this directly as an input
-        """ """
+        ...
 
     def resolutionComplete(self) -> None:
-        """ """
+        ...
+
+    # Internal Methods
+    def start(self) -> D[IProtocol]:
+        ...
 
     def established(self, protocol: TwistedProtocol) -> None:
-        """ """
-
-    def oneAttemptFailed(self, reason: Failure) -> None:
-        """
-        A connection cannot be established
-        """
-
-    def endpointQueueEmpty(self) -> None:
-        """
-        There are no more endpoints in the outbound queue.
-        """
+        ...
 
     def noPendingConnections(self) -> None:
-        """
-        The last pending connection has terminated, in either success or
-        failure.
-        """
+        ...
 
-    # def userCancellation(self):
-    #     """
-    #     A user cancelled the outermost deferred.
-    #     """
-    # now handled by .cancel()
+    def userCancellation(self, deferred: D[IProtocol]) -> None:
+        ...
 
     def attemptDelayExpired(self) -> None:
-        """
-        It's time to unqueue the next connection attempt.
-        """
-
-    def moreQueuedEndpoints(self) -> None:
-        """
-        More endpoints remain in the queue.
-        """
+        ...
 
 
-def addr2endpoints(
+def addr2endpoint(
     hostnameEndpoint: HostnameEndpoint, address: IAddress
-) -> Iterable[IStreamClientEndpoint]:
-    """
-    Convert an address into an endpoint
-    """
+) -> IStreamClientEndpoint:
     # Circular imports.
     from twisted.internet.endpoints import TCP4ClientEndpoint, TCP6ClientEndpoint
 
-    reactor = hostnameEndpoint._reactor
-    timeout = hostnameEndpoint._timeout
-    bindAddress = hostnameEndpoint._bindAddress
-
-    if isinstance(address, IPv6Address):
-        yield TCP6ClientEndpoint(
-            reactor, address.host, address.port, timeout, bindAddress
-        )
-    if isinstance(address, IPv4Address):
-        yield TCP4ClientEndpoint(
-            reactor, address.host, address.port, timeout, bindAddress
-        )
+    _endpoints = {IPv6Address: TCP6ClientEndpoint, IPv4Address: TCP4ClientEndpoint}
+    assert isinstance(address, (IPv4Address, IPv6Address))
+    return _endpoints[type(address)](
+        hostnameEndpoint._reactor,
+        address.host,
+        address.port,
+        hostnameEndpoint._timeout,
+        hostnameEndpoint._bindAddress,
+    )
 
 
 @dataclass
-class ConnectionAttemptCore:
-    """
-    Automat state core for a single in-progress call to HostnameEndpoint.connect()
-    """
-
-    # this is only ever un-set in Idle state. Should this even be a state,
-    # then, or just a construction parameter?
-    deferred: Deferred[IProtocol]
-
-    # provide for feedback.  TODO: can the framework do this and auto-populate
-    # such an annotation?
-    machine: ConnectionAttempt
-
+class AttemptState:
+    deferred: D[IProtocol]
     endpoint: HostnameEndpoint
-    endpointQueue: list[IStreamClientEndpoint]
-    pendingConnectionAttempts: List[Deferred[IProtocol]]
-    lastAttemptTime: float
     protocolFactory: IProtocolFactory
-    failures: list[Failure]
-    nextAttemptCall: Optional[IDelayedCall] = None
+    lastAttemptTime: float = 0.0
+    pendingCxnTrys: List[D[IProtocol]] = field(default_factory=list)
+    failures: list[Failure] = field(default_factory=list)
+    nextAttemptCall: IDelayedCall | None = None
     resolutionInProgress: IHostResolution | None = None
 
-    @property
-    def reactor(self) -> Any:
-        return self.endpoint._reactor
-
-    def oneAttemptLater(self) -> None:
-        assert self.nextAttemptCall is None
-
+    def oneAttemptLater(self, machine: CxnTry) -> None:
         def noneAndInput() -> None:
             self.nextAttemptCall = None
-            self.machine.attemptDelayExpired()
+            machine.attemptDelayExpired()
 
+        assert self.nextAttemptCall is None
         self.nextAttemptCall = self.endpoint._reactor.callLater(
             self.endpoint._attemptDelay
             - (self.endpoint._reactor.seconds() - self.lastAttemptTime),
             noneAndInput,
         )
 
-    def resolutionFailure(self) -> None:
-        """
-        Name resolution failed.
-        """
-        self.deferred.errback(
-            Failure(
-                DNSLookupError(
-                    f"no results for hostname lookup: {self.endpoint._hostText}"
-                )
-            )
-        )
-
-    def queueOneAttempt(self, address: IAddress) -> None:
-        """
-        Add an endpoint to the list of endpoints that we should still use.
-        """
-        self.endpointQueue.extend(addr2endpoints(self.endpoint, address))
-
-    def doOneAttempt(self) -> None:
-        """
-        Perform an attempt, draining the queue.
-        """
-        self.lastAttemptTime = self.endpoint._reactor.seconds()
-        endpoint = self.endpointQueue.pop(0)
-        if not self.endpointQueue:
-            self.machine.endpointQueueEmpty()
-        else:
-            self.machine.moreQueuedEndpoints()
-        connected = endpoint.connect(self.protocolFactory)
-        self.pendingConnectionAttempts.append(connected)
-
+    def queueOneAttempt(self, attempt: CxnTry, address: IAddress) -> None:
         def removePending(result: T) -> T:
-            self.pendingConnectionAttempts.remove(connected)
+            self.pendingCxnTrys.remove(connected)
             return result
 
-        connected.addBoth(removePending)
-        connected.addCallbacks(self.machine.established, self.failures.append)
-
         def maybeNoMoreConnections(result: object) -> None:
-            if not self.pendingConnectionAttempts:
-                self.machine.noPendingConnections()
+            if not self.pendingCxnTrys:
+                attempt.noPendingConnections()
 
+        self.lastAttemptTime = self.endpoint._reactor.seconds()
+        endpoint = addr2endpoint(self.endpoint, address)
+        connected = endpoint.connect(self.protocolFactory)
+        self.pendingCxnTrys.append(connected)
+        connected.addBoth(removePending)
+        connected.addCallbacks(attempt.established, self.failures.append)
         connected.addBoth(maybeNoMoreConnections)
 
 
-ConnectionAttemptImpl: TypeMachineBuilder[
-    ConnectionAttempt, ConnectionAttemptCore
-] = TypeMachineBuilder(ConnectionAttempt, ConnectionAttemptCore)
-
-
-idle = ConnectionAttemptImpl.state("idle")
-awaitingResolution = ConnectionAttemptImpl.state("awaitingResolution")
-
-
-def rememberResolution(
-    attempt: ConnectionAttempt,
-    core: ConnectionAttemptCore,
-    resolutionInProgress: IHostResolution,
+def rememberRes(
+    attempt: CxnTry, core: AttemptState, resolutionInProgress: IHostResolution
 ) -> IHostResolution:
     return resolutionInProgress
 
 
-noNamesYet = ConnectionAttemptImpl.state("noNamesYet", rememberResolution)
-resolvingWithPending = ConnectionAttemptImpl.state("resolvingWithPending")
-done = ConnectionAttemptImpl.state("done")
-justPending = ConnectionAttemptImpl.state("justPending")
-resolvingNames = ConnectionAttemptImpl.state("resolvingNames")
-justPending = ConnectionAttemptImpl.state("justPending")
+def addressResolved(attempt: CxnTry, core: AttemptState, address: IAddress) -> None:
+    core.queueOneAttempt(attempt, address)
+
+
+# states
+build = TypeMachineBuilder(CxnTry, AttemptState)
+idle = build.state("idle")
+"initial idle state"
+awaitingResolution = build.state("awaitingResolution")
+"resolveHostName has been called, but no names have yet been resolved"
+noNamesYet = build.state("noNamesYet", rememberRes)
+"resolutionBegan called on the resolution receiver, but no names yet"
+resolvingWithPending = build.state("resolvingWithPending")
+"at least one address has been resolved, and there are pending .connect() calls"
+resolvingNames = build.state("resolvingNames")
+"at least one address has been resolved, and there are no pending .connect() calls"
+justPending = build.state("justPending")
 "There are no queued connections right now, but there are pending ones."
-justQueued = ConnectionAttemptImpl.state("justQueued")
+justQueued = build.state("justQueued")
 "There are no pending connections right now, but there are queued ones."
-resolvingWithPendingAndQueued = ConnectionAttemptImpl.state(
-    "resolvingWithPendingAndQueued"
+resolvingWithPendingAndQueued = build.state("resolvingWithPendingAndQueued")
+pendingAndQueued = build.state("pendingAndQueued")
+done = build.state("done")
+
+awaitingResolution.upon(CxnTry.resolutionBegan).to(noNamesYet).returns(None)
+resolvingNames.upon(CxnTry.resolutionComplete).to(done).returns(None)
+resolvingNames.upon(CxnTry.addressResolved).to(resolvingNames)(addressResolved)
+resolvingWithPending.upon(CxnTry.noPendingConnections).to(resolvingNames).returns(None)
+justPending.upon(CxnTry.noPendingConnections).to(done).returns(None)
+# FIXME
+#     outputs=[connectionFailure],
+justPending.upon(CxnTry.userCancellation).to(done).returns(None)
+# FIXME
+# outputs=[cancelOtherPending0, connectionFailure],
+justPending.upon(CxnTry.established).to(done)
+# FIXME
+#     outputs=[cancelOtherPending1, complete],
+justQueued.upon(CxnTry.moreQueuedEndpoints).to(
+    pendingAndQueued,
+    # FIXME
+    # outputs=[oneAttemptLater0],
+)
+justQueued.upon(CxnTry.noPendingConnections).to(justQueued)
+# FIXME
+# outputs=[doOneAttempt0]
+justQueued.upon(CxnTry.endpointQueueEmpty).to(justPending).returns(None)
+resolvingWithPendingAndQueued.upon(CxnTry.endpointQueueEmpty).to(
+    resolvingWithPending
+).returns(None)
+resolvingWithPendingAndQueued.upon(CxnTry.resolutionComplete).to(
+    pendingAndQueued
+).returns(None)
+resolvingWithPendingAndQueued.upon(CxnTry.noPendingConnections).to(
+    resolvingWithPendingAndQueued
+).returns(None)
+pendingAndQueued.upon(CxnTry.moreQueuedEndpoints).to(pendingAndQueued).returns(None)
+# this one's a bit weird; the queued connection will inevitably _become_ a
+# pending connection, so pendingAndQueued is still an appropriate state despite
+# the lack of anything presently pending
+pendingAndQueued.upon(CxnTry.noPendingConnections).to(justQueued)
+# FIXME
+# outputs=[cancelTimer0, doOneAttempt0],
+done.upon(CxnTry.noPendingConnections).to(done).returns(None)
+noNamesYet.upon(CxnTry.addressResolved).to(resolvingWithPending)(
+    lambda attempt, core, resolution, address: addressResolved(attempt, core, address)
+)
+resolvingWithPending.upon(CxnTry.addressResolved).to(resolvingWithPendingAndQueued)(
+    addressResolved
 )
 
 
-@idle.upon(ConnectionAttempt.start).to(awaitingResolution)
-def start(
-    attempt: ConnectionAttempt, core: ConnectionAttemptCore
-) -> Deferred[IProtocol]:
-    """
-    Start the resolution process.
-    """
-    core.endpoint._getNameResolverAndMaybeWarn(core.reactor).resolveHostName(
-        core.machine,
+@idle.upon(CxnTry.start).to(awaitingResolution)
+def doStart(attempt: CxnTry, core: AttemptState) -> D[IProtocol]:
+    core.endpoint._getNameResolverAndMaybeWarn(core.endpoint._reactor).resolveHostName(
+        attempt,
         core.endpoint._hostText,
         portNumber=core.endpoint._port,
     )
-    core.deferred = Deferred()
+    core.deferred = D(attempt.userCancellation)
     return core.deferred
 
 
-awaitingResolution.upon(ConnectionAttempt.resolutionBegan).to(noNamesYet).returns(None)
+@noNamesYet.upon(CxnTry.resolutionComplete).to(done)
+def completed(attempt: CxnTry, core: AttemptState, res: IHostResolution) -> None:
+    e = DNSLookupError(f"no results for hostname lookup: {core.endpoint._hostText}")
+    core.deferred.errback(e)
 
 
-def resolutionBegan(
-    attempt: ConnectionAttempt,
-    core: ConnectionAttemptCore,
-    resolutionInProgress: IHostResolution,
-) -> None:
-    "Resolution began, we don't need to do anything."
-
-
-@noNamesYet.upon(ConnectionAttempt.addressResolved).to(resolvingWithPending)
-def addressResolvedInProgress(
-    attempt: ConnectionAttempt,
-    core: ConnectionAttemptCore,
-    resolutionInProgress: IHostResolution,
-    address: IAddress,
-) -> None:
-    core.queueOneAttempt(address)
-    core.doOneAttempt()
-
-
-@resolvingWithPending.upon(ConnectionAttempt.addressResolved).to(
-    resolvingWithPendingAndQueued
-)
-def addressResolved(
-    attempt: ConnectionAttempt, core: ConnectionAttemptCore, address: IAddress
-) -> None:
-    core.queueOneAttempt(address)
-    core.doOneAttempt()
-
-
-@noNamesYet.upon(ConnectionAttempt.resolutionComplete).to(done)
-def resolutionComplete(
-    attempt: ConnectionAttempt,
-    core: ConnectionAttemptCore,
-    resolutionInProgress: IHostResolution,
-) -> None:
-    core.resolutionFailure()
-
-
-@noNamesYet.upon(ConnectionAttempt.cancel).to(done)
+@noNamesYet.upon(CxnTry.userCancellation).to(done)
 def cancel(
-    attempt: ConnectionAttempt,
-    core: ConnectionAttemptCore,
-    resolutionInProgress: IHostResolution,
+    attempt: CxnTry, core: AttemptState, res: IHostResolution, deferred: D[IProtocol]
 ) -> None:
-    resolutionInProgress.cancel()
+    res.cancel()
 
 
-@resolvingNames.upon(ConnectionAttempt.addressResolved).to(resolvingNames)
-def resolvedWhileResolving(
-    attempt: ConnectionAttempt, core: ConnectionAttemptCore, address: IAddress
-) -> None:
-    core.queueOneAttempt(address)
-    core.doOneAttempt()
+CxnTryImpl = build.build()
 
 
-resolvingNames.upon(ConnectionAttempt.resolutionComplete).to(done).returns(None)
-
-resolvingWithPending.upon(ConnectionAttempt.noPendingConnections).to(
-    resolvingNames
-).returns(None)
-"No pending connections remain. Transition to Resolving only."
-
-
-resolvingWithPending.upon(ConnectionAttempt.endpointQueueEmpty).to(
-    resolvingWithPending
-).returns(None)
-"""
-Endpoint queue empty; transition to resolving-with-pending only and do
-nothing.
-"""
-
-
-justPending.upon(
-    endpointQueueEmpty.input,
-    enter=justPending,
-    outputs=[],
-)
-justPending.upon(
-    noPendingConnections.input,
-    enter=_done,
-    outputs=[connectionFailure],
-    collector=list,
-)
-
-justPending.upon(
-    userCancellation.input,
-    enter=_done,
-    outputs=[cancelOtherPending0, connectionFailure],
-)
-justPending.upon(
-    established.input,
-    enter=_done,
-    outputs=[cancelOtherPending1, complete],
-    collector=list,
-)
-
-
-@ConnectionAttemptImpl.state
-class JustQueued:
-    _justQueued.upon(
-        moreQueuedEndpoints.input,
-        enter=_pendingAndQueued,
-        outputs=[oneAttemptLater0],
-        collector=list,
-    )
-    _justQueued.upon(
-        noPendingConnections.input, enter=_justQueued, outputs=[doOneAttempt0]
-    )
-    _justQueued.upon(endpointQueueEmpty.input, enter=justPending, outputs=[])
-
-
-@ConnectionAttemptImpl.state
-class ResolvingWithPendingAndQueued:
-    """
-    This is starting to look like a cartesian product...
-    """
-
-    _resolvingWithPendingAndQueued.upon(
-        endpointQueueEmpty.input, enter=_resolvingWithPending, outputs=[]
-    )
-    _resolvingWithPendingAndQueued.upon(
-        resolutionComplete.input, enter=_pendingAndQueued, outputs=[]
-    )
-    _resolvingWithPendingAndQueued.upon(
-        noPendingConnections.input, enter=_resolvingWithPendingAndQueued, outputs=[]
-    )
-
-
-@ConnectionAttemptImpl.state
-class PendingAndQueued:
-    """
-    There are pending connection attempts as well as queued connections.
-    """
-
-    _pendingAndQueued.upon(
-        moreQueuedEndpoints.input, enter=_pendingAndQueued, outputs=[]
-    )
-    # this one's a bit weird; the queued connection will inevitably _become_ a
-    # pending connection, so _pendingAndQueued is still an appropriate state
-    # despite the lack of anything presently pending
-    _pendingAndQueued.upon(
-        noPendingConnections.input,
-        enter=_justQueued,
-        outputs=[cancelTimer0, doOneAttempt0],
-        collector=list,
-    )
-
-
-@ConnectionAttemptImpl.state
-class Done:
-    """
-    The operation is complete.
-    """
-
-    _done.upon(noPendingConnections.input, enter=_done, outputs=[], collector=list)
-
-
-ConnectionAttempter = ConnectionAttemptImpl.build()
-
-
-def new(hostnameEndpoint: HostnameEndpoint) -> ConnectionAttempt:
-    """ """
-    return ConnectionAttempter(ConnectionAttemptCore())
+def start(endpoint: HostnameEndpoint, pf: IProtocolFactory) -> D[IProtocol]:
+    state = AttemptState(D(), endpoint, pf)
+    return CxnTryImpl(state).start()
