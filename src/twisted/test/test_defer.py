@@ -60,16 +60,24 @@ from twisted.internet.defer import (
     _DeferredListSingleResultT,
     ensureDeferred,
     race,
+    succeed,
 )
 from twisted.internet.task import Clock
 from twisted.python import log
 from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
+from twisted.python.reflect import requireModule
 from twisted.trial import unittest
+
+sniffio = requireModule("sniffio")
+if sniffio:
+    sniffioSkip = None
+else:
+    sniffioSkip = "sniffio is not available"
 
 
 def ensuringDeferred(
-    f: Callable[..., Coroutine[Deferred[Any], Any, _T]]
+    f: Callable[..., Coroutine[Deferred[Any], Any, _T]],
 ) -> Callable[..., Deferred[_T]]:
     @functools.wraps(f)
     def wrapper(*args: object, **kwargs: object) -> Deferred[_T]:
@@ -4049,3 +4057,119 @@ class InlineCallbackTests(unittest.SynchronousTestCase):
         # The object has been freed if the weak reference returns None.
         self.assertIsNone(objWeakRef())
         self.assertIsNone(funcDWeakRef())
+
+
+class CoroutineSniffioTests(unittest.SynchronousTestCase):
+    skip = sniffioSkip
+
+    def testNotFoundWhenOutside(self) -> None:
+        """
+        sniffio will fail to find a library when outside coroutines and
+        L{defer.inlineCallbacks}.
+        """
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+    def testTwistedFoundInCoroutine(self) -> None:
+        """sniffio will recognize Twisted in a coroutine"""
+
+        async def twistAndShout() -> str:
+            return sniffio.current_async_library()
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.assertEqual(self.successResultOf(d), "twisted")
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+    def testNothingFoundAfterCoroutine(self) -> None:
+        """sniffio will recognize no loop after a coroutine"""
+
+        async def twistAndShout() -> None:
+            pass
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.successResultOf(d)
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+    def testTwistedFoundInCoroutineExceptionHandler(self) -> None:
+        """
+        sniffio will recognize Twisted in a coroutine when handling an
+        exception.
+        """
+
+        class LocalException(Exception):
+            pass
+
+        async def fail() -> None:
+            raise LocalException()
+
+        async def twistAndShout() -> str:
+            try:
+                await fail()
+            except LocalException:
+                return sniffio.current_async_library()
+
+            return "exception not handled"
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.assertEqual(self.successResultOf(d), "twisted")
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+    def testNothingFoundafterCoroutineExceptionHandler(self) -> None:
+        """
+        sniffio will recognize no loop after a coroutine raises an exception
+        """
+
+        class LocalException(Exception):
+            pass
+
+        async def twistAndShout() -> None:
+            raise LocalException()
+
+        d = defer.ensureDeferred(twistAndShout())
+        self.failureResultOf(d)
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )
+
+    def testTwistedFoundInInlineCallbacks(self) -> None:
+        """sniffio will recognize Twisted in a L{defer.inlineCallbacks}"""
+
+        @defer.inlineCallbacks
+        def twistALittleCloserNow() -> Generator[Deferred[Any], Any, str]:
+            yield succeed(None)
+
+            return sniffio.current_async_library()
+
+        d = defer.ensureDeferred(twistALittleCloserNow())
+        self.assertEqual(self.successResultOf(d), "twisted")
+
+    def testNothingFoundAfterInlineCallbacks(self) -> None:
+        """sniffio will recognize no loop after a L{defer.inlineCallbacks}"""
+
+        @defer.inlineCallbacks
+        def twistALittleCloserNow() -> Generator[Deferred[Any], Any, None]:
+            yield succeed(None)
+
+        d = defer.ensureDeferred(twistALittleCloserNow())
+        self.successResultOf(d)
+
+        self.assertRaises(
+            sniffio.AsyncLibraryNotFoundError,
+            sniffio.current_async_library,
+        )

@@ -104,8 +104,12 @@ websocket = [
     "wsproto",
 ]
 
+sniffio = [
+    "sniffio >= 1.3.0, < 2.0",
+]
+
 all-non-platform = [
-    "twisted[test,tls,conch,serial,http2,websocket]",
+    "twisted[test,tls,conch,serial,http2,websocket,sniffio]",
 ]
 
 macos-platform = [

@@ -53,6 +53,15 @@ from twisted.python.compat import cmp, comparable
 from twisted.python.deprecate import deprecated, deprecatedProperty, warnAboutFunction
 from twisted.python.failure import Failure, _extraneous
 
+current_async_library_cvar = None
+try:
+    import sniffio
+
+    current_async_library_cvar = sniffio.current_async_library_cvar
+except ImportError:
+    pass
+
+
 log = Logger()
 
 
@@ -1841,6 +1850,9 @@ def _inlineCallbacks(
 
     stopIteration: bool = False
     callbackValue: Any = None
+
+    if current_async_library_cvar is not None:
+        context.run(current_async_library_cvar.set, "twisted")
 
     while 1:
         try:

@@ -50,7 +50,9 @@ The following optional dependencies are supported:
 * **macos-platform** - **all-non-platform** options and dependencies to work with macOS specific APIs.
 * **windows-platform** - **all-non-platform** options and dependencies to work with Windows's specific APIs.
 * **gtk-platform** - **all-non-platform** options and dependencies to work with the GTK API.
+* **sniffio** - the `sniffio`_ package provides an interface to identify the event loop processing the active coroutine (Twisted vs. Trio etc).
 
 .. _pip: https://pip.pypa.io/en/latest/quickstart.html
 .. _`setuptools documentation`: https://pythonhosted.org/setuptools/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 .. _`python packaging tutorial`: https://packaging.python.org/en/latest/installing.html#examples
+.. _sniffio: https://pypi.org/project/sniffio

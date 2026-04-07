@@ -6,10 +6,15 @@
 asyncio-based reactor implementation.
 """
 
-
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_running_loop, new_event_loop, set_event_loop
+from asyncio import (
+    AbstractEventLoop,
+    get_running_loop,
+    new_event_loop,
+    set_event_loop,
+    tasks,
+)
 from typing import Dict, Optional, Type
 
 from zope.interface import implementer
@@ -23,6 +28,29 @@ from twisted.internet.posixbase import (
 )
 from twisted.logger import Logger
 from twisted.python.log import callWithLogger
+
+try:
+    from contextvars import copy_context
+
+    _contextvarsSupport = True
+except ImportError:
+    _contextvarsSupport = False
+
+current_async_library_cvar = None
+if _contextvarsSupport:
+    try:
+        import sniffio
+
+        current_async_library_cvar = sniffio.current_async_library_cvar
+    except ImportError:
+        pass
+
+
+def sniffioTaskFactory(loop, coro):
+    current_context = copy_context()
+    current_context.run(current_async_library_cvar.set, None)
+
+    return current_context.run(tasks.Task, coro=coro, loop=loop)
 
 
 @implementer(IReactorFDSet)
@@ -51,6 +79,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 _eventloop: AbstractEventLoop = get_running_loop()
             except RuntimeError:
                 _eventloop = new_event_loop()
+            if current_async_library_cvar is not None:
+                _eventloop.set_task_factory(factory=sniffioTaskFactory)
             set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
