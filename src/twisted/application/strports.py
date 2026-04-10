@@ -8,7 +8,9 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.serverFromString}
 @see: L{twisted.internet.endpoints.clientFromString}
 """
-from typing import Optional, cast
+from __future__ import annotations
+
+from typing import cast
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.internet import endpoints, interfaces
@@ -23,7 +25,7 @@ def _getReactor() -> interfaces.IReactorCore:
 def service(
     description: str,
     factory: interfaces.IProtocolFactory,
-    reactor: Optional[interfaces.IReactorCore] = None,
+    reactor: interfaces.IReactorCore | None = None,
 ) -> StreamServerEndpointService:
     """
     Return the service corresponding to a description.

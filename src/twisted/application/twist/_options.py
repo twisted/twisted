@@ -6,10 +6,12 @@
 Command line options for C{twist}.
 """
 
-import typing
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping, Sequence
 from sys import stderr, stdout
 from textwrap import dedent
-from typing import Callable, Iterable, Mapping, Optional, Sequence, Tuple, cast
+from typing import Callable, NoReturn, cast
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
@@ -28,7 +30,7 @@ from ..service import IServiceMaker
 openFile = open
 
 
-def _update_doc(opt: Callable[["TwistOptions", str], None], **kwargs: str) -> None:
+def _update_doc(opt: Callable[[TwistOptions, str], None], **kwargs: str) -> None:
     """
     Update the docstring of a method that implements an option.
     The string is dedented and the given keyword arguments are substituted.
@@ -58,7 +60,7 @@ class TwistOptions(Options):
     def getSynopsis(self) -> str:
         return f"{Options.getSynopsis(self)} plugin [plugin_options]"
 
-    def opt_version(self) -> "typing.NoReturn":
+    def opt_version(self) -> NoReturn:
         """
         Print version and exit.
         """
@@ -166,7 +168,7 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
                 self["logFormat"] = "json"
 
-    def parseOptions(self, options: Optional[Sequence[str]] = None) -> None:
+    def parseOptions(self, options: Sequence[str] | None = None) -> None:
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
@@ -187,7 +189,7 @@ class TwistOptions(Options):
     @property
     def subCommands(
         self,
-    ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
+    ) -> Iterable[tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
         for name in sorted(plugins):
             plugin = plugins[name]

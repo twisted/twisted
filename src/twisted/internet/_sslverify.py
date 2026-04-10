@@ -6,18 +6,10 @@ from __future__ import annotations
 
 import warnings
 from binascii import hexlify
+from collections.abc import Sequence
 from functools import lru_cache
 from hashlib import md5
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -178,7 +170,7 @@ _x509names = {
 }
 
 
-class DistinguishedName(Dict[str, bytes]):
+class DistinguishedName(dict[str, bytes]):
     """
     Identify and describe an entity.
 
@@ -1101,11 +1093,11 @@ def _verifyCB(
 
 def optionsForClientTLS(
     hostname: str,
-    trustRoot: Optional[Union[IOpenSSLTrustRoot, Certificate]] = None,
-    clientCertificate: Optional[PrivateCertificate] = None,
-    acceptableProtocols: Optional[Sequence[bytes]] = None,
+    trustRoot: IOpenSSLTrustRoot | Certificate | None = None,
+    clientCertificate: PrivateCertificate | None = None,
+    acceptableProtocols: Sequence[bytes] | None = None,
     *,
-    extraCertificateOptions: Optional[dict[str, Any]] = None,
+    extraCertificateOptions: dict[str, Any] | None = None,
     sendServerName: bool | None = None,
 ) -> IOpenSSLClientConnectionCreator:
     """

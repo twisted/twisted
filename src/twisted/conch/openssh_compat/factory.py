@@ -7,9 +7,10 @@ Factory for reading openssh configuration files: public keys, private keys, and
 moduli file.
 """
 
+from __future__ import annotations
+
 import errno
 import os
-from typing import Dict, List, Optional, Tuple
 
 from twisted.conch.openssh_compat import primes
 from twisted.conch.ssh import common, factory, keys
@@ -67,7 +68,7 @@ class OpenSSHFactory(factory.SSHFactory):
                     privateKeys[key.sshType()] = key
         return privateKeys
 
-    def getPrimes(self) -> Optional[Dict[int, List[Tuple[int, int]]]]:
+    def getPrimes(self) -> dict[int, list[tuple[int, int]]] | None:
         try:
             return primes.parseModuliFile(self.moduliRoot + "/moduli")
         except OSError:

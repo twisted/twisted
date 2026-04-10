@@ -8,11 +8,12 @@
 Tests for L{twisted.conch.manhole}.
 """
 
+from __future__ import annotations
+
 import sys
 import traceback
-from typing import Optional
 
-ssh: Optional[bool] = None
+ssh: bool | None = None
 
 from twisted.conch import manhole
 from twisted.conch.insults import insults

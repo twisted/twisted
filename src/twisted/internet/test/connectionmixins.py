@@ -6,10 +6,10 @@
 Various helpers for tests for connection-oriented transports.
 """
 
+from __future__ import annotations
 
 import socket
 from gc import collect
-from typing import Optional
 from weakref import ref
 
 from zope.interface.verify import verifyObject
@@ -276,7 +276,7 @@ class ConnectionTestsMixin:
     implementations.
     """
 
-    endpoints: Optional[EndpointCreator] = None
+    endpoints: EndpointCreator | None = None
 
     def test_logPrefix(self):
         """

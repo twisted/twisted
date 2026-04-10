@@ -18,20 +18,8 @@ import os
 import re
 import socket
 import warnings
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Iterable,
-    List,
-    Optional,
-    Protocol as TypingProtocol,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from collections.abc import Iterable, Sequence
+from typing import Any, Callable, ClassVar, Protocol as TypingProtocol, TypeVar, Union
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -754,15 +742,15 @@ class TCP6ClientEndpoint:
             return defer.fail()
 
 
-_gairesult = List[
-    Tuple[
+_gairesult = list[
+    tuple[
         socket.AddressFamily,
         socket.SocketKind,
         int,
         str,
         Union[
-            Tuple[str, int],
-            Tuple[str, int, int, int],
+            tuple[str, int],
+            tuple[str, int, int, int],
         ],
     ]
 ]
@@ -799,7 +787,7 @@ class _SimpleHostnameResolver:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -1643,8 +1631,8 @@ class _SystemdParser:
         self,
         reactor: IReactorSocket,
         domain: str,
-        index: Optional[str] = None,
-        name: Optional[str] = None,
+        index: str | None = None,
+        name: str | None = None,
     ) -> AdoptedStreamServerEndpoint:
         """
         Internal parser function for L{_parseServer} to convert the string

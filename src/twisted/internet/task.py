@@ -10,21 +10,8 @@ from __future__ import annotations
 import sys
 import time
 import warnings
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generic,
-    Iterable,
-    Iterator,
-    List,
-    NoReturn,
-    Optional,
-    Sequence,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Coroutine, Iterable, Iterator, Sequence
+from typing import Any, Callable, Generic, NoReturn, TypeVar, cast
 
 from zope.interface import implementer
 
@@ -69,13 +56,13 @@ class LoopingCall:
         to L{LoopingCall.start}.
     """
 
-    call: Optional[IDelayedCall] = None
+    call: IDelayedCall | None = None
     running = False
-    _deferred: Optional[Deferred["LoopingCall"]] = None
-    interval: Optional[float] = None
+    _deferred: Deferred[LoopingCall] | None = None
+    interval: float | None = None
     _runAtStart = False
-    starttime: Optional[float] = None
-    _realLastTime: Optional[float] = None
+    starttime: float | None = None
+    _realLastTime: float | None = None
 
     def __init__(self, f: Callable[..., object], *a: object, **kw: object) -> None:
         self.f = f
@@ -86,7 +73,7 @@ class LoopingCall:
         self.clock = cast(IReactorTime, reactor)
 
     @property
-    def deferred(self) -> Optional[Deferred["LoopingCall"]]:
+    def deferred(self) -> Deferred[LoopingCall] | None:
         """
         DEPRECATED. L{Deferred} fired when loop stops or fails.
 
@@ -102,7 +89,7 @@ class LoopingCall:
         return self._deferred
 
     @classmethod
-    def withCount(cls, countCallable: Callable[[int], object]) -> "LoopingCall":
+    def withCount(cls, countCallable: Callable[[int], object]) -> LoopingCall:
         """
         An alternate constructor for L{LoopingCall} that makes available the
         number of calls which should have occurred since it was last invoked.
@@ -178,7 +165,7 @@ class LoopingCall:
         intervalNum = int(elapsedTime / self.interval)
         return intervalNum
 
-    def start(self, interval: float, now: bool = True) -> Deferred["LoopingCall"]:
+    def start(self, interval: float, now: bool = True) -> Deferred[LoopingCall]:
         """
         Start running function every interval seconds.
 
@@ -418,7 +405,7 @@ class CooperativeTask(Generic[_TaskIteratorT]):
     def __init__(
         self,
         iterator: _TaskIteratorT,
-        cooperator: "Cooperator",
+        cooperator: Cooperator,
     ) -> None:
         """
         A private constructor: to create a new L{CooperativeTask}, see
@@ -426,10 +413,10 @@ class CooperativeTask(Generic[_TaskIteratorT]):
         """
         self._iterator = iterator
         self._cooperator = cooperator
-        self._deferreds: List[Deferred[_TaskIteratorT]] = []
+        self._deferreds: list[Deferred[_TaskIteratorT]] = []
         self._pauseCount = 0
-        self._completionState: Optional[SchedulerError] = None
-        self._completionResult: Optional[Union[_TaskIteratorT, Failure]] = None
+        self._completionState: SchedulerError | None = None
+        self._completionResult: _TaskIteratorT | Failure | None = None
         cooperator._addTask(self)
 
     def whenDone(self) -> Deferred[_TaskIteratorT]:
@@ -481,7 +468,7 @@ class CooperativeTask(Generic[_TaskIteratorT]):
     def _completeWith(
         self,
         completionState: SchedulerError,
-        deferredResult: Union[_TaskIteratorT, Failure],
+        deferredResult: _TaskIteratorT | Failure,
     ) -> None:
         """
         @param completionState: a L{SchedulerError} exception or a subclass
@@ -601,18 +588,18 @@ class Cooperator:
         stepped as soon as they are added, or if they will be queued up until
         L{Cooperator.start} is called.
         """
-        self._tasks: List[CooperativeTask[Iterator[object]]] = []
+        self._tasks: list[CooperativeTask[Iterator[object]]] = []
         self._metarator: Iterator[CooperativeTask[Iterator[object]]] = iter(())
         self._terminationPredicateFactory = terminationPredicateFactory
         self._scheduler = scheduler
-        self._delayedCall: Optional[IDelayedCall] = None
+        self._delayedCall: IDelayedCall | None = None
         self._stopped = False
         self._started = started
 
     def coiterate(
         self,
         iterator: _TaskIteratorT,
-        doneDeferred: Optional[Deferred[_TaskIteratorT]] = None,
+        doneDeferred: Deferred[_TaskIteratorT] | None = None,
     ) -> Deferred[_TaskIteratorT]:
         """
         Add an iterator to the list of iterators this L{Cooperator} is
@@ -779,7 +766,7 @@ class Clock:
     rightNow = 0.0
 
     def __init__(self) -> None:
-        self.calls: List[DelayedCall] = []
+        self.calls: list[DelayedCall] = []
 
     def seconds(self) -> float:
         """
@@ -849,7 +836,7 @@ class Clock:
 def deferLater(
     clock: IReactorTime,
     delay: float,
-    callable: Optional[Callable[..., _T]] = None,
+    callable: Callable[..., _T] | None = None,
     *args: object,
     **kw: object,
 ) -> Deferred[_T]:
@@ -888,10 +875,10 @@ def deferLater(
 def react(
     main: Callable[
         ...,
-        Union[Deferred[_T], Coroutine["Deferred[_T]", object, _T]],
+        Deferred[_T] | Coroutine[Deferred[_T], object, _T],
     ],
     argv: Iterable[object] = (),
-    _reactor: Optional[IReactorCore] = None,
+    _reactor: IReactorCore | None = None,
 ) -> NoReturn:
     """
     Call C{main} and run the reactor until the L{Deferred} it returns fires or

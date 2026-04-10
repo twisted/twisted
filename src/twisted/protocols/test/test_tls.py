@@ -8,7 +8,7 @@ Tests for L{twisted.protocols.tls}.
 from __future__ import annotations
 
 import gc
-from typing import Any, Union
+from typing import Any
 
 from zope.interface import Interface, directlyProvides, implementer
 from zope.interface.verify import verifyObject
@@ -1931,7 +1931,7 @@ class _AggregateSmallWritesTests(SynchronousTestCase):
             max_size=1_000,
         )
     )
-    def test_writes_get_aggregated(self, writes: list[Union[bytes, None]]) -> None:
+    def test_writes_get_aggregated(self, writes: list[bytes | None]) -> None:
         """
         A L{_AggregateSmallWrites} correctly aggregates data for the given
         sequence of writes (indicated by bytes) and increments in the clock

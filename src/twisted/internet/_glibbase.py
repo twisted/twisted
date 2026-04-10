@@ -13,7 +13,7 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from typing import Any, Callable, Dict, Set
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -135,9 +135,9 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
-        self._reads: Set[IReadDescriptor] = set()
-        self._writes: Set[IWriteDescriptor] = set()
-        self._sources: Dict[FileDescriptor, int] = {}
+        self._reads: set[IReadDescriptor] = set()
+        self._writes: set[IWriteDescriptor] = set()
+        self._sources: dict[FileDescriptor, int] = {}
         self._glib = glib_module
 
         self._POLL_DISCONNECTED = (

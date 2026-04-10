@@ -19,7 +19,6 @@ import tokenize
 from io import BytesIO
 from traceback import format_exception
 from types import TracebackType
-from typing import Type
 
 from twisted.conch import recvline
 from twisted.internet import defer
@@ -117,7 +116,7 @@ class ManholeInterpreter(code.InteractiveInterpreter):
 
     def excepthook(
         self,
-        excType: Type[BaseException],
+        excType: type[BaseException],
         excValue: BaseException,
         excTraceback: TracebackType,
     ) -> None:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import socket
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from zope.interface import classImplements, implementer
 
@@ -370,7 +370,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         self,
         host: str,
         port: int,
-        factory: "ClientFactory[P]",
+        factory: ClientFactory[P],
         timeout: float = 30.0,
         bindAddress: tuple[str, int] | None = None,
     ) -> IConnector:

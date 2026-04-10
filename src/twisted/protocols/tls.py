@@ -38,7 +38,8 @@ transports, such as UNIX sockets and stdio.
 
 from __future__ import annotations
 
-from typing import Callable, Iterable, Optional, cast
+from collections.abc import Iterable
+from typing import Callable, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
@@ -629,7 +630,7 @@ class _AggregateSmallWrites:
         self._clock = clock
         self._buffer: list[bytes] = []
         self._bufferLeft = self.MAX_BUFFER_SIZE
-        self._scheduled: Optional[IDelayedCall] = None
+        self._scheduled: IDelayedCall | None = None
 
     def write(self, data: bytes) -> None:
         """
@@ -738,7 +739,7 @@ class TLSMemoryBIOFactory(WrappingFactory[TLSMemoryBIOProtocol]):
         contextFactory: SomeConnectionCreator,
         isClient: bool,
         wrappedFactory: IProtocolFactory,
-        clock: Optional[IReactorTime] = None,
+        clock: IReactorTime | None = None,
     ) -> None:
         """
         Create a L{TLSMemoryBIOFactory}.

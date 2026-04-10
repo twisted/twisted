@@ -7,12 +7,11 @@ Resource limiting policies.
 
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
-
 from __future__ import annotations
 
 # system imports
 import sys
-from typing import Callable, Optional, Type
+from typing import Callable
 
 from zope.interface import directlyProvides, providedBy
 
@@ -52,7 +51,7 @@ class ProtocolWrapper(Protocol):
     disconnecting = 0
 
     def __init__(
-        self, factory: "WrappingFactory[Self]", wrappedProtocol: interfaces.IProtocol
+        self, factory: WrappingFactory[Self], wrappedProtocol: interfaces.IProtocol
     ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
@@ -399,7 +398,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     connectionCount = 0
     connectionLimit = None
-    overflowProtocol: Optional[Type[Protocol]] = None
+    overflowProtocol: type[Protocol] | None = None
 
     def buildProtocol(self, addr):
         if self.connectionLimit is None or self.connectionCount < self.connectionLimit:
@@ -632,7 +631,7 @@ class TimeoutMixin:
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
 
-    timeOut: Optional[int] = None
+    timeOut: int | None = None
 
     __timeoutCall = None
 

@@ -12,13 +12,15 @@ available.  Additionally, the tests will automatically be applied to all
 available reactor implementations.
 """
 
+from __future__ import annotations
 
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os
 import signal
 import time
-from typing import TYPE_CHECKING, Callable, Dict, Optional, Sequence, Type, Union, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Callable, cast
 
 from zope.interface import Interface
 
@@ -175,11 +177,11 @@ class ReactorBuilder:
                     ]
                 )
 
-    reactorFactory: Optional[Callable[[], object]] = None
+    reactorFactory: Callable[[], object] | None = None
 
     originalHandler = None
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
-    skippedReactors: Dict[str, str] = {}
+    requiredInterfaces: Sequence[type[Interface]] | None = None
+    skippedReactors: dict[str, str] = {}
 
     def setUp(self):
         """
@@ -355,15 +357,13 @@ class ReactorBuilder:
 
     @classmethod
     def makeTestCaseClasses(
-        cls: Type["ReactorBuilder"],
-    ) -> Dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]]:
+        cls: type[ReactorBuilder],
+    ) -> dict[str, type[ReactorBuilder] | type[SynchronousTestCase]]:
         """
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes: Dict[
-            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
-        ] = {}
+        classes: dict[str, type[ReactorBuilder] | type[SynchronousTestCase]] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
@@ -383,7 +383,7 @@ class ReactorBuilder:
         return classes
 
 
-def asyncioSelectorReactor(self: object) -> "asyncioreactor.AsyncioSelectorReactor":
+def asyncioSelectorReactor(self: object) -> asyncioreactor.AsyncioSelectorReactor:
     """
     Make a new asyncio reactor associated with a new event loop.
 

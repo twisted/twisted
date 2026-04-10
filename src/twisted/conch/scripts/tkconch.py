@@ -16,7 +16,6 @@ import sys
 import tkinter as Tkinter
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
-from typing import List, Tuple
 
 from twisted.conch import error
 from twisted.conch.client.default import isInKnownHosts
@@ -278,9 +277,9 @@ class GeneralOptions(usage.Options):
         ],
     )
 
-    identitys: List[str] = []
-    localForwards: List[Tuple[int, Tuple[int, int]]] = []
-    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
+    identitys: list[str] = []
+    localForwards: list[tuple[int, tuple[int, int]]] = []
+    remoteForwards: list[tuple[int, tuple[int, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -506,7 +505,7 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles: List[str] = []
+    usedFiles: list[str] = []
 
     def getPassword(self, prompt=None):
         if not prompt:

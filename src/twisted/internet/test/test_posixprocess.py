@@ -5,13 +5,13 @@
 Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
+from __future__ import annotations
 
 import errno
 import os
 import sys
-from typing import Optional
 
-platformSkip: Optional[str]
+platformSkip: str | None
 try:
     import fcntl
 except ImportError:

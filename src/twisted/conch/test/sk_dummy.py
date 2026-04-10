@@ -7,10 +7,11 @@ Helper classes for testing security key related features.
 Code is based on https://github.com/openssh/openssh-portable/blob/master/regress/misc/sk-dummy/sk-dummy.c
 """
 
+from __future__ import annotations
+
 import hashlib
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, utils
@@ -32,7 +33,7 @@ class EnrollResponse:
     public_key: bytes
     key_handle: bytes
     signature: bytes
-    attestation_cert: Optional[bytes] = None
+    attestation_cert: bytes | None = None
     flags: int = 0
 
 
@@ -43,7 +44,7 @@ class SignResponse:
     flags: int
     counter: int
     signature_r: bytes
-    signature_s: Optional[bytes]  # None for Ed25519 algorithm
+    signature_s: bytes | None  # None for Ed25519 algorithm
 
 
 class SKError(Exception):
@@ -69,7 +70,7 @@ class DummySK:
         challenge: bytes,
         application: str,
         flags: int,
-        pin: Optional[str] = None,
+        pin: str | None = None,
     ) -> EnrollResponse:
         """
         Simulates the enrollment of a new security key credential.
@@ -128,7 +129,7 @@ class DummySK:
         application: str,
         key_handle: bytes,
         flags: int,
-        pin: Optional[str] = None,
+        pin: str | None = None,
     ) -> SignResponse:
         """
         Simulates signing data with a previously enrolled key.

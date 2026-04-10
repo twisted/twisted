@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -67,7 +67,7 @@ _Hash = Any
 _DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
 
 
-class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
+class _MACParams(tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).
@@ -514,7 +514,7 @@ class SSHTransportBase(protocol.Protocol):
     _EXT_INFO_S = b"ext-info-s"
 
     _peerSupportsExtensions = False
-    peerExtensions: Dict[bytes, bytes] = {}
+    peerExtensions: dict[bytes, bytes] = {}
 
     # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
     avatar: object
@@ -1911,7 +1911,7 @@ class SSHClientTransport(SSHTransportBase):
         d.addErrback(
             lambda unused: self.sendDisconnect(
                 DISCONNECT_HOST_KEY_NOT_VERIFIABLE,
-                f"bad host key [ecdh] {unused}".encode("utf-8"),
+                f"bad host key [ecdh] {unused}".encode(),
             )
         )
         return d

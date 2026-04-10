@@ -4,7 +4,6 @@
 
 import inspect
 import sys
-from typing import List
 from unittest import skipIf
 
 from zope.interface import directlyProvides
@@ -489,7 +488,7 @@ class POP3HelperMixin:
 class TLSServerFactory(protocol.ServerFactory):
     class protocol(basic.LineReceiver):
         context = None
-        output: List[bytes] = []
+        output: list[bytes] = []
 
         def connectionMade(self):
             self.factory.input = []

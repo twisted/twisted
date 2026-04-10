@@ -9,6 +9,7 @@ IPv6-aware hostname resolution.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from socket import (
     AF_INET,
     AF_INET6,
@@ -20,7 +21,7 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import TYPE_CHECKING, Callable, NoReturn, Optional, Protocol, Sequence, Type
+from typing import TYPE_CHECKING, Callable, NoReturn, Protocol
 
 from zope.interface import implementer
 
@@ -120,7 +121,7 @@ class GAIResolver:
     def __init__(
         self,
         reactor: IReactorThreads,
-        getThreadPool: Optional[Callable[[], "ThreadPool"]] = None,
+        getThreadPool: Callable[[], ThreadPool] | None = None,
         getaddrinfo: _LikeGetAddrInfo = getaddrinfo,
     ):
         """
@@ -150,7 +151,7 @@ class GAIResolver:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -220,7 +221,7 @@ class SimpleResolverComplexifier:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -283,7 +284,7 @@ class FirstOneWins:
     An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
     """
 
-    def __init__(self, deferred: "Deferred[str]"):
+    def __init__(self, deferred: Deferred[str]):
         """
         @param deferred: The L{Deferred} to fire when the first resolution
             result arrives.
@@ -336,7 +337,7 @@ class ComplexResolverSimplifier:
         """
         self._nameResolver = nameResolver
 
-    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> "Deferred[str]":
+    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> Deferred[str]:
         """
         See L{IResolverSimple.getHostByName}
 
@@ -346,6 +347,6 @@ class ComplexResolverSimplifier:
 
         @return: see L{IResolverSimple.getHostByName}
         """
-        result: "Deferred[str]" = Deferred()
+        result: Deferred[str] = Deferred()
         self._nameResolver.resolveHostName(FirstOneWins(result), name, 0, [IPv4Address])
         return result

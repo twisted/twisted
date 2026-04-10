@@ -9,7 +9,8 @@ from __future__ import annotations
 import errno
 import os
 import pickle
-from typing import AnyStr, Mapping, Optional, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import AnyStr
 
 from zope.interface import implementer
 
@@ -118,14 +119,14 @@ class DummyProcessReactor(MemoryReactor, Clock):
     def spawnProcess(
         self,
         processProtocol: IProcessProtocol,
-        executable: Union[bytes, str],
-        args: Sequence[Union[bytes, str]],
-        env: Optional[Mapping[AnyStr, AnyStr]] = None,
-        path: Union[None, bytes, str] = None,
-        uid: Optional[int] = None,
-        gid: Optional[int] = None,
+        executable: bytes | str,
+        args: Sequence[bytes | str],
+        env: Mapping[AnyStr, AnyStr] | None = None,
+        path: None | bytes | str = None,
+        uid: int | None = None,
+        gid: int | None = None,
         usePTY: bool = False,
-        childFDs: Optional[Mapping[int, Union[int, str]]] = None,
+        childFDs: Mapping[int, int | str] | None = None,
     ) -> IProcessTransport:
         """
         Fake L{reactor.spawnProcess}, that logs all the process

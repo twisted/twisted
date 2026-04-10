@@ -14,8 +14,7 @@ import os
 import socket
 import struct
 import sys
-import typing
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol
 
 from zope.interface import Interface, implementer
 
@@ -799,9 +798,9 @@ class Server(_TLSServerMixin, Connection):
 
     _base = Connection
 
-    _addressType: Union[
-        type[address.IPv4Address], type[address.IPv6Address]
-    ] = address.IPv4Address
+    _addressType: (
+        type[address.IPv4Address] | type[address.IPv6Address]
+    ) = address.IPv4Address
 
     def __init__(
         self,
@@ -964,7 +963,7 @@ class _IFileDescriptorReservation(Interface):
         """
 
 
-class _HasClose(typing.Protocol):
+class _HasClose(TypingProtocol):
     def close(self) -> object:
         ...
 
@@ -984,7 +983,7 @@ class _FileDescriptorReservation:
     _log: ClassVar[Logger] = Logger()
 
     _fileFactory: Callable[[], _HasClose]
-    _fileDescriptor: Optional[_HasClose] = attr.ib(init=False, default=None)
+    _fileDescriptor: _HasClose | None = attr.ib(init=False, default=None)
 
     def available(self):
         """
@@ -1136,7 +1135,7 @@ class _BuffersLogs:
 
     _namespace: str
     _observer: ILogObserver
-    _logs: List[LogEvent] = attr.ib(default=attr.Factory(list))
+    _logs: list[LogEvent] = attr.ib(default=attr.Factory(list))
 
     def __enter__(self):
         """
@@ -1281,7 +1280,7 @@ class Port(base.BasePort, _SocketCloser):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber: Optional[int] = None
+    _realPortNumber: int | None = None
 
     # An externally initialized socket that we will use, rather than creating
     # our own.

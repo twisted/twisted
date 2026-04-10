@@ -16,7 +16,7 @@ import socket
 import struct
 import time
 import tty
-from typing import Callable, Dict, Tuple
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -52,10 +52,10 @@ except ImportError:
 class UnixSSHRealm:
     def requestAvatar(
         self,
-        username: bytes | Tuple[()],
+        username: bytes | tuple[()],
         mind: object,
         *interfaces: portal._InterfaceItself,
-    ) -> Tuple[portal._InterfaceItself, UnixConchUser, Callable[[], None]]:
+    ) -> tuple[portal._InterfaceItself, UnixConchUser, Callable[[], None]]:
         if not isinstance(username, bytes):
             raise LoginDenied("UNIX SSH realm does not authorize anonymous sessions.")
         user = UnixConchUser(username.decode())
@@ -72,7 +72,7 @@ class UnixConchUser(ConchUser):
             if username in userlist:
                 l.append(gid)
         self.otherGroups = l
-        self.listeners: Dict[
+        self.listeners: dict[
             str, IListeningPort
         ] = {}  # Dict mapping (interface, port) -> listener
         self.channelLookup.update(

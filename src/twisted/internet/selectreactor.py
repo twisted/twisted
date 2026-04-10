@@ -11,7 +11,7 @@ import select
 import sys
 from errno import EBADF, EINTR
 from time import sleep
-from typing import Callable, Type, TypeVar
+from typing import Callable, TypeVar
 
 from zope.interface import implementer
 
@@ -48,7 +48,7 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase: Type[object] = object
+    _extraBase: type[object] = object
 else:
     _extraBase = _ThreadedWin32EventsMixin
 

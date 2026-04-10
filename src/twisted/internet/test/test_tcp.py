@@ -13,10 +13,11 @@ import gc
 import io
 import os
 import socket
+from collections.abc import Mapping, Sequence
 from functools import wraps
 from io import BytesIO
 from types import ModuleType
-from typing import Any, Callable, ClassVar, List, Mapping, Optional, Sequence, Type
+from typing import Any, Callable, ClassVar
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -474,7 +475,7 @@ class FakeResolver:
     def __init__(self, names: Mapping[str, str]):
         self.names = names
 
-    def getHostByName(self, name: str, timeout: Sequence[int] = ()) -> "Deferred[str]":
+    def getHostByName(self, name: str, timeout: Sequence[int] = ()) -> Deferred[str]:
         """
         Return the address mapped to C{name} if it exists, or raise a
         C{DNSLookupError}.
@@ -1037,7 +1038,7 @@ class _ExhaustsFileDescriptors:
         default=lambda: os.dup(0), repr=False
     )
     _close: Callable[[int], None] = attr.ib(default=os.close, repr=False)
-    _fileDescriptors: List[int] = attr.ib(
+    _fileDescriptors: list[int] = attr.ib(
         default=attr.Factory(list), init=False, repr=False
     )
     _sourceCache: SourceCacheForCoverage | None = None
@@ -1559,7 +1560,7 @@ class TCPPortTestsMixin:
     Tests for L{IReactorTCP.listenTCP}
     """
 
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
+    requiredInterfaces: Sequence[type[Interface]] | None = (IReactorTCP,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """
@@ -2121,7 +2122,7 @@ class WriteSequenceTestsMixin:
     Test for L{twisted.internet.abstract.FileDescriptor.writeSequence}.
     """
 
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorTCP,)
+    requiredInterfaces: Sequence[type[Interface]] | None = (IReactorTCP,)
 
     def setWriteBufferSize(self, transport, value):
         """
@@ -2791,7 +2792,7 @@ class AbortConnectionMixin:
     """
 
     # Override in subclasses, should be an EndpointCreator instance:
-    endpoints: Optional[EndpointCreator] = None
+    endpoints: EndpointCreator | None = None
 
     def runAbortTest(self, clientClass, serverClass, clientConnectionLostReason=None):
         """

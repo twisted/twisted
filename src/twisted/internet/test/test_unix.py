@@ -5,7 +5,9 @@
 Tests for implementations of L{IReactorUNIX}.
 """
 
+from __future__ import annotations
 
+from collections.abc import Sequence
 from hashlib import md5
 from os import close, fstat, stat, unlink, urandom
 from pprint import pformat
@@ -13,7 +15,7 @@ from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from stat import S_IMODE
 from struct import pack
 from tempfile import mkstemp, mktemp
-from typing import Any, Callable, Optional, Sequence, Type
+from typing import Any, Callable
 from unittest import skipIf
 
 try:
@@ -103,7 +105,7 @@ class UNIXCreator(EndpointCreator):
     Create UNIX socket end points.
     """
 
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (interfaces.IReactorUNIX,)
+    requiredInterfaces: Sequence[type[Interface]] | None = (interfaces.IReactorUNIX,)
 
     def server(self, reactor):
         """
@@ -729,7 +731,7 @@ class SocketUNIXMixin:
     UNIX ports.
     """
 
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (
+    requiredInterfaces: Sequence[type[Interface]] | None = (
         IReactorUNIX,
         IReactorSocket,
     )
@@ -801,7 +803,7 @@ class ListenUNIXMixin:
 
 
 class UNIXPortTestsMixin:
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = (IReactorUNIX,)
+    requiredInterfaces: Sequence[type[Interface]] | None = (IReactorUNIX,)
 
     def getExpectedStartListeningLogMessage(self, port, factory):
         """

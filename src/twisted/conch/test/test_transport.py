@@ -5,6 +5,7 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
+from __future__ import annotations
 
 import binascii
 import re
@@ -12,7 +13,6 @@ import string
 import struct
 import types
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Dict, List, Optional, Tuple, Type
 
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
@@ -28,7 +28,7 @@ from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
 
-dependencySkip: Optional[str]
+dependencySkip: str | None
 if cryptography:
     dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
@@ -289,7 +289,7 @@ class MockFactory(factory.SSHFactory):
             b"ssh-dsa": keys.Key.fromString(keydata.privateDSA_openssh),
         }
 
-    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
+    def getPrimes(self) -> dict[int, list[tuple[int, int]]]:
         """
         Diffie-Hellman primes that can be used for key exchange algorithms
         that use group exchange to establish a prime / generator group.
@@ -364,7 +364,7 @@ class TransportTestCase(TestCase):
     Base class for transport test cases.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = None
+    klass: type[transport.SSHTransportBase] | None = None
 
     if dependencySkip:
         skip = dependencySkip
@@ -461,7 +461,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = MockTransportBase
+    klass: type[transport.SSHTransportBase] | None = MockTransportBase
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -1447,7 +1447,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHServerTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHServerTransport
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -2174,7 +2174,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHClientTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHClientTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHClientTransport
 
     def verifyHostKey(self, pubKey, fingerprint):
         """

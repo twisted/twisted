@@ -2,8 +2,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
 import textwrap
-from typing import Optional, Type
 
 from constantly import ValueConstant, Values
 
@@ -220,7 +221,7 @@ def testByte%(groupName)s(self):
 
 
 class ByteGroupingsMixin(MockMixin):
-    protocolFactory: Optional[Type[Protocol]] = None
+    protocolFactory: type[Protocol] | None = None
 
     for word, n in [
         ("Pairs", 2),

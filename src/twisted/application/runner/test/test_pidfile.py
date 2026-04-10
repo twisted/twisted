@@ -5,10 +5,12 @@
 Tests for L{twisted.application.runner._pidfile}.
 """
 
+from __future__ import annotations
+
 import errno
 from functools import wraps
 from os import getpid, name as SYSTEM_NAME
-from typing import Any, Callable, NoReturn, Optional
+from typing import Any, Callable, NoReturn
 
 from zope.interface.verify import verifyObject
 
@@ -71,7 +73,7 @@ class PIDFileTests(twisted.trial.unittest.TestCase):
     Tests for L{PIDFile}.
     """
 
-    def filePath(self, content: Optional[bytes] = None) -> FilePath[str]:
+    def filePath(self, content: bytes | None = None) -> FilePath[str]:
         filePath = FilePath(self.mktemp())
         if content is not None:
             filePath.setContent(content)
