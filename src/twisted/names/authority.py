@@ -219,9 +219,7 @@ class FileAuthority(common.ResolverBase):
                         )
                     )
             # Additional processing for NS records (A/AAAA glue).
-            additionalInformation = self._additionalRecords(
-                [], authority, default_ttl
-            )
+            additionalInformation = self._additionalRecords([], authority, default_ttl)
             additional.extend(additionalInformation)
             return defer.succeed(([], authority, additional))
 
