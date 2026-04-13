@@ -79,6 +79,9 @@ class _IPQHybridKexAlgorithm(_IKexAlgorithm):
     An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
     """
 
+    c_pk2_len = Attribute("An L{int} giving the PQ component public key length in bytes.")
+    c_pk1_len = Attribute("An L{int} giving the classical component public key length in bytes.")
+
 
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
@@ -276,6 +279,20 @@ def isPQHybrid(kexAlgorithm: bytes) -> bool:
         otherwise C{False}.
     """
     return _IPQHybridKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
+
+def getPQHybridKex(kexAlgorithm: bytes) -> _IPQHybridKexAlgorithm:
+    """
+    Get a description of a named PQ/T Hybrid key exchange algorithm.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: A description of the PQ/T Hybrid key exchange algorithm.
+
+    @raises ConchError: if the key exchange algorithm is not found or is not
+        a PQ/T Hybrid algorithm.
+    """
+    return _IPQHybridKexAlgorithm(getKex(kexAlgorithm))
 
 
 def getHashProcessor(kexAlgorithm: bytes) -> _HashFactory:

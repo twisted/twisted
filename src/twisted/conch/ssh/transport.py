@@ -1565,7 +1565,7 @@ class SSHServerTransport(SSHTransportBase):
 
         c_init, packet = getNS(packet)
 
-        kex = _kex.getKex(self.kexAlg)
+        kex = _kex.getPQHybridKex(self.kexAlg)
 
         if len(c_init) != kex.c_pk2_len + kex.c_pk1_len:
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid C_INIT length")
