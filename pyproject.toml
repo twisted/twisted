@@ -88,7 +88,7 @@ conch = [
     "cryptography >= 38",
     "appdirs >= 1.4.0",
     "bcrypt >= 3.2.1",
-    "ml-kem-rs >= 0.1.1",
+    "ml-kem-rs >= 0.1.1; platform_python_implementation == 'CPython'",
 ]
 
 serial = [
