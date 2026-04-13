@@ -2193,7 +2193,7 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
     PQ/T Hybrid ML-KEM-768 + X25519 key exchange tests for SSHServerTransport.
     """
 
-    def test_KEX_HYBRID_INIT(self) -> None:
+    def test_KEX_HYBRID_INIT(self):
         """
         SSHServerTransport responds to SSH_MSG_KEX_HYBRID_INIT with
         SSH_MSG_KEX_HYBRID_REPLY containing the server host key blob,
@@ -2246,7 +2246,7 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
 
         self.assertTrue(keys.Key.fromString(k_s).verify(signature, exchangeHash))
 
-    def test_disconnectHYBRID_INIT_badLength(self) -> None:
+    def test_disconnectHYBRID_INIT_badLength(self):
         """
         If the C_INIT payload has a length other than 1216 bytes
         (1184 ML-KEM 768 encap key + 32 X25519 pubkey), the server
@@ -2260,7 +2260,7 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
-    def test_disconnectHYBRID_INIT_invalidX25519Key(self) -> None:
+    def test_disconnectHYBRID_INIT_invalidX25519Key(self):
         """
         If the C_PK1 portion of C_INIT is invalid, the
         server disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
@@ -2278,7 +2278,7 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
 
-    def test_disconnectHYBRID_INIT_invalidMLKEMKey(self) -> None:
+    def test_disconnectHYBRID_INIT_invalidMLKEMKey(self):
         """
         If the C_PK2 portion of C_INIT is not a valid ML-KEM 768
         encapsulation key, the server disconnects with
