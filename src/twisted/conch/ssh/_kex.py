@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     # NB: Not a real attribute at runtime.
     from hashlib import _Hash
 
+try:
+    import ml_kem_rs  # noqa: F401
+except ImportError:
+    ml_kem_supported = False
+else:
+    ml_kem_supported = True
+
 
 class _HashFactory(Protocol):
     def __call__(self, data: bytes = ...) -> _Hash:
@@ -67,6 +74,12 @@ class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
     """
 
 
+class _IPQHybridKexAlgorithm(_IKexAlgorithm):
+    """
+    An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
+    """
+
+
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
     An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
@@ -75,6 +88,18 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     A prime / generator group should be chosen at run time based on the
     requested size. See RFC 4419.
     """
+
+
+@implementer(_IPQHybridKexAlgorithm)
+class _MLKEM768X25519SHA256:
+    """
+    PQ/T Hybrid Key Exchange using ML-KEM-768 and X25519 with SHA256.
+    """
+
+    preference = 1
+    hashProcessor = sha256
+    c_pk2_len = 1184
+    c_pk1_len = 32
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
@@ -187,6 +212,7 @@ class _DHGroup14SHA1:
 
 # Which ECDH hash function to use is dependent on the size.
 _kexAlgorithms: dict[bytes, _IKexAlgorithm] = {
+    b"mlkem768x25519-sha256": _MLKEM768X25519SHA256(),
     b"curve25519-sha256": _Curve25519SHA256(),
     b"curve25519-sha256@libssh.org": _Curve25519SHA256LibSSH(),
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
@@ -240,6 +266,18 @@ def isFixedGroup(kexAlgorithm: bytes) -> bool:
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
+def isPQHybrid(kexAlgorithm: bytes) -> bool:
+    """
+    Returns C{True} if C{kexAlgorithm} is a PQ/T Hybrid algorithm.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: C{True} if C{kexAlgorithm} is a PQ/T Hybrid algorithm,
+        otherwise C{False}.
+    """
+    return _IPQHybridKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
+
 def getHashProcessor(kexAlgorithm: bytes) -> _HashFactory:
     """
     Get the hash algorithm callable to use in key exchange.
@@ -288,6 +326,11 @@ def getSupportedKeyExchanges() -> list[bytes]:
             )
         elif keyAlgorithm.startswith(b"curve25519-sha256"):
             supported = backend.x25519_supported()
+        elif keyAlgorithm == b"mlkem768x25519-sha256":
+            if ml_kem_supported:
+                supported = backend.x25519_supported()
+            else:
+                supported = False
         else:
             supported = True
         if not supported:

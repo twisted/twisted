@@ -1552,6 +1552,82 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
+    def _ssh_KEX_HYBRID_INIT(self, packet: bytes) -> None:
+        """
+        Called to handle PQ/T Hybrid key exchanges (e.g. mlkem768x25519-sha256).
+
+        Payload::
+            string C_INIT (C_PK2 || C_PK1)
+
+        @param packet: The message data.
+        """
+        import ml_kem_rs
+
+        c_init, packet = getNS(packet)
+
+        kex = _kex.getKex(self.kexAlg)
+
+        if len(c_init) != kex.c_pk2_len + kex.c_pk1_len:
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid C_INIT length")
+            return
+
+        c_pk2 = c_init[: kex.c_pk2_len]
+        c_pk1 = c_init[kex.c_pk2_len :]
+
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
+
+        s_sk1 = x25519.X25519PrivateKey.generate()
+        s_pk1 = s_sk1.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+
+        # Calculate K_CL (X25519 shared secret)
+        try:
+            peer_key = x25519.X25519PublicKey.from_public_bytes(c_pk1)
+            k_cl = s_sk1.exchange(peer_key)
+        except Exception:
+            self.sendDisconnect(
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid X25519 public key"
+            )
+            return
+
+        # Calculate K_PQ (ML-KEM shared secret)
+        try:
+            # encapsulate returns (ciphertext, shared_secret)
+            s_ct2, k_pq = ml_kem_rs.mlkem768_encapsulate(c_pk2)
+            s_ct2 = bytes(s_ct2)
+            k_pq = bytes(k_pq)
+        except ValueError:
+            self.sendDisconnect(
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid ML-KEM public key"
+            )
+            return
+
+        hashProcessor = kex.hashProcessor
+        k_shared = NS(hashProcessor(k_pq + k_cl).digest())
+
+        s_reply = s_ct2 + s_pk1
+
+        h = hashProcessor()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(pubHostKey.blob()))
+        h.update(NS(c_init))
+        h.update(NS(s_reply))
+        h.update(k_shared)
+        exchangeHash = h.digest()
+
+        self.sendPacket(
+            MSG_KEXDH_REPLY,
+            NS(pubHostKey.blob())
+            + NS(s_reply)
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
+        )
+
+        self._keySetup(k_shared, exchangeHash)
+
     def _ssh_KEXDH_INIT(self, packet: bytes) -> None:
         """
         Called to handle the beginning of a non-group key exchange.
@@ -1623,6 +1699,8 @@ class SSHServerTransport(SSHTransportBase):
             return self._ssh_KEXDH_INIT(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
             return self._ssh_KEX_ECDH_INIT(packet)
+        elif _kex.isPQHybrid(self.kexAlg):
+            return self._ssh_KEX_HYBRID_INIT(packet)
         else:
             self.dhGexRequest = packet
             ideal = struct.unpack(">L", packet)[0]

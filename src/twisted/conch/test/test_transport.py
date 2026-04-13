@@ -72,6 +72,16 @@ def skipWithoutX25519(f):
     return f
 
 
+_ml_kem_rs = requireModule("ml_kem_rs")
+ML_KEM_SUPPORTED = bool(_ml_kem_rs) and X25519_SUPPORTED
+
+
+def skipWithoutMLKEM(f):
+    if not ML_KEM_SUPPORTED:
+        f.skip = "ml_kem_rs not available or x25519 not supported"
+    return f
+
+
 def _MPpow(x, y, z):
     """
     Return the MP version of C{(x ** y) % z}.
@@ -453,6 +463,15 @@ class Curve25519SHA256Mixin:
     """
 
     kexAlgorithm = b"curve25519-sha256"
+    hashProcessor = sha256
+
+
+class MLKEM768X25519SHA256Mixin:
+    """
+    Mixin for mlkem768x25519-sha256 tests.
+    """
+
+    kexAlgorithm = b"mlkem768x25519-sha256"
     hashProcessor = sha256
 
 
@@ -2166,6 +2185,131 @@ class ServerSSHTransportCurve25519SHA256Tests(
 ):
     """
     curve25519-sha256 tests for SSHServerTransport.
+    """
+
+
+class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
+    """
+    PQ/T Hybrid ML-KEM-768 + X25519 key exchange tests for SSHServerTransport.
+    """
+
+    def test_KEX_HYBRID_INIT(self):
+        """
+        SSHServerTransport responds to SSH_MSG_KEX_HYBRID_INIT with
+        SSH_MSG_KEX_HYBRID_REPLY containing the server host key blob,
+        S_REPLY (S_CT2 || S_PK1), and a valid signature over the exchange
+        hash H.  It also sends SSH_MSG_NEWKEYS.
+        """
+        import ml_kem_rs
+        from cryptography.hazmat.primitives.asymmetric import x25519
+
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        dk, ek = ml_kem_rs.mlkem768_generate()
+        c_pk2 = bytes(ek)
+        c_sk1 = x25519.X25519PrivateKey.generate()
+        c_pk1 = c_sk1.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        c_init = c_pk2 + c_pk1
+
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_init))
+
+        self.assertEqual(len(self.packets), 2)
+        self.assertEqual(self.packets[0][0], transport.MSG_KEXDH_REPLY)
+        self.assertEqual(self.packets[1], (transport.MSG_NEWKEYS, b""))
+
+        k_s, s_reply, signature, _ = common.getNS(self.packets[0][1], 3)
+
+        self.assertEqual(len(s_reply), 1088 + 32)
+        s_ct2 = s_reply[:1088]
+        s_pk1 = s_reply[1088:]
+
+        k_pq = bytes(ml_kem_rs.mlkem768_decapsulate(bytes(dk), s_ct2))
+        k_cl = c_sk1.exchange(x25519.X25519PublicKey.from_public_bytes(s_pk1))
+        k_shared = self.hashProcessor(k_pq + k_cl).digest()
+        k_encoded = common.NS(k_shared)
+
+        pubHostKey, _ = self.proto._getHostKeys(b"ssh-rsa")
+        h = self.hashProcessor()
+        h.update(common.NS(self.proto.otherVersionString))
+        h.update(common.NS(self.proto.ourVersionString))
+        h.update(common.NS(self.proto.otherKexInitPayload))
+        h.update(common.NS(self.proto.ourKexInitPayload))
+        h.update(common.NS(pubHostKey.blob()))
+        h.update(common.NS(c_init))
+        h.update(common.NS(s_reply))
+        h.update(k_encoded)
+        exchangeHash = h.digest()
+
+        self.assertTrue(keys.Key.fromString(k_s).verify(signature, exchangeHash))
+
+    def test_disconnectHYBRID_INIT_badLength(self):
+        """
+        If the C_INIT payload has a length other than 1216 bytes
+        (1184 ML-KEM 768 encap key + 32 X25519 pubkey), the server
+        disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(b"\x00" * 100))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+    def test_disconnectHYBRID_INIT_invalidX25519Key(self):
+        """
+        If the C_PK1 portion of C_INIT is invalid, the
+        server disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+        import ml_kem_rs
+
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        _, ek = ml_kem_rs.mlkem768_generate()
+        c_pk2 = bytes(ek)
+        c_pk1 = b"\x00" * 32
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+    def test_disconnectHYBRID_INIT_invalidMLKEMKey(self):
+        """
+        If the C_PK2 portion of C_INIT is not a valid ML-KEM 768
+        encapsulation key, the server disconnects with
+        SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+        from cryptography.hazmat.primitives.asymmetric import x25519
+
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        # Invalid encapsulation key
+        c_pk2 = b"\xff" * 1184
+        c_pk1 = (
+            x25519.X25519PrivateKey.generate()
+            .public_key()
+            .public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+        )
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
+@skipWithoutMLKEM
+class ServerSSHTransportMLKEM768X25519Tests(
+    ServerSSHTransportMLKEM768X25519BaseCase,
+    MLKEM768X25519SHA256Mixin,
+    TransportTestCase,
+):
+    """
+    mlkem768x25519-sha256 tests for SSHServerTransport.
     """
 
 
