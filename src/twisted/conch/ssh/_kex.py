@@ -79,8 +79,12 @@ class _IPQHybridKexAlgorithm(_IKexAlgorithm):
     An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
     """
 
-    c_pk2_len = Attribute("An L{int} giving the PQ component public key length in bytes.")
-    c_pk1_len = Attribute("An L{int} giving the classical component public key length in bytes.")
+    c_pk2_len = Attribute(
+        "An L{int} giving the PQ component public key length in bytes."
+    )
+    c_pk1_len = Attribute(
+        "An L{int} giving the classical component public key length in bytes."
+    )
 
 
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
