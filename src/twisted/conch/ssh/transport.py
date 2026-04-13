@@ -1867,9 +1867,7 @@ class SSHClientTransport(SSHTransportBase):
     # The client does not yet implement PQ/T Hybrid key exchange, so filter
     # those algorithms out to prevent negotiating an unsupported method.
     supportedKeyExchanges = [
-        kex
-        for kex in _kex.getSupportedKeyExchanges()
-        if not _kex.isPQHybrid(kex)
+        kex for kex in _kex.getSupportedKeyExchanges() if not _kex.isPQHybrid(kex)
     ]
 
     # Recommended minimal and maximal values from RFC 4419, 3.
