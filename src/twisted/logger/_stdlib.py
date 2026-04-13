@@ -6,8 +6,10 @@
 Integration with Python standard library logging.
 """
 
+from __future__ import annotations
+
 import logging as stdlibLogging
-from typing import Mapping, Tuple
+from collections.abc import Mapping
 
 from zope.interface import implementer
 
@@ -28,13 +30,14 @@ toStdlibLogLevelMapping: Mapping[NamedConstant, int] = {
 }
 
 
-def _reverseLogLevelMapping() -> Mapping[int, NamedConstant]:
+def _reverseLogLevelMapping() -> Mapping[str | int, NamedConstant]:
     """
     Reverse the above mapping, adding both the numerical keys used above and
     the corresponding string keys also used by python logging.
+
     @return: the reversed mapping
     """
-    mapping = {}
+    mapping: dict[str | int, NamedConstant] = {}
     for logLevel, pyLogLevel in toStdlibLogLevelMapping.items():
         mapping[pyLogLevel] = logLevel
         mapping[stdlibLogging.getLevelName(pyLogLevel)] = logLevel
@@ -80,7 +83,7 @@ class STDLibLogObserver:
 
     def _findCaller(
         self, stackInfo: bool = False, stackLevel: int = 1
-    ) -> Tuple[str, int, str, None]:
+    ) -> tuple[str, int, str, None]:
         """
         Based on the stack depth passed to this L{STDLibLogObserver}, identify
         the calling function.

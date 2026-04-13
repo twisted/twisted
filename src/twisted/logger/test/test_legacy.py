@@ -5,9 +5,11 @@
 Test cases for L{twisted.logger._legacy}.
 """
 
+from __future__ import annotations
+
 import logging as py_logging
 from time import time
-from typing import List, cast
+from typing import cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
@@ -64,7 +66,7 @@ class LegacyLogObserverWrapperTests(unittest.TestCase):
 
         @return: the event as observed by the legacy wrapper
         """
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
 
         legacyObserver = cast(legacyLog.ILogObserver, lambda e: events.append(e))
         observer = LegacyLogObserverWrapper(legacyObserver)
@@ -280,7 +282,7 @@ class PublishToNewObserverTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.events: List[LogEvent] = []
+        self.events: list[LogEvent] = []
         self.observer = cast(ILogObserver, self.events.append)
 
     def legacyEvent(self, *message: str, **values: object) -> legacyLog.EventDict:

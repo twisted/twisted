@@ -8,9 +8,10 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 from __future__ import annotations
 
 import zlib
+from collections.abc import Sequence
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -122,7 +123,7 @@ class StubHTTPProtocol(Protocol):
     """
 
     def __init__(self) -> None:
-        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
+        self.requests: list[tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):
@@ -1392,6 +1393,15 @@ class AgentURIInjectionTests(
         agent.request(method, uri, Headers(), None)
 
 
+def dummyTLSProtocol() -> TLSMemoryBIOProtocol:
+    factory = TLSMemoryBIOFactory(
+        optionsForClientTLS("example.com"), True, Factory.forProtocol(Protocol)
+    )
+    result = factory.buildProtocol(None)
+    assert result is not None
+    return result
+
+
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMixin):
     """
@@ -1567,7 +1577,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             "Since Twisted 14.0, you must pass a provider of IPolicyForHTTPS.",
         )
 
-    def test_alternateTrustRoot(self):
+    def test_alternateTrustRoot(self) -> None:
         """
         L{BrowserLikePolicyForHTTPS.creatorForNetloc} returns an
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
@@ -1576,7 +1586,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
-        connection = creator.clientConnectionForTLS(None)
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertTrue(trustRoot.called)
         self.assertIs(trustRoot.context, connection.get_context())
 
@@ -2684,7 +2694,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         crossScheme: bool = False,
         crossDomain: bool = False,
         crossPort: bool = False,
-        requestHeaders: Optional[Headers] = None,
+        requestHeaders: Headers | None = None,
     ) -> Request:
         """
         When getting a redirect, L{client.RedirectAgent} follows the URL
@@ -2792,7 +2802,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
+        def normHeaders(headers: Headers) -> dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)
@@ -3296,7 +3306,7 @@ class ReadBodyTests(TestCase):
 
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class HostnameCachingHTTPSPolicyTests(TestCase):
-    def test_cacheIsUsed(self):
+    def test_cacheIsUsed(self) -> None:
         """
         Verify that the connection creator is added to the
         policy's cache, and that it is reused on subsequent calls
@@ -3307,12 +3317,12 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
-        firstConnection = creator.clientConnectionForTLS(None)
+        firstConnection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertIs(trustRoot.context, firstConnection.get_context())
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
         self.assertEqual(1, len(policy._cache))
-        connection = creator.clientConnectionForTLS(None)
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertIs(trustRoot.context, connection.get_context())
 
         policy.creatorForNetloc(b"foo", 1589)

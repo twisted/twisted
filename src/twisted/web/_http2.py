@@ -16,7 +16,6 @@ it has stabilised, it'll be made public.
 
 import io
 from collections import deque
-from typing import List
 
 from zope.interface import implementer
 
@@ -45,7 +44,7 @@ from twisted.python.failure import Failure
 from twisted.web.error import ExcessiveBufferingError
 
 # This API is currently considered private.
-__all__: List[str] = []
+__all__: list[str] = []
 
 
 _END_STREAM_SENTINEL = object()

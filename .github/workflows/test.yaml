@@ -222,10 +222,10 @@ jobs:
             trial-target: '-- twisted.application twisted.cred twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.trial twisted.web twisted.words'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -237,7 +237,7 @@ jobs:
         echo "cache-dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
     - name: pip cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pip-cache.outputs.cache-dir }}
         key:
@@ -309,7 +309,7 @@ jobs:
 
     - name: Store coverage file
       if: ${{ !cancelled() && !matrix.skip-coverage }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         include-hidden-files: true
@@ -324,7 +324,7 @@ jobs:
     needs:
       - testing  # Code coverage only needs to wait for test jobs.
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -334,7 +334,7 @@ jobs:
         python -m pip install --upgrade coverage[toml] diff_cover
 
     - name: Download coverage reports
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: coverage-*
         merge-multiple: true
@@ -370,7 +370,7 @@ jobs:
 
     - name: Upload HTML report on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: html-report
         path: htmlcov
@@ -388,10 +388,10 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         # When you will need to change this to run the benchmarks
         # on a different Python version,
@@ -452,13 +452,13 @@ jobs:
       TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         # Need full history for various diff checks to work.
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
@@ -480,9 +480,9 @@ jobs:
     name: API docs build
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -497,9 +497,9 @@ jobs:
     name: Narrative docs build
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
     - name: Install dependencies
@@ -520,10 +520,10 @@ jobs:
     name: Build and check release, then upload artifact
     runs-on: 'ubuntu-22.04'
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
 
@@ -538,7 +538,7 @@ jobs:
       run: |
         ls -R dist/
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: dist
         path: dist
@@ -564,7 +564,7 @@ jobs:
     name: publish on twisted-* tag
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: dist
         path: dist

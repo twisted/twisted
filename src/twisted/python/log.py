@@ -6,13 +6,14 @@
 Logging and metrics infrastructure.
 """
 
+from __future__ import annotations
 
 import sys
 import time
 import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, BinaryIO, Dict, Optional, cast
+from typing import Any, BinaryIO, cast
 
 from zope.interface import Interface
 
@@ -31,7 +32,7 @@ from twisted.logger._legacy import publishToNewObserver as _publishNew
 from twisted.python import context, failure, reflect, util
 from twisted.python.threadable import synchronize
 
-EventDict = Dict[str, Any]
+EventDict = dict[str, Any]
 
 
 class ILogContext:
@@ -353,7 +354,7 @@ if "theLogPublisher" not in globals():
         """
 
 
-def _safeFormat(fmtString: str, fmtDict: Dict[str, Any]) -> str:
+def _safeFormat(fmtString: str, fmtDict: dict[str, Any]) -> str:
     """
     Try to format a string, swallowing all errors to always return a string.
 
@@ -397,7 +398,7 @@ def _safeFormat(fmtString: str, fmtDict: Dict[str, Any]) -> str:
     return text
 
 
-def textFromEventDict(eventDict: EventDict) -> Optional[str]:
+def textFromEventDict(eventDict: EventDict) -> str | None:
     """
     Extract text from an event dict passed to a log observer. If it cannot
     handle the dict, it returns None.
@@ -472,7 +473,7 @@ class FileLogObserver(_GlobalStartStopObserver):
     @ivar timeFormat: If not L{None}, the format string passed to strftime().
     """
 
-    timeFormat: Optional[str] = None
+    timeFormat: str | None = None
 
     def __init__(self, f):
         # Compatibility

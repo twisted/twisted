@@ -4,7 +4,7 @@
 """
 Tests for L{twisted.protocols.haproxy._parser}.
 """
-from typing import Type, Union
+from __future__ import annotations
 
 from twisted.internet.endpoints import (
     TCP4ServerEndpoint,
@@ -83,11 +83,11 @@ class HAProxyServerParserTests(TestCase):
     def onePrefix(
         self,
         description: str,
-        expectedClass: Union[
-            Type[TCP4ServerEndpoint],
-            Type[TCP6ServerEndpoint],
-            Type[UNIXServerEndpoint],
-        ],
+        expectedClass: (
+            type[TCP4ServerEndpoint]
+            | type[TCP6ServerEndpoint]
+            | type[UNIXServerEndpoint]
+        ),
     ) -> _WrapperServerEndpoint:
         """
         Test the C{haproxy} enpdoint prefix against one sub-endpoint type.

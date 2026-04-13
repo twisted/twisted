@@ -15,7 +15,6 @@ import time
 import types
 from importlib import reload
 from types import ModuleType
-from typing import Dict
 
 # Sibling Imports
 from twisted.python import log, reflect
@@ -60,7 +59,7 @@ class Sensitive:
             return anObject
 
 
-_modDictIDMap: Dict[int, ModuleType] = {}
+_modDictIDMap: dict[int, ModuleType] = {}
 
 
 def latestFunction(oldFunc):

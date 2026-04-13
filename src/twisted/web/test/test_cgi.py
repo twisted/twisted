@@ -10,7 +10,7 @@ import os
 import sys
 from io import BytesIO
 
-from twisted.internet import address, error, interfaces, reactor
+from twisted.internet import address, error, reactor
 from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, util
 from twisted.trial import unittest
@@ -114,7 +114,7 @@ class _StartServerAndTearDownMixin:
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(source)
         return cgiFilename
 
@@ -123,9 +123,6 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
     Tests for L{twcgi.FilteredScript}.
     """
-
-    if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
 
     def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)
@@ -264,7 +261,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -285,7 +282,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -310,7 +307,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)

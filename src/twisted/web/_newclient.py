@@ -29,7 +29,7 @@ Various other classes in this module support this usage:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from zope.interface import implementer
 
@@ -606,7 +606,7 @@ def _ensureValidURI(uri):
     raise ValueError(f"Invalid URI {uri!r}")
 
 
-def _contentLength(connHeaders: Headers) -> Optional[int]:
+def _contentLength(connHeaders: Headers) -> int | None:
     """
     Parse the I{Content-Length} connection header.
 

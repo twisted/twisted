@@ -11,7 +11,7 @@ Twisted.  The Protocol class contains some introductory material.
 from __future__ import annotations
 
 import random
-from typing import Any, Callable, Generic, Optional, Protocol as TypingProtocol
+from typing import Any, Callable, Generic, Protocol as TypingProtocol
 
 from zope.interface import implementer
 
@@ -67,7 +67,7 @@ class _ProtoWithFactory(TypingProtocol):
     def connectionLost(self, reason: Failure) -> None:
         ...
 
-    def makeConnection(self, transport: "ITransport") -> None:
+    def makeConnection(self, transport: ITransport) -> None:
         ...
 
     def connectionMade(self) -> None:
@@ -83,7 +83,7 @@ class Factory(Generic[P]):
     self.protocol.
     """
 
-    protocol: "Optional[Callable[..., P]]" = None
+    protocol: Callable[..., P] | None = None
 
     numPorts = 0
     noisy = True
@@ -171,7 +171,7 @@ class Factory(Generic[P]):
         directly.
         """
 
-    def buildProtocol(self, addr: IAddress | None) -> "Optional[P]":
+    def buildProtocol(self, addr: IAddress | None) -> P | None:
         """
         Create an instance of a subclass of Protocol.
 
@@ -550,7 +550,7 @@ class BaseProtocol:
     """
 
     connected = 0
-    transport: Optional[ITransport] = None
+    transport: ITransport | None = None
 
     def makeConnection(self, transport):
         """
@@ -678,7 +678,7 @@ class ProcessProtocol(BaseProtocol):
     stdin, stdout, and stderr file descriptors.
     """
 
-    transport: Optional[interfaces.IProcessTransport] = None
+    transport: interfaces.IProcessTransport | None = None
 
     def childDataReceived(self, childFD: int, data: bytes) -> None:
         if childFD == 1:

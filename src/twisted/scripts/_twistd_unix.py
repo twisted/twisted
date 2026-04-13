@@ -390,7 +390,9 @@ class UnixApplicationRunner(app.ApplicationRunner):
                 "An error has occurred: {}\nPlease look at log "
                 "file for more information.\n".format(dataRepr)
             )
-            untilConcludes(sys.__stderr__.write, msg)
+            origstderr = sys.__stderr__
+            assert origstderr is not None
+            untilConcludes(origstderr.write, msg)
             return 1
         return 0
 

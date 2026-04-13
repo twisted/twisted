@@ -5,9 +5,10 @@
 Tests for L{twisted.web.template}
 """
 
+from __future__ import annotations
+
 import sys
 from io import StringIO
-from typing import List, Optional
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -146,7 +147,7 @@ class ElementTests(TestCase):
 
         class ElementWithRenderMethod(Element):
             @renderer
-            def foo(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
+            def foo(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return "bar"
 
         foo = ElementWithRenderMethod().lookupRenderMethod("foo")
@@ -160,7 +161,7 @@ class ElementTests(TestCase):
 
         @implementer(ITemplateLoader)
         class TemplateLoader:
-            def load(self) -> List[Flattenable]:
+            def load(self) -> list[Flattenable]:
                 return ["result"]
 
         class StubElement(Element):
@@ -481,9 +482,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def renderMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return succeed("Hello, world.")
 
         element = RenderfulElement(
@@ -518,9 +517,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def renderMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 renders.append((self, request))
                 return tag("Hello, world.")
 
@@ -542,9 +539,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def renderMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return "Hello, world."
 
         element = RenderfulElement(
@@ -567,9 +562,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def renderMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return tag(Element(loader=XMLString("<em>Hello, world.</em>")))
 
         element = RenderfulElement(
@@ -590,9 +583,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class RenderfulElement(Element):
             @renderer
-            def renderMethod(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def renderMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return tag.fillSlots(test2="world.")
 
         element = RenderfulElement(
@@ -615,7 +606,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class OuterElement(Element):
             @renderer
-            def outerMethod(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
+            def outerMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return tag(
                     InnerElement(
                         loader=XMLString(
@@ -630,7 +621,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
         class InnerElement(Element):
             @renderer
-            def innerMethod(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
+            def innerMethod(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return "Hello, world."
 
         element = OuterElement(
@@ -661,15 +652,13 @@ class FlattenIntegrationTests(FlattenTestCase):
             loader = sharedLoader
 
             @renderer
-            def classCounter(
-                self, request: Optional[IRequest], tag: Tag
-            ) -> Flattenable:
+            def classCounter(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 DestructiveElement.count += 1
                 return tag(str(DestructiveElement.count))
 
             @renderer
             def instanceCounter(
-                self, request: Optional[IRequest], tag: Tag
+                self, request: IRequest | None, tag: Tag
             ) -> Flattenable:
                 self.instanceCount += 1
                 return tag(str(self.instanceCount))
@@ -743,7 +732,7 @@ class FailingElement(Element):
     An element that raises an exception when rendered.
     """
 
-    def render(self, request: Optional[IRequest]) -> "Flattenable":
+    def render(self, request: IRequest | None) -> Flattenable:
         a = 42
         b = 0
         return f"{a // b}"

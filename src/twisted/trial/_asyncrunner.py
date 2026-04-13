@@ -25,7 +25,7 @@ class TestSuite(pyunit.TestSuite):
     C{run} method.
     """
 
-    def run(self, result):
+    def run(self, result: pyunit.TestResult, debug: bool = False) -> pyunit.TestResult:
         """
         Call C{run} on every member of the suite.
         """

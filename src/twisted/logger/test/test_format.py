@@ -5,7 +5,9 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from typing import Any, AnyStr, Dict, Optional, cast
+from __future__ import annotations
+
+from typing import Any, AnyStr, cast
 
 try:
     from time import tzset
@@ -100,8 +102,8 @@ class FormattingTests(unittest.TestCase):
         L{formatEvent} will format subscripts of attributes per PEP 3101.
         """
 
-        class Example(object):
-            config: Dict[str, str] = dict(foo="bar", baz="qux")
+        class Example:
+            config: dict[str, str] = dict(foo="bar", baz="qux")
 
         self.assertEqual(
             "bar qux",
@@ -200,7 +202,7 @@ class TimeFormattingTests(unittest.TestCase):
             raise SkipTest("Platform cannot change timezone; unable to verify offsets.")
 
         def testForTimeZone(
-            name: str, expectedDST: Optional[str], expectedSTD: str
+            name: str, expectedDST: str | None, expectedSTD: str
         ) -> None:
             setTZ(name)
 
@@ -298,7 +300,7 @@ class ClassicLogFormattingTests(unittest.TestCase):
         argument.
         """
 
-        def formatTime(t: Optional[float]) -> str:
+        def formatTime(t: float | None) -> str:
             return f"__{t}__"
 
         event = dict(log_format="XYZZY", log_time=12345)

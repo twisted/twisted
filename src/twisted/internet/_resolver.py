@@ -7,8 +7,9 @@ IPv6-aware hostname resolution.
 
 @see: L{IHostnameResolver}
 """
+from __future__ import annotations
 
-
+from collections.abc import Sequence
 from socket import (
     AF_INET,
     AF_INET6,
@@ -20,17 +21,7 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    List,
-    NoReturn,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, NoReturn, Protocol
 
 from zope.interface import implementer
 
@@ -95,15 +86,29 @@ _socktypeToType = {
 }
 
 
-_GETADDRINFO_RESULT = List[
-    Tuple[
-        AddressFamily,
-        SocketKind,
-        int,
-        str,
-        Union[Tuple[str, int], Tuple[str, int, int, int]],
-    ]
-]
+class _LikeGetAddrInfo(Protocol):
+    """
+    A callable matching the type signature of L{getaddrinfo}.
+    """
+
+    def __call__(
+        self,
+        host: bytes | str | None,
+        port: bytes | str | int | None,
+        family: int = AF_UNSPEC,
+        type: int = 0,
+        proto: int = 0,
+        flags: int = 0,
+    ) -> list[
+        tuple[
+            AddressFamily,
+            SocketKind,
+            int,
+            str,
+            tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
+        ]
+    ]:
+        ...
 
 
 @implementer(IHostnameResolver)
@@ -116,8 +121,8 @@ class GAIResolver:
     def __init__(
         self,
         reactor: IReactorThreads,
-        getThreadPool: Optional[Callable[[], "ThreadPool"]] = None,
-        getaddrinfo: Callable[[str, int, int, int], _GETADDRINFO_RESULT] = getaddrinfo,
+        getThreadPool: Callable[[], ThreadPool] | None = None,
+        getaddrinfo: _LikeGetAddrInfo = getaddrinfo,
     ):
         """
         Create a L{GAIResolver}.
@@ -146,7 +151,7 @@ class GAIResolver:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -170,27 +175,30 @@ class GAIResolver:
         ]
         socketType = _transportToSocket[transportSemantics]
 
-        def get() -> _GETADDRINFO_RESULT:
+        resolution = HostResolution(hostName)
+
+        async def resolveAndProcess() -> None:
+            resolutionReceiver.resolutionBegan(resolution)
             try:
-                return self._getaddrinfo(
-                    hostName, portNumber, addressFamily, socketType
+                names = await deferToThreadPool(
+                    self._reactor,
+                    pool,
+                    self._getaddrinfo,
+                    hostName,
+                    portNumber,
+                    addressFamily,
+                    socketType,
                 )
             except gaierror:
-                return []
-
-        d = deferToThreadPool(self._reactor, pool, get)
-        resolution = HostResolution(hostName)
-        resolutionReceiver.resolutionBegan(resolution)
-
-        @d.addCallback
-        def deliverResults(result: _GETADDRINFO_RESULT) -> None:
-            for family, socktype, proto, cannoname, sockaddr in result:
+                names = []
+            for family, socktype, proto, cannoname, sockaddr in names:
                 addrType = _afToType[family]
                 resolutionReceiver.addressResolved(
                     addrType(_socktypeToType.get(socktype, "TCP"), *sockaddr)
                 )
             resolutionReceiver.resolutionComplete()
 
+        Deferred.fromCoroutine(resolveAndProcess())
         return resolution
 
 
@@ -213,7 +221,7 @@ class SimpleResolverComplexifier:
         resolutionReceiver: IResolutionReceiver,
         hostName: str,
         portNumber: int = 0,
-        addressTypes: Optional[Sequence[Type[IAddress]]] = None,
+        addressTypes: Sequence[type[IAddress]] | None = None,
         transportSemantics: str = "TCP",
     ) -> IHostResolution:
         """
@@ -254,13 +262,15 @@ class SimpleResolverComplexifier:
                 )
             )
             .addErrback(
-                lambda error: None
-                if error.check(DNSLookupError)
-                else self._log.failure(
-                    "while looking up {name} with {resolver}",
-                    error,
-                    name=hostName,
-                    resolver=self._simpleResolver,
+                lambda error: (
+                    None
+                    if error.check(DNSLookupError)
+                    else self._log.failure(
+                        "while looking up {name} with {resolver}",
+                        error,
+                        name=hostName,
+                        resolver=self._simpleResolver,
+                    )
                 )
             )
             .addCallback(lambda nothing: resolutionReceiver.resolutionComplete())
@@ -274,7 +284,7 @@ class FirstOneWins:
     An L{IResolutionReceiver} which fires a L{Deferred} with its first result.
     """
 
-    def __init__(self, deferred: "Deferred[str]"):
+    def __init__(self, deferred: Deferred[str]):
         """
         @param deferred: The L{Deferred} to fire when the first resolution
             result arrives.
@@ -327,7 +337,7 @@ class ComplexResolverSimplifier:
         """
         self._nameResolver = nameResolver
 
-    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> "Deferred[str]":
+    def getHostByName(self, name: str, timeouts: Sequence[int] = ()) -> Deferred[str]:
         """
         See L{IResolverSimple.getHostByName}
 
@@ -337,6 +347,6 @@ class ComplexResolverSimplifier:
 
         @return: see L{IResolverSimple.getHostByName}
         """
-        result: "Deferred[str]" = Deferred()
+        result: Deferred[str] = Deferred()
         self._nameResolver.resolveHostName(FirstOneWins(result), name, 0, [IPv4Address])
         return result

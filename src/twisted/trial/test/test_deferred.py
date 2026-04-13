@@ -270,7 +270,7 @@ class TimeoutTests(TestTester):
         # raises KeyboardInterrupt because Trial sucks
         from twisted.internet import reactor
 
-        call = reactor.callLater(2, reactor.crash)  # type: ignore[attr-defined]
+        call = reactor.callLater(2, reactor.crash)
         result = self.runTest("test_calledButNeverCallback")
         if call.active():
             call.cancel()

@@ -273,7 +273,7 @@ async def runTests(
     testCases: Iterable[ITestCase],
     result: DistReporter,
     driveWorker: Callable[
-        [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
+        [DistReporter, Iterable[ITestCase], LocalWorkerAMP], Awaitable[None]
     ],
 ) -> None:
     try:
@@ -349,7 +349,7 @@ class DistTrialRunner:
     async def _driveWorker(
         self,
         result: DistReporter,
-        testCases: Sequence[ITestCase],
+        testCases: Iterable[ITestCase],
         worker: LocalWorkerAMP,
     ) -> None:
         """

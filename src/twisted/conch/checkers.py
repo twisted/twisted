@@ -6,24 +6,14 @@
 Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
+from __future__ import annotations
 
 import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import (
-    IO,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
-    Optional,
-    Protocol,
-    Tuple,
-    cast,
-)
+from collections.abc import Iterable, Iterator, Mapping
+from typing import IO, Any, Callable, Literal, Protocol, cast
 
 from zope.interface import Interface, implementer, providedBy
 
@@ -45,7 +35,7 @@ from twisted.python.util import runAsEffectiveUser
 _log = Logger()
 
 
-class UserRecord(Tuple[str, str, int, int, str, str, str]):
+class UserRecord(tuple[str, str, int, int, str, str, str]):
     """
     A record in a UNIX-style password database.  See L{pwd} for field details.
 
@@ -73,7 +63,7 @@ class UserDB(Protocol):
         """
 
 
-pwd: Optional[UserDB]
+pwd: UserDB | None
 try:
     import pwd as _pwd
 except ImportError:
@@ -117,7 +107,7 @@ def _lookupUser(userdb: UserDB, username: bytes) -> UserRecord:
     return userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
 
 
-def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
+def _pwdGetByName(username: str) -> CryptedPasswordRecord | None:
     """
     Look up a user in the /etc/passwd database using the pwd module.  If the
     pwd module is not available, return None.
@@ -135,7 +125,7 @@ def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     return cast(CryptedPasswordRecord, pwd.getpwnam(username))
 
 
-def _shadowGetByName(username: str) -> Optional[CryptedPasswordRecord]:
+def _shadowGetByName(username: str) -> CryptedPasswordRecord | None:
     """
     Look up a user in the /etc/shadow database using the spwd module.  If it is
     not available, return L{None}.
@@ -517,7 +507,7 @@ class UNIXAuthorizedKeysFiles:
 
     def __init__(
         self,
-        userdb: Optional[UserDB] = None,
+        userdb: UserDB | None = None,
         parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString,
     ):
         """

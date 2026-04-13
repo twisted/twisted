@@ -113,15 +113,7 @@ from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
-from typing import (
-    AnyStr,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Protocol as TypingProtocol,
-    Tuple,
-)
+from typing import AnyStr, Callable, Protocol as TypingProtocol
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -526,7 +518,7 @@ def toChunk(data):
     return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
 
 
-def fromChunk(data: bytes) -> Tuple[bytes, bytes]:
+def fromChunk(data: bytes) -> tuple[bytes, bytes]:
     """
     Convert chunk to string.
 
@@ -942,7 +934,7 @@ class Request:
             URL-encoded body uploads into C{request.args}. This can use large
             amounts of memory for large uploads.
         """
-        self.notifications: List[Deferred[None]] = []
+        self.notifications: list[Deferred[None]] = []
         self.channel = channel
 
         # Cache the client and server information, we'll need this
@@ -952,9 +944,9 @@ class Request:
         self.host = self.channel.getHost()
 
         self.requestHeaders: Headers = Headers()
-        self.received_cookies: Dict[bytes, bytes] = {}
+        self.received_cookies: dict[bytes, bytes] = {}
         self.responseHeaders: Headers = Headers()
-        self.cookies: List[bytes] = []  # outgoing cookies
+        self.cookies: list[bytes] = []  # outgoing cookies
         self.transport = self.channel.transport
 
         if queued is _QUEUED_SENTINEL:
@@ -1152,7 +1144,7 @@ class Request:
 
     # The following is the public interface that people should be
     # writing to.
-    def getHeader(self, key: AnyStr) -> Optional[AnyStr]:
+    def getHeader(self, key: AnyStr) -> AnyStr | None:
         """
         Get an HTTP request header.
 
@@ -1443,7 +1435,7 @@ class Request:
             cookie += b"; SameSite=" + sameSite
         self.cookies.append(cookie)
 
-    def setResponseCode(self, code: int, message: Optional[bytes] = None) -> None:
+    def setResponseCode(self, code: int, message: bytes | None = None) -> None:
         """
         Set the HTTP response code.
 
@@ -2000,7 +1992,7 @@ class _ChunkedTransferDecoder:
         self.finishCallback = finishCallback
         self._buffer = bytearray()
         self._start = 0
-        self._trailerHeaders: List[bytearray] = []
+        self._trailerHeaders: list[bytearray] = []
         self._maxTrailerHeadersSize = 2**16
         self._receivedTrailerHeadersSize = 0
 
@@ -2327,7 +2319,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     totalHeadersSize = 16384
     abortTimeout = 15
 
-    length: Optional[int] = 0
+    length: int | None = 0
     persistent = 1
     __header = b""
     __first_line = 1
@@ -3381,7 +3373,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
             reactor.
         """
         if reactor is None:
-            from twisted.internet import reactor  # type:ignore[assignment]
+            from twisted.internet import reactor
         self.reactor: IReactorTime = reactor  # type:ignore[assignment]
 
         if logPath is not None:
@@ -3418,7 +3410,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
     def _set_logFile(self, newLogFile: BufferedIOBase | _MinimalLogFile) -> None:
         if isinstance(newLogFile, BufferedIOBase):
             newLogFile = TextIOWrapper(
-                newLogFile,  # type:ignore[arg-type]
+                newLogFile,  # type:ignore[type-var]
                 "utf-8",
                 write_through=True,
                 newline="\n",

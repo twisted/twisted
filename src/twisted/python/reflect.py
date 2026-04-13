@@ -7,6 +7,7 @@ Standardized versions of various cool and/or strange things that you can do
 with Python's reflection capabilities.
 """
 
+from __future__ import annotations
 
 import os
 import pickle
@@ -17,7 +18,6 @@ import types
 import weakref
 from collections import deque
 from io import IOBase, StringIO
-from typing import Type, Union
 
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
@@ -348,7 +348,7 @@ def filenameToModuleName(fn):
     return modName
 
 
-def qual(clazz: Type[object]) -> str:
+def qual(clazz: type[object]) -> str:
     """
     Return full import path of a class.
     """
@@ -373,7 +373,7 @@ def _determineClassName(x):
             return "<BROKEN CLASS AT 0x%x>" % id(c)
 
 
-def _safeFormat(formatter: Union[types.FunctionType, Type[str]], o: object) -> str:
+def _safeFormat(formatter: types.FunctionType | type[str], o: object) -> str:
     """
     Helper function for L{safe_repr} and L{safe_str}.
 

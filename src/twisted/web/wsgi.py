@@ -6,9 +6,10 @@ An implementation of
 U{Python Web Server Gateway Interface v1.0.1<http://www.python.org/dev/peps/pep-3333/>}.
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from sys import exc_info
-from typing import List, Union
 from warnings import warn
 
 from zope.interface import implementer
@@ -34,7 +35,7 @@ from twisted.web.server import NOT_DONE_YET
 #
 # The following pair of functions -- _wsgiString() and _wsgiStringToBytes() --
 # are used to make Twisted's WSGI support compliant with the standard.
-def _wsgiString(string: Union[str, bytes]) -> str:
+def _wsgiString(string: str | bytes) -> str:
     """
     Convert C{string} to a WSGI "bytes-as-unicode" string.
 
@@ -100,7 +101,7 @@ class _ErrorStream:
         # will overwrite this value if it is not properly formatted here.
         self._log.error(data, system="wsgi", isError=True, message=(data,))
 
-    def writelines(self, iovec: List[str]) -> None:
+    def writelines(self, iovec: list[str]) -> None:
         """
         Join the given lines and pass them to C{write} to be handled in the
         usual way.

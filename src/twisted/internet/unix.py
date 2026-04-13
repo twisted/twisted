@@ -10,13 +10,13 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import annotations
 
 import os
 import socket
 import stat
 import struct
 from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
-from typing import Optional, Type
 
 from zope.interface import implementedBy, implementer, implementer_only
 
@@ -66,7 +66,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
+    _writeSomeDataBase: type[FileDescriptor] | None = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):

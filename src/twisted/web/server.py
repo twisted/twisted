@@ -13,13 +13,14 @@ This is a web server which integrates with the twisted.internet infrastructure.
     value.
 """
 
+from __future__ import annotations
+
 import copy
 import os
 import re
 import zlib
 from binascii import hexlify
 from html import escape
-from typing import List, Optional
 from urllib.parse import quote as _quote
 
 from zope.interface import implementer
@@ -87,11 +88,11 @@ class Request(Copyable, http.Request, components.Componentized):
         will be transmitted only over HTTPS.
     """
 
-    defaultContentType: Optional[bytes] = b"text/html"
+    defaultContentType: bytes | None = b"text/html"
     site = None
     appRootURL = None
-    prepath: Optional[List[bytes]] = None
-    postpath: Optional[List[bytes]] = None
+    prepath: list[bytes] | None = None
+    postpath: list[bytes] | None = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
     _encoder = None

@@ -147,5 +147,5 @@ def connect(
     # giving up because there's a cycle in the type graph
     # (_ProtoWithFactory.factory -> Factory[Self] -> Factory.protocol:
     # "Optional[Callable[..., P]]" -> P < _ProtoWithFactory)
-    IReactorTCP(reactor).connectTCP(host, port, factory)  # type:ignore[arg-type]
+    IReactorTCP(reactor).connectTCP(host, port, factory)
     return d

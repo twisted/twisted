@@ -8,7 +8,8 @@ Common functions for the SSH classes.
 from __future__ import annotations
 
 import struct
-from typing import Sequence, overload
+from collections.abc import Sequence
+from typing import overload
 
 from cryptography.utils import int_to_bytes
 

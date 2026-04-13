@@ -13,8 +13,9 @@ import mimetypes
 import os
 import time
 import warnings
+from collections.abc import Sequence
 from html import escape
-from typing import Any, Callable, Dict, Literal, Sequence
+from typing import Any, Callable, Literal
 from urllib.parse import quote, unquote
 
 from zope.interface import implementer
@@ -199,7 +200,7 @@ class File(resource.Resource, filepath.FilePath[str]):
 
     contentEncodings = {".gz": "gzip", ".bz2": "bzip2"}
 
-    processors: Dict[str, Callable[[str, Any], Data]] = {}
+    processors: dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
 

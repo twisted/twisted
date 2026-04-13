@@ -14,6 +14,7 @@ To do::
   Clarify some API docs (Query, etc)
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
+from __future__ import annotations
 
 import binascii
 import codecs
@@ -28,7 +29,7 @@ import uuid
 from base64 import decodebytes, encodebytes
 from io import BytesIO
 from itertools import chain
-from typing import Any, List, Optional, cast
+from typing import Any, cast
 
 from zope.interface import implementer
 
@@ -184,7 +185,7 @@ class MessageSet:
         that it will not be called out-of-order).
     """
 
-    _empty: List[Any] = []
+    _empty: list[Any] = []
     _infinity = float("inf")
 
     def __init__(self, start=_empty, end=_empty):
@@ -5691,7 +5692,7 @@ class _FetchParser:
         def __str__(self) -> str:
             return self.__bytes__().decode("ascii")
 
-        def getBytes(self, length: Optional[int] = None) -> bytes:
+        def getBytes(self, length: int | None = None) -> bytes:
             """
             Prepare the initial command response for a Fetch BODY request.
             Interpret the Fetch request from the client and return the

@@ -825,7 +825,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         path to it.
         """
         script = _asFilesystemBytes(self.mktemp())
-        with open(script, "wt") as scriptFile:
+        with open(script, "w") as scriptFile:
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
@@ -842,7 +842,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(executable),
+                f"#!{executable}",
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",

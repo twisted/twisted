@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import socket
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from zope.interface import classImplements, implementer
 
@@ -30,7 +30,7 @@ from twisted.internet.interfaces import (
     IReactorUNIXDatagram,
 )
 from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, P
 from twisted.python import failure, log
 from twisted.python.runtime import platform, platformType
 from ._signals import (
@@ -370,7 +370,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         self,
         host: str,
         port: int,
-        factory: "ClientFactory",
+        factory: ClientFactory[P],
         timeout: float = 30.0,
         bindAddress: tuple[str, int] | None = None,
     ) -> IConnector:

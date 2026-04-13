@@ -8,9 +8,11 @@ relevant fields from the format string and persisting them for later
 examination.
 """
 
+from __future__ import annotations
+
 from collections import defaultdict
 from string import Formatter
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ._interfaces import LogEvent
 
@@ -27,10 +29,10 @@ class KeyFlattener:
         """
         Initialize a L{KeyFlattener}.
         """
-        self.keys: Dict[str, int] = defaultdict(lambda: 0)
+        self.keys: dict[str, int] = defaultdict(int)
 
     def flatKey(
-        self, fieldName: str, formatSpec: Optional[str], conversion: Optional[str]
+        self, fieldName: str, formatSpec: str | None, conversion: str | None
     ) -> str:
         """
         Compute a string key for a given field/format/conversion.

@@ -5,13 +5,15 @@
 Test HTTP support.
 """
 
+from __future__ import annotations
+
 import base64
 import calendar
 import random
+from collections.abc import Sequence
 from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
-from typing import Sequence, Union
 from unittest import skipIf
 from urllib.parse import clear_cache  # type: ignore[attr-defined]
 from urllib.parse import urlparse, urlunsplit
@@ -256,7 +258,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
+    expected_response: Sequence[Sequence[bytes]] | bytes = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -3935,7 +3937,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
         # get back a TextIOWrapper, wrapping our BytesIO.
         logFile = factory.logFile = BytesIO()
-        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+        getBackLogFile: TextIOWrapper = factory.logFile
 
         # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
         # now, even though the property's signature is such that it isn't.

@@ -94,10 +94,11 @@ __all__ = [
 
 import inspect
 import sys
+from collections.abc import Sequence
 from dis import findlinestarts
 from functools import wraps
 from types import ModuleType
-from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString
@@ -628,75 +629,32 @@ def warnAboutFunction(offender, warningString):
     )
 
 
-def _passedArgSpec(argspec, positional, keyword):
-    """
-    Take an I{inspect.ArgSpec}, a tuple of positional arguments, and a dict of
-    keyword arguments, and return a mapping of arguments that were actually
-    passed to their passed values.
-
-    @param argspec: The argument specification for the function to inspect.
-    @type argspec: I{inspect.ArgSpec}
-
-    @param positional: The positional arguments that were passed.
-    @type positional: L{tuple}
-
-    @param keyword: The keyword arguments that were passed.
-    @type keyword: L{dict}
-
-    @return: A dictionary mapping argument names (those declared in C{argspec})
-        to values that were passed explicitly by the user.
-    @rtype: L{dict} mapping L{str} to L{object}
-    """
-    result: Dict[str, object] = {}
-    unpassed = len(argspec.args) - len(positional)
-    if argspec.keywords is not None:
-        kwargs = result[argspec.keywords] = {}
-    if unpassed < 0:
-        if argspec.varargs is None:
-            raise TypeError("Too many arguments.")
-        else:
-            result[argspec.varargs] = positional[len(argspec.args) :]
-    for name, value in zip(argspec.args, positional):
-        result[name] = value
-    for name, value in keyword.items():
-        if name in argspec.args:
-            if name in result:
-                raise TypeError("Already passed.")
-            result[name] = value
-        elif argspec.keywords is not None:
-            kwargs[name] = value
-        else:
-            raise TypeError("no such param")
-    return result
-
-
-def _passedSignature(signature, positional, keyword):
+def _passedSignature(
+    signature: inspect.Signature,
+    positional: tuple[object, ...],
+    keyword: dict[str, object],
+) -> dict[str, object]:
     """
     Take an L{inspect.Signature}, a tuple of positional arguments, and a dict of
     keyword arguments, and return a mapping of arguments that were actually
     passed to their passed values.
 
     @param signature: The signature of the function to inspect.
-    @type signature: L{inspect.Signature}
-
     @param positional: The positional arguments that were passed.
-    @type positional: L{tuple}
-
     @param keyword: The keyword arguments that were passed.
-    @type keyword: L{dict}
 
     @return: A dictionary mapping argument names (those declared in
         C{signature}) to values that were passed explicitly by the user.
-    @rtype: L{dict} mapping L{str} to L{object}
     """
-    result = {}
-    kwargs = None
-    numPositional = 0
+    result: dict[str, object] = {}
+    kwargs: dict[str, object] | None = None
+    numPositional: int = 0
     for n, (name, param) in enumerate(signature.parameters.items()):
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # Varargs, for example: *args
-            result[name] = positional[n:]
-            numPositional = len(result[name]) + 1
+            varargs: tuple[object, ...] = positional[n:]
+            result[name] = varargs
+            numPositional = len(varargs) + 1
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
             # Variable keyword args, for example: **my_kwargs
             kwargs = result[name] = {}
@@ -771,7 +729,7 @@ _Tc = TypeVar("_Tc", bound=Callable[..., Any])
 
 
 def deprecatedKeywordParameter(
-    version: Version, name: str, replacement: Optional[str] = None
+    version: Version, name: str, replacement: str | None = None
 ) -> Callable[[_Tc], _Tc]:
     """
     Return a decorator that marks a keyword parameter of a callable

@@ -24,19 +24,19 @@ from ctypes import (
 )
 from ctypes.util import find_library
 from socket import AF_INET, AF_INET6, inet_ntop
-from typing import Any, List, Tuple
+from typing import Any
 
 from twisted.python.compat import nativeString
 
 libc = CDLL(find_library("c") or "")
 
 if sys.platform.startswith("freebsd") or sys.platform == "darwin":
-    _sockaddrCommon: List[Tuple[str, Any]] = [
+    _sockaddrCommon: list[tuple[str, Any]] = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
     ]
 else:
-    _sockaddrCommon: List[Tuple[str, Any]] = [
+    _sockaddrCommon: list[tuple[str, Any]] = [
         ("sin_family", c_ushort),
     ]
 

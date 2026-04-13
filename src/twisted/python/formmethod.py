@@ -10,8 +10,10 @@ This module contains support for descriptive method signatures that can be used
 to format methods.
 """
 
+from __future__ import annotations
+
 import calendar
-from typing import Any, Optional, Tuple
+from typing import Any
 
 
 class FormException(Exception):
@@ -136,7 +138,7 @@ class Hidden(String):
 class Integer(Argument):
     """A single integer."""
 
-    defaultDefault: Optional[int] = None
+    defaultDefault: int | None = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -203,7 +205,7 @@ class IntegerRange(Integer):
 
 
 class Float(Argument):
-    defaultDefault: Optional[float] = None
+    defaultDefault: float | None = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None
@@ -343,7 +345,7 @@ def positiveInt(x):
 class Date(Argument):
     """A date -- (year, month, day) tuple."""
 
-    defaultDefault: Optional[Tuple[int, int, int]] = None
+    defaultDefault: tuple[int, int, int] | None = None
 
     def __init__(
         self, name, allowNone=1, default=None, shortDesc=None, longDesc=None, hints=None

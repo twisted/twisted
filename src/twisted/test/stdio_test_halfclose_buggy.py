@@ -59,7 +59,7 @@ if __name__ == "__main__":  # pragma: no branch
     reflect.namedAny(sys.argv[1]).install()
     log.startLogging(open(sys.argv[2], "w"))
     reactor: IReactorCore
-    from twisted.internet import reactor  # type:ignore[assignment]
+    from twisted.internet import reactor
 
     halfCloseProtocol = HalfCloseProtocol()
     stdio.StandardIO(halfCloseProtocol)

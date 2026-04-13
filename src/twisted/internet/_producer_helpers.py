@@ -6,8 +6,6 @@
 Helpers for working with producers.
 """
 
-from typing import List
-
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IPushProducer
@@ -17,7 +15,7 @@ from twisted.logger import Logger
 _log = Logger()
 
 # This module exports nothing public, it's for internal Twisted use only.
-__all__: List[str] = []
+__all__: list[str] = []
 
 
 @implementer(IPushProducer)

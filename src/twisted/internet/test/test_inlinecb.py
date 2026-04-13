@@ -6,11 +6,14 @@
 Tests for L{twisted.internet.inlineCallbacks}.
 """
 
+from __future__ import annotations
+
 import traceback
 import unittest as pyunit
 import weakref
+from collections.abc import Generator
 from enum import Enum
-from typing import Any, Generator, List, Set, Union
+from typing import Any
 
 from twisted.internet import reactor, task
 from twisted.internet.defer import (
@@ -36,7 +39,7 @@ async def getValueViaCoro(value):
     return await getValueViaDeferred(value)
 
 
-def getDivisionFailure(msg: Union[str, None] = None) -> Failure:
+def getDivisionFailure(msg: str | None = None) -> Failure:
     """
     Make a L{Failure} of a divide-by-zero error.
     """
@@ -47,7 +50,7 @@ def getDivisionFailure(msg: Union[str, None] = None) -> Failure:
     return f
 
 
-async def getDivisionFailureCoro(msg: Union[str, None] = None) -> None:
+async def getDivisionFailureCoro(msg: str | None = None) -> None:
     """
     Make a coroutine that throws a divide-by-zero error.
     """
@@ -397,7 +400,7 @@ class BasicTests(TestCase):
         """
 
         # Create an object and weak reference to track if its gotten freed.
-        obj: Set[Any] = set()
+        obj: set[Any] = set()
         objWeakRef = weakref.ref(obj)
 
         @inlineCallbacks
@@ -1638,8 +1641,8 @@ class CancellationTests(SynchronousTestCase):
             3. Cancelling the deferred again cancels any deferred the function
                is waiting on, and the exception is raised.
         """
-        canceller1Calls: List[Deferred[object]] = []
-        canceller2Calls: List[Deferred[object]] = []
+        canceller1Calls: list[Deferred[object]] = []
+        canceller2Calls: list[Deferred[object]] = []
         d1: Deferred[object] = Deferred(canceller1Calls.append)
         d2: Deferred[object] = Deferred(canceller2Calls.append)
 

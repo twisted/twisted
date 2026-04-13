@@ -7,7 +7,7 @@ Tests for L{twisted.python.systemd}.
 
 
 import os
-from typing import Dict, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 from hamcrest import assert_that, equal_to, not_
 from hypothesis import given
@@ -18,7 +18,7 @@ from twisted.trial.unittest import SynchronousTestCase
 from .strategies import systemdDescriptorNames
 
 
-def buildEnvironment(count: int, pid: object) -> Dict[str, str]:
+def buildEnvironment(count: int, pid: object) -> dict[str, str]:
     """
     @param count: The number of file descriptors to indicate as inherited.
 

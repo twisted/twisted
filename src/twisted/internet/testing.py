@@ -7,22 +7,12 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
-import typing
+from collections.abc import Coroutine, Generator, Iterator, Sequence
 from dataclasses import dataclass
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from time import time
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generator,
-    Iterator,
-    Sequence,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import Any, Callable, Protocol, TypeVar, overload
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
@@ -81,7 +71,7 @@ __all__ = [
 _P = ParamSpec("_P")
 
 
-class _ProtocolConnectionMadeHaver(typing.Protocol):
+class _ProtocolConnectionMadeHaver(Protocol):
     """
     Explicit stipulation of the implicit requirement of L{AccumulatingProtocol}'s factory.
     """
@@ -1095,11 +1085,11 @@ _T = TypeVar("_T")
 def _benchmarkWithReactor(
     test_target: Callable[
         [],
-        Union[
-            Coroutine[Deferred[Any], Any, _T],
-            Generator[Deferred[Any], Any, _T],
-            Deferred[_T],
-        ],
+        (
+            Coroutine[Deferred[Any], Any, _T]
+            | Generator[Deferred[Any], Any, _T]
+            | Deferred[_T]
+        ),
     ],
 ) -> Callable[[Any], None]:  # pragma: no cover
     """
@@ -1151,8 +1141,9 @@ def _runReactor(callback: Callable[[], Deferred[_T]]) -> None:  # pragma: no cov
 
     deferred = callback()
     deferred.addErrback(errors.append)
-    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))  # type: ignore[attr-defined]
-    reactor.run(installSignalHandlers=False)  # type: ignore[attr-defined]
+    deferred.addBoth(lambda _: reactor.callLater(0, _stopReactor, reactor))
+    # installSignalHandlers is technically not in IReactorCore
+    reactor.run(installSignalHandlers=False)  # type:ignore[call-arg]
 
     if errors:  # pragma: no cover
         # Make sure the test fails in a visible way:

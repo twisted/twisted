@@ -5,8 +5,9 @@
 Tests for implementations of L{ITLSTransport}.
 """
 
+from __future__ import annotations
 
-from typing import Optional, Sequence, Type
+from collections.abc import Sequence
 
 from zope.interface import Interface, implementer
 
@@ -48,7 +49,7 @@ else:
 
 
 class TLSMixin:
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = [IReactorSSL]
+    requiredInterfaces: Sequence[type[Interface]] | None = [IReactorSSL]
 
     if platform.isWindows():
         msg = (

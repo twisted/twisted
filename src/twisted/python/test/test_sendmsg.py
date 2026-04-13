@@ -7,6 +7,7 @@ Tests for L{twisted.python.sendmsg}.
 
 import errno
 import os
+import runpy
 import sys
 import warnings
 from os import close, pathsep, pipe, read
@@ -295,6 +296,78 @@ class SendmsgTests(TestCase):
         yield sspp.stopped
         self.assertEqual(read(pipeOut.fileno(), 1024), b"Test fixture data: blonk.\n")
         # Make sure that the pipe is actually closed now.
+        self.assertEqual(read(pipeOut.fileno(), 1024), b"")
+
+
+@skipIf(nonUNIXSkip, "Platform does not support AF_UNIX sockets")
+@skipIf(doImportSkip, importSkipReason)
+class PullPipeTests(TestCase):
+    """
+    Tests for L{twisted.python.test.pullpipe}.
+    """
+
+    def setUp(self):
+        """
+        Create a pair of UNIX sockets.
+        """
+        self.input, self.output = socketpair(AF_UNIX)
+
+    def tearDown(self):
+        """
+        Close the sockets opened by setUp.
+        """
+        self.input.close()
+        self.output.close()
+
+    def test_recvfd(self):
+        """
+        L{pullpipe.recvfd} returns a received FD and payload bytes.
+        """
+        from twisted.python.test import pullpipe
+
+        pipeOut, pipeIn = _makePipe()
+        self.addCleanup(pipeOut.close)
+        self.addCleanup(pipeIn.close)
+
+        with pipeIn:
+            sendmsg(
+                self.input,
+                b"blonk",
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
+            )
+
+        receivedFD, description = pullpipe.recvfd(self.output.fileno())
+        self.addCleanup(close, receivedFD)
+        self.assertEqual(description, b"blonk")
+
+        os.write(receivedFD, b"from recvfd")
+        self.assertEqual(read(pipeOut.fileno(), 1024), b"from recvfd")
+
+    def test_main(self):
+        """
+        Running C{pullpipe.py} as C{__main__} writes fixture data and closes the
+        passed FD.
+        """
+        pullpipePath = FilePath(__file__).sibling("pullpipe.py").asTextMode().path
+        pipeOut, pipeIn = _makePipe()
+        self.addCleanup(pipeOut.close)
+        self.addCleanup(pipeIn.close)
+
+        with pipeIn:
+            sendmsg(
+                self.input,
+                b"blonk",
+                [(SOL_SOCKET, SCM_RIGHTS, pack("i", pipeIn.fileno()))],
+            )
+
+        self.patch(
+            sys,
+            "argv",
+            [pullpipePath, str(self.output.fileno())],
+        )
+        runpy.run_path(pullpipePath, run_name="__main__")
+
+        self.assertEqual(read(pipeOut.fileno(), 1024), b"Test fixture data: blonk.\n")
         self.assertEqual(read(pipeOut.fileno(), 1024), b"")
 
 

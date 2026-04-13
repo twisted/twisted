@@ -30,17 +30,8 @@ else:
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import Any, Callable, ClassVar, TypeVar
 
 from incremental import Version
 
@@ -615,7 +606,7 @@ class FancyStrMixin:
 
     # Override in subclasses:
     showAttributes: Sequence[
-        Union[str, Tuple[str, str, str], Tuple[str, Callable[[Any], str]]]
+        str | tuple[str, str, str] | tuple[str, Callable[[Any], str]]
     ] = ()
 
     def __str__(self) -> str:

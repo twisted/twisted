@@ -1,0 +1,2 @@
+A potential reference cycle that might cause intermittent memory spikes while
+using twisted.internet.defer.inlineCallbacks was removed.

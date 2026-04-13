@@ -20,7 +20,7 @@ __all__ = [
 ]
 
 import warnings
-from typing import Sequence
+from collections.abc import Sequence
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -65,7 +65,7 @@ class IResource(Interface):
         @type request: L{twisted.web.server.Request}
         """
 
-    def putChild(path: bytes, child: "IResource") -> None:
+    def putChild(path: bytes, child: IResource) -> None:
         """
         Put a child L{IResource} implementor at the given path.
 

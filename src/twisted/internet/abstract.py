@@ -8,8 +8,8 @@ Support for generic select()able objects.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional, Union
 
 from zope.interface import implementer
 
@@ -182,7 +182,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
+    def __init__(self, reactor: interfaces.IReactorFDSet | None = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -191,10 +191,10 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if not reactor:
             from twisted.internet import reactor as _reactor
 
-            reactor = _reactor  # type: ignore[assignment]
+            reactor = _reactor
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer: List[bytes] = []
+        self._tempDataBuffer: list[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):
@@ -215,7 +215,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> Union[int, BaseException]:
+    def writeSomeData(self, data: bytes) -> int | BaseException:
         """
         Write as much as possible of the given data, immediately.
 

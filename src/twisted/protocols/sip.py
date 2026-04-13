@@ -13,7 +13,6 @@ import socket
 import time
 import warnings
 from collections import OrderedDict
-from typing import Dict, List
 
 from zope.interface import Interface, implementer
 
@@ -340,7 +339,7 @@ class URL:
             self.headers = headers
 
     def toString(self) -> str:
-        l: List[str] = []
+        l: list[str] = []
         w = l.append
         w("sip:")
         if self.username != None:
@@ -1057,7 +1056,7 @@ class RegisterProxy(Proxy):
 
     registry = None  # Should implement IRegistry
 
-    authorizers: Dict[str, IAuthorizer] = {}
+    authorizers: dict[str, IAuthorizer] = {}
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)

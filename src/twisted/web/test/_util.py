@@ -6,8 +6,6 @@ General helpers for L{twisted.web} unit tests.
 """
 from __future__ import annotations
 
-from typing import Type
-
 from twisted.internet.defer import Deferred, succeed
 from twisted.trial.unittest import SynchronousTestCase
 from twisted.web import server
@@ -67,7 +65,7 @@ class FlattenTestCase(SynchronousTestCase):
         """
         return self.successResultOf(self.assertFlattensTo(root, target))
 
-    def assertFlatteningRaises(self, root: Flattenable, exn: Type[Exception]) -> None:
+    def assertFlatteningRaises(self, root: Flattenable, exn: type[Exception]) -> None:
         """
         Assert flattening a root element raises a particular exception.
         """

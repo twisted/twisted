@@ -12,15 +12,17 @@ import collections
 import os
 import warnings
 import zlib
+from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Hashable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
 
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
@@ -28,6 +30,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
     IAddress,
+    IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
     IReactorTime,
@@ -286,8 +289,11 @@ else:
         platformTrust,
     )
 
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
 
-def _requireSSL(decoratee):
+
+def _requireSSL(decoratee: Callable[_P, _T]) -> Callable[_P, _T]:
     """
     The decorated method requires pyOpenSSL to be present, or it raises
     L{NotImplementedError}.
@@ -301,8 +307,8 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
-        def raiseNotImplemented(*a, **kw):
+        @wraps(decoratee)  # type:ignore[unreachable]
+        def raiseNotImplemented(*a: _P.args, **kw: _P.kwargs) -> _T:
             """
             pyOpenSSL is not available.
 
@@ -366,7 +372,9 @@ class BrowserLikePolicyForHTTPS:
         self._trustRoot = trustRoot
 
     @_requireSSL
-    def creatorForNetloc(self, hostname, port):
+    def creatorForNetloc(
+        self, hostname: bytes, port: int
+    ) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
@@ -421,19 +429,21 @@ class HostnameCachingHTTPSPolicy:
     @since: Twisted 19.2.0
     """
 
-    def __init__(self, policyforHTTPS, cacheSize=20):
+    def __init__(self, policyforHTTPS: IPolicyForHTTPS, cacheSize: int = 20) -> None:
         """
         @param policyforHTTPS: The IPolicyForHTTPS to wrap.
-        @type policyforHTTPS: L{IPolicyForHTTPS}
 
         @param cacheSize: The maximum size of the hostname cache.
-        @type cacheSize: L{int}
         """
         self._policyForHTTPS = policyforHTTPS
-        self._cache = collections.OrderedDict()
+        self._cache: collections.OrderedDict[
+            str, IOpenSSLClientConnectionCreator
+        ] = collections.OrderedDict()
         self._cacheSize = cacheSize
 
-    def creatorForNetloc(self, hostname, port):
+    def creatorForNetloc(
+        self, hostname: bytes, port: int
+    ) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
@@ -1174,8 +1184,8 @@ class Agent(_AgentBase):
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a request to the server indicated by the given C{uri}.
@@ -1375,8 +1385,8 @@ class CookieAgent:
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a new request to the wrapped L{Agent}.

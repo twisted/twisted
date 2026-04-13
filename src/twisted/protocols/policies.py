@@ -7,18 +7,18 @@ Resource limiting policies.
 
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
-
+from __future__ import annotations
 
 # system imports
 import sys
-from typing import Callable, Optional, Type
+from typing import Callable
 
 from zope.interface import directlyProvides, providedBy
 
 from typing_extensions import Self, TypeVar
 
 from twisted.internet import error, interfaces
-from twisted.internet.interfaces import ILoggingContext
+from twisted.internet.interfaces import IAddress, ILoggingContext
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
 
@@ -51,7 +51,7 @@ class ProtocolWrapper(Protocol):
     disconnecting = 0
 
     def __init__(
-        self, factory: "WrappingFactory[Self]", wrappedProtocol: interfaces.IProtocol
+        self, factory: WrappingFactory[Self], wrappedProtocol: interfaces.IProtocol
     ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
@@ -154,7 +154,7 @@ class WrappingFactory(ClientFactory[WP]):
     def clientConnectionLost(self, connector, reason):
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr: IAddress | None) -> WP:
         return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
 
     def registerProtocol(self, p):
@@ -398,7 +398,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
 
     connectionCount = 0
     connectionLimit = None
-    overflowProtocol: Optional[Type[Protocol]] = None
+    overflowProtocol: type[Protocol] | None = None
 
     def buildProtocol(self, addr):
         if self.connectionLimit is None or self.connectionCount < self.connectionLimit:
@@ -631,7 +631,7 @@ class TimeoutMixin:
     @cvar timeOut: The number of seconds after which to timeout the connection.
     """
 
-    timeOut: Optional[int] = None
+    timeOut: int | None = None
 
     __timeoutCall = None
 

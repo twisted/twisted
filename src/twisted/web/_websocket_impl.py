@@ -169,7 +169,7 @@ class WebSocketProtocol(typing.Protocol):
         A text message was received from the peer.
         """
 
-    def bytesMessageReceived(self, data: bytes) -> None:
+    def bytesMessageReceived(self, data: bytes | bytearray) -> None:
         """
         A bytes message was received from the peer.
         """

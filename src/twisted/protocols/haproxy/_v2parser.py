@@ -6,10 +6,11 @@
 """
 IProxyParser implementation for version two of the PROXY protocol.
 """
+from __future__ import annotations
 
 import binascii
 import struct
-from typing import Callable, Literal, Tuple, Type, Union
+from typing import Callable, Literal
 
 from zope.interface import implementer
 
@@ -79,9 +80,7 @@ class V2Parser:
     def __init__(self) -> None:
         self.buffer = b""
 
-    def feed(
-        self, data: bytes
-    ) -> Union[Tuple[_info.ProxyInfo, bytes], Tuple[None, None]]:
+    def feed(self, data: bytes) -> tuple[_info.ProxyInfo, bytes] | tuple[None, None]:
         """
         Consume a chunk of data and attempt to parse it.
 
@@ -194,12 +193,12 @@ class V2Parser:
                 address.UNIXAddress(dest.rstrip(b"\x00")),
             )
 
-        addrType: Union[Literal["TCP"], Literal["UDP"]] = "TCP"
+        addrType: Literal["TCP"] | Literal["UDP"] = "TCP"
         if netproto is NetProtocol.DGRAM:
             addrType = "UDP"
-        addrCls: Union[
-            Type[address.IPv4Address], Type[address.IPv6Address]
-        ] = address.IPv4Address
+        addrCls: (
+            type[address.IPv4Address] | type[address.IPv6Address]
+        ) = address.IPv4Address
         addrParser: Callable[[bytes], bytes] = cls._bytesToIPv4
         if family is NetFamily.INET6:
             addrCls = address.IPv6Address

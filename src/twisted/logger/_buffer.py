@@ -6,8 +6,10 @@
 Log observer that maintains a buffer.
 """
 
+from __future__ import annotations
+
 from collections import deque
-from typing import Deque, Optional
+from typing import Deque
 
 from zope.interface import implementer
 
@@ -34,7 +36,7 @@ class LimitedHistoryLogObserver:
         >>>
     """
 
-    def __init__(self, size: Optional[int] = _DEFAULT_BUFFER_MAXIMUM) -> None:
+    def __init__(self, size: int | None = _DEFAULT_BUFFER_MAXIMUM) -> None:
         """
         @param size: The maximum number of events to buffer.  If L{None}, the
             buffer is unbounded.

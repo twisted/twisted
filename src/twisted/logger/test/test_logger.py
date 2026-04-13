@@ -5,7 +5,9 @@
 Test cases for L{twisted.logger._logger}.
 """
 
-from typing import List, Optional, Type, cast
+from __future__ import annotations
+
+from typing import cast
 
 from zope.interface import implementer
 
@@ -27,7 +29,7 @@ class TestLogger(Logger):
     """
 
     def emit(
-        self, level: NamedConstant, format: Optional[str] = None, **kwargs: object
+        self, level: NamedConstant, format: str | None = None, **kwargs: object
     ) -> None:
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -53,7 +55,7 @@ class LogComposedObject:
 
     log = TestLogger()
 
-    def __init__(self, state: Optional[str] = None) -> None:
+    def __init__(self, state: str | None = None) -> None:
         self.state = state
 
     def __str__(self) -> str:
@@ -86,7 +88,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result: List[Logger] = []
+        result: list[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -108,10 +110,10 @@ class LoggerTests(unittest.TestCase):
 
         self.assertEqual(cast(TestLogger, obj.log).namespace, expectedNamespace)
         self.assertEqual(
-            cast(Type[TestLogger], LogComposedObject.log).namespace, expectedNamespace
+            cast(type[TestLogger], LogComposedObject.log).namespace, expectedNamespace
         )
         self.assertIs(
-            cast(Type[TestLogger], LogComposedObject.log).source, LogComposedObject
+            cast(type[TestLogger], LogComposedObject.log).source, LogComposedObject
         )
         self.assertIs(cast(TestLogger, obj.log).source, obj)
         self.assertIsNone(Logger().source)
@@ -120,7 +122,7 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed: List[LogEvent] = []
+        observed: list[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))

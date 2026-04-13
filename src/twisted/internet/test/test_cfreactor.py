@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from twisted.trial.unittest import SynchronousTestCase
 from .reactormixins import ReactorBuilder
@@ -67,7 +67,7 @@ class CoreFoundationSpecificTests(ReactorBuilder, fakeBase):
         allow us to enumerate all active timers or sources.
         """
         r = self.buildReactor()
-        x: List[int] = []
+        x: list[int] = []
         r.callLater(0, x.append, 1)
         delayed = r.callLater(100, noop)
         r.iterate()

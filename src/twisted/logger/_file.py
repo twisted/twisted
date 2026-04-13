@@ -6,7 +6,9 @@
 File log observer.
 """
 
-from typing import IO, Any, Callable, Optional
+from __future__ import annotations
+
+from typing import IO, Any, Callable
 
 from zope.interface import implementer
 
@@ -22,7 +24,7 @@ class FileLogObserver:
     """
 
     def __init__(
-        self, outFile: IO[Any], formatEvent: Callable[[LogEvent], Optional[str]]
+        self, outFile: IO[Any], formatEvent: Callable[[LogEvent], str | None]
     ) -> None:
         """
         @param outFile: A file-like object.  Ideally one should be passed which
@@ -30,7 +32,7 @@ class FileLogObserver:
         @param formatEvent: A callable that formats an event.
         """
         if ioType(outFile) is not str:
-            self._encoding: Optional[str] = "utf-8"
+            self._encoding: str | None = "utf-8"
         else:
             self._encoding = None
 
@@ -54,7 +56,7 @@ class FileLogObserver:
 
 
 def textFileLogObserver(
-    outFile: IO[Any], timeFormat: Optional[str] = timeFormatRFC3339
+    outFile: IO[Any], timeFormat: str | None = timeFormatRFC3339
 ) -> FileLogObserver:
     """
     Create a L{FileLogObserver} that emits text to a specified (writable)
@@ -69,7 +71,7 @@ def textFileLogObserver(
     @return: A file log observer.
     """
 
-    def formatEvent(event: LogEvent) -> Optional[str]:
+    def formatEvent(event: LogEvent) -> str | None:
         return formatEventAsClassicLogText(
             event, formatTime=lambda e: formatTime(e, timeFormat)
         )

@@ -9,11 +9,12 @@ L{twisted.internet.endpoints}.
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from errno import EPERM
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 from unittest import skipIf
 
