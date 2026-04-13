@@ -110,7 +110,7 @@ websocket = [
 ]
 
 all-non-platform = [
-    "twisted[test,tls,conch,serial,http2,websocket]",
+    "twisted[test,tls,conch,conch-hpq,serial,http2,websocket]",
 ]
 
 macos-platform = [
