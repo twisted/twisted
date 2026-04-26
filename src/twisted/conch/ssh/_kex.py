@@ -285,6 +285,18 @@ def isPQHybrid(kexAlgorithm: bytes) -> bool:
     return _IPQHybridKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
+def isNonFixedGroup(kexAlgorithm: bytes) -> bool:
+    """
+    Returns C{True} if C{kexAlgorithm} uses group exchange.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: C{True} if C{kexAlgorithm} uses group exchange, otherwise
+        C{False}.
+    """
+    return _IGroupExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
+
 def getPQHybridKex(kexAlgorithm: bytes) -> _IPQHybridKexAlgorithm:
     """
     Get a description of a named PQ/T Hybrid key exchange algorithm.

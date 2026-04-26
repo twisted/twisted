@@ -45,6 +45,7 @@ The following optional dependencies are supported:
 * **http2** - packages needed for http2 support.
 * **websocket** - packages needed for websocket protocol support.
 * **conch** - packages for working with conch/SSH.
+* **conch-hpq** - additional packages for enabling post-quantum algorithms for conch/SSH.
 * **serial** - package to work with serial data.
 * **all-non-platform** - installs **tls**, **conch**, and **serial** options.
 * **macos-platform** - **all-non-platform** options and dependencies to work with macOS specific APIs.

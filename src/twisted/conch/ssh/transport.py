@@ -1515,6 +1515,9 @@ class SSHServerTransport(SSHTransportBase):
         key.
 
         @param packet: The message data.
+
+        Documentation at:
+        https://www.ietf.org/archive/id/draft-ietf-sshm-mlkem-hybrid-kex-10.html
         """
         # Get the raw client public key.
         pktPub, packet = getNS(packet)
@@ -1864,6 +1867,7 @@ class SSHClientTransport(SSHTransportBase):
 
     isClient = True
 
+    # FIXME https://github.com/twisted/twisted/issues/12624
     # The client does not yet implement PQ/T Hybrid key exchange, so filter
     # those algorithms out to prevent negotiating an unsupported method.
     supportedKeyExchanges = [

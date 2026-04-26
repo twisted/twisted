@@ -80,9 +80,7 @@ class SSHFactory(protocol.Factory[Any]):
             t.supportedKeyExchanges = [
                 kexAlgorithm
                 for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm)
-                or _kex.isEllipticCurve(kexAlgorithm)
-                or _kex.isPQHybrid(kexAlgorithm)
+                if not _kex.isNonFixedGroup(kexAlgorithm)
             ]
         return t
 
