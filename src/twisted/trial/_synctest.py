@@ -7,7 +7,7 @@ Things likely to be used by writers of unit tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 import inspect
 import os
@@ -16,21 +16,9 @@ import tempfile
 import types
 import unittest as pyunit
 import warnings
+from collections.abc import Coroutine, Generator, Iterable
 from dis import findlinestarts as _findlinestarts
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generator,
-    Iterable,
-    List,
-    NoReturn,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, NoReturn, TypeVar
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
@@ -78,7 +66,7 @@ class Todo:
     """
 
     reason: str
-    errors: Optional[Iterable[Type[BaseException]]] = None
+    errors: Iterable[type[BaseException]] | None = None
 
     def __repr__(self) -> str:
         return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
@@ -98,9 +86,7 @@ class Todo:
 
 
 def makeTodo(
-    value: Union[
-        str, Tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
-    ]
+    value: (str | tuple[type[BaseException] | Iterable[type[BaseException]], str])
 ) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
@@ -119,7 +105,7 @@ def makeTodo(
     if isinstance(value, tuple):
         errors, reason = value
         if isinstance(errors, type):
-            iterableErrors: Iterable[Type[BaseException]] = [errors]
+            iterableErrors: Iterable[type[BaseException]] = [errors]
         else:
             iterableErrors = errors
         return Todo(reason=reason, errors=iterableErrors)
@@ -371,7 +357,7 @@ class _Assertions(pyunit.TestCase):
     callbacks.
     """
 
-    def fail(self, msg: Optional[object] = None) -> NoReturn:
+    def fail(self, msg: object | None = None) -> NoReturn:
         """
         Absolutely fail the test.  Do not pass go, do not collect $200.
 
@@ -689,11 +675,11 @@ class _Assertions(pyunit.TestCase):
 
     def successResultOf(
         self,
-        deferred: Union[
-            Coroutine[Deferred[T], Any, T],
-            Generator[Deferred[T], Any, T],
-            Deferred[T],
-        ],
+        deferred: (
+            Coroutine[Deferred[T], Any, T]
+            | Generator[Deferred[T], Any, T]
+            | Deferred[T]
+        ),
     ) -> T:
         """
         Return the current success result of C{deferred} or raise
@@ -719,7 +705,7 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        results: List[Union[T, failure.Failure]] = []
+        results: list[T | failure.Failure] = []
         deferred.addBoth(results.append)
 
         if not results:
@@ -995,7 +981,7 @@ class SynchronousTestCase(_Assertions):
             return self._testMethodName
         return desc
 
-    def getSkip(self) -> Tuple[bool, Optional[str]]:
+    def getSkip(self) -> tuple[bool, str | None]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
@@ -1263,7 +1249,7 @@ class SynchronousTestCase(_Assertions):
         }
         if message is not None:
             expectedWarning = expectedWarning + ": " + message
-        self.assert_(
+        self.assertTrue(
             observedWarning.startswith(expectedWarning),
             f"Expected {observedWarning!r} to start with {expectedWarning!r}",
         )

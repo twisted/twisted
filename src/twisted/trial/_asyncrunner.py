@@ -5,12 +5,12 @@
 """
 Infrastructure for test running and suites.
 """
-
+from __future__ import annotations
 
 import doctest
 import gc
 import unittest as pyunit
-from typing import Iterator, Union
+from collections.abc import Iterator
 
 from zope.interface import implementer
 
@@ -162,7 +162,7 @@ if _docTestCase:
 
 
 def _iterateTests(
-    testSuiteOrCase: Union[pyunit.TestCase, pyunit.TestSuite]
+    testSuiteOrCase: pyunit.TestCase | pyunit.TestSuite,
 ) -> Iterator[itrial.ITestCase]:
     """
     Iterate through all of the test cases in C{testSuiteOrCase}.

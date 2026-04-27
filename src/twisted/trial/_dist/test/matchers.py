@@ -11,7 +11,8 @@ __all__ = [
     "IsSequenceOf",
 ]
 
-from typing import Any, List, Protocol, Sequence, Tuple, TypeVar
+from collections.abc import Sequence
+from typing import Any, Protocol, TypeVar
 
 from hamcrest import (
     contains_exactly,
@@ -167,7 +168,7 @@ def isFailure(**properties: Matcher[object]) -> Matcher[object]:
 
 def similarFrame(
     functionName: str, fileName: str
-) -> Matcher[Sequence[Tuple[str, str, int, List[object], List[object]]]]:
+) -> Matcher[Sequence[tuple[str, str, int, list[object], list[object]]]]:
     """
     Match a tuple representation of a frame like those used by
     L{twisted.python.failure.Failure}.

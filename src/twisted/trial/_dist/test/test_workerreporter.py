@@ -6,7 +6,7 @@ Tests for L{twisted.trial._dist.workerreporter}.
 """
 from __future__ import annotations
 
-from typing import Sized
+from collections.abc import Sized
 from unittest import TestCase
 
 from hamcrest import assert_that, equal_to, has_length

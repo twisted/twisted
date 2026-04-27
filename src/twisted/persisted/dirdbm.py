@@ -22,7 +22,8 @@ import base64
 import glob
 import os
 import pickle
-from typing import AnyStr, Iterable, Mapping, TypeVar, overload
+from collections.abc import Iterable, Mapping
+from typing import AnyStr, TypeVar, overload
 
 from twisted.python.filepath import FilePath
 

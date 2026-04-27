@@ -4,9 +4,11 @@
 """
 General functional-style helpers for disttrial.
 """
+from __future__ import annotations
 
+from collections.abc import Awaitable, Iterable
 from functools import partial, wraps
-from typing import Awaitable, Callable, Iterable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 from twisted.internet.defer import Deferred, succeed
 
@@ -15,7 +17,7 @@ _B = TypeVar("_B")
 _C = TypeVar("_C")
 
 
-def fromOptional(default: _A, optional: Optional[_A]) -> _A:
+def fromOptional(default: _A, optional: _A | None) -> _A:
     """
     Get a definite value from an optional value.
 

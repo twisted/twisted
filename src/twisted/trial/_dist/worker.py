@@ -8,19 +8,11 @@ This module implements the worker classes.
 
 @since: 12.3
 """
+from __future__ import annotations
 
 import os
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Protocol,
-    TextIO,
-    TypeVar,
-)
+from collections.abc import Awaitable
+from typing import Any, Callable, Protocol, TextIO, TypeVar
 from unittest import TestCase
 
 from zope.interface import implementer
@@ -181,7 +173,7 @@ class LocalWorkerAMP(AMP):
         self,
         error: WorkerException,
         errorClass: str,
-        frames: List[str],
+        frames: list[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
@@ -211,7 +203,7 @@ class LocalWorkerAMP(AMP):
         errorClass: str,
         errorStreamId: int,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add an error to the reporter.
 
@@ -241,7 +233,7 @@ class LocalWorkerAMP(AMP):
         failStreamId: int,
         failClass: str,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add a failure to the reporter.
 
@@ -271,8 +263,8 @@ class LocalWorkerAMP(AMP):
 
     @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
-        self, testName: str, errorStreamId: int, todo: Optional[str]
-    ) -> Dict[str, bool]:
+        self, testName: str, errorStreamId: int, todo: str | None
+    ) -> dict[str, bool]:
         """
         Add an expected failure to the reporter.
 

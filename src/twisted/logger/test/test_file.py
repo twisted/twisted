@@ -45,7 +45,7 @@ class FileLogObserverTests(TestCase):
             self.assertEqual(observer._encoding, "utf-8")
             event = dict(x=1)
             observer(event)
-            self.assertEqual(fileHandle.getvalue(), "Hello World".encode("utf-8"))
+            self.assertEqual(fileHandle.getvalue(), b"Hello World")
 
     def test_observeWrites(self) -> None:
         """

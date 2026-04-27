@@ -10,7 +10,7 @@ import sys
 from functools import partial
 from io import StringIO
 from os.path import sep
-from typing import Callable, List, Set
+from typing import Callable
 from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify
@@ -68,7 +68,7 @@ class FakeTransport:
     A simple fake process transport.
     """
 
-    _closed: Set[int] = field(default=Factory(set))
+    _closed: set[int] = field(default=Factory(set))
 
     def writeToChild(self, fd, data):
         """
@@ -712,7 +712,7 @@ class FunctionalTests(TestCase):
         ``iterateWhile`` executes the actions from its factory until the predicate
         does not match an action result.
         """
-        actions: List[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
+        actions: list[Deferred[int]] = [Deferred(), Deferred(), Deferred()]
 
         def predicate(value):
             return value != 42
@@ -822,7 +822,7 @@ class StartedLocalWorkerPool:
     """
 
     workingDirectory: FilePath[str]
-    workers: List[Worker]
+    workers: list[Worker]
     _stopped: Deferred[None]
 
     async def run(self, workerAction: WorkerAction[None]) -> None:
@@ -844,7 +844,7 @@ class LocalWorkerPool:
     """
 
     _config: WorkerPoolConfig
-    _started: List[StartedLocalWorkerPool] = field(default=Factory(list))
+    _started: list[StartedLocalWorkerPool] = field(default=Factory(list))
     _autostop: bool = False
     _workerFactory: Callable[[], Worker] = _LocalWorker
 

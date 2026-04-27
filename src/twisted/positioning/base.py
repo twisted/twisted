@@ -8,9 +8,10 @@ Generic positioning base classes.
 """
 
 
+from collections.abc import Sequence
 from functools import partial
 from operator import attrgetter
-from typing import ClassVar, Sequence
+from typing import ClassVar
 
 from zope.interface import implementer
 
