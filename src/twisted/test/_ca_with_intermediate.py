@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Tuple
 
 from cryptography.hazmat.primitives.asymmetric.rsa import (
     RSAPrivateKey,
@@ -33,7 +32,7 @@ def buildNew(validAround: datetime) -> CertificateBuilder:
     )
 
 
-def boilerplate(cn: str, ca: bool) -> Tuple[Name, RSAPrivateKey, CertificateBuilder]:
+def boilerplate(cn: str, ca: bool) -> tuple[Name, RSAPrivateKey, CertificateBuilder]:
     """
     Common boilerplate for any certificate.
     """
@@ -51,7 +50,7 @@ def boilerplate(cn: str, ca: bool) -> Tuple[Name, RSAPrivateKey, CertificateBuil
     )
 
 
-def createCA(caName: str) -> Tuple[RSAPrivateKey, Certificate]:
+def createCA(caName: str) -> tuple[RSAPrivateKey, Certificate]:
     """
     Create a CA certificate.
     """
@@ -61,7 +60,7 @@ def createCA(caName: str) -> Tuple[RSAPrivateKey, Certificate]:
 
 def createIntermediate(
     intermediateName: str, caCert: Certificate, caKey: RSAPrivateKey
-) -> Tuple[RSAPrivateKey, Certificate]:
+) -> tuple[RSAPrivateKey, Certificate]:
     """
     Create an intermediate CA certificate.
     """
@@ -73,7 +72,7 @@ def createIntermediate(
 
 def createLeaf(
     host: str, caCert: Certificate, caKey: RSAPrivateKey
-) -> Tuple[RSAPrivateKey, Certificate]:
+) -> tuple[RSAPrivateKey, Certificate]:
     """
     Create a leaf certificate for use by a server.
     """

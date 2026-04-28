@@ -9,7 +9,7 @@ import sys
 import textwrap
 import types
 from io import StringIO
-from typing import Any, List
+from typing import Any
 from unittest import skipIf
 
 from hamcrest import assert_that, contains_string
@@ -51,7 +51,7 @@ def logSomething() -> None:
     Logger().info("something")
 
 
-def parseArguments(argv: List[str]) -> trial.Options:
+def parseArguments(argv: list[str]) -> trial.Options:
     """
     Parse an argument list using trial's argument parser.
     """

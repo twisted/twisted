@@ -8,7 +8,9 @@ import io
 import pickle
 import sys
 import textwrap
-from typing import Any, Callable, List, NoReturn, Tuple
+from typing import Any, Callable, NoReturn
+
+from typing_extensions import TypeAlias
 
 # Twisted Imports
 from twisted.persisted import aot, crefutil, styles
@@ -337,7 +339,7 @@ class NonDictState:
         self.state = state
 
 
-_CircularTupleType = List[Tuple["_CircularTupleType", int]]
+_CircularTupleType: TypeAlias = list[tuple["_CircularTupleType", int]]
 
 
 class AOTTests(TestCase):

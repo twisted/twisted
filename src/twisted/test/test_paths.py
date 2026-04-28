@@ -16,18 +16,7 @@ import sys
 import time
 from functools import total_ordering
 from pprint import pformat
-from typing import (
-    IO,
-    AnyStr,
-    Callable,
-    Dict,
-    List,
-    NoReturn,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import IO, AnyStr, Callable, NoReturn, TypeVar
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
@@ -210,7 +199,7 @@ class AbstractFilePathTests(BytesTestCase):
         with their string counterparts.
         """
         f1 = self.path.child(b"file1")
-        dictoid: Dict[Union[filepath.FilePath[bytes], bytes], str] = {f1: "hello"}
+        dictoid: dict[filepath.FilePath[bytes] | bytes, str] = {f1: "hello"}
         dictoid[f1.path] = "goodbye"
         self.assertEqual(len(dictoid), 2)
 
@@ -256,7 +245,7 @@ class FakeWindowsPath(filepath.FilePath[AnyStr]):
     A test version of FilePath which overrides listdir to raise L{WindowsError}.
     """
 
-    def listdir(self) -> List[AnyStr]:
+    def listdir(self) -> list[AnyStr]:
         """
         @raise WindowsError: always.
         """
@@ -379,17 +368,16 @@ class TrackingFilePath(filepath.FilePath[AnyStr]):
         self,
         path: AnyStr,
         alwaysCreate: bool = False,
-        trackingList: Optional[
-            List[Union[TrackingFilePath[str], TrackingFilePath[bytes]]]
-        ] = None,
+        trackingList: None
+        | (list[TrackingFilePath[str] | TrackingFilePath[bytes]]) = None,
     ) -> None:
         filepath.FilePath.__init__(self, path, alwaysCreate)
         if trackingList is None:
             trackingList = []
-        self.trackingList: List[
-            Union[TrackingFilePath[str], TrackingFilePath[bytes]]
+        self.trackingList: list[
+            TrackingFilePath[str] | TrackingFilePath[bytes]
         ] = trackingList
-        self.openedFiles: List[IO[bytes]] = []
+        self.openedFiles: list[IO[bytes]] = []
 
     def open(self, mode: FileMode = "r") -> IO[bytes]:
         """
@@ -401,7 +389,7 @@ class TrackingFilePath(filepath.FilePath[AnyStr]):
 
     def openedPaths(
         self,
-    ) -> List[Union[TrackingFilePath[str], TrackingFilePath[bytes]]]:
+    ) -> list[TrackingFilePath[str] | TrackingFilePath[bytes]]:
         """
         Return a list of all L{TrackingFilePath}s associated with this
         L{TrackingFilePath} that have had their C{open()} method called.
@@ -434,9 +422,8 @@ class ExplodingFilePath(filepath.FilePath[AnyStr]):
     def __init__(
         self,
         pathName: AnyStr,
-        originalExploder: Optional[
-            Union[ExplodingFilePath[str], ExplodingFilePath[bytes]]
-        ] = None,
+        originalExploder: None
+        | (ExplodingFilePath[str] | ExplodingFilePath[bytes]) = None,
     ) -> None:
         """
         Initialize an L{ExplodingFilePath} with a name and a reference to the
@@ -478,9 +465,7 @@ class PermissionsTests(BytesTestCase):
     Test Permissions and RWX classes
     """
 
-    def assertNotUnequal(
-        self, first: T, second: object, msg: Optional[str] = None
-    ) -> T:
+    def assertNotUnequal(self, first: T, second: object, msg: str | None = None) -> T:
         """
         Tests that C{first} != C{second} is false.  This method tests the
         __ne__ method, as opposed to L{assertEqual} (C{first} == C{second}),
@@ -707,7 +692,7 @@ class FilePathTests(AbstractFilePathTests):
             self.path.child(b"sub1").child(b"sub1.loopylink").path,
         )
 
-        def iterateOverPath() -> List[bytes]:
+        def iterateOverPath() -> list[bytes]:
             return [foo.path for foo in self.path.walk()]
 
         self.assertRaises(filepath.LinkError, iterateOverPath)
@@ -729,7 +714,7 @@ class FilePathTests(AbstractFilePathTests):
         def noSymLinks(path: filepath.FilePath[bytes]) -> bool:
             return not path.islink()
 
-        def iterateOverPath() -> List[bytes]:
+        def iterateOverPath() -> list[bytes]:
             return [foo.path for foo in self.path.walk(descend=noSymLinks)]
 
         self.assertTrue(iterateOverPath())
@@ -1151,7 +1136,7 @@ class FilePathTests(AbstractFilePathTests):
             (OSError, IOError), self.path.moveTo, self.path.child(b"file1")
         )
 
-    def setUpFaultyRename(self) -> List[Tuple[str, str]]:
+    def setUpFaultyRename(self) -> list[tuple[str, str]]:
         """
         Set up a C{os.rename} that will fail with L{errno.EXDEV} on first call.
         This is used to simulate a cross-device rename failure.

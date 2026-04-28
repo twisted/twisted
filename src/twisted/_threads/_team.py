@@ -9,7 +9,7 @@ workers.
 from __future__ import annotations
 
 from collections import deque
-from typing import Callable, Optional, Set
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -77,7 +77,7 @@ class Team:
     def __init__(
         self,
         coordinator: IExclusiveWorker,
-        createWorker: Callable[[], Optional[IWorker]],
+        createWorker: Callable[[], IWorker | None],
         logException: Callable[[], None],
     ):
         """
@@ -100,9 +100,9 @@ class Team:
         self._logException = logException
 
         # Don't touch these except from the coordinator.
-        self._idle: Set[IWorker] = set()
+        self._idle: set[IWorker] = set()
         self._busyCount = 0
-        self._pending: "deque[Callable[..., object]]" = deque()
+        self._pending: deque[Callable[..., object]] = deque()
         self._shouldQuitCoordinator = False
         self._toShrink = 0
 
@@ -131,7 +131,7 @@ class Team:
                     return
                 self._recycleWorker(worker)
 
-    def shrink(self, n: Optional[int] = None) -> None:
+    def shrink(self, n: int | None = None) -> None:
         """
         Decrease the number of idle workers by C{n}.
 
@@ -142,7 +142,7 @@ class Team:
         self._quit.check()
         self._coordinator.do(lambda: self._quitIdlers(n))
 
-    def _quitIdlers(self, n: Optional[int] = None) -> None:
+    def _quitIdlers(self, n: int | None = None) -> None:
         """
         The implmentation of C{shrink}, performed by the coordinator worker.
 

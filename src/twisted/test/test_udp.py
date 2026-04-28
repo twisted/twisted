@@ -889,7 +889,7 @@ class MulticastTestsIPv6(MulticastTests):
     clientAddress: str = "::1"
     multicastGroup: str = "ff03::1"
     alternateInterface: str | int = next(
-        (idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo"))
+        idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo")
     )
     interfaceSynonym: str | int = alternateInterface
     invalidGroup: str = "::1"

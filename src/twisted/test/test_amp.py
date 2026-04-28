@@ -9,7 +9,7 @@ Tests for L{twisted.protocols.amp}.
 
 import datetime
 import decimal
-from typing import ClassVar, Dict, Type, TypeVar
+from typing import ClassVar, TypeVar
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -136,9 +136,9 @@ class Hello(amp.Command):
 
     response = [(b"hello", amp.String()), (b"print", amp.Unicode(optional=True))]
 
-    errors: ClassVar[Dict[Type[Exception], bytes]] = {UnfriendlyGreeting: b"UNFRIENDLY"}
+    errors: ClassVar[dict[type[Exception], bytes]] = {UnfriendlyGreeting: b"UNFRIENDLY"}
 
-    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {DeathThreat: b"DEAD"}
+    fatalErrors: ClassVar[dict[type[Exception], bytes]] = {DeathThreat: b"DEAD"}
 
 
 class NoAnswerHello(Hello):
@@ -2136,7 +2136,7 @@ class BaseCommand(amp.Command):
     This provides a command that will be subclassed.
     """
 
-    errors: ClassVar[Dict[Type[Exception], bytes]] = {
+    errors: ClassVar[dict[type[Exception], bytes]] = {
         InheritedError: b"INHERITED_ERROR"
     }
 
@@ -2155,7 +2155,7 @@ class AddErrorsCommand(BaseCommand):
     """
 
     arguments = [(b"other", amp.Boolean())]
-    errors: ClassVar[Dict[Type[Exception], bytes]] = {
+    errors: ClassVar[dict[type[Exception], bytes]] = {
         OtherInheritedError: b"OTHER_INHERITED_ERROR"
     }
 
@@ -2529,7 +2529,7 @@ _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
 
 
-class MyBox(Dict[_KT, _VT]):
+class MyBox(dict[_KT, _VT]):
     """
     A unique dict subclass.
     """

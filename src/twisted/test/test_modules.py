@@ -11,9 +11,10 @@ import compileall
 import itertools
 import sys
 import zipfile
+from collections.abc import Generator
 from importlib.abc import PathEntryFinder
 from types import ModuleType
-from typing import Any, Generator, Protocol
+from typing import Any, Protocol
 
 import twisted
 from twisted.python import modules
@@ -26,9 +27,7 @@ from twisted.trial.unittest import TestCase
 
 
 class _SupportsWalkModules(Protocol):
-    def walkModules(
-        self, importPackages: bool
-    ) -> Generator[modules.PythonModule, None, None]:
+    def walkModules(self, importPackages: bool) -> Generator[modules.PythonModule]:
         ...
 
 

@@ -7,8 +7,8 @@ L{twisted.cred.strcred}.
 
 
 import os
+from collections.abc import Sequence
 from io import StringIO
-from typing import Sequence, Type
 from unittest import skipIf
 
 from zope.interface import Interface
@@ -563,7 +563,7 @@ class OptionsSupportsAllInterfaces(usage.Options, strcred.AuthOptionMixin):
 
 
 class OptionsSupportsNoInterfaces(usage.Options, strcred.AuthOptionMixin):
-    supportedInterfaces: Sequence[Type[Interface]] = []
+    supportedInterfaces: Sequence[type[Interface]] = []
 
 
 class LimitingInterfacesTests(TestCase):

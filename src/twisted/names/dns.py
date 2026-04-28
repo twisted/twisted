@@ -15,9 +15,10 @@ import inspect
 import random
 import socket
 import struct
+from collections.abc import Sequence
 from io import BytesIO
 from itertools import chain
-from typing import Optional, Sequence, SupportsInt, Union, overload
+from typing import SupportsInt, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -402,7 +403,7 @@ def _str2time(s: str) -> int:
 
 
 @overload
-def str2time(s: Union[str, bytes, int]) -> int:
+def str2time(s: str | bytes | int) -> int:
     ...
 
 
@@ -411,7 +412,7 @@ def str2time(s: None) -> None:
     ...
 
 
-def str2time(s: Union[str, bytes, int, None]) -> Union[int, None]:
+def str2time(s: str | bytes | int | None) -> int | None:
     """
     Parse a string description of an interval into an integer number of seconds.
 
@@ -660,7 +661,7 @@ class Query:
     @type cls: L{int}
     """
 
-    def __init__(self, name: Union[bytes, str] = b"", type: int = A, cls: int = IN):
+    def __init__(self, name: bytes | str = b"", type: int = A, cls: int = IN):
         """
         @type name: L{bytes} or L{str}
         @param name: See L{Query.name}
@@ -989,11 +990,11 @@ class RRHeader(tputil.FancyEqMixin):
 
     def __init__(
         self,
-        name: Union[bytes, str] = b"",
+        name: bytes | str = b"",
         type: int = A,
         cls: int = IN,
         ttl: SupportsInt = 0,
-        payload: Optional[IEncodableRecord] = None,
+        payload: IEncodableRecord | None = None,
         auth: bool = False,
     ):
         """
@@ -1093,7 +1094,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("name", "name", "%s"), "ttl")
     compareAttributes = ("name", "ttl")
 
-    TYPE: Optional[int] = None
+    TYPE: int | None = None
     name = None
 
     def __init__(self, name=b"", ttl=None):
@@ -1568,7 +1569,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
         prefixLen: int = 0,
         suffix: bytes | str = "::",
         prefix: bytes | str = b"",
-        ttl: Union[str, bytes, int, None] = None,
+        ttl: str | bytes | int | None = None,
     ):
         """
         @param suffix: An IPv6 address suffix in in RFC 2373 format.
@@ -1943,7 +1944,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self,
         cpu: bytes = b"",
         os: bytes = b"",
-        ttl: Union[str, bytes, int, None] = None,
+        ttl: str | bytes | int | None = None,
     ):
         self.cpu, self.os = cpu, os
         self.ttl = str2time(ttl)

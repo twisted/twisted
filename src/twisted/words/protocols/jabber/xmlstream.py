@@ -21,12 +21,11 @@ Stanzas.
 @var Reset: Token to signal that the XML stream has been reset.
 @type Reset: Basic object.
 """
-
+from __future__ import annotations
 
 from binascii import hexlify
 from hashlib import sha1
 from sys import intern
-from typing import Optional, Tuple
 
 from zope.interface import directlyProvides, implementer
 
@@ -166,7 +165,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -262,7 +261,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     def associateWithStream(self, xmlstream):
         """
@@ -318,7 +317,7 @@ class BaseFeatureInitiatingInitializer:
     @type required: C{bool}
     """
 
-    feature: Optional[Tuple[str, str]] = None
+    feature: tuple[str, str] | None = None
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs

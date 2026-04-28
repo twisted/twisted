@@ -12,8 +12,8 @@ import datetime
 import gc
 import itertools
 import textwrap
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 from weakref import ref
 
 from zope.interface import implementer

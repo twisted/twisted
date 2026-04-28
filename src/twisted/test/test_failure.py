@@ -12,11 +12,12 @@ import pickle
 import re
 import sys
 import traceback
+from collections.abc import Generator
 from dis import distb
 from io import StringIO
 from traceback import FrameSummary
 from types import TracebackType
-from typing import Any, Generator, cast
+from typing import Any, cast
 from unittest import skipIf
 
 from cython_test_exception_raiser import raiser
@@ -938,7 +939,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         """
         stuff = []
 
-        def generator() -> Generator[None, None, None]:
+        def generator() -> Generator[None]:
             try:
                 yield
             except BaseException:
@@ -969,7 +970,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
 
         newFailures = []
 
-        def generator() -> Generator[None, None, None]:
+        def generator() -> Generator[None]:
             try:
                 yield
             except BaseException:
@@ -999,7 +1000,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         original one.
         """
 
-        def generator() -> Generator[None, None, None]:
+        def generator() -> Generator[None]:
             try:
                 try:
                     yield
@@ -1020,7 +1021,7 @@ class ExtendedGeneratorTests(SynchronousTestCase):
         original one.
         """
 
-        def generator() -> Generator[None, None, None]:
+        def generator() -> Generator[None]:
             try:
                 yield
             except BaseException:

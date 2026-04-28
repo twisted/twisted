@@ -6,8 +6,9 @@ Test cases for using NMEA sentences.
 from __future__ import annotations
 
 import datetime
+from collections.abc import Iterable
 from operator import attrgetter
-from typing import Callable, Iterable, Literal, Protocol, TypedDict
+from typing import Callable, Literal, Protocol, TypedDict
 
 from zope.interface import implementer
 

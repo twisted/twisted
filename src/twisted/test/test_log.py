@@ -13,7 +13,7 @@ import sys
 import time
 import warnings
 from io import IOBase, StringIO
-from typing import Callable, List, Protocol
+from typing import Callable, Protocol
 
 from zope.interface import implementer
 
@@ -293,7 +293,7 @@ class LogTests(unittest.SynchronousTestCase):
         self.assertIsInstance(errors[0], RuntimeError)
 
 
-class FakeFile(List[bytes]):
+class FakeFile(list[bytes]):
     def write(self, bytes: bytes) -> None:
         self.append(bytes)
 

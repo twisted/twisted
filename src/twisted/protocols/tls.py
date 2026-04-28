@@ -118,6 +118,9 @@ def _representsEOF(exceptionObject: Error) -> bool:
         _, reasonString = exceptionObject.args
     else:
         errorQueue = exceptionObject.args[0]
+        if not errorQueue:
+            # This appears to be the behavior in OpenSSL 4.
+            return True
         _, _, reasonString = errorQueue[-1]
     return reasonString.casefold().startswith("unexpected eof")
 

@@ -7,7 +7,7 @@ A miscellany of code used to run Trial tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 __all__ = [
     "TestSuite",
@@ -35,9 +35,10 @@ import sys
 import types
 import unittest as pyunit
 import warnings
+from collections.abc import Generator
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Callable, Generator, List, Optional, Protocol, TextIO, Type, Union
+from typing import Callable, Protocol, TextIO, Union
 
 from zope.interface import implementer
 
@@ -275,7 +276,7 @@ _Loadable: TypeAlias = Union[
     modules.PythonAttribute,
     modules.PythonModule,
     pyunit.TestCase,
-    Type[pyunit.TestCase],
+    type[pyunit.TestCase],
 ]
 
 
@@ -301,7 +302,7 @@ def name(thing: _Loadable) -> str:
     raise TypeError(f"Cannot name {thing!r}")
 
 
-def isTestCase(obj: type) -> TypeGuard[Type[pyunit.TestCase]]:
+def isTestCase(obj: type) -> TypeGuard[type[pyunit.TestCase]]:
     """
     @return: C{True} if C{obj} is a class that contains test cases, C{False}
         otherwise. Used to find all the tests in a module.
@@ -413,7 +414,7 @@ class TestLoader:
     methodPrefix = "test"
     modulePrefix = "test_"
 
-    suiteFactory: Type[TestSuite] = TestSuite
+    suiteFactory: type[TestSuite] = TestSuite
     sorter: Callable[[_Loadable], object] = name
 
     def sort(self, xs):
@@ -714,7 +715,7 @@ class TestLoader:
 
     loadTestsFromName = loadByName
 
-    def loadByNames(self, names: List[str], recurse: bool = False) -> TestSuite:
+    def loadByNames(self, names: list[str], recurse: bool = False) -> TestSuite:
         """
         Load some tests by a list of names.
 
@@ -789,7 +790,7 @@ def _qualNameWalker(qualName):
 
 
 @contextmanager
-def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
+def _testDirectory(workingDirectory: str) -> Generator[None]:
     """
     A context manager which obtains a lock on a trial working directory
     and enters (L{os.chdir}) it and then reverses these things.
@@ -809,7 +810,7 @@ def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
 
 
 @contextmanager
-def _logFile(logfile: str) -> Generator[None, None, None]:
+def _logFile(logfile: str) -> Generator[None]:
     """
     A context manager which adds a log observer and then removes it.
 
@@ -834,11 +835,11 @@ def _logFile(logfile: str) -> Generator[None, None, None]:
 class _Runner(Protocol):
     stream: TextIO
 
-    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter:
         ...
 
     def runUntilFailure(
-        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+        self, test: pyunit.TestCase | pyunit.TestSuite
     ) -> itrial.IReporter:
         ...
 
@@ -889,7 +890,7 @@ class TrialRunner:
     DRY_RUN = "dry-run"
 
     reporterFactory: Callable[[TextIO, str, bool, log.LogPublisher], itrial.IReporter]
-    mode: Optional[str] = None
+    mode: str | None = None
     logfile: str = "test.log"
     stream: TextIO = sys.stdout
     profile: bool = False
@@ -898,7 +899,7 @@ class TrialRunner:
     uncleanWarnings: bool = False
     workingDirectory: str = "_trial_temp"
     _forceGarbageCollection: bool = False
-    debugger: Optional[_Debugger] = None
+    debugger: _Debugger | None = None
     _exitFirst: bool = False
 
     _log: log.LogPublisher = log  # type: ignore[assignment]
@@ -921,7 +922,7 @@ class TrialRunner:
     def rterrors(self) -> bool:
         return self._realTimeErrors
 
-    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter:
         """
         Run the test or suite and return a result object.
         """
@@ -934,7 +935,7 @@ class TrialRunner:
 
     def _runWithoutDecoration(
         self,
-        test: Union[pyunit.TestCase, pyunit.TestSuite],
+        test: pyunit.TestCase | pyunit.TestSuite,
         forceGarbageCollection: bool = False,
     ) -> itrial.IReporter:
         """
@@ -964,7 +965,7 @@ class TrialRunner:
         return result
 
     def runUntilFailure(
-        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+        self, test: pyunit.TestCase | pyunit.TestSuite
     ) -> itrial.IReporter:
         """
         Repeatedly run C{test} until it fails.

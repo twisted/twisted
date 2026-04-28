@@ -4,10 +4,11 @@
 """
 Shiny new words service maker
 """
+from __future__ import annotations
 
 import socket
 import sys
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 from twisted import plugin
 from twisted.application import strports
@@ -19,7 +20,7 @@ from twisted.words import iwords, service
 
 class Options(usage.Options, strcred.AuthOptionMixin):
     supportedInterfaces = [credentials.IUsernamePassword]
-    optParameters: List[Sequence[Optional[str]]] = [
+    optParameters: list[Sequence[str | None]] = [
         (
             "hostname",
             None,

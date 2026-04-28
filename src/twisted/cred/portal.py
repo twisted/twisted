@@ -6,9 +6,10 @@
 """
 The point of integration of application and authentication.
 """
+from __future__ import annotations
 
-
-from typing import Callable, Dict, Iterable, List, Tuple, Type, Union
+from collections.abc import Iterable
+from typing import Callable
 
 from zope.interface import Interface, providedBy
 
@@ -24,12 +25,12 @@ from twisted.python import failure, reflect
 # implementation of Interface itself (subclassing it actually instantiates it),
 # since mypy-zope treats Interface objects *as* types, this is how you have to
 # treat it.
-_InterfaceItself = Type[Interface]
+_InterfaceItself = type[Interface]
 
 # This is the result shape for both IRealm.requestAvatar and Portal.login,
 # although the former is optionally allowed to return synchronously and the
 # latter must be Deferred.
-_requestResult = Tuple[_InterfaceItself, object, Callable[[], None]]
+_requestResult = tuple[_InterfaceItself, object, Callable[[], None]]
 
 
 class IRealm(Interface):
@@ -39,8 +40,8 @@ class IRealm(Interface):
     """
 
     def requestAvatar(
-        avatarId: Union[bytes, Tuple[()]], mind: object, *interfaces: _InterfaceItself
-    ) -> Union[Deferred[_requestResult], _requestResult]:
+        avatarId: bytes | tuple[()], mind: object, *interfaces: _InterfaceItself
+    ) -> Deferred[_requestResult] | _requestResult:
         """
         Return avatar which provides one of the given interfaces.
 
@@ -75,7 +76,7 @@ class Portal:
     in the realm object and in the credentials checker objects.
     """
 
-    checkers: Dict[Type[Interface], ICredentialsChecker]
+    checkers: dict[type[Interface], ICredentialsChecker]
 
     def __init__(
         self, realm: IRealm, checkers: Iterable[ICredentialsChecker] = ()
@@ -88,14 +89,14 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
-    def listCredentialsInterfaces(self) -> List[Type[Interface]]:
+    def listCredentialsInterfaces(self) -> list[type[Interface]]:
         """
         Return list of credentials interfaces that can be used to login.
         """
         return list(self.checkers.keys())
 
     def registerChecker(
-        self, checker: ICredentialsChecker, *credentialInterfaces: Type[Interface]
+        self, checker: ICredentialsChecker, *credentialInterfaces: type[Interface]
     ) -> None:
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
@@ -103,7 +104,7 @@ class Portal:
             self.checkers[credentialInterface] = checker
 
     def login(
-        self, credentials: ICredentials, mind: object, *interfaces: Type[Interface]
+        self, credentials: ICredentials, mind: object, *interfaces: type[Interface]
     ) -> Deferred[_requestResult]:
         """
         @param credentials: an implementor of
