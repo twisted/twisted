@@ -238,13 +238,13 @@ class GeneralOptions(usage.Options):
             "localforward",
             "L",
             None,
-            "listen-port:host:port   Forward local port to remote address",
+            "[listen-addr:]listen-port:host:port   Forward local port to remote address",
         ],
         [
             "remoteforward",
             "R",
             None,
-            "listen-port:host:port   Forward remote port to local address",
+            "[listen-addr:]listen-port:host:port   Forward remote port to local address",
         ],
     ]
 
@@ -267,8 +267,8 @@ class GeneralOptions(usage.Options):
         optActions={
             "cipher": usage.CompleteList([v.decode() for v in _ciphers]),
             "macs": usage.CompleteList([v.decode() for v in _macs]),
-            "localforward": usage.Completer(descr="listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="listen-port:host:port"),
+            "localforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
+            "remoteforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
         },
         extraActions=[
             usage.CompleteUserAtHost(),
@@ -278,23 +278,37 @@ class GeneralOptions(usage.Options):
     )
 
     identitys: list[str] = []
-    localForwards: list[tuple[int, tuple[int, int]]] = []
-    remoteForwards: list[tuple[int, tuple[int, int]]] = []
+    localForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
+    remoteForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
 
     def opt_localforward(self, f):
-        localPort, remoteHost, remotePort = f.split(":")  # doesn't do v6 yet
+        colonCount = f.count(":")
+        if colonCount == 2:
+            localHost = "127.0.0.1"
+            localPort, remoteHost, remotePort = f.split(":")
+        elif colonCount == 3:
+            localHost, localPort, remoteHost, remotePort = f.split(":")
+        else:
+            sys.exit(f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
         localPort = int(localPort)
         remotePort = int(remotePort)
-        self.localForwards.append((localPort, (remoteHost, remotePort)))
+        self.localForwards.append(((localHost, localPort), (remoteHost, remotePort)))
 
     def opt_remoteforward(self, f):
-        remotePort, connHost, connPort = f.split(":")  # doesn't do v6 yet
+        colonCount = f.count(":")
+        if colonCount == 2:
+            remoteHost = "127.0.0.1"
+            remotePort, connHost, connPort = f.split(":")
+        elif colonCount == 3:
+            remoteHost, remotePort, connHost, connPort = f.split(":")
+        else:
+            sys.exit(f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
         remotePort = int(remotePort)
         connPort = int(connPort)
-        self.remoteForwards.append((remotePort, (connHost, connPort)))
+        self.remoteForwards.append(((remoteHost, remotePort), (connHost, connPort)))
 
     def opt_compress(self):
         SSHClientTransport.supportedCompressions[0:1] = ["zlib"]
@@ -377,11 +391,11 @@ def run():
     for k, v in options.items():
         if v and hasattr(menu, k):
             getattr(menu, k).insert(Tkinter.END, v)
-    for p, (rh, rp) in options.localForwards:
-        menu.forwards.insert(Tkinter.END, f"L:{p}:{rh}:{rp}")
+    for (lh, lp), (rh, rp) in options.localForwards:
+        menu.forwards.insert(Tkinter.END, f"L:{lh}:{lp}:{rh}:{rp}")
     options.localForwards = []
-    for p, (rh, rp) in options.remoteForwards:
-        menu.forwards.insert(Tkinter.END, f"R:{p}:{rh}:{rp}")
+    for (lh, lp), (rh, rp) in options.remoteForwards:
+        menu.forwards.insert(Tkinter.END, f"R:{lh}:{lp}:{rh}:{rp}")
     options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
     root.geometry(
@@ -557,23 +571,24 @@ class SSHConnection(connection.SSHConnection):
         if not options["noshell"]:
             self.openChannel(SSHSession())
         if options.localForwards:
-            for localPort, hostport in options.localForwards:
+            for localAddr, remoteAddr in options.localForwards:
                 reactor.listenTCP(
-                    localPort,
+                    localAddr[1],
                     forwarding.SSHListenForwardingFactory(
-                        self, hostport, forwarding.SSHListenClientForwardingChannel
+                        self, remoteAddr, forwarding.SSHListenClientForwardingChannel
                     ),
+                    interface=localAddr[0],
                 )
         if options.remoteForwards:
-            for remotePort, hostport in options.remoteForwards:
+            for remoteAddr, connAddr in options.remoteForwards:
                 log.msg(
                     "asking for remote forwarding for {}:{}".format(
-                        remotePort, hostport
+                        remoteAddr, connAddr
                     )
                 )
-                data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
+                data = forwarding.packGlobal_tcpip_forward(remoteAddr)
                 self.sendGlobalRequest("tcpip-forward", data)
-                self.remoteForwards[remotePort] = hostport
+                self.remoteForwards[remoteAddr] = connAddr
 
 
 class SSHSession(channel.SSHChannel):
