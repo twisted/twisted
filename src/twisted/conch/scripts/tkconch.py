@@ -83,12 +83,12 @@ class TkConchMenu(Tkinter.Frame):
         Tkinter.Button(self, text="Remove", command=self.removeForward).grid(
             column=1, row=8
         )
-        self.forwardPort = Tkinter.Entry(self)
-        self.forwardPort.grid(column=2, row=7, sticky="nesw")
-        Tkinter.Label(self, text="Port").grid(column=3, row=7, sticky="nesw")
-        self.forwardHost = Tkinter.Entry(self)
-        self.forwardHost.grid(column=2, row=8, sticky="nesw")
-        Tkinter.Label(self, text="Host").grid(column=3, row=8, sticky="nesw")
+        self.forwardListenAddress = Tkinter.Entry(self)
+        self.forwardListenAddress.grid(column=2, row=7, sticky="nesw")
+        Tkinter.Label(self, text="Listen Address").grid(column=3, row=7, sticky="nesw")
+        self.forwardConnectAddress = Tkinter.Entry(self)
+        self.forwardConnectAddress.grid(column=2, row=8, sticky="nesw")
+        Tkinter.Label(self, text="Connect Address").grid(column=3, row=8, sticky="nesw")
         self.localForward = Tkinter.Radiobutton(
             self, text="Local", variable=self.localRemoteVar, value="local"
         )
@@ -136,19 +136,25 @@ class TkConchMenu(Tkinter.Frame):
             self.identity.insert(Tkinter.END, r)
 
     def addForward(self):
-        port = self.forwardPort.get()
-        self.forwardPort.delete(0, Tkinter.END)
-        host = self.forwardHost.get()
-        self.forwardHost.delete(0, Tkinter.END)
+        listenHost, _, listenPort = self.forwardListenAddress.get().rpartition(":")
+        listenHost = listenHost or "127.0.0.1"
+        self.forwardListenAddress.delete(0, Tkinter.END)
+        connectHost, _, connectPort = self.forwardConnectAddress.get().rpartition(":")
+        connectHost = connectHost or "127.0.0.1"
+        self.forwardConnectAddress.delete(0, Tkinter.END)
         if self.localRemoteVar.get() == "local":
-            self.forwards.insert(Tkinter.END, f"L:{port}:{host}")
+            self.forwards.insert(
+                Tkinter.END, f"L:{listenHost}:{listenPort}:{connectHost}:{connectPort}"
+            )
         else:
-            self.forwards.insert(Tkinter.END, f"R:{port}:{host}")
+            self.forwards.insert(
+                Tkinter.END, f"R:{listenHost}:{listenPort}:{connectHost}:{connectPort}"
+            )
 
     def removeForward(self):
         cur = self.forwards.curselection()
         if cur:
-            self.forwards.remove(cur[0])
+            self.forwards.delete(cur[0])
 
     def doConnect(self):
         finished = 1
