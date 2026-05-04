@@ -574,6 +574,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
 
 class SSHConnection(connection.SSHConnection):
     def serviceStarted(self):
+        self.remoteForwards = {}
         if not options["noshell"]:
             self.openChannel(SSHSession())
         if options.localForwards:
@@ -593,8 +594,27 @@ class SSHConnection(connection.SSHConnection):
                     )
                 )
                 data = forwarding.packGlobal_tcpip_forward(remoteAddr)
-                self.sendGlobalRequest("tcpip-forward", data)
+                self.sendGlobalRequest(b"tcpip-forward", data)
                 self.remoteForwards[remoteAddr] = connAddr
+
+    def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
+        log.msg(f"FTCP {data!r}")
+        remoteAddr, _ = forwarding.unpackOpen_forwarded_tcpip(data)
+        log.msg(self.remoteForwards)
+        log.msg(remoteAddr)
+        if remoteAddr in self.remoteForwards:
+            connectAddr = self.remoteForwards[remoteAddr]
+            log.msg(f"connect forwarding {connectAddr}")
+            return forwarding.SSHConnectForwardingChannel(
+                connectAddr,
+                remoteWindow=windowSize,
+                remoteMaxPacket=maxPacket,
+                conn=self,
+            )
+        else:
+            raise error.ConchError(
+                connection.OPEN_CONNECT_FAILED, "don't know about that port"
+            )
 
 
 class SSHSession(channel.SSHChannel):
