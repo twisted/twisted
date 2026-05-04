@@ -41,13 +41,13 @@ class ClientOptions(ConchOptions):
             "localforward",
             "L",
             None,
-            "listen-port:host:port   Forward local port to remote address",
+            "[listen-addr:]listen-port:host:port   Forward local port to remote address",
         ],
         [
             "remoteforward",
             "R",
             None,
-            "listen-port:host:port   Forward remote port to local address",
+            "[listen-addr:]listen-port:host:port   Forward remote port to local address",
         ],
     ]
 
@@ -63,8 +63,8 @@ class ClientOptions(ConchOptions):
     compData = usage.Completions(
         mutuallyExclusive=[("tty", "notty")],
         optActions={
-            "localforward": usage.Completer(descr="listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="listen-port:host:port"),
+            "localforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
+            "remoteforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
         },
         extraActions=[
             usage.CompleteUserAtHost(),
@@ -73,8 +73,8 @@ class ClientOptions(ConchOptions):
         ],
     )
 
-    localForwards: list[tuple[int, tuple[int, int]]] = []
-    remoteForwards: list[tuple[int, tuple[int, int]]] = []
+    localForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
+    remoteForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
 
     def opt_escape(self, esc):
         """
@@ -91,21 +91,35 @@ class ClientOptions(ConchOptions):
 
     def opt_localforward(self, f):
         """
-        Forward local port to remote address (lport:host:port)
+        Forward local port to remote address ([lhost:]lport:host:port)
         """
-        localPort, remoteHost, remotePort = f.split(":")  # Doesn't do v6 yet
+        colonCount = f.count(":")
+        if colonCount == 2:
+            localHost = "127.0.0.1"
+            localPort, remoteHost, remotePort = f.split(":")
+        elif colonCount == 3:
+            localHost, localPort, remoteHost, remotePort = f.split(":")
+        else:
+            sys.exit(f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
         localPort = int(localPort)
         remotePort = int(remotePort)
-        self.localForwards.append((localPort, (remoteHost, remotePort)))
+        self.localForwards.append(((localHost, localPort), (remoteHost, remotePort)))
 
     def opt_remoteforward(self, f):
         """
-        Forward remote port to local address (rport:host:port)
+        Forward remote port to local address ([rhost:]rport:host:port)
         """
-        remotePort, connHost, connPort = f.split(":")  # Doesn't do v6 yet
+        colonCount = f.count(":")
+        if colonCount == 2:
+            remoteHost = "127.0.0.1"
+            remotePort, connHost, connPort = f.split(":")
+        elif colonCount == 3:
+            remoteHost, remotePort, connHost, connPort = f.split(":")
+        else:
+            sys.exit(f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
         remotePort = int(remotePort)
         connPort = int(connPort)
-        self.remoteForwards.append((remotePort, (connHost, connPort)))
+        self.remoteForwards.append(((remoteHost, remotePort), (connHost, connPort)))
 
     def parseArgs(self, host, *command):
         self["host"] = host
@@ -233,18 +247,19 @@ def onConnect():
     if hasattr(conn.transport, "sendIgnore"):
         _KeepAlive(conn)
     if options.localForwards:
-        for localPort, hostport in options.localForwards:
+        for localAddr, remoteAddr in options.localForwards:
             s = reactor.listenTCP(
-                localPort,
+                localAddr[1],
                 forwarding.SSHListenForwardingFactory(
-                    conn, hostport, SSHListenClientForwardingChannel
+                    conn, remoteAddr, SSHListenClientForwardingChannel
                 ),
+                interface=localAddr[0]
             )
             conn.localForwards.append(s)
     if options.remoteForwards:
-        for remotePort, hostport in options.remoteForwards:
-            log.msg(f"asking for remote forwarding for {remotePort}:{hostport}")
-            conn.requestRemoteForwarding(remotePort, hostport)
+        for remoteAddr, connAddr in options.remoteForwards:
+            log.msg(f"asking for remote forwarding for {remoteAddr}:{connAddr}")
+            conn.requestRemoteForwarding(remoteAddr, connAddr)
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutdown)
     if not options["noshell"] or options["agent"]:
         conn.openChannel(SSHSession())
@@ -269,9 +284,9 @@ def reConnect():
 
 def beforeShutdown():
     remoteForwards = options.remoteForwards
-    for remotePort, hostport in remoteForwards:
-        log.msg(f"cancelling {remotePort}:{hostport}")
-        conn.cancelRemoteForwarding(remotePort)
+    for remoteAddr, localAddr in remoteForwards:
+        log.msg(f"cancelling {remoteAddr}:{localAddr}")
+        conn.cancelRemoteForwarding(remoteAddr)
 
 
 def stopConnection():
@@ -319,42 +334,42 @@ class SSHConnection(connection.SSHConnection):
             s.loseConnection()
         stopConnection()
 
-    def requestRemoteForwarding(self, remotePort, hostport):
-        data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
+    def requestRemoteForwarding(self, remoteAddr, connAddr):
+        data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         d = self.sendGlobalRequest(b"tcpip-forward", data, wantReply=1)
-        log.msg(f"requesting remote forwarding {remotePort}:{hostport}")
-        d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
-        d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
+        log.msg(f"requesting remote forwarding {remoteAddr}:{connAddr}")
+        d.addCallback(self._cbRemoteForwarding, remoteAddr, connAddr)
+        d.addErrback(self._ebRemoteForwarding, remoteAddr, connAddr)
 
-    def _cbRemoteForwarding(self, result, remotePort, hostport):
-        log.msg(f"accepted remote forwarding {remotePort}:{hostport}")
-        self.remoteForwards[remotePort] = hostport
+    def _cbRemoteForwarding(self, result, remoteAddr, connAddr):
+        log.msg(f"accepted remote forwarding {remoteAddr}:{connAddr}")
+        self.remoteForwards[remoteAddr] = connAddr
         log.msg(repr(self.remoteForwards))
 
-    def _ebRemoteForwarding(self, f, remotePort, hostport):
-        log.msg(f"remote forwarding {remotePort}:{hostport} failed")
+    def _ebRemoteForwarding(self, f, remoteAddr, connAddr):
+        log.msg(f"remote forwarding {remoteAddr}:{connAddr} failed")
         log.msg(f)
 
-    def cancelRemoteForwarding(self, remotePort):
-        data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
+    def cancelRemoteForwarding(self, remoteAddr):
+        data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         self.sendGlobalRequest(b"cancel-tcpip-forward", data)
-        log.msg(f"cancelling remote forwarding {remotePort}")
+        log.msg(f"cancelling remote forwarding {remoteAddr}")
         try:
-            del self.remoteForwards[remotePort]
+            del self.remoteForwards[remoteAddr]
         except Exception:
             pass
         log.msg(repr(self.remoteForwards))
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
         log.msg(f"FTCP {data!r}")
-        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
+        remoteAddr, _ = forwarding.unpackOpen_forwarded_tcpip(data)
         log.msg(self.remoteForwards)
-        log.msg(remoteHP)
-        if remoteHP[1] in self.remoteForwards:
-            connectHP = self.remoteForwards[remoteHP[1]]
-            log.msg(f"connect forwarding {connectHP}")
+        log.msg(remoteAddr)
+        if remoteAddr in self.remoteForwards:
+            connectAddr = self.remoteForwards[remoteAddr]
+            log.msg(f"connect forwarding {connectAddr}")
             return SSHConnectForwardingChannel(
-                connectHP, remoteWindow=windowSize, remoteMaxPacket=maxPacket, conn=self
+                connectAddr, remoteWindow=windowSize, remoteMaxPacket=maxPacket, conn=self
             )
         else:
             raise ConchError(
