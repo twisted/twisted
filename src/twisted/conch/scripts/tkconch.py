@@ -290,31 +290,36 @@ class GeneralOptions(usage.Options):
     def opt_identity(self, i):
         self.identitys.append(i)
 
+    def _parseForwardSpec(self, f):
+        """
+        Parse a forward spec string ([lhost:]lport:host:port) and return ((lhost, lport), (host, port)).
+        Returns None if spec string is invalid. Defaults lhost to 127.0.0.1 if not provided.
+        """
+        *maybeLhost, lport, host, port = f.split(":")
+        if len(maybeLhost) not in (0, 1):
+            return None
+        [lhost, *_] = [*maybeLhost, "127.0.0.1"]
+        if not (lport.isdigit() and port.isdigit()):
+            return None
+        return ((lhost, int(lport)), (host, int(port)))
+
     def opt_localforward(self, f):
-        colonCount = f.count(":")
-        if colonCount == 2:
-            localHost = "127.0.0.1"
-            localPort, remoteHost, remotePort = f.split(":")
-        elif colonCount == 3:
-            localHost, localPort, remoteHost, remotePort = f.split(":")
-        else:
+        """
+        Forward local port to remote address ([lhost:]lport:host:port)
+        """
+        forwardSpec = self._parseForwardSpec(f)
+        if forwardSpec is None:
             sys.exit(f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
-        localPort = int(localPort)
-        remotePort = int(remotePort)
-        self.localForwards.append(((localHost, localPort), (remoteHost, remotePort)))
+        self.localForwards.append(forwardSpec)
 
     def opt_remoteforward(self, f):
-        colonCount = f.count(":")
-        if colonCount == 2:
-            remoteHost = "127.0.0.1"
-            remotePort, connHost, connPort = f.split(":")
-        elif colonCount == 3:
-            remoteHost, remotePort, connHost, connPort = f.split(":")
-        else:
+        """
+        Forward remote port to local address ([rhost:]rport:host:port)
+        """
+        forwardSpec = self._parseForwardSpec(f)
+        if forwardSpec is None:
             sys.exit(f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
-        remotePort = int(remotePort)
-        connPort = int(connPort)
-        self.remoteForwards.append(((remoteHost, remotePort), (connHost, connPort)))
+        self.remoteForwards.append(forwardSpec)
 
     def opt_compress(self):
         SSHClientTransport.supportedCompressions[0:1] = ["zlib"]
