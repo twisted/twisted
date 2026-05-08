@@ -31,7 +31,10 @@ from twisted.conch.ssh import (
 )
 from twisted.conch.ui import tkvt100
 from twisted.internet import defer, protocol, reactor, tksupport
-from twisted.python import log, usage
+from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
+from twisted.python import usage
+
+_log = Logger()
 
 
 class TkConchMenu(Tkinter.Frame):
@@ -209,17 +212,16 @@ class TkConchMenu(Tkinter.Frame):
             self.master.quit()
             self.master.destroy()
             if options["log"]:
-                realout = sys.stdout
-                log.startLogging(sys.stderr)
-                sys.stdout = realout
+                globalLogBeginner.beginLoggingTo(
+                    [textFileLogObserver(sys.stderr)], redirectStandardIO=False
+                )
             else:
-                log.discardLogs()
-            log.deferr = handleError  # HACK
+                globalLogBeginner.beginLoggingTo([], redirectStandardIO=False)
             if not options.identitys:
                 options.identitys = ["~/.ssh/id_rsa", "~/.ssh/id_dsa"]
             host = options["host"]
             port = int(options["port"] or 22)
-            log.msg((host, port))
+            _log.debug("connecting to {host}:{port}", host=host, port=port)
             reactor.connectTCP(host, port, SSHClientFactory())
             frame.master.deiconify()
             frame.master.title(
@@ -425,11 +427,9 @@ def run():
 
 
 def handleError():
-    from twisted.python import failure
-
     global exitStatus
     exitStatus = 2
-    log.err(failure.Failure())
+    _log.failure("error in tkconch")
     reactor.stop()
     raise
 
@@ -469,7 +469,7 @@ class SSHClientTransport(transport.SSHClientTransport):
     def receiveDebug(self, alwaysDisplay, message, lang):
         global options
         if alwaysDisplay or options["log"]:
-            log.msg("Received Debug Message: %s" % message)
+            _log.debug("Received Debug Message: {message}", message=message)
 
     def verifyHostKey(self, pubKey, fingerprint):
         # d = defer.Deferred()
@@ -518,7 +518,7 @@ class SSHClientTransport(transport.SSHClientTransport):
                 encodedKey = base64.b64encode(pubKey)
                 known_hosts.write(f"\n{khHost} {keyType} {encodedKey}")
         except BaseException:
-            log.deferr()
+            _log.failure("failed to record host key")
             raise error.ConchError
 
     def connectionSecure(self):
@@ -542,7 +542,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
         if not files:
             return None
         file = files[0]
-        log.msg(file)
+        _log.debug("trying identity file {file}", file=file)
         self.usedFiles.append(file)
         file = os.path.expanduser(file)
         file += ".pub"
@@ -593,23 +593,23 @@ class SSHConnection(connection.SSHConnection):
                 )
         if options.remoteForwards:
             for remoteAddr, connAddr in options.remoteForwards:
-                log.msg(
-                    "asking for remote forwarding for {}:{}".format(
-                        remoteAddr, connAddr
-                    )
+                _log.info(
+                    "asking for remote forwarding for {remoteAddr}:{connAddr}",
+                    remoteAddr=remoteAddr,
+                    connAddr=connAddr,
                 )
                 data = forwarding.packGlobal_tcpip_forward(remoteAddr)
                 self.sendGlobalRequest(b"tcpip-forward", data)
                 self.remoteForwards[remoteAddr] = connAddr
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
-        log.msg(f"FTCP {data!r}")
+        _log.debug("FTCP {data!r}", data=data)
         remoteAddr, _ = forwarding.unpackOpen_forwarded_tcpip(data)
-        log.msg(self.remoteForwards)
-        log.msg(remoteAddr)
+        _log.debug("{remoteForwards!r}", remoteForwards=self.remoteForwards)
+        _log.debug("{remoteAddr!r}", remoteAddr=remoteAddr)
         if remoteAddr in self.remoteForwards:
             connectAddr = self.remoteForwards[remoteAddr]
-            log.msg(f"connect forwarding {connectAddr}")
+            _log.debug("connect forwarding {connectAddr}", connectAddr=connectAddr)
             return forwarding.SSHConnectForwardingChannel(
                 connectAddr,
                 remoteWindow=windowSize,
@@ -659,7 +659,6 @@ class SSHSession(channel.SSHChannel):
         self.conn.transport.transport.setTcpNoDelay(1)
 
     def handleInput(self, char):
-        # log.msg('handling %s' % repr(char))
         if char in ("\n", "\r"):
             self.escapeMode = 1
             self.write(char)
@@ -668,7 +667,7 @@ class SSHSession(channel.SSHChannel):
         elif self.escapeMode == 2:
             self.escapeMode = 1  # so we can chain escapes together
             if char == ".":  # disconnect
-                log.msg("disconnecting from escape")
+                _log.info("disconnecting from escape")
                 reactor.stop()
                 return
             elif char == "\x1a":  # ^Z, suspend
@@ -676,7 +675,7 @@ class SSHSession(channel.SSHChannel):
                 os.kill(os.getpid(), signal.SIGSTOP)
                 return
             elif char == "R":  # rekey connection
-                log.msg("rekeying connection")
+                _log.info("rekeying connection")
                 self.conn.transport.sendKexInit()
                 return
             self.write("~" + char)
@@ -692,23 +691,23 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
-            log.msg("got %s stderr data" % len(data))
+            _log.debug("got {n} stderr data", n=len(data))
             sys.stderr.write(data)
             sys.stderr.flush()
 
     def eofReceived(self):
-        log.msg("got eof")
+        _log.debug("got eof")
         sys.stdin.close()
 
     def closed(self):
-        log.msg("closed %s" % self)
+        _log.debug("closed {session}", session=self)
         if len(self.conn.channels) == 1:  # just us left
             reactor.stop()
 
     def request_exit_status(self, data):
         global exitStatus
         exitStatus = int(struct.unpack(">L", data)[0])
-        log.msg("exit status: %s" % exitStatus)
+        _log.info("exit status: {exitStatus}", exitStatus=exitStatus)
 
     def sendEOF(self):
         self.conn.sendEOF(self)
