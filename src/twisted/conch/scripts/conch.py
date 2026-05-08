@@ -334,7 +334,10 @@ class SSHConnection(connection.SSHConnection):
             s.loseConnection()
         stopConnection()
 
-    def requestRemoteForwarding(self, remoteAddr, connAddr):
+    def requestRemoteForwarding(self, remotePort, hostport):
+        self.requestRemoteAddrForwarding(("127.0.0.1", remotePort), hostport)
+
+    def requestRemoteAddrForwarding(self, remoteAddr, connAddr):
         data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         d = self.sendGlobalRequest(b"tcpip-forward", data, wantReply=1)
         log.msg(f"requesting remote forwarding {remoteAddr}:{connAddr}")
@@ -350,7 +353,10 @@ class SSHConnection(connection.SSHConnection):
         log.msg(f"remote forwarding {remoteAddr}:{connAddr} failed")
         log.msg(f)
 
-    def cancelRemoteForwarding(self, remoteAddr):
+    def cancelRemoteForwarding(self, remotePort):
+        self.cancelRemoteAddrForwarding(("127.0.0.1", remotePort))
+
+    def cancelRemoteAddrForwarding(self, remoteAddr):
         data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         self.sendGlobalRequest(b"cancel-tcpip-forward", data)
         log.msg(f"cancelling remote forwarding {remoteAddr}")
