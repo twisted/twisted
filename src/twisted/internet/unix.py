@@ -355,9 +355,8 @@ class Port(_UNIXPort, tcp.Port):
         reactor: Any = None,
         wantPID: int = 0,
     ) -> None:
-        tcp.Port.__init__(
-            self, self._buildAddr(fileName).name, factory, backlog, reactor=reactor
-        )
+        tcp.Port.__init__(self, None, factory, backlog, reactor=reactor)
+        self._bindPath = self._buildAddr(fileName).name
         self.mode = mode
         self.wantPID = wantPID
         self._preexistingSocket = None
@@ -386,7 +385,7 @@ class Port(_UNIXPort, tcp.Port):
         if hasattr(self, "socket"):
             return "<{} on {!r}>".format(
                 factoryName,
-                _coerceToFilesystemEncoding("", self.port),
+                _coerceToFilesystemEncoding("", self._bindPath),
             )
         else:
             return f"<{factoryName} (not listening)>"
@@ -406,13 +405,15 @@ class Port(_UNIXPort, tcp.Port):
             "%s starting on %r"
             % (
                 self._getLogPrefix(self.factory),
-                _coerceToFilesystemEncoding("", self.port),
+                _coerceToFilesystemEncoding("", self._bindPath),
             )
         )
         if self.wantPID:
-            self.lockFile = lockfile.FilesystemLock(self.port + b".lock")
+            self.lockFile = lockfile.FilesystemLock(self._bindPath + b".lock")
             if not self.lockFile.lock():
-                raise error.CannotListenError(None, self.port, "Cannot acquire lock")
+                raise error.CannotListenError(
+                    None, self._bindPath, "Cannot acquire lock"
+                )
             else:
                 if not self.lockFile.clean:
                     try:
@@ -421,8 +422,8 @@ class Port(_UNIXPort, tcp.Port):
                         # If it fails, there's not much else we can
                         # do.  The bind() below will fail with an
                         # exception that actually propagates.
-                        if stat.S_ISSOCK(os.stat(self.port).st_mode):
-                            os.remove(self.port)
+                        if stat.S_ISSOCK(os.stat(self._bindPath).st_mode):
+                            os.remove(self._bindPath)
                     except BaseException:
                         pass
 
@@ -434,13 +435,13 @@ class Port(_UNIXPort, tcp.Port):
                 self._preexistingSocket = None
             else:
                 skt = self.createInternetSocket()
-                skt.bind(self.port)
+                skt.bind(self._bindPath)
         except OSError as le:
-            raise error.CannotListenError(None, self.port, le)
+            raise error.CannotListenError(None, self._bindPath, le)
         else:
-            if _inFilesystemNamespace(self.port):
+            if _inFilesystemNamespace(self._bindPath):
                 # Make the socket readable and writable to the world.
-                os.chmod(self.port, self.mode)
+                os.chmod(self._bindPath, self.mode)
             skt.listen(self.backlog)
             self.connected = True
             self.socket = skt
@@ -457,14 +458,14 @@ class Port(_UNIXPort, tcp.Port):
             % (
                 _coerceToFilesystemEncoding(
                     "",
-                    self.port,
+                    self._bindPath,
                 )
             )
         )
 
     def connectionLost(self, reason):
-        if _inFilesystemNamespace(self.port):
-            os.unlink(self.port)
+        if _inFilesystemNamespace(self._bindPath):
+            os.unlink(self._bindPath)
         if self.lockFile is not None:
             self.lockFile.unlock()
         tcp.Port.connectionLost(self, reason)

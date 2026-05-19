@@ -9,9 +9,11 @@ Maintainer: Itamar Shtull-Trauring
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, AnyStr, Callable
+from typing import TYPE_CHECKING, Any, AnyStr, Callable, NewType, Optional
 
 from zope.interface import Attribute, Interface
+
+from attr import frozen
 
 from twisted.python.failure import Failure
 
@@ -675,6 +677,17 @@ class IResolver(IResolverSimple):
         """
 
 
+@frozen
+class _Binding:
+    _addr: Optional[str] = None
+    _port: int = 0
+    _reuseAddr: bool = False
+    _reusePort: bool = False
+
+
+Binding = NewType("Binding", _Binding)
+
+
 class IReactorTCP(Interface):
     def listenTCP(
         port: int,
@@ -717,6 +730,62 @@ class IReactorTCP(Interface):
                         connection has failed.
         @param bindAddress: a (host, port) tuple of local address to bind
                             to, or None.
+
+        @return: An object which provides L{IConnector}. This connector will
+                 call various callbacks on the factory when a connection is
+                 made, failed, or lost - see
+                 L{ClientFactory<twisted.internet.protocol.ClientFactory>}
+                 docs for details.
+        """
+
+
+class IReactorTCP2(IReactorTCP):
+    def listenTCP(
+        port: _Binding | int,
+        factory: ServerFactory,
+        backlog: int = 50,
+        interface: str | None = None,
+    ) -> IListeningPort:
+        """
+        Connects a given protocol factory to the given numeric TCP/IP port.
+
+        @param port: object returned by
+            L{twisted.internet.tcp.makeBinding} describing which
+            address, port and options to use when binding
+        @param factory: a L{twisted.internet.protocol.ServerFactory} instance
+        @param backlog: size of the listen queue
+        @param interface: Unused.
+
+        Note that to bind to all IPv4 and IPv6 addresses, you must call this
+        method twice.
+
+        @return: an object that provides L{IListeningPort}.
+
+        @raise CannotListenError: as defined here
+                                  L{twisted.internet.error.CannotListenError},
+                                  if it cannot listen on this port (e.g., it
+                                  cannot bind to the required port number)
+        """
+
+    def connectTCP(
+        host: str,
+        port: int,
+        factory: ClientFactory[P],
+        timeout: float = 30.0,
+        # TODO: including the "tuple[str,int]" below makes mypy happy
+        # .. but how do we communicate to users "don't do that"?
+        bindAddress: _Binding | tuple[str, int] | None = None,
+    ) -> IConnector:
+        """
+        Connect a TCP client.
+
+        @param host: A hostname or an IPv4 or IPv6 address literal.
+        @param port: a port number
+        @param factory: a L{twisted.internet.protocol.ClientFactory} instance
+        @param timeout: number of seconds to wait before assuming the
+                        connection has failed.
+        @param bindAddress: configuration saying how to bind the
+            address, an object returned from L{twisted.internet.tcp.makeBinding}
 
         @return: An object which provides L{IConnector}. This connector will
                  call various callbacks on the factory when a connection is

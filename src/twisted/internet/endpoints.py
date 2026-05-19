@@ -37,6 +37,7 @@ from twisted.internet.address import (
     _ProcessAddress,
 )
 from twisted.internet.interfaces import (
+    Binding,
     IAddress,
     IHostnameResolver,
     IHostResolution,
@@ -53,8 +54,10 @@ from twisted.internet.interfaces import (
     IStreamClientEndpointStringParserWithReactor,
     IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
+    _Binding,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
+from twisted.internet.tcp import makeBinding
 
 try:
     from twisted.internet.stdio import PipeAddress, StandardIO
@@ -620,7 +623,7 @@ class TCP4ClientEndpoint:
         host: str,
         port: int,
         timeout: float = 30,
-        bindAddress: str | tuple[bytes | str, int] | None = None,
+        bindAddress: Binding | str | tuple[bytes | str, int] | None = None,
     ) -> None:
         """
         @param reactor: An L{IReactorTCP} provider
@@ -869,7 +872,7 @@ class HostnameEndpoint:
         host: str | bytes,
         port: int,
         timeout: float = 30,
-        bindAddress: bytes | str | tuple[bytes | str, int] | None = None,
+        bindAddress: Binding | bytes | str | tuple[bytes | str, int] | None = None,
         attemptDelay: float | None = None,
     ) -> None:
         """
@@ -899,7 +902,9 @@ class HostnameEndpoint:
             specific local port. To bind the port, but leave the
             interface unbound, use a tuple of ("", port), or ("0.0.0.0",
             port) for IPv4, or ("::0", port) for IPv6. To leave both
-            interface and port unbound, just use None.
+            interface and port unbound, just use None. You may also pass
+            a Binding instance (as returned from L{makeBinding} to specify
+            further options.
         @type bindAddress: L{str}, L{tuple}, or None
 
         @param attemptDelay: The number of seconds to delay between connection
@@ -927,12 +932,20 @@ class HostnameEndpoint:
         self._port = port
         self._timeout = timeout
 
-        if bindAddress is not None:
-            if isinstance(bindAddress, (bytes, str)):
-                bindAddress = (bindAddress, 0)
+        self._bindAddress = None
+        if bindAddress is None:
+            pass
+        elif isinstance(bindAddress, _Binding):
+            self._bindAddress = bindAddress
+        elif isinstance(bindAddress, bytes):
+            self._bindAddress = makeBinding(bindAddress.decode(), 0)
+        elif isinstance(bindAddress, str):
+            self._bindAddress = makeBinding(bindAddress, 0)
+        elif isinstance(bindAddress, tuple):
             if isinstance(bindAddress[0], bytes):
-                bindAddress = (bindAddress[0].decode(), bindAddress[1])
-        self._bindAddress = bindAddress
+                self._bindAddress = makeBinding(bindAddress[0].decode(), bindAddress[1])
+            elif isinstance(bindAddress[0], str):
+                self._bindAddress = makeBinding(bindAddress[0], bindAddress[1])
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
@@ -1289,7 +1302,9 @@ class SSL4ClientEndpoint:
         self._port = port
         self._sslContextFactory = sslContextFactory
         self._timeout = timeout
-        self._bindAddress = bindAddress
+        self._bindAddress = (
+            makeBinding() if bindAddress is None else makeBinding(*bindAddress)
+        )
 
     def connect(self, protocolFactory):
         """

@@ -13,6 +13,7 @@ import gc
 import io
 import os
 import socket
+import sys
 from collections.abc import Mapping, Sequence
 from functools import wraps
 from typing import Any, Callable, ClassVar
@@ -72,6 +73,7 @@ from twisted.internet.tcp import (
     _IFileDescriptorReservation,
     _NullFileDescriptorReservation,
     _resolveIPv6,
+    makeBinding,
 )
 from twisted.internet.test.connectionmixins import (
     BrokenContextFactory,
@@ -99,7 +101,7 @@ from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
-from twisted.python.runtime import platform
+from twisted.python.runtime import platform, platformType
 from twisted.test.test_tcp import (
     ClientStartStopFactory,
     ClosingFactory,
@@ -921,6 +923,241 @@ class TCP6ClientTestsBuilder(TCPClientTestsBase):
         # it so that the connect call for the IPv6 address test simply uses an
         # address literal.
         self.fakeDomainName = self.endpoints.interface
+
+
+class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
+    """
+    Test the various combinations of bindAddress arguments
+    """
+
+    requiredInterfaces = (IReactorTCP,)
+    fakeDomainName = "some-fake.domain.example.com"
+    family = socket.AF_INET
+    addressClass = IPv4Address
+
+    def _actuallyTestBindAddressConnect(self, createBinding, confirmClient):
+        """
+        Harness to test passing bindAddress= variants to connectTCP
+        """
+        host, port = findFreePort(self.interface, self.family)[:2]
+        reactor = self.buildReactor()
+        fakeDomain = self.fakeDomainName
+        reactor.installResolver(FakeResolver({fakeDomain: self.interface}))
+
+        clientFactory = Stop(reactor)
+        bindAddress = createBinding(host, port)
+
+        log.msg(f"Connect attempt with bindAddress {bindAddress}")
+        connector = reactor.connectTCP(
+            fakeDomain,
+            port,
+            clientFactory,
+            bindAddress=bindAddress,
+        )
+        client = connector.transport
+        laddr = client.socket.getsockname()
+        self.assertEqual(laddr[1], port)
+        confirmClient(client)
+
+    def _actuallyTestBindAddressListen(self, createBinding, confirmPort):
+        """
+        Harness to test passing bindAddress= variants to listenTCP
+        """
+        host, port = findFreePort(self.interface, self.family)[:2]
+        reactor = self.buildReactor()
+
+        serverFactory = MyServerFactory()
+        bindAddress = createBinding(host, port)
+
+        log.msg(f"Listen with bindAddress {bindAddress}")
+        tcpport = reactor.listenTCP(
+            bindAddress,
+            serverFactory,
+        )
+        addr = tcpport.getHost()
+        self.assertEqual(addr.port, port)
+        confirmPort(tcpport)
+
+    def test_bindAddressListenInconsistent(self):
+        """
+        Both an interface= and port= with Binding cannot be
+        specifed at once
+        """
+        host, port = findFreePort(self.interface, self.family)[:2]
+        reactor = self.buildReactor()
+
+        serverFactory = MyServerFactory()
+        bindAddress = makeBinding(host, port)
+
+        log.msg(f"Listen with bindAddress {bindAddress}")
+        with self.assertRaises(ValueError):
+            _ = reactor.listenTCP(
+                bindAddress,
+                serverFactory,
+                interface="inconsistent interface",
+            )
+
+    def test_bindAddressListenConsistent(self):
+        """
+        It is okay to specify both a Binding and an interface as long as
+        they're consistent.
+        """
+        host, port = findFreePort(self.interface, self.family)[:2]
+        reactor = self.buildReactor()
+
+        serverFactory = MyServerFactory()
+        bindAddress = makeBinding(host, port)
+
+        _ = reactor.listenTCP(
+            bindAddress,
+            serverFactory,
+            interface=host,
+        )
+
+    def test_bindAddressLegacy(self):
+        """
+        We can use a (host, port) 2-tuple for the binding
+        """
+
+        def check_client(client):
+            reuseAddr = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+            )
+            self.assertEqual(reuseAddr, False)
+            if platformType == "posix" and sys.platform != "cygwin":
+                reusePort = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+                )
+                self.assertEqual(reusePort, False)
+
+        self._actuallyTestBindAddressConnect(
+            lambda host, port: tuple((host, port)), check_client
+        )
+
+    def test_bindAddressLegacyServerDefault(self):
+        """
+        Legacy defaults for SO_REUSEADDR and SO_REUSEPORT are
+        different for the connect vs listen APIs: SO_REUSEADDR was
+        always specified in Twisted 26.4.0 and earlier for listen
+        ports.
+        """
+
+        def check_server(client):
+            if platformType == "posix" and sys.platform != "cygwin":
+                reuseAddr = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+                )
+                self.assertEqual(reuseAddr, True)
+                reusePort = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+                )
+                self.assertEqual(reusePort, False)
+
+        self._actuallyTestBindAddressListen(lambda host, port: port, check_server)
+
+    def test_bindAddressIllegal(self):
+        """
+        An error happens when passing something unsupported
+        """
+
+        class Unsupported:
+            pass
+
+        def bind(host, port):
+            return Unsupported()
+
+        with self.assertRaises((AssertionError, SkipTest)):
+            self._actuallyTestBindAddressConnect(bind, lambda _: None)
+
+    @skipIf(
+        not (platformType == "posix" and sys.platform != "cygwin"),
+        "Only works on POSIX",
+    )
+    def test_bindAddressBasic(self):
+        """
+        Defaults for makeBinding are correct
+        """
+
+        def check(client):
+            if platformType == "posix" and sys.platform != "cygwin":
+                reuseAddr = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+                )
+                self.assertEqual(reuseAddr, False)
+                reusePort = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+                )
+                self.assertEqual(reusePort, False)
+
+        self._actuallyTestBindAddressConnect(makeBinding, check)
+        self._actuallyTestBindAddressListen(makeBinding, check)
+
+    @skipIf(
+        not (platformType == "posix" and sys.platform != "cygwin"),
+        "Only works on POSIX",
+    )
+    def test_bindAddressReusePort(self):
+        def check(client):
+            if platformType == "posix" and sys.platform != "cygwin":
+                reuseAddr = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+                )
+                self.assertEqual(reuseAddr, False)
+                reusePort = bool(
+                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+                )
+                self.assertEqual(reusePort, True)
+
+        def bind(a, b):
+            return makeBinding(a, b, reusePort=True, reuseAddr=False)
+
+        self._actuallyTestBindAddressConnect(bind, check)
+        self._actuallyTestBindAddressListen(bind, check)
+
+    @skipIf(
+        not (platformType == "posix" and sys.platform != "cygwin"),
+        "Only works on POSIX",
+    )
+    def test_bindAddressReuseAddr(self):
+        def check(client):
+            reuseAddr = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+            )
+            reusePort = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+            )
+            self.assertEqual(reuseAddr, True)
+            self.assertEqual(reusePort, False)
+
+        def bind(a, b):
+            return makeBinding(a, b, reuseAddr=True)
+
+        self._actuallyTestBindAddressConnect(bind, check)
+        self._actuallyTestBindAddressListen(bind, check)
+
+    @skipIf(
+        not (platformType == "posix" and sys.platform != "cygwin"),
+        "Only works on POSIX",
+    )
+    def test_bindAddressReuseAddrPort(self):
+        def check(client):
+            reuseAddr = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+            )
+            reusePort = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+            )
+            self.assertEqual(reuseAddr, True)
+            reusePort = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+            )
+            self.assertEqual(reusePort, True)
+
+        def bind(a, b):
+            return makeBinding(a, b, reuseAddr=True, reusePort=True)
+
+        self._actuallyTestBindAddressConnect(bind, check)
+        self._actuallyTestBindAddressListen(bind, check)
 
 
 class TCPConnectorTestsBuilder(ReactorBuilder):
@@ -2567,6 +2804,7 @@ globals().update(TCP4ConnectorTestsBuilder.makeTestCaseClasses())
 globals().update(TCP6ConnectorTestsBuilder.makeTestCaseClasses())
 globals().update(TCPTransportTestsBuilder.makeTestCaseClasses())
 globals().update(AdoptStreamConnectionTestsBuilder.makeTestCaseClasses())
+globals().update(TestBindAddressBuilder.makeTestCaseClasses())
 
 
 class ServerAbortsTwice(ConnectableProtocol):
