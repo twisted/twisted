@@ -17,18 +17,18 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.9.12"
+requires-python = ">=3.10"
 authors = [
     { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "zope.interface >= 5",
@@ -51,7 +51,7 @@ dependencies = [
 # We trust semantic versioning and auto-upgrading to a bugfix release
 # should be OK.
 test = [
-    "cython-test-exception-raiser >= 1.0.2, <2",
+    "cython-test-exception-raiser ~= 26.4.1",
     "PyHamcrest >= 2",
     "hypothesis >= 6.56",
     "httpx[http2] >= 0.27",
@@ -60,20 +60,20 @@ test = [
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
-    "towncrier ~= 23.6",
     "pydoctor ~= 25.4.0",
     "sphinx-rtd-theme ~= 1.3",
     "sphinx >= 6, <7",
+    "twisted[dev]",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[test]",
-    "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
     "coverage ~= 7.5",
+    "towncrier ~= 23.6",
 ]
 
 tls = [
@@ -115,9 +115,9 @@ all-non-platform = [
 
 macos-platform = [
     "twisted[all-non-platform]",
-    "pyobjc-core >= 12 ; python_version >= '3.10'",
-    "pyobjc-framework-CFNetwork >= 12; python_version >= '3.10'",
-    "pyobjc-framework-Cocoa >= 12; python_version >= '3.10'",
+    "pyobjc-core >= 12",
+    "pyobjc-framework-CFNetwork >= 12",
+    "pyobjc-framework-Cocoa >= 12",
 ]
 
 windows-platform = [
@@ -132,14 +132,13 @@ osx-platform = [
 
 gtk-platform = [
     "twisted[all-non-platform]",
-    "pygobject; python_version >= '3.10'",
-    "pygobject < 3.52.1; python_version < '3.10'",
+    "pygobject",
 ]
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy==1.19.1",
-    "mypy-zope==1.0.14",
+    "mypy==2.1.0",
+    "mypy-zope==1.0.15",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -284,8 +283,10 @@ include = [
         name = "Misc"
         showcontent = false
 
+# Next time you need to work on black consider migration to ruff
+# https://github.com/twisted/twisted/issues/12646
 [tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"

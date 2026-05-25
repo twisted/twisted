@@ -433,9 +433,10 @@ class _Assertions(pyunit.TestCase):
         super().assertEqual(first, second, msg)
         return first
 
+    # We keep all these aliases for backward compatibility.
+    assertEquals = assertEqual
     failUnlessEqual = assertEqual
     failUnlessEquals = assertEqual
-    assertEqual = assertEqual
 
     def assertIs(self, first, second, msg=None):
         """
@@ -480,7 +481,8 @@ class _Assertions(pyunit.TestCase):
             raise self.failureException(msg or f"{first!r} == {second!r}")
         return first
 
-    assertNotEqual = assertNotEqual
+    # We keep all these aliases for backward compatibility.
+    assertNotEquals = assertNotEqual
     failIfEquals = assertNotEqual
     failIfEqual = assertNotEqual
 

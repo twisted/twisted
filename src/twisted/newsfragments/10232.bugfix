@@ -1,1 +1,0 @@
-TLS version range constraints passed to twisted.internet.ssl.CertificateOptions are now properly respected rather than excluding the version being passed as the desired constraint.

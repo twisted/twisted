@@ -109,12 +109,8 @@ class LoggerTests(unittest.TestCase):
         )
 
         self.assertEqual(cast(TestLogger, obj.log).namespace, expectedNamespace)
-        self.assertEqual(
-            cast(type[TestLogger], LogComposedObject.log).namespace, expectedNamespace
-        )
-        self.assertIs(
-            cast(type[TestLogger], LogComposedObject.log).source, LogComposedObject
-        )
+        self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
+        self.assertIs(LogComposedObject.log.source, LogComposedObject)
         self.assertIs(cast(TestLogger, obj.log).source, obj)
         self.assertIsNone(Logger().source)
 

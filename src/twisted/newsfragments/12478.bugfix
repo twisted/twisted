@@ -1,1 +1,0 @@
-twisted.internet.protocol.ReconnectingClientFactory: Don't multiply by ``factor`` for initial delay, but use ``initialDelay`` directly.

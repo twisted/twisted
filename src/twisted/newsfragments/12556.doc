@@ -1,1 +1,0 @@
-Type annotations now use modern PEP 585 built-in generics and PEP 604 union syntax throughout the project.

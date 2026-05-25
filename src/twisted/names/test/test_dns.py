@@ -352,6 +352,52 @@ class NameTests(unittest.TestCase):
         stream = BytesIO(b"\xc0\x00")
         self.assertRaises(ValueError, name.decode, stream)
 
+    def test_rejectTooManyCompressionPointers(self):
+        """
+        L{Name.decode} raises L{dns.DNSDecodeError} when it would have to
+        follow more than L{Name.maxCompressionPointers} compression
+        pointers to finish decoding a name.
+        """
+        # Four distinct pointers chained end-to-end, terminated by a zero
+        # label byte.  With maxCompressionPointers of three the fourth
+        # dereference must trip the safety limit.
+        payload = b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"
+        name = dns.Name()
+        name.maxCompressionPointers = 3
+        self.assertRaises(dns.DNSDecodeError, name.decode, BytesIO(payload))
+
+    def test_decodeRecoversAfterDNSDecodeError(self):
+        """
+        After L{Name.decode} raises L{dns.DNSDecodeError}, subsequent
+        L{Name.decode} calls continue to work.  No residual
+        compression-pointer counter leaks across calls, so a legitimate
+        name decoded right after a hostile one still succeeds.
+        """
+        # First, force a DNSDecodeError by decoding a payload that
+        # exceeds the configured limit.
+        hostile = dns.Name()
+        hostile.maxCompressionPointers = 3
+        self.assertRaises(
+            dns.DNSDecodeError,
+            hostile.decode,
+            BytesIO(b"\xc0\x02\xc0\x04\xc0\x06\xc0\x08\x00"),
+        )
+
+        # Then prove the process has not been poisoned: a legitimate
+        # name still decodes normally, both with a fresh instance and
+        # with the instance that just errored.
+        stream = BytesIO()
+        dns.Name(b"example.org").encode(stream)
+
+        fresh = dns.Name()
+        stream.seek(0)
+        fresh.decode(stream)
+        self.assertEqual(fresh.name, b"example.org")
+
+        stream.seek(0)
+        hostile.decode(stream)
+        self.assertEqual(hostile.name, b"example.org")
+
     def test_equality(self):
         """
         L{Name} instances are equal as long as they have the same value for
@@ -760,6 +806,37 @@ class MessageTests(unittest.SynchronousTestCase):
         L{dns.Message.authenticData} has default value 0.
         """
         self.assertEqual(dns.Message().authenticData, 0)
+
+    def test_rejectCompressionPointerFlood(self):
+        """
+        L{Message.decode} installs a shared compression-pointer counter and
+        raises L{dns.DNSDecodeError} when the aggregate number of pointer
+        dereferences across every record in the message exceeds
+        L{dns.Message.maxCompressionPointers}.
+        """
+        chainLength = 100
+        numRecords = 8000
+        header = struct.pack("!H2B4H", 0x1234, 0x80, 0x00, 0, numRecords, 0, 0)
+
+        # Long compression chain inside the RDATA of an unknown
+        # record so that subsequent records can aim pointers at it.
+        owner = b"\x04rrrr\x00"
+        chainBase = len(header) + len(owner) + 10
+        chain = bytearray()
+        for i in range(chainLength):
+            chain += struct.pack("!H", 0xC000 | (chainBase + 2 * (i + 1)))
+        chain += b"\x04test\x00"
+
+        firstRecord = owner + struct.pack("!HHIH", 999, 1, 0, len(chain)) + bytes(chain)
+        followupRecord = (
+            struct.pack("!H", 0xC000 | chainBase)
+            + struct.pack("!HHIH", 1, 1, 0, 4)
+            + b"\x00\x00\x00\x00"
+        )
+        payload = header + firstRecord + followupRecord * (numRecords - 1)
+
+        message = dns.Message()
+        self.assertRaises(dns.DNSDecodeError, message.decode, BytesIO(payload))
 
     def test_authenticDataOverride(self):
         """

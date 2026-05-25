@@ -84,10 +84,10 @@ class LineLogger(basic.LineReceiver):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    tag = None
-    stream = None
+    tag = None  # type:ignore[assignment]
+    stream = None  # type:ignore[assignment]
     delimiter = b"\n"
-    service = None
+    service = None  # type:ignore[assignment]
 
     def lineReceived(self, line: bytes) -> None:
         try:
@@ -106,8 +106,8 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    service = None
-    name = None
+    service = None  # type:ignore[assignment]
+    name = None  # type:ignore[assignment]
 
     def connectionMade(self) -> None:
         self._output = LineLogger()

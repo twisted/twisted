@@ -60,14 +60,15 @@ version of jelly running on an older version of Python.)
 
 """
 
+from __future__ import annotations
+
 import copy
 import datetime
 import decimal
-
-# System Imports
 import types
 import warnings
 from functools import reduce
+from typing import TYPE_CHECKING, Callable
 
 from zope.interface import implementer
 
@@ -81,12 +82,13 @@ from twisted.persisted.crefutil import (
     _InstanceMethod,
     _Tuple,
 )
-
-# Twisted Imports
 from twisted.python.compat import nativeString
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.reflect import namedAny, namedObject, qual
 from twisted.spread.interfaces import IJellyable, IUnjellyable
+
+if TYPE_CHECKING:
+    from .pb import RemoteCopy
 
 DictTypes = (dict,)
 
@@ -122,8 +124,8 @@ deprecatedModuleAttribute(
 
 # errors
 unpersistable_atom = b"unpersistable"  # u
-unjellyableRegistry = {}
-unjellyableFactoryRegistry = {}
+unjellyableRegistry: dict[str, type[object]] = {}
+unjellyableFactoryRegistry: dict[str, Callable[..., RemoteCopy]] = {}
 
 
 def _createBlank(cls):

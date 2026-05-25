@@ -62,8 +62,7 @@ from twisted.web.iweb import (
 # any of the real implementation.
 
 if TYPE_CHECKING:
-    from email.message import EmailMessage as _InfoType
-    from http.client import HTTPResponse as _ResponseBase
+    from http.client import HTTPMessage as _InfoType, HTTPResponse as _ResponseBase
     from urllib.request import Request as _RequestBase
 else:
     _RequestBase = object

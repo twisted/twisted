@@ -315,6 +315,19 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         self._testUnequalPair(x, y)
         self._testUnequalPair(y, z)
 
+    def test_assertEqual_plural_form(self):
+        """
+        The plural forms are still avaialble for backward compatibility.
+        """
+        self.assertIs(
+            unittest.SynchronousTestCase.assertEqual,
+            unittest.SynchronousTestCase.assertEquals,
+        )
+        self.assertIs(
+            unittest.SynchronousTestCase.assertNotEqual,
+            unittest.SynchronousTestCase.assertNotEquals,
+        )
+
     def test_assertEqualMessage(self):
         """
         When a message is passed to L{assertEqual} it is included in the error

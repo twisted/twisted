@@ -203,6 +203,7 @@ class File(resource.Resource, filepath.FilePath[str]):
     processors: dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
+    ignoredExts: Sequence[str]
 
     type = None
 
@@ -245,7 +246,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         filepath.FilePath.__init__(self, path)
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
-            warnings.warn("ignoredExts should receive a list, not a boolean")
+            warnings.warn(  # type:ignore[unreachable]
+                "ignoredExts should receive a list, not a boolean"
+            )
             if ignoredExts or allowExt:
                 self.ignoredExts = ["*"]
             else:

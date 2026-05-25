@@ -241,37 +241,37 @@ def comparable(klass):
     def __eq__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c == 0
 
     def __ne__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c != 0
 
     def __lt__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c < 0
 
     def __le__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c <= 0
 
     def __gt__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c > 0
 
     def __ge__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c >= 0
 
     klass.__lt__ = __lt__

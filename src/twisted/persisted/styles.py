@@ -241,7 +241,7 @@ class Ephemeral:
 
 
 versionedsToUpgrade: dict[int, "Versioned"] = {}
-upgraded = {}
+upgraded: dict[int, int] = {}
 
 
 def doUpgrade():
