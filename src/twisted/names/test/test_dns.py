@@ -1010,6 +1010,101 @@ class MessageTests(unittest.SynchronousTestCase):
         self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
+    def _bigTXTAnswers(self, count):
+        """
+        Build a list of C{count} TXT L{dns.RRHeader} answer records sharing one
+        name, each large enough that several of them overflow a 512 octet UDP
+        message.
+
+        @param count: The number of answer records to build.
+        @type count: L{int}
+
+        @return: The answer records.
+        @rtype: L{list} of L{dns.RRHeader}
+        """
+        name = b"big-txt.example.com"
+        return [
+            dns.RRHeader(
+                name=name,
+                type=dns.TXT,
+                ttl=500,
+                payload=dns.Record_TXT(b"a" * 100, ttl=500),
+            )
+            for _ in range(count)
+        ]
+
+    def test_encodeTruncationSetsTCBit(self):
+        """
+        When the answers do not all fit within L{dns.Message.maxSize},
+        L{dns.Message.encode} sets the TC (truncation) bit, drops the records
+        that do not fit on a whole-record boundary, and writes a section count
+        that matches the records actually included.  The encoded message stays
+        within C{maxSize} and decodes cleanly.  This is required by RFC 1035
+        section 4.1.1 and RFC 2181 section 9; a partial RRSet must never be
+        served as if it were complete.  See #12604.
+        """
+        message = dns.Message(id=1, answer=1, auth=1)
+        message.maxSize = 512
+        message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
+        message.answers = self._bigTXTAnswers(8)
+
+        wire = message.toStr()
+
+        self.assertTrue(message.trunc, "TC bit was not set on a truncated message.")
+        self.assertLessEqual(len(wire), 512)
+
+        decoded = dns.Message()
+        decoded.fromStr(wire)
+
+        self.assertTrue(decoded.trunc)
+        # Some but not all of the records were included ...
+        self.assertGreater(len(decoded.answers), 0)
+        self.assertLess(len(decoded.answers), 8)
+        # ... and the count in the header matches the records in the body, so
+        # no partial record was emitted.
+        self.assertEqual(struct.unpack("!H", wire[6:8])[0], len(decoded.answers))
+
+    def test_encodeNoTruncationWhenItFits(self):
+        """
+        When every answer fits within L{dns.Message.maxSize},
+        L{dns.Message.encode} leaves the TC bit clear and includes every
+        record.
+        """
+        answers = self._bigTXTAnswers(8)
+        message = dns.Message(id=1, answer=1, auth=1)
+        message.maxSize = 4096
+        message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
+        message.answers = answers
+
+        wire = message.toStr()
+
+        self.assertFalse(message.trunc)
+
+        decoded = dns.Message()
+        decoded.fromStr(wire)
+        self.assertFalse(decoded.trunc)
+        self.assertEqual(len(decoded.answers), len(answers))
+
+    def test_encodeNoMaxSizeNeverTruncates(self):
+        """
+        A L{dns.Message} whose C{maxSize} is C{0} (as produced by
+        L{dns.Message.decode}) is never truncated by L{dns.Message.encode},
+        regardless of how large the answer section is.
+        """
+        answers = self._bigTXTAnswers(8)
+        message = dns.Message(id=1, answer=1, auth=1)
+        message.maxSize = 0
+        message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
+        message.answers = answers
+
+        wire = message.toStr()
+
+        self.assertFalse(message.trunc)
+        decoded = dns.Message()
+        decoded.fromStr(wire)
+        self.assertFalse(decoded.trunc)
+        self.assertEqual(len(decoded.answers), len(answers))
+
     def test_lookupRecordTypeDefault(self):
         """
         L{Message.lookupRecordType} returns C{dns.UnknownRecord} if it is
