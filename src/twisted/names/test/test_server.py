@@ -1104,14 +1104,13 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertEqual(args, (m,))
         self.assertEqual(kwargs, {})
 
-    def _oversizedResponse(self):
+    def _oversizedResponse(self) -> dns.Message:
         """
         Build a response L{dns.Message} carrying a TXT RRSet that does not fit
         within a 512 octet UDP message, with C{maxSize} set to C{0} as
         L{server.DNSServerFactory._responseFromMessage} would leave it.
 
         @return: The response message.
-        @rtype: L{dns.Message}
         """
         name = b"big-txt.example.com"
         message = dns.Message(id=1, answer=1, auth=1)

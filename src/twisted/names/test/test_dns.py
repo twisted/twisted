@@ -1010,17 +1010,15 @@ class MessageTests(unittest.SynchronousTestCase):
         self.assertIsInstance(msg2.answers[0].payload, dns.Record_NULL)
         self.assertEqual(msg2.answers[0].payload.payload, bytes)
 
-    def _bigTXTAnswers(self, count):
+    def _bigTXTAnswers(self, count: int) -> list[dns.RRHeader]:
         """
         Build a list of C{count} TXT L{dns.RRHeader} answer records sharing one
         name, each large enough that several of them overflow a 512 octet UDP
         message.
 
         @param count: The number of answer records to build.
-        @type count: L{int}
 
         @return: The answer records.
-        @rtype: L{list} of L{dns.RRHeader}
         """
         name = b"big-txt.example.com"
         return [
