@@ -31,14 +31,13 @@ from twisted.internet.interfaces import (
     IProtocolNegotiationFactory,
 )
 from twisted.internet.task import Clock
-from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.reflect import requireModule
 from twisted.test.iosim import IOPump, connectedServerAndClient
 from twisted.trial import util
-from twisted.trial.unittest import SkipTest, SynchronousTestCase, TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 skipSSL = ""
 
@@ -46,7 +45,7 @@ if requireModule("OpenSSL"):
     import ipaddress
 
     from OpenSSL import SSL
-    from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
+    from OpenSSL.crypto import FILETYPE_PEM, FILETYPE_TEXT, TYPE_DSA, X509, PKey
 
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
@@ -126,29 +125,37 @@ A_PEER_CERTIFICATE_PEM = """
 A_KEYPAIR = getModule(__name__).filePath.sibling("server.pem").getContent()
 
 
-def counter(counter=itertools.count()):
+def counter(counter=itertools.count(1)):
     """
-    Each time we're called, return the next integer in the natural numbers.
+    Each time we're called, return the next integer in the natural numbers,
+    starting from 1 (certificate serial numbers must be positive).
     """
     return next(counter)
 
 
 def makeCertificate(**kw):
-    keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 2048)
+    privateKey = generate_private_key(public_exponent=65537, key_size=2048)
+    name = sslverify.DN(**kw)._toNameObject()
+    notBefore = datetime.datetime.now(datetime.timezone.utc)
+    certificate = (
+        x509.CertificateBuilder()
+        .issuer_name(name)
+        .subject_name(name)
+        .public_key(privateKey.public_key())
+        .serial_number(counter())
+        .not_valid_before(notBefore)
+        .not_valid_after(notBefore + datetime.timedelta(days=365))
+        .add_extension(
+            x509.BasicConstraints(ca=True, path_length=None),
+            critical=True,
+        )
+        .sign(privateKey, hashes.SHA256())
+    )
 
-    certificate = X509()
-    certificate.gmtime_adj_notBefore(0)
-    certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
-    for xname in certificate.get_issuer(), certificate.get_subject():
-        for k, v in kw.items():
-            setattr(xname, k, nativeString(v))
-
-    certificate.set_serial_number(counter())
-    certificate.set_pubkey(keypair)
-    certificate.sign(keypair, "md5")
-
-    return keypair, certificate
+    return (
+        PKey.from_cryptography_key(privateKey),
+        X509.from_cryptography(certificate),
+    )
 
 
 oneDay = datetime.timedelta(1, 0, 0)
@@ -976,9 +983,15 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         )
         opts._contextFactory = FakeContext
         ctx = opts.getContext()
-        self.assertEqual(self.sKey, ctx._privateKey)
-        self.assertEqual(self.sCert, ctx._certificate)
-        self.assertEqual(self.extraCertChain, ctx._extraCertChain)
+        self.assertEqual(
+            self.sKey.to_cryptography_key().private_numbers(),
+            ctx._privateKey.private_numbers(),
+        )
+        self.assertEqual(self.sCert.to_cryptography(), ctx._certificate)
+        self.assertEqual(
+            [cert.to_cryptography() for cert in self.extraCertChain],
+            ctx._extraCertChain,
+        )
 
     def test_extraChainDoesNotBreakPyOpenSSL(self):
         """
@@ -1959,9 +1972,6 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Connections use ECDH when OpenSSL supports it.
         """
-        if not get_elliptic_curves():
-            raise SkipTest("OpenSSL does not support ECDH.")
-
         onData = defer.Deferred()
         # TLS 1.3 cipher suites do not specify the key exchange
         # mechanism:
@@ -3465,6 +3475,29 @@ class KeyPairTests(TestCase):
             sslverify.KeyPair(self.sKey).__setstate__,
             state,
         )
+
+    def test_generateOnlySupportsRSA(self):
+        """
+        L{sslverify.KeyPair.generate} rejects key types other than RSA.
+        """
+        self.assertRaises(ValueError, sslverify.KeyPair.generate, TYPE_DSA)
+
+    def test_dumpPEM(self):
+        """
+        A L{sslverify.KeyPair} dumped to PEM can be loaded back.
+        """
+        keyPair = sslverify.KeyPair(self.sKey)
+        data = keyPair.dump(FILETYPE_PEM)
+        self.assertEqual(
+            keyPair.keyHash(), sslverify.KeyPair.load(data, FILETYPE_PEM).keyHash()
+        )
+
+    def test_dumpUnsupportedFormat(self):
+        """
+        L{sslverify.KeyPair.dump} rejects formats other than C{FILETYPE_PEM}
+        and C{FILETYPE_ASN1}.
+        """
+        self.assertRaises(ValueError, sslverify.KeyPair(self.sKey).dump, FILETYPE_TEXT)
 
     def test_noTrailingNewlinePemCert(self):
         noTrailingNewlineKeyPemPath = getModule("twisted.test").filePath.sibling(

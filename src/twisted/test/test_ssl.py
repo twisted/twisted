@@ -5,6 +5,7 @@
 Tests for twisted SSL support.
 """
 
+import datetime
 import os
 
 import hamcrest
@@ -19,10 +20,11 @@ from twisted.test.test_tcp import ProperlyCloseFilesMixin
 from twisted.trial.unittest import TestCase
 
 try:
-    from OpenSSL import SSL, crypto
+    from OpenSSL import SSL
 
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.x509.oid import NameOID
 
     from twisted.internet import ssl
@@ -166,36 +168,34 @@ def generateCertificateObjects(organization, organizationalUnit):
 
     @return: a tuple of (key, request, certificate) objects.
     """
-    pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 2048)
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
+            x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, organizationalUnit),
+        ]
+    )
     req = (
         x509.CertificateSigningRequestBuilder()
-        .subject_name(
-            x509.Name(
-                [
-                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
-                    x509.NameAttribute(
-                        NameOID.ORGANIZATIONAL_UNIT_NAME, organizationalUnit
-                    ),
-                ]
-            )
-        )
-        .sign(pkey.to_cryptography_key(), hashes.SHA256())
+        .subject_name(name)
+        .sign(key, hashes.SHA256())
     )
 
     # Here comes the actual certificate
-    cert = crypto.X509()
-    cert.set_serial_number(1)
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(60)  # Testing certificates need not be long lived
-    subject = cert.get_subject()
-    subject.O = organization
-    subject.OU = organizationalUnit
-    cert.set_issuer(cert.get_subject())
-    cert.set_pubkey(pkey)
-    cert.sign(pkey, "md5")
+    notBefore = datetime.datetime.now(datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(1)
+        .not_valid_before(notBefore)
+        # Testing certificates need not be long lived
+        .not_valid_after(notBefore + datetime.timedelta(seconds=60))
+        .sign(key, hashes.SHA256())
+    )
 
-    return pkey, req, cert
+    return key, req, cert
 
 
 def generateCertificateFiles(basename, organization, organizationalUnit):
@@ -203,12 +203,19 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
     Create certificate files key, req and cert prefixed by C{basename} for
     given C{organization} and C{organizationalUnit}.
     """
-    pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
+    key, req, cert = generateCertificateObjects(organization, organizationalUnit)
 
     for ext, data in [
-        ("key", crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)),
+        (
+            "key",
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            ),
+        ),
         ("req", req.public_bytes(serialization.Encoding.PEM)),
-        ("cert", crypto.dump_certificate(crypto.FILETYPE_PEM, cert)),
+        ("cert", cert.public_bytes(serialization.Encoding.PEM)),
     ]:
         fName = os.extsep.join((basename, ext)).encode("utf-8")
         FilePath(fName).setContent(data)

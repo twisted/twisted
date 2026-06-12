@@ -135,7 +135,6 @@ mypy = [
     "mypy==2.1.0",
     "mypy-zope==1.0.15",
     "types-setuptools",
-    "types-pyOpenSSL",
 ]
 
 [project.scripts]

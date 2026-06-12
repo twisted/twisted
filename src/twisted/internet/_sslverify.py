@@ -7,9 +7,10 @@ from __future__ import annotations
 import warnings
 from binascii import hexlify
 from collections.abc import Sequence
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypeVar, cast
 
 from zope.interface import Interface, implementer
 
@@ -22,6 +23,7 @@ import attr
 from constantly import FlagConstant, Flags, NamedConstant, Names
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import dsa, rsa
 from cryptography.x509.oid import NameOID
 from incremental import Version
 
@@ -53,7 +55,18 @@ from ._service_identity import (
 )
 
 if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519
+
     from twisted.protocols.tls import TLSMemoryBIOProtocol
+
+    # The private key types accepted by SSL.Context.use_privatekey.
+    _ContextPrivateKey: TypeAlias = (
+        dsa.DSAPrivateKey
+        | ec.EllipticCurvePrivateKey
+        | ed25519.Ed25519PrivateKey
+        | ed448.Ed448PrivateKey
+        | rsa.RSAPrivateKey
+    )
 
 _log = Logger()
 
@@ -245,15 +258,19 @@ class DistinguishedName(dict[str, bytes]):
         for k, v in kw.items():
             setattr(self, k, v)
 
-    def _copyFrom(self, x509name):
-        for name in _x509names:
-            value = getattr(x509name, name, None)
-            if value is not None:
-                setattr(self, name, value)
+    def _copyFrom(self, x509name: x509.Name) -> None:
+        for attribute in x509name:
+            name = _x509OIDNames.get(attribute.oid)
+            if name is not None:
+                setattr(self, name, attribute.value)
 
-    def _copyInto(self, x509name):
-        for k, v in self.items():
-            setattr(x509name, k, nativeString(v))
+    def _toNameObject(self) -> x509.Name:
+        return x509.Name(
+            [
+                x509.NameAttribute(_x509NameOIDs[k], nativeString(v))
+                for k, v in self.items()
+            ]
+        )
 
     def __repr__(self) -> str:
         return "<DN %s>" % (dict.__repr__(self)[1:-1])
@@ -311,7 +328,7 @@ class CertBase:
 
     def _copyName(self, suffix):
         dn = DistinguishedName()
-        dn._copyFrom(getattr(self.original, "get_" + suffix)())
+        dn._copyFrom(getattr(self.original.to_cryptography(), suffix))
         return dn
 
     def getSubject(self):
@@ -742,7 +759,23 @@ class KeyPair(PublicKey):
         return Class(crypto.load_privatekey(format, data))
 
     def dump(self, format=crypto.FILETYPE_ASN1):
-        return crypto.dump_privatekey(format, self.original)
+        key = self.original.to_cryptography_key()
+        # These (encoding, format) pairs match the output of pyOpenSSL's
+        # dump_privatekey byte-for-byte.
+        if format == crypto.FILETYPE_ASN1:
+            return key.private_bytes(
+                serialization.Encoding.DER,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            )
+        elif format == crypto.FILETYPE_PEM:
+            return key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            )
+        else:
+            raise ValueError(f"Unsupported format: {format!r}")
 
     @deprecated(Version("Twisted", 15, 0, 0), "a real persistence system")
     def __getstate__(self):
@@ -765,9 +798,10 @@ class KeyPair(PublicKey):
 
     @classmethod
     def generate(Class, kind=crypto.TYPE_RSA, size=2048):
-        pkey = crypto.PKey()
-        pkey.generate_key(kind, size)
-        return Class(pkey)
+        if kind != crypto.TYPE_RSA:
+            raise ValueError(f"Unsupported key type: {kind!r}")
+        key = rsa.generate_private_key(public_exponent=65537, key_size=size)
+        return Class(crypto.PKey.from_cryptography_key(key))
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
@@ -775,14 +809,7 @@ class KeyPair(PublicKey):
     def requestObject(self, distinguishedName, digestAlgorithm="sha256"):
         req = (
             x509.CertificateSigningRequestBuilder()
-            .subject_name(
-                x509.Name(
-                    [
-                        x509.NameAttribute(_x509NameOIDs[k], nativeString(v))
-                        for k, v in distinguishedName.items()
-                    ]
-                )
-            )
+            .subject_name(distinguishedName._toNameObject())
             .sign(
                 self.original.to_cryptography_key(),
                 _digestAlgorithms[digestAlgorithm](),
@@ -855,15 +882,28 @@ class KeyPair(PublicKey):
         Sign a CertificateRequest instance, returning a Certificate instance.
         """
         req = requestObject.original
-        cert = crypto.X509()
-        issuerDistinguishedName._copyInto(cert.get_issuer())
-        requestObject._subjectToDistinguishedName()._copyInto(cert.get_subject())
-        cert.set_pubkey(crypto.PKey.from_cryptography_key(req.public_key()))
-        cert.gmtime_adj_notBefore(0)
-        cert.gmtime_adj_notAfter(secondsToExpiry)
-        cert.set_serial_number(serialNumber)
-        cert.sign(self.original, digestAlgorithm)
-        return Certificate(cert)
+        notBefore = datetime.now(timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .issuer_name(issuerDistinguishedName._toNameObject())
+            .subject_name(req.subject)
+            .public_key(req.public_key())
+            .serial_number(serialNumber)
+            .not_valid_before(notBefore)
+            .not_valid_after(notBefore + timedelta(seconds=secondsToExpiry))
+            # This API historically issued version 1 certificates, which may
+            # act as CAs.  Version 3 certificates need basicConstraints to say
+            # so explicitly, or they cannot sign other certificates.
+            .add_extension(
+                x509.BasicConstraints(ca=True, path_length=None),
+                critical=False,
+            )
+            .sign(
+                self.original.to_cryptography_key(),
+                _digestAlgorithms[digestAlgorithm](),
+            )
+        )
+        return Certificate(crypto.X509.from_cryptography(cert))
 
     def selfSignedCert(self, serialNumber, **kw):
         dn = DN(**kw)
@@ -1123,7 +1163,7 @@ class ClientTLSOptions:
 
 def _verifyCB(
     tlsProtocol: TLSMemoryBIOProtocol, hostIsDNS: bool, hostnameASCII: str
-) -> Callable[[Connection, X509, int, int, bool], bool]:
+) -> Callable[[Connection, X509, int, int, int], bool]:
     svcid: ServiceID
     if hostIsDNS:
         svcid = DNS_ID(hostnameASCII)
@@ -1133,9 +1173,9 @@ def _verifyCB(
     weakProtoRef: TLSMemoryBIOProtocol | None = tlsProtocol
 
     def verifyCallback(
-        conn: Connection, cert: X509, err: int, depth: int, ok: bool
+        conn: Connection, cert: X509, err: int, depth: int, ok: int
     ) -> bool:
-        ourVerifyResult = ok
+        ourVerifyResult = bool(ok)
         nonlocal weakProtoRef
         try:
             if depth != 0:
@@ -1641,7 +1681,7 @@ class OpenSSLCertificateOptions:
         ctx = self.getContext()
         cxn = Connection(ctx)
         if acceptable := protosFromProtocol(protocol, self._acceptableProtocols or ()):
-            cxn.set_alpn_protos(acceptable)
+            cxn.set_alpn_protos(list(acceptable))
         return cxn
 
     def _makeContext(self, skipCiphers: bool = False) -> SSL.Context:
@@ -1659,10 +1699,16 @@ class OpenSSLCertificateOptions:
         ctx.set_mode(self._mode)
 
         if self.certificate is not None and self.privateKey is not None:
-            ctx.use_certificate(self.certificate)
-            ctx.use_privatekey(self.privateKey)
+            # pyOpenSSL deprecates passing its own X509/PKey types here, so
+            # convert them to cryptography objects first.
+            ctx.use_certificate(self.certificate.to_cryptography())
+            # to_cryptography_key is declared as possibly returning a public
+            # key, but this PKey always holds a private key.
+            ctx.use_privatekey(
+                cast("_ContextPrivateKey", self.privateKey.to_cryptography_key())
+            )
             for extraCert in self.extraCertChain:
-                ctx.add_extra_chain_cert(extraCert)
+                ctx.add_extra_chain_cert(extraCert.to_cryptography())
             # Sanity check
             ctx.check_privatekey()
 
