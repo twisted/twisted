@@ -798,9 +798,12 @@ class KeyPair(PublicKey):
 
     @classmethod
     def generate(Class, kind=crypto.TYPE_RSA, size=2048):
-        if kind != crypto.TYPE_RSA:
+        if kind == crypto.TYPE_RSA:
+            key = rsa.generate_private_key(public_exponent=65537, key_size=size)
+        elif kind == crypto.TYPE_DSA:
+            key = dsa.generate_private_key(key_size=size)
+        else:
             raise ValueError(f"Unsupported key type: {kind!r}")
-        key = rsa.generate_private_key(public_exponent=65537, key_size=size)
         return Class(crypto.PKey.from_cryptography_key(key))
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):

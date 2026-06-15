@@ -1,1 +1,0 @@
-twisted.internet.ssl.KeyPair.generate no longer supports generating DSA keys (or any key type other than RSA).

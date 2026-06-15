@@ -50,7 +50,7 @@ if requireModule("OpenSSL"):
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.asymmetric import dsa, ec
     from cryptography.hazmat.primitives.asymmetric.rsa import (
         RSAPrivateKey,
         generate_private_key,
@@ -3476,11 +3476,26 @@ class KeyPairTests(TestCase):
             state,
         )
 
-    def test_generateOnlySupportsRSA(self):
+    def test_generateRSA(self):
         """
-        L{sslverify.KeyPair.generate} rejects key types other than RSA.
+        L{sslverify.KeyPair.generate} generates an RSA key by default.
         """
-        self.assertRaises(ValueError, sslverify.KeyPair.generate, TYPE_DSA)
+        keyPair = sslverify.KeyPair.generate(size=1024)
+        self.assertIsInstance(keyPair.original.to_cryptography_key(), RSAPrivateKey)
+
+    def test_generateDSA(self):
+        """
+        L{sslverify.KeyPair.generate} generates a DSA key when passed
+        L{crypto.TYPE_DSA}.
+        """
+        keyPair = sslverify.KeyPair.generate(TYPE_DSA, size=1024)
+        self.assertIsInstance(keyPair.original.to_cryptography_key(), dsa.DSAPrivateKey)
+
+    def test_generateUnsupportedType(self):
+        """
+        L{sslverify.KeyPair.generate} rejects key types other than RSA and DSA.
+        """
+        self.assertRaises(ValueError, sslverify.KeyPair.generate, object())
 
     def test_dumpPEM(self):
         """
