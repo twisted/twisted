@@ -275,8 +275,12 @@ class GeneralOptions(usage.Options):
         optActions={
             "cipher": usage.CompleteList([v.decode() for v in _ciphers]),
             "macs": usage.CompleteList([v.decode() for v in _macs]),
-            "localforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
+            "localforward": usage.Completer(
+                descr="[listen-addr:]listen-port:host:port"
+            ),
+            "remoteforward": usage.Completer(
+                descr="[listen-addr:]listen-port:host:port"
+            ),
         },
         extraActions=[
             usage.CompleteUserAtHost(),
@@ -311,7 +315,9 @@ class GeneralOptions(usage.Options):
         """
         forwardSpec = self._parseForwardSpec(f)
         if forwardSpec is None:
-            sys.exit(f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
+            sys.exit(
+                f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
+            )
         self.localForwards.append(forwardSpec)
 
     def opt_remoteforward(self, f):
@@ -320,7 +326,9 @@ class GeneralOptions(usage.Options):
         """
         forwardSpec = self._parseForwardSpec(f)
         if forwardSpec is None:
-            sys.exit(f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
+            sys.exit(
+                f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
+            )
         self.remoteForwards.append(forwardSpec)
 
     def opt_compress(self):

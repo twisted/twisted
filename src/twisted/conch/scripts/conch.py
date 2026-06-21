@@ -66,8 +66,12 @@ class ClientOptions(ConchOptions):
     compData = usage.Completions(
         mutuallyExclusive=[("tty", "notty")],
         optActions={
-            "localforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="[listen-addr:]listen-port:host:port"),
+            "localforward": usage.Completer(
+                descr="[listen-addr:]listen-port:host:port"
+            ),
+            "remoteforward": usage.Completer(
+                descr="[listen-addr:]listen-port:host:port"
+            ),
         },
         extraActions=[
             usage.CompleteUserAtHost(),
@@ -105,14 +109,15 @@ class ClientOptions(ConchOptions):
             return None
         return ((lhost, int(lport)), (host, int(port)))
 
-
     def opt_localforward(self, f):
         """
         Forward local port to remote address ([lhost:]lport:host:port)
         """
         forwardSpec = self._parseForwardSpec(f)
         if forwardSpec is None:
-            sys.exit(f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
+            sys.exit(
+                f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
+            )
         self.localForwards.append(forwardSpec)
 
     def opt_remoteforward(self, f):
@@ -121,7 +126,9 @@ class ClientOptions(ConchOptions):
         """
         forwardSpec = self._parseForwardSpec(f)
         if forwardSpec is None:
-            sys.exit(f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported).")
+            sys.exit(
+                f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
+            )
         self.remoteForwards.append(forwardSpec)
 
     def parseArgs(self, host, *command):
@@ -254,7 +261,7 @@ def onConnect():
                 forwarding.SSHListenForwardingFactory(
                     conn, remoteAddr, SSHListenClientForwardingChannel
                 ),
-                interface=localAddr[0]
+                interface=localAddr[0],
             )
             conn.localForwards.append(s)
     if options.remoteForwards:
@@ -262,7 +269,8 @@ def onConnect():
             _log.info(
                 "asking for remote forwarding for {remoteAddr}:{connAddr}",
                 remoteAddr=remoteAddr,
-                connAddr=connAddr)
+                connAddr=connAddr,
+            )
             conn.requestRemoteForwarding(remoteAddr, connAddr)
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutdown)
     if not options["noshell"] or options["agent"]:
@@ -292,7 +300,8 @@ def beforeShutdown():
         _log.info(
             "cancelling {remoteAddr}:{localAddr}",
             remoteAddr=remoteAddr,
-            localAddr=localAddr)
+            localAddr=localAddr,
+        )
         conn.cancelRemoteForwarding(remoteAddr)
 
 
@@ -350,7 +359,8 @@ class SSHConnection(connection.SSHConnection):
         _log.debug(
             "requesting remote forwarding {remoteAddr}:{connAddr}",
             remoteAddr=remoteAddr,
-            connAddr=connAddr)
+            connAddr=connAddr,
+        )
         d.addCallback(self._cbRemoteForwarding, remoteAddr, connAddr)
         d.addErrback(self._ebRemoteForwarding, remoteAddr, connAddr)
 
@@ -358,7 +368,8 @@ class SSHConnection(connection.SSHConnection):
         _log.debug(
             "accepted remote forwarding {remoteAddr}:{connAddr}",
             remoteAddr=remoteAddr,
-            connAddr=connAddr)
+            connAddr=connAddr,
+        )
         self.remoteForwards[remoteAddr] = connAddr
         _log.debug("{remoteForwards!r}", remoteForwards=self.remoteForwards)
 
@@ -366,7 +377,8 @@ class SSHConnection(connection.SSHConnection):
         _log.warn(
             "remote forwarding {remoteAddr}:{connAddr} failed",
             remoteAddr=remoteAddr,
-            connAddr=connAddr)
+            connAddr=connAddr,
+        )
         _log.debug("{f}", f=f)
 
     def cancelRemoteForwarding(self, remotePort):
@@ -391,7 +403,10 @@ class SSHConnection(connection.SSHConnection):
             connectAddr = self.remoteForwards[remoteAddr]
             _log.debug("connect forwarding {connectAddr}", connectAddr=connectAddr)
             return SSHConnectForwardingChannel(
-                connectAddr, remoteWindow=windowSize, remoteMaxPacket=maxPacket, conn=self
+                connectAddr,
+                remoteWindow=windowSize,
+                remoteMaxPacket=maxPacket,
+                conn=self,
             )
         else:
             raise ConchError(
