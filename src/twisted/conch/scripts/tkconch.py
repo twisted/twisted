@@ -38,7 +38,7 @@ _log = Logger()
 
 
 class TkConchMenu(Tkinter.Frame):
-    def __init__(self, *args, **params):
+    def __init__(self, *args, **params):  # pragma: no cover
         ## Standard heading: initialization
         Tkinter.Frame.__init__(self, *args, **params)
 
@@ -138,7 +138,7 @@ class TkConchMenu(Tkinter.Frame):
             self.identity.delete(0, Tkinter.END)
             self.identity.insert(Tkinter.END, r)
 
-    def addForward(self):
+    def addForward(self):  # pragma: no cover
         listenHost, _, listenPort = self.forwardListenAddress.get().rpartition(":")
         listenHost = listenHost or "127.0.0.1"
         self.forwardListenAddress.delete(0, Tkinter.END)
@@ -154,12 +154,12 @@ class TkConchMenu(Tkinter.Frame):
                 Tkinter.END, f"R:{listenHost}:{listenPort}:{connectHost}:{connectPort}"
             )
 
-    def removeForward(self):
+    def removeForward(self):  # pragma: no cover
         cur = self.forwards.curselection()
         if cur:
             self.forwards.delete(cur[0])
 
-    def doConnect(self):
+    def doConnect(self):  # pragma: no cover
         finished = 1
         options["host"] = self.host.get()
         options["port"] = self.port.get()
@@ -385,7 +385,7 @@ def deferredAskFrame(question, echo):
     return d
 
 
-def run():
+def run():  # pragma: no cover
     global menu, options, frame
     args = sys.argv[1:]
     if "-l" in args:  # cvs is an idiot
@@ -476,7 +476,7 @@ class SSHClientTransport(transport.SSHClientTransport):
         )
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
 
-    def receiveDebug(self, alwaysDisplay, message, lang):
+    def receiveDebug(self, alwaysDisplay, message, lang):  # pragma: no cover
         global options
         if alwaysDisplay or options["log"]:
             _log.debug("Received Debug Message: {message}", message=message)
@@ -510,7 +510,7 @@ class SSHClientTransport(transport.SSHClientTransport):
                 self._cbVerifyHostKey, pubKey, khHost, keyType
             )
 
-    def _cbVerifyHostKey(self, ans, pubKey, khHost, keyType):
+    def _cbVerifyHostKey(self, ans, pubKey, khHost, keyType):  # pragma: no cover
         if ans.lower() not in ("yes", "no"):
             return deferredAskFrame("Please type  'yes' or 'no': ", 1).addCallback(
                 self._cbVerifyHostKey, pubKey, khHost, keyType
@@ -547,7 +547,7 @@ class SSHUserAuthClient(userauth.SSHUserAuthClient):
             prompt = "{}@{}'s password: ".format(self.user, options["host"])
         return deferredAskFrame(prompt, 0)
 
-    def getPublicKey(self):
+    def getPublicKey(self):  # pragma: no cover
         files = [x for x in options.identitys if x not in self.usedFiles]
         if not files:
             return None

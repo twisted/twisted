@@ -58,6 +58,11 @@ else:
     StdioInteractingSession = _StdioInteractingSession
 
 
+_conchScript = requireModule("twisted.conch.scripts.conch")
+
+_conchSkip = "conch is importable only on POSIX" if _conchScript is None else None
+
+
 class FakeStdio:
     """
     A fake for testing L{twisted.conch.scripts.conch.SSHSession.eofReceived} and
@@ -805,3 +810,516 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
             ),
             ConchError,
         )
+
+
+class _FakeOptions(dict[str, object]):
+    """
+    Minimal stand-in for L{twisted.conch.scripts.conch.ClientOptions} that
+    supports both attribute access (C{localForwards}/C{remoteForwards}) and
+    C{__getitem__} for option flags.
+    """
+
+    def __init__(self, **flags):
+        super().__init__(flags)
+        self.localForwards = []
+        self.remoteForwards = []
+
+
+class _FakePort:
+    """A stand-in for the object returned by C{reactor.listenTCP}."""
+
+
+class _FakeTransport:
+    """A stand-in transport exposing C{sendIgnore}."""
+
+    sendIgnore = True
+
+
+class _FakeForwardingConn:
+    """A stand-in for the conch C{SSHConnection} used by C{onConnect}."""
+
+    def __init__(self):
+        self.transport = _FakeTransport()
+        self.localForwards = []
+        self.requestedRemote = []
+        self.cancelledRemote = []
+
+    def requestRemoteAddrForwarding(self, remoteAddr, connAddr):
+        self.requestedRemote.append((remoteAddr, connAddr))
+
+    def cancelRemoteAddrForwarding(self, remoteAddr):
+        self.cancelledRemote.append(remoteAddr)
+
+
+class ConchClientOptionsForwardingTests(TestCase):
+    """
+    Tests for forward-spec parsing in
+    L{twisted.conch.scripts.conch.ClientOptions}.
+    """
+
+    skip = _conchSkip
+
+    def _options(self):
+        options = _conchScript.ClientOptions()
+        options.localForwards = []
+        options.remoteForwards = []
+        return options
+
+    def test_parseForwardSpecWithoutListenAddress(self):
+        """
+        A three-part spec defaults the listen address to C{127.0.0.1}.
+        """
+        options = self._options()
+        self.assertEqual(
+            options._parseForwardSpec("8080:dest:90"),
+            (("127.0.0.1", 8080), ("dest", 90)),
+        )
+
+    def test_parseForwardSpecWithListenAddress(self):
+        """
+        A four-part spec uses the supplied listen address.
+        """
+        options = self._options()
+        self.assertEqual(
+            options._parseForwardSpec("1.2.3.4:8080:dest:90"),
+            (("1.2.3.4", 8080), ("dest", 90)),
+        )
+
+    def test_parseForwardSpecTooManyParts(self):
+        """
+        A spec with more than one leading listen address is invalid.
+        """
+        options = self._options()
+        self.assertIsNone(options._parseForwardSpec("a:b:8080:dest:90"))
+
+    def test_parseForwardSpecNonNumericPorts(self):
+        """
+        Specs with non-numeric ports are invalid.
+        """
+        options = self._options()
+        self.assertIsNone(options._parseForwardSpec("xx:dest:90"))
+        self.assertIsNone(options._parseForwardSpec("8080:dest:yy"))
+
+    def test_optLocalforwardValid(self):
+        """
+        A valid local forward spec is recorded.
+        """
+        options = self._options()
+        options.opt_localforward("8080:dest:90")
+        self.assertEqual(
+            options.localForwards, [(("127.0.0.1", 8080), ("dest", 90))]
+        )
+
+    def test_optLocalforwardInvalid(self):
+        """
+        An invalid local forward spec exits.
+        """
+        options = self._options()
+        self.assertRaises(SystemExit, options.opt_localforward, "x:dest:90")
+
+    def test_optRemoteforwardValid(self):
+        """
+        A valid remote forward spec is recorded.
+        """
+        options = self._options()
+        options.opt_remoteforward("8080:dest:90")
+        self.assertEqual(
+            options.remoteForwards, [(("127.0.0.1", 8080), ("dest", 90))]
+        )
+
+    def test_optRemoteforwardInvalid(self):
+        """
+        An invalid remote forward spec exits.
+        """
+        options = self._options()
+        self.assertRaises(SystemExit, options.opt_remoteforward, "x:dest:90")
+
+
+class ConchSSHConnectionForwardingTests(TestCase):
+    """
+    Tests for the remote-forwarding methods of
+    L{twisted.conch.scripts.conch.SSHConnection}.
+    """
+
+    skip = _conchSkip
+
+    def _makeConnection(self):
+        connection = _conchScript.SSHConnection()
+        connection.remoteForwards = {}
+        self.sent = []
+        self.deferreds = []
+
+        def fakeSendGlobalRequest(request, data, wantReply=0):
+            d = Deferred()
+            self.sent.append((request, data, wantReply))
+            self.deferreds.append(d)
+            return d
+
+        connection.sendGlobalRequest = fakeSendGlobalRequest
+        return connection
+
+    def test_requestRemoteAddrForwarding(self):
+        """
+        Requesting forwarding sends a C{tcpip-forward} global request and,
+        once accepted, records the mapping keyed by the full address.
+        """
+        connection = self._makeConnection()
+        connection.requestRemoteAddrForwarding(("127.0.0.1", 8080), ("dest", 90))
+        self.assertEqual(self.sent[0][0], b"tcpip-forward")
+        self.deferreds[0].callback(None)
+        self.assertEqual(
+            connection.remoteForwards[("127.0.0.1", 8080)], ("dest", 90)
+        )
+
+    def test_requestRemoteForwardingDelegates(self):
+        """
+        The legacy port-based API binds to C{127.0.0.1} and delegates.
+        """
+        connection = self._makeConnection()
+        connection.requestRemoteForwarding(8080, ("dest", 90))
+        self.assertEqual(self.sent[0][0], b"tcpip-forward")
+        self.deferreds[0].callback(None)
+        self.assertIn(("127.0.0.1", 8080), connection.remoteForwards)
+
+    def test_ebRemoteForwarding(self):
+        """
+        A failed forwarding request is logged without raising.
+        """
+        from twisted.python.failure import Failure
+
+        connection = self._makeConnection()
+        connection._ebRemoteForwarding(
+            Failure(ConchError("nope")), ("127.0.0.1", 8080), ("dest", 90)
+        )
+        self.assertNotIn(("127.0.0.1", 8080), connection.remoteForwards)
+
+    def test_cancelRemoteAddrForwarding(self):
+        """
+        Cancelling sends a C{cancel-tcpip-forward} request and drops the entry.
+        """
+        connection = self._makeConnection()
+        connection.remoteForwards = {("127.0.0.1", 8080): ("dest", 90)}
+        connection.cancelRemoteAddrForwarding(("127.0.0.1", 8080))
+        self.assertEqual(self.sent[0][0], b"cancel-tcpip-forward")
+        self.assertNotIn(("127.0.0.1", 8080), connection.remoteForwards)
+
+    def test_cancelRemoteForwardingDelegates(self):
+        """
+        The legacy port-based cancel API binds to C{127.0.0.1} and delegates.
+        """
+        connection = self._makeConnection()
+        connection.remoteForwards = {("127.0.0.1", 8080): ("dest", 90)}
+        connection.cancelRemoteForwarding(8080)
+        self.assertNotIn(("127.0.0.1", 8080), connection.remoteForwards)
+
+    def test_cancelRemoteAddrForwardingUnknown(self):
+        """
+        Cancelling an unknown forward is a no-op (the missing key is ignored).
+        """
+        connection = self._makeConnection()
+        connection.remoteForwards = {}
+        connection.cancelRemoteAddrForwarding(("127.0.0.1", 8080))
+        self.assertEqual(self.sent[0][0], b"cancel-tcpip-forward")
+
+    def test_channelForwardedTcpipKnown(self):
+        """
+        An incoming forwarded-tcpip channel for a known address opens a
+        connecting channel.
+        """
+        connection = self._makeConnection()
+        connection.remoteForwards = {("127.0.0.1", 8080): ("dest", 90)}
+        data = _conchScript.forwarding.packOpen_forwarded_tcpip(
+            ("127.0.0.1", 8080), ("orig", 5)
+        )
+        channel = connection.channel_forwarded_tcpip(2**15, 2**15, data)
+        self.assertIsInstance(
+            channel, _conchScript.forwarding.SSHConnectForwardingChannel
+        )
+
+    def test_channelForwardedTcpipUnknown(self):
+        """
+        An incoming forwarded-tcpip channel for an unknown address is rejected.
+        """
+        connection = self._makeConnection()
+        connection.remoteForwards = {}
+        data = _conchScript.forwarding.packOpen_forwarded_tcpip(
+            ("127.0.0.1", 8080), ("orig", 5)
+        )
+        self.assertRaises(
+            ConchError, connection.channel_forwarded_tcpip, 2**15, 2**15, data
+        )
+
+    def test_channelClosedStopsWhenLast(self):
+        """
+        When the final channel closes, the connection is stopped.
+        """
+        connection = self._makeConnection()
+        connection.channels = {0: object()}
+        self.patch(_conchScript, "options", _FakeOptions(reconnect=True))
+        connection.channelClosed(object())
+
+
+class ConchOnConnectTests(TestCase):
+    """
+    Tests for the module-level C{onConnect} and C{beforeShutdown} helpers.
+    """
+
+    skip = _conchSkip
+
+    def test_onConnectSetsUpForwarding(self):
+        """
+        C{onConnect} listens for local forwards and asks for remote forwards.
+        """
+        conn = _FakeForwardingConn()
+        options = _FakeOptions(noshell=True, agent=False, fork=False)
+        options.localForwards = [(("127.0.0.1", 8080), ("dest", 90))]
+        options.remoteForwards = [(("127.0.0.1", 9090), ("dest2", 91))]
+
+        listened = []
+
+        def fakeListenTCP(port, factory, interface=""):
+            listened.append((port, interface))
+            return _FakePort()
+
+        self.patch(_conchScript, "conn", conn)
+        self.patch(_conchScript, "options", options)
+        self.patch(_conchScript, "_KeepAlive", lambda conn: None)
+        self.patch(_conchScript.reactor, "listenTCP", fakeListenTCP)
+        self.patch(
+            _conchScript.reactor, "addSystemEventTrigger", lambda *a, **k: None
+        )
+
+        _conchScript.onConnect()
+
+        self.assertEqual(listened, [(8080, "127.0.0.1")])
+        self.assertEqual(len(conn.localForwards), 1)
+        self.assertEqual(
+            conn.requestedRemote, [(("127.0.0.1", 9090), ("dest2", 91))]
+        )
+
+    def test_beforeShutdownCancelsForwarding(self):
+        """
+        C{beforeShutdown} cancels each remote forward by address.
+        """
+        conn = _FakeForwardingConn()
+        options = _FakeOptions()
+        options.remoteForwards = [(("127.0.0.1", 9090), ("dest", 91))]
+        self.patch(_conchScript, "conn", conn)
+        self.patch(_conchScript, "options", options)
+
+        _conchScript.beforeShutdown()
+
+        self.assertEqual(conn.cancelledRemote, [("127.0.0.1", 9090)])
+
+
+class ConchSSHSessionTests(TestCase):
+    """
+    Tests for L{twisted.conch.scripts.conch.SSHSession}.
+    """
+
+    skip = _conchSkip
+
+    def test_channelOpenWithAgent(self):
+        """
+        With agent forwarding and no shell, C{channelOpen} requests agent
+        forwarding and returns.
+        """
+        session = _conchScript.SSHSession()
+        session.id = 0
+        sent = []
+
+        class FakeConn:
+            def sendRequest(self, *args, **kwargs):
+                sent.append(args)
+                return Deferred()
+
+        session.conn = FakeConn()
+        self.patch(
+            _conchScript, "options", _FakeOptions(agent=True, noshell=True)
+        )
+
+        session.channelOpen(None)
+
+        self.assertEqual(len(sent), 1)
+
+    def test_handleInputDisconnect(self):
+        """
+        The C{.} escape disconnects.
+        """
+        session = _conchScript.SSHSession()
+        session.escapeMode = 2
+        self.patch(
+            _conchScript, "options", _FakeOptions(reconnect=True, escape=b"~")
+        )
+
+        session.handleInput(b".")
+
+        self.assertEqual(session.escapeMode, 1)
+
+    def test_handleInputRekey(self):
+        """
+        The C{R} escape triggers a rekey.
+        """
+        session = _conchScript.SSHSession()
+        session.escapeMode = 2
+        kexed = []
+
+        class FakeTransport:
+            def sendKexInit(self):
+                kexed.append(True)
+
+        class FakeConn:
+            transport = FakeTransport()
+
+        session.conn = FakeConn()
+        self.patch(_conchScript, "options", _FakeOptions(escape=b"~"))
+
+        session.handleInput(b"R")
+
+        self.assertEqual(kexed, [True])
+
+    def test_handleInputSuspend(self):
+        """
+        The C{^Z} escape schedules a suspend.
+        """
+        session = _conchScript.SSHSession()
+        session.escapeMode = 2
+        calls = []
+
+        class FakeReactor:
+            def callLater(self, *args):
+                calls.append(args)
+
+        self.patch(_conchScript, "reactor", FakeReactor())
+        self.patch(_conchScript, "options", _FakeOptions(escape=b"~"))
+
+        session.handleInput(b"\x1a")
+
+        self.assertEqual(len(calls), 1)
+
+    def test_extReceivedStderr(self):
+        """
+        Extended STDERR data is written to stderr.
+        """
+        from io import BytesIO
+
+        session = _conchScript.SSHSession()
+        fakeErr = BytesIO()
+        self.patch(sys, "stderr", fakeErr)
+
+        session.extReceived(
+            _conchScript.connection.EXTENDED_DATA_STDERR, b"oops"
+        )
+
+        self.assertEqual(fakeErr.getvalue(), b"oops")
+
+    def test_closed(self):
+        """
+        C{closed} logs without error.
+        """
+        session = _conchScript.SSHSession()
+
+        class FakeConn:
+            channels = {0: "channel"}
+
+        session.conn = FakeConn()
+        session.closed()
+
+    def test_closeReceived(self):
+        """
+        C{closeReceived} sends a close back to the server.
+        """
+        session = _conchScript.SSHSession()
+        closed = []
+
+        class FakeConn:
+            def sendClose(self, channel):
+                closed.append(channel)
+
+        session.conn = FakeConn()
+        session.closeReceived()
+        self.assertEqual(closed, [session])
+
+    def test_requestExitStatus(self):
+        """
+        C{request_exit_status} records the remote exit status.
+        """
+        import struct
+
+        session = _conchScript.SSHSession()
+        self.patch(_conchScript, "exitStatus", 0)
+        session.request_exit_status(struct.pack(">L", 7))
+        self.assertEqual(_conchScript.exitStatus, 7)
+
+    def test_enterRawModeNotATty(self):
+        """
+        C{_enterRawMode} warns rather than failing when stdin is not a tty.
+        """
+
+        class FakeStdin:
+            def fileno(self):
+                return 0
+
+        def raiseError(fd):
+            raise OSError("not a tty")
+
+        self.patch(_conchScript, "_inRawMode", 0)
+        self.patch(sys, "stdin", FakeStdin())
+        self.patch(_conchScript.tty, "tcgetattr", raiseError)
+
+        _conchScript._enterRawMode()
+
+    def test_enterRawModeSuccess(self):
+        """
+        C{_enterRawMode} puts a real terminal into raw mode.
+        """
+
+        class FakeStdin:
+            def fileno(self):
+                return 0
+
+        applied = []
+        fakeAttrs = [0, 0, 0, 0, 0, 0, [0] * 32]
+
+        self.patch(_conchScript, "_inRawMode", 0)
+        self.patch(_conchScript, "_savedRawMode", None)
+        self.patch(sys, "stdin", FakeStdin())
+        self.patch(_conchScript.tty, "tcgetattr", lambda fd: fakeAttrs)
+        self.patch(
+            _conchScript.tty, "tcsetattr", lambda *args: applied.append(args)
+        )
+
+        _conchScript._enterRawMode()
+
+        self.assertEqual(_conchScript._inRawMode, 1)
+        self.assertEqual(len(applied), 1)
+
+
+class ConchHandleErrorTests(TestCase):
+    """
+    Tests for the module-level C{handleError} helper.
+    """
+
+    skip = _conchSkip
+
+    def test_handleErrorReraises(self):
+        """
+        C{handleError} sets the exit status, schedules a stop and re-raises.
+        """
+        calls = []
+
+        class FakeReactor:
+            def callLater(self, *args, **kwargs):
+                calls.append(args)
+
+        self.patch(_conchScript, "reactor", FakeReactor())
+        self.patch(_conchScript, "exitStatus", 0)
+
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            self.assertRaises(ValueError, _conchScript.handleError)
+
+        self.assertEqual(_conchScript.exitStatus, 2)
+        self.assertEqual(len(calls), 1)
+        self.flushLoggedErrors(ValueError)

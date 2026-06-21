@@ -448,6 +448,7 @@ module = [
     'twisted.conch.test.test_session',
     'twisted.conch.test.test_ssh',
     'twisted.conch.test.test_telnet',
+    'twisted.conch.test.test_tkconch',
     'twisted.conch.test.test_transport',
     'twisted.conch.test.test_userauth',
     'twisted.conch.ui.tkvt100',

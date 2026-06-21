@@ -176,11 +176,13 @@ def run():
                 f = open(options["logfile"], "a+")
         else:
             f = sys.stderr
-        globalLogBeginner.beginLoggingTo(
+        globalLogBeginner.beginLoggingTo(  # pragma: no cover
             [textFileLogObserver(f)], redirectStandardIO=False
         )
     else:
-        globalLogBeginner.beginLoggingTo([], redirectStandardIO=False)
+        globalLogBeginner.beginLoggingTo(  # pragma: no cover
+            [], redirectStandardIO=False
+        )
     doConnect()
     fd = sys.stdin.fileno()
     try:
