@@ -296,7 +296,9 @@ class GeneralOptions(usage.Options):
     def opt_identity(self, i):
         self.identitys.append(i)
 
-    def _parseForwardSpec(self, f):
+    def _parseForwardSpec(
+        self, f: str
+    ) -> tuple[tuple[str, int], tuple[str, int]] | None:
         """
         Parse a forward spec string ([lhost:]lport:host:port) and return ((lhost, lport), (host, port)).
         Returns None if spec string is invalid. Defaults lhost to 127.0.0.1 if not provided.
