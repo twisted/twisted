@@ -97,9 +97,7 @@ class TkConchOptionsForwardingTests(TestCase):
         """
         options = self._options()
         options.opt_localforward("8080:dest:90")
-        self.assertEqual(
-            options.localForwards, [(("127.0.0.1", 8080), ("dest", 90))]
-        )
+        self.assertEqual(options.localForwards, [(("127.0.0.1", 8080), ("dest", 90))])
         self.assertRaises(SystemExit, options.opt_localforward, "x:dest:90")
 
     def test_optRemoteforward(self):
@@ -108,9 +106,7 @@ class TkConchOptionsForwardingTests(TestCase):
         """
         options = self._options()
         options.opt_remoteforward("8080:dest:90")
-        self.assertEqual(
-            options.remoteForwards, [(("127.0.0.1", 8080), ("dest", 90))]
-        )
+        self.assertEqual(options.remoteForwards, [(("127.0.0.1", 8080), ("dest", 90))])
         self.assertRaises(SystemExit, options.opt_remoteforward, "x:dest:90")
 
 
@@ -140,9 +136,7 @@ class TkConchSSHConnectionTests(TestCase):
 
         self.assertEqual(reactor.listened, [(8080, "127.0.0.1")])
         self.assertEqual(sent, [b"tcpip-forward"])
-        self.assertEqual(
-            connection.remoteForwards[("127.0.0.1", 9090)], ("dest2", 91)
-        )
+        self.assertEqual(connection.remoteForwards[("127.0.0.1", 9090)], ("dest2", 91))
 
     def test_channelForwardedTcpipKnown(self):
         """
@@ -155,9 +149,7 @@ class TkConchSSHConnectionTests(TestCase):
             ("127.0.0.1", 8080), ("orig", 5)
         )
         channel = connection.channel_forwarded_tcpip(2**15, 2**15, data)
-        self.assertIsInstance(
-            channel, tkconch.forwarding.SSHConnectForwardingChannel
-        )
+        self.assertIsInstance(channel, tkconch.forwarding.SSHConnectForwardingChannel)
 
     def test_channelForwardedTcpipUnknown(self):
         """

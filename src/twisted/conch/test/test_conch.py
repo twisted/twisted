@@ -906,9 +906,7 @@ class ConchClientOptionsForwardingTests(TestCase):
         """
         options = self._options()
         options.opt_localforward("8080:dest:90")
-        self.assertEqual(
-            options.localForwards, [(("127.0.0.1", 8080), ("dest", 90))]
-        )
+        self.assertEqual(options.localForwards, [(("127.0.0.1", 8080), ("dest", 90))])
 
     def test_optLocalforwardInvalid(self):
         """
@@ -923,9 +921,7 @@ class ConchClientOptionsForwardingTests(TestCase):
         """
         options = self._options()
         options.opt_remoteforward("8080:dest:90")
-        self.assertEqual(
-            options.remoteForwards, [(("127.0.0.1", 8080), ("dest", 90))]
-        )
+        self.assertEqual(options.remoteForwards, [(("127.0.0.1", 8080), ("dest", 90))])
 
     def test_optRemoteforwardInvalid(self):
         """
@@ -967,9 +963,7 @@ class ConchSSHConnectionForwardingTests(TestCase):
         connection.requestRemoteAddrForwarding(("127.0.0.1", 8080), ("dest", 90))
         self.assertEqual(self.sent[0][0], b"tcpip-forward")
         self.deferreds[0].callback(None)
-        self.assertEqual(
-            connection.remoteForwards[("127.0.0.1", 8080)], ("dest", 90)
-        )
+        self.assertEqual(connection.remoteForwards[("127.0.0.1", 8080)], ("dest", 90))
 
     def test_requestRemoteForwardingDelegates(self):
         """
@@ -1085,17 +1079,13 @@ class ConchOnConnectTests(TestCase):
         self.patch(_conchScript, "options", options)
         self.patch(_conchScript, "_KeepAlive", lambda conn: None)
         self.patch(_conchScript.reactor, "listenTCP", fakeListenTCP)
-        self.patch(
-            _conchScript.reactor, "addSystemEventTrigger", lambda *a, **k: None
-        )
+        self.patch(_conchScript.reactor, "addSystemEventTrigger", lambda *a, **k: None)
 
         _conchScript.onConnect()
 
         self.assertEqual(listened, [(8080, "127.0.0.1")])
         self.assertEqual(len(conn.localForwards), 1)
-        self.assertEqual(
-            conn.requestedRemote, [(("127.0.0.1", 9090), ("dest2", 91))]
-        )
+        self.assertEqual(conn.requestedRemote, [(("127.0.0.1", 9090), ("dest2", 91))])
 
     def test_beforeShutdownCancelsForwarding(self):
         """
@@ -1134,9 +1124,7 @@ class ConchSSHSessionTests(TestCase):
                 return Deferred()
 
         session.conn = FakeConn()
-        self.patch(
-            _conchScript, "options", _FakeOptions(agent=True, noshell=True)
-        )
+        self.patch(_conchScript, "options", _FakeOptions(agent=True, noshell=True))
 
         session.channelOpen(None)
 
@@ -1148,9 +1136,7 @@ class ConchSSHSessionTests(TestCase):
         """
         session = _conchScript.SSHSession()
         session.escapeMode = 2
-        self.patch(
-            _conchScript, "options", _FakeOptions(reconnect=True, escape=b"~")
-        )
+        self.patch(_conchScript, "options", _FakeOptions(reconnect=True, escape=b"~"))
 
         session.handleInput(b".")
 
@@ -1207,9 +1193,7 @@ class ConchSSHSessionTests(TestCase):
         fakeErr = BytesIO()
         self.patch(sys, "stderr", fakeErr)
 
-        session.extReceived(
-            _conchScript.connection.EXTENDED_DATA_STDERR, b"oops"
-        )
+        session.extReceived(_conchScript.connection.EXTENDED_DATA_STDERR, b"oops")
 
         self.assertEqual(fakeErr.getvalue(), b"oops")
 
@@ -1285,9 +1269,7 @@ class ConchSSHSessionTests(TestCase):
         self.patch(_conchScript, "_savedRawMode", None)
         self.patch(sys, "stdin", FakeStdin())
         self.patch(_conchScript.tty, "tcgetattr", lambda fd: fakeAttrs)
-        self.patch(
-            _conchScript.tty, "tcsetattr", lambda *args: applied.append(args)
-        )
+        self.patch(_conchScript.tty, "tcsetattr", lambda *args: applied.append(args))
 
         _conchScript._enterRawMode()
 
