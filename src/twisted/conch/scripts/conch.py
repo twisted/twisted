@@ -273,7 +273,7 @@ def onConnect():
                 remoteAddr=remoteAddr,
                 connAddr=connAddr,
             )
-            conn.requestRemoteForwarding(remoteAddr, connAddr)
+            conn.requestRemoteAddrForwarding(remoteAddr, connAddr)
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutdown)
     if not options["noshell"] or options["agent"]:
         conn.openChannel(SSHSession())
@@ -304,7 +304,7 @@ def beforeShutdown():
             remoteAddr=remoteAddr,
             localAddr=localAddr,
         )
-        conn.cancelRemoteForwarding(remoteAddr)
+        conn.cancelRemoteAddrForwarding(remoteAddr)
 
 
 def stopConnection():
