@@ -19,7 +19,7 @@ import tty
 from typing import Any
 
 from twisted.conch.client import connect, default
-from twisted.conch.client.options import ConchOptions
+from twisted.conch.client.options import CommonOptions
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import channel, common, connection, forwarding, session
 from twisted.internet import reactor, stdio, task
@@ -30,112 +30,19 @@ from twisted.python.compat import ioType, networkString
 _log = Logger()
 
 
-class ClientOptions(ConchOptions):
-    synopsis = """Usage:   conch [options] host [command]
+class ClientOptions(CommonOptions):
+    synopsis = """Usage:   conch
+ [options] host [command]
 """
     longdesc = (
         "conch is a SSHv2 client that allows logging into a remote "
         "machine and executing commands."
     )
 
-    optParameters = [
-        ["escape", "e", "~"],
-        [
-            "localforward",
-            "L",
-            None,
-            "[listen-addr:]listen-port:host:port   Forward local port to remote address",
-        ],
-        [
-            "remoteforward",
-            "R",
-            None,
-            "[listen-addr:]listen-port:host:port   Forward remote port to local address",
-        ],
-    ]
-
     optFlags = [
         ["null", "n", "Redirect input from /dev/null."],
         ["fork", "f", "Fork to background after authentication."],
-        ["tty", "t", "Tty; allocate a tty even if command is given."],
-        ["notty", "T", "Do not allocate a tty."],
-        ["noshell", "N", "Do not execute a shell or command."],
-        ["subsystem", "s", "Invoke command (mandatory) as SSH2 subsystem."],
     ]
-
-    compData = usage.Completions(
-        mutuallyExclusive=[("tty", "notty")],
-        optActions={
-            "localforward": usage.Completer(
-                descr="[listen-addr:]listen-port:host:port"
-            ),
-            "remoteforward": usage.Completer(
-                descr="[listen-addr:]listen-port:host:port"
-            ),
-        },
-        extraActions=[
-            usage.CompleteUserAtHost(),
-            usage.Completer(descr="command"),
-            usage.Completer(descr="argument", repeat=True),
-        ],
-    )
-
-    localForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
-    remoteForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
-
-    def opt_escape(self, esc):
-        """
-        Set escape character; ``none'' = disable
-        """
-        if esc == "none":
-            self["escape"] = None
-        elif esc[0] == "^" and len(esc) == 2:
-            self["escape"] = chr(ord(esc[1]) - 64)
-        elif len(esc) == 1:
-            self["escape"] = esc
-        else:
-            sys.exit(f"Bad escape character '{esc}'.")
-
-    def _parseForwardSpec(
-        self, f: str
-    ) -> tuple[tuple[str, int], tuple[str, int]] | None:
-        """
-        Parse a forward spec string ([lhost:]lport:host:port) and return ((lhost, lport), (host, port)).
-        Returns None if spec string is invalid. Defaults lhost to 127.0.0.1 if not provided.
-        """
-        *maybeLhost, lport, host, port = f.split(":")
-        if len(maybeLhost) not in (0, 1):
-            return None
-        [lhost, *_] = [*maybeLhost, "127.0.0.1"]
-        if not (lport.isdigit() and port.isdigit()):
-            return None
-        return ((lhost, int(lport)), (host, int(port)))
-
-    def opt_localforward(self, f):
-        """
-        Forward local port to remote address ([lhost:]lport:host:port)
-        """
-        forwardSpec = self._parseForwardSpec(f)
-        if forwardSpec is None:
-            sys.exit(
-                f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
-            )
-        self.localForwards.append(forwardSpec)
-
-    def opt_remoteforward(self, f):
-        """
-        Forward remote port to local address ([rhost:]rport:host:port)
-        """
-        forwardSpec = self._parseForwardSpec(f)
-        if forwardSpec is None:
-            sys.exit(
-                f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
-            )
-        self.remoteForwards.append(forwardSpec)
-
-    def parseArgs(self, host, *command):
-        self["host"] = host
-        self["command"] = " ".join(command)
 
 
 # Rest of code in "run"

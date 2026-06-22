@@ -295,7 +295,7 @@ class ConchOptionsParsing(TestCase):
     Options parsing.
     """
 
-    def test_macs(self):
+    def test_macs(self) -> None:
         """
         Specify MAC algorithms.
         """

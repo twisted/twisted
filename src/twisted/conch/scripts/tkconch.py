@@ -19,6 +19,7 @@ import tkinter.messagebox as tkMessageBox
 
 from twisted.conch import error
 from twisted.conch.client.default import isInKnownHosts
+from twisted.conch.client.options import CommonOptions
 from twisted.conch.ssh import (
     channel,
     common,
@@ -231,118 +232,19 @@ class TkConchMenu(Tkinter.Frame):
             self.focus()
 
 
-class GeneralOptions(usage.Options):
-    synopsis = """Usage:    tkconch [options] host [command]
- """
-
-    optParameters = [
-        ["user", "l", None, "Log in using this user name."],
-        ["identity", "i", "~/.ssh/identity", "Identity for public key authentication"],
-        ["escape", "e", "~", "Set escape character; ``none'' = disable"],
-        ["cipher", "c", None, "Select encryption algorithm."],
-        ["macs", "m", None, "Specify MAC algorithms for protocol version 2."],
-        ["port", "p", None, "Connect to this port.  Server must be on the same port."],
-        [
-            "localforward",
-            "L",
-            None,
-            "[listen-addr:]listen-port:host:port   Forward local port to remote address",
-        ],
-        [
-            "remoteforward",
-            "R",
-            None,
-            "[listen-addr:]listen-port:host:port   Forward remote port to local address",
-        ],
-    ]
+class GeneralOptions(CommonOptions):
+    synopsis = """\
+Usage:    tkconch [options] host [command]
+"""
 
     optFlags = [
-        ["tty", "t", "Tty; allocate a tty even if command is given."],
-        ["notty", "T", "Do not allocate a tty."],
-        ["version", "V", "Display version number only."],
         ["compress", "C", "Enable compression."],
-        ["noshell", "N", "Do not execute a shell or command."],
-        ["subsystem", "s", "Invoke command (mandatory) as SSH2 subsystem."],
         ["log", "v", "Log to stderr"],
         ["ansilog", "a", "Print the received data to stdout"],
     ]
 
     _ciphers = transport.SSHClientTransport.supportedCiphers
     _macs = transport.SSHClientTransport.supportedMACs
-
-    compData = usage.Completions(
-        mutuallyExclusive=[("tty", "notty")],
-        optActions={
-            "cipher": usage.CompleteList([v.decode() for v in _ciphers]),
-            "macs": usage.CompleteList([v.decode() for v in _macs]),
-            "localforward": usage.Completer(
-                descr="[listen-addr:]listen-port:host:port"
-            ),
-            "remoteforward": usage.Completer(
-                descr="[listen-addr:]listen-port:host:port"
-            ),
-        },
-        extraActions=[
-            usage.CompleteUserAtHost(),
-            usage.Completer(descr="command"),
-            usage.Completer(descr="argument", repeat=True),
-        ],
-    )
-
-    identitys: list[str] = []
-    localForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
-    remoteForwards: list[tuple[tuple[str, int], tuple[str, int]]] = []
-
-    def opt_identity(self, i):
-        self.identitys.append(i)
-
-    def _parseForwardSpec(
-        self, f: str
-    ) -> tuple[tuple[str, int], tuple[str, int]] | None:
-        """
-        Parse a forward spec string ([lhost:]lport:host:port) and return ((lhost, lport), (host, port)).
-        Returns None if spec string is invalid. Defaults lhost to 127.0.0.1 if not provided.
-        """
-        *maybeLhost, lport, host, port = f.split(":")
-        if len(maybeLhost) not in (0, 1):
-            return None
-        [lhost, *_] = [*maybeLhost, "127.0.0.1"]
-        if not (lport.isdigit() and port.isdigit()):
-            return None
-        return ((lhost, int(lport)), (host, int(port)))
-
-    def opt_localforward(self, f):
-        """
-        Forward local port to remote address ([lhost:]lport:host:port)
-        """
-        forwardSpec = self._parseForwardSpec(f)
-        if forwardSpec is None:
-            sys.exit(
-                f"Invalid local forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
-            )
-        self.localForwards.append(forwardSpec)
-
-    def opt_remoteforward(self, f):
-        """
-        Forward remote port to local address ([rhost:]rport:host:port)
-        """
-        forwardSpec = self._parseForwardSpec(f)
-        if forwardSpec is None:
-            sys.exit(
-                f"Invalid remote forward '{f}' (expected [listen-addr:]listen-port:host:port; IPv6 addresses not supported)."
-            )
-        self.remoteForwards.append(forwardSpec)
-
-    def opt_compress(self):
-        SSHClientTransport.supportedCompressions[0:1] = ["zlib"]
-
-    def parseArgs(self, *args):
-        if args:
-            self["host"] = args[0]
-            self["command"] = " ".join(args[1:])
-        else:
-            self["host"] = ""
-            self["command"] = ""
 
 
 # Rest of code in "run"
