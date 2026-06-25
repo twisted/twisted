@@ -229,8 +229,7 @@ def makeBinding(
 
 # note: it could make sense to have a makeExclusiveBinding() function
 # as well, that returns an object "similar" to above but for
-# Windows-only use-cases, so no reuseAddr or reusePort but adding
-# "exclusive" mapping to SO_EXCLUSIVEADDRUSE
+# see https://github.com/twisted/twisted/issues/12677
 
 
 def makeBindingFromArg(arg: Binding | tuple[str, int] | None) -> Binding:
