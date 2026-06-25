@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from zope.interface import classImplements, implementer
 
 from twisted.internet import address, defer, error, interfaces, main
-from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.abstract import _LogOwner
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
@@ -430,6 +430,7 @@ class Port(_SocketCloser, _LogOwner):
     socketType = socket.SOCK_STREAM
     _addressType = address.IPv4Address
     sessionno = 0
+    factory = None
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
