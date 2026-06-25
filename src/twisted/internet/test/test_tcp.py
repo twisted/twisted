@@ -935,7 +935,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
     family = socket.AF_INET
     addressClass = IPv4Address
 
-    def _actuallyTestBindAddressConnect(self, createBinding, confirmClient):
+    def _checkTestBindAddressConnect(self, createBinding, confirmClient):
         """
         Harness to test passing bindAddress= variants to connectTCP
         """
@@ -959,7 +959,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
         self.assertEqual(laddr[1], port)
         confirmClient(client)
 
-    def _actuallyTestBindAddressListen(self, createBinding, confirmPort):
+    def _checkTestBindAddressListen(self, createBinding, confirmPort):
         """
         Harness to test passing bindAddress= variants to listenTCP
         """
@@ -1030,7 +1030,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
                 )
                 self.assertEqual(reusePort, False)
 
-        self._actuallyTestBindAddressConnect(
+        self._checkTestBindAddressConnect(
             lambda host, port: tuple((host, port)), check_client
         )
 
@@ -1053,7 +1053,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
                 )
                 self.assertEqual(reusePort, False)
 
-        self._actuallyTestBindAddressListen(lambda host, port: port, check_server)
+        self._checkTestBindAddressListen(lambda host, port: port, check_server)
 
     def test_bindAddressIllegal(self):
         """
@@ -1067,7 +1067,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
             return Unsupported()
 
         with self.assertRaises((AssertionError, SkipTest)):
-            self._actuallyTestBindAddressConnect(bind, lambda _: None)
+            self._checkTestBindAddressConnect(bind, lambda _: None)
 
     @skipIf(
         not (platformType == "posix" and sys.platform != "cygwin"),
@@ -1089,8 +1089,8 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
                 )
                 self.assertEqual(reusePort, False)
 
-        self._actuallyTestBindAddressConnect(makeBinding, check)
-        self._actuallyTestBindAddressListen(makeBinding, check)
+        self._checkTestBindAddressConnect(makeBinding, check)
+        self._checkTestBindAddressListen(makeBinding, check)
 
     @skipIf(
         not (platformType == "posix" and sys.platform != "cygwin"),
@@ -1111,8 +1111,8 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
         def bind(a, b):
             return makeBinding(a, b, reusePort=True, reuseAddr=False)
 
-        self._actuallyTestBindAddressConnect(bind, check)
-        self._actuallyTestBindAddressListen(bind, check)
+        self._checkTestBindAddressConnect(bind, check)
+        self._checkTestBindAddressListen(bind, check)
 
     @skipIf(
         not (platformType == "posix" and sys.platform != "cygwin"),
@@ -1132,8 +1132,8 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
         def bind(a, b):
             return makeBinding(a, b, reuseAddr=True)
 
-        self._actuallyTestBindAddressConnect(bind, check)
-        self._actuallyTestBindAddressListen(bind, check)
+        self._checkTestBindAddressConnect(bind, check)
+        self._checkTestBindAddressListen(bind, check)
 
     @skipIf(
         not (platformType == "posix" and sys.platform != "cygwin"),
@@ -1156,8 +1156,8 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
         def bind(a, b):
             return makeBinding(a, b, reuseAddr=True, reusePort=True)
 
-        self._actuallyTestBindAddressConnect(bind, check)
-        self._actuallyTestBindAddressListen(bind, check)
+        self._checkTestBindAddressConnect(bind, check)
+        self._checkTestBindAddressListen(bind, check)
 
 
 class TCPConnectorTestsBuilder(ReactorBuilder):
