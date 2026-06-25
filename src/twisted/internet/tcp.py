@@ -1291,6 +1291,33 @@ def _accept(logger, accepts, listener, reservedFD):
             yield client, address
 
 
+def _constructTCPPort(self, port, factory, backlog, interface):
+    binding = port
+    if port is None:
+        # what does port of "None" really mean? socket.bind()
+        # doesn't say and it gets called like this below in
+        # _fromListeningDescriptor
+        binding = makeBinding(interface, port, reuseAddr=True)
+    if isinstance(binding, int):
+        binding = makeBinding(interface, port, reuseAddr=True)
+    else:
+        assert isinstance(binding, _Binding), "Binding is {}".format(binding)
+        if interface != "" and binding._addr != interface:
+            raise ValueError("Inconsistent interface vs Binding specifiers")
+    # we need to be backwards-compatible to when Port had settable
+    # .port and .interface attributes .. so we extract everything
+    # from Binding here (thus leaving Binding immutable).
+    self.port = binding._port
+    self.interface = "" if binding._addr is None else binding._addr
+    self._reuseAddr = binding._reuseAddr
+    self._reusePort = binding._reusePort
+    self.factory = factory
+    self.backlog = backlog
+    if abstract.isIPv6Address(interface):
+        self.addressFamily = socket.AF_INET6
+        self._addressType = address.IPv6Address
+
+
 @implementer(IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
@@ -1359,30 +1386,7 @@ class Port(base.BasePort, _SocketCloser):
     ):
         """Initialize with a numeric port to listen on."""
         base.BasePort.__init__(self, reactor=reactor)
-        binding = port
-        if port is None:
-            # what does port of "None" really mean? socket.bind()
-            # doesn't say and it gets called like this below in
-            # _fromListeningDescriptor
-            binding = makeBinding(interface, port, reuseAddr=True)
-        if isinstance(binding, int):
-            binding = makeBinding(interface, port, reuseAddr=True)
-        else:
-            assert isinstance(binding, _Binding), "Binding is {}".format(binding)
-            if interface != "" and binding._addr != interface:
-                raise ValueError("Inconsistent interface vs Binding specifiers")
-        # we need to be backwards-compatible to when Port had settable
-        # .port and .interface attributes .. so we extract everything
-        # from Binding here (thus leaving Binding immutable).
-        self.port = binding._port
-        self.interface = "" if binding._addr is None else binding._addr
-        self._reuseAddr = binding._reuseAddr
-        self._reusePort = binding._reusePort
-        self.factory = factory
-        self.backlog = backlog
-        if abstract.isIPv6Address(interface):
-            self.addressFamily = socket.AF_INET6
-            self._addressType = address.IPv6Address
+        _constructTCPPort(self, port, factory, backlog, interface)
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):

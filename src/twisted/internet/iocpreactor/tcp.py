@@ -34,6 +34,7 @@ from twisted.internet.tcp import (
     _BaseBaseClient,
     _BaseTCPClient,
     _Binding,
+    _constructTCPPort,
     _getsockname,
     _resolveIPv6,
     _SocketCloser,
@@ -440,30 +441,9 @@ class Port(_SocketCloser, _LogOwner):
     # Only used for logging.
     _type = "TCP"
 
-    # TODO: this constructor basically duplicates ../tcp.Port's
-    # constuctor (and did before) but we _aren't_ subclassing Port so
-    # this code kind of has to be kept in sync? Is there a better way?
     def __init__(self, port, factory, backlog=50, interface="", reactor=None):
         self.reactor = reactor
-        binding = port
-        if isinstance(binding, int):
-            binding = makeBinding(interface, port, reuseAddr=True)
-        else:
-            assert isinstance(binding, _Binding), "Binding is {}".format(binding)
-            if interface != "" and binding._addr != interface:
-                raise ValueError("Inconsistent interface vs Binding specifiers")
-        # we need to be backwards-compatible to when Port had settable
-        # .port and .interface attributes .. so we extract everything
-        # from Binding here (thus leaving Binding immutable).
-        self.port = binding._port
-        self.interface = "" if binding._addr is None else binding._addr
-        self._reuseAddr = binding._reuseAddr
-        self._reusePort = binding._reusePort
-        self.factory = factory
-        self.backlog = backlog
-        if isIPv6Address(interface):
-            self.addressFamily = socket.AF_INET6
-            self._addressType = address.IPv6Address
+        _constructTCPPort(self, port, factory, backlog, interface)
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:
