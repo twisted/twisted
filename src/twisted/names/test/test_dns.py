@@ -1041,7 +1041,7 @@ class MessageTests(unittest.SynchronousTestCase):
         section 4.1.1 and RFC 2181 section 9; a partial RRSet must never be
         served as if it were complete.  See #12604.
         """
-        message = dns.Message(id=1, answer=1, auth=1)
+        message = dns.Message(id=1, answer=1, auth=True)
         message.maxSize = 512
         message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
         message.answers = self._bigTXTAnswers(8)
@@ -1069,7 +1069,7 @@ class MessageTests(unittest.SynchronousTestCase):
         record.
         """
         answers = self._bigTXTAnswers(8)
-        message = dns.Message(id=1, answer=1, auth=1)
+        message = dns.Message(id=1, answer=1, auth=True)
         message.maxSize = 4096
         message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
         message.answers = answers
@@ -1090,7 +1090,7 @@ class MessageTests(unittest.SynchronousTestCase):
         regardless of how large the answer section is.
         """
         answers = self._bigTXTAnswers(8)
-        message = dns.Message(id=1, answer=1, auth=1)
+        message = dns.Message(id=1, answer=1, auth=True)
         message.maxSize = 0
         message.queries = [dns.Query(b"big-txt.example.com", dns.TXT)]
         message.answers = answers

@@ -1113,7 +1113,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         @return: The response message.
         """
         name = b"big-txt.example.com"
-        message = dns.Message(id=1, answer=1, auth=1)
+        message = dns.Message(id=1, answer=1, auth=True)
         message.maxSize = 0
         message.timeReceived = 0
         message.queries = [dns.Query(name, dns.TXT)]
@@ -1180,7 +1180,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         without the TC bit and with all of its records intact.
         """
         name = b"host.example.com"
-        message = dns.Message(id=1, answer=1, auth=1)
+        message = dns.Message(id=1, answer=1, auth=True)
         message.maxSize = 0
         message.timeReceived = 0
         message.queries = [dns.Query(name, dns.A)]

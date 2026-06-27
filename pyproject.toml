@@ -812,7 +812,6 @@ module = [
     'twisted.internet._posixserialport',
     'twisted.internet._posixstdio',
     'twisted.internet._producer_helpers',
-    'twisted.internet.address',
     'twisted.internet.default',
     'twisted.internet.epollreactor',
     'twisted.internet.gireactor',

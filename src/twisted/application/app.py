@@ -669,6 +669,7 @@ def run(runApp, ServerOptions):
         commstr = " ".join(sys.argv[0:2])
         print(config)
         print(f"{commstr}: {ue}")
+        sys.exit(1)
     else:
         runApp(config)
 
