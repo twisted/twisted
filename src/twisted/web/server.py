@@ -38,7 +38,6 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
-    HTTPChannel,
     HTTPFactory,
     Request as _HTTPRequest,
     _GenericHTTPChannelProtocol,
