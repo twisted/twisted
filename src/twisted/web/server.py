@@ -774,7 +774,7 @@ class Session(components.Componentized):
 
     def __init__(
         self,
-        site: Site | None,
+        site: Site,
         uid: bytes,
         reactor: interfaces.IReactorTime | None = None,
     ) -> None:
@@ -786,13 +786,7 @@ class Session(components.Componentized):
         """
         super().__init__()
 
-        # site is typed Optional because twisted.web.test.requesthelper
-        # constructs Session instances with site=None; production code
-        # always supplies a real Site. When reactor isn't given explicitly
-        # we have to fall back to the site's reactor, so site can't be
-        # missing in that branch.
         if reactor is None:
-            assert site is not None
             reactor = site.reactor
         self._reactor = reactor
 
@@ -820,7 +814,6 @@ class Session(components.Componentized):
         """
         Expire/logout of the session.
         """
-        assert self.site is not None
         del self.site.sessions[self.uid]
         for c in self.expireCallbacks:
             c()

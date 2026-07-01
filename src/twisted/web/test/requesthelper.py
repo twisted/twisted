@@ -246,7 +246,9 @@ class DummyRequest:
         self.postpath = postpath
         self.prepath = []
         self.session = None
-        self.protoSession = session or Session(site=None, uid=b"0", reactor=Clock())
+        self.protoSession = session or Session(
+            site=Site(Resource()), uid=b"0", reactor=Clock()
+        )
         self.args = {}
         self.requestHeaders = Headers()
         self.responseHeaders = Headers()
