@@ -107,7 +107,13 @@ class Request(Copyable, http.Request, components.Componentized):
 
     def __init__(
         self,
-        channel: HTTPChannel,
+        # Production callers always pass a real HTTPChannel, but the test
+        # suite (twisted.web.test.test_web, test_util) constructs Request
+        # with duck-typed fakes (e.g. DummyChannel) that don't subclass it.
+        # There's no shared structural type declared for these fakes, so
+        # HTTPChannel would be inaccurate here; Any reflects actual usage
+        # across the codebase.
+        channel: Any,
         *args: Any,
         parsePOSTFormSubmission: bool | None = None,
         **kw: Any,
@@ -118,11 +124,7 @@ class Request(Copyable, http.Request, components.Componentized):
         @type parsePOSTFormSubmission: C{None} or C{bool}
         """
         if parsePOSTFormSubmission is None:
-            # HTTPChannel.site is set dynamically by Site.buildProtocol and is
-            # not yet part of HTTPChannel's declared attributes; that
-            # annotation belongs to the twisted.web.http phase of this
-            # cleanup (follow-up to #12574 / #12663).
-            parsePOSTFormSubmissionBool = channel.site._parsePOSTFormSubmission  # type: ignore[attr-defined]
+            parsePOSTFormSubmissionBool = channel.site._parsePOSTFormSubmission
         else:
             parsePOSTFormSubmissionBool = parsePOSTFormSubmission
         # mypy assumes **kw could also contain a "parsePOSTFormSubmission"
@@ -148,7 +150,15 @@ class Request(Copyable, http.Request, components.Componentized):
         del x["content"]
         del x["site"]
         assert self.content is not None
-        self.content.seek(0, 0)
+        # iweb.IRequest (which this class implements via @implementer)
+        # declares its own untyped `content = Attribute(...)`. The
+        # mypy_zope plugin cross-references that against the real
+        # `BinaryIO | None` annotation from http.Request and narrows
+        # self.content to bare None here, which makes mypy consider this
+        # line unreachable. Confirmed the type is genuinely BinaryIO at
+        # runtime (verified via the full test_web/test_http suite); this
+        # is a plugin inference quirk, not a real code issue.
+        self.content.seek(0, 0)  # type: ignore[unreachable]
         x["content_data"] = self.content.read()
         x["remote"] = ViewPoint(issuer, self)
 
@@ -764,7 +774,10 @@ class Session(components.Componentized):
     _expireCall: interfaces.IDelayedCall | None = None
 
     def __init__(
-        self, site: Site, uid: bytes, reactor: interfaces.IReactorTime | None = None
+        self,
+        site: Site | None,
+        uid: bytes,
+        reactor: interfaces.IReactorTime | None = None,
     ) -> None:
         """
         Initialize a session with a unique ID for that session.
@@ -774,7 +787,13 @@ class Session(components.Componentized):
         """
         super().__init__()
 
+        # site is typed Optional because twisted.web.test.requesthelper
+        # constructs Session instances with site=None; production code
+        # always supplies a real Site. When reactor isn't given explicitly
+        # we have to fall back to the site's reactor, so site can't be
+        # missing in that branch.
         if reactor is None:
+            assert site is not None
             reactor = site.reactor
         self._reactor = reactor
 
@@ -802,6 +821,7 @@ class Session(components.Componentized):
         """
         Expire/logout of the session.
         """
+        assert self.site is not None
         del self.site.sessions[self.uid]
         for c in self.expireCallbacks:
             c()
@@ -933,10 +953,14 @@ class Site(HTTPFactory):
 
     def buildProtocol(
         self, addr: interfaces.IAddress | None
-    ) -> _GenericHTTPChannelProtocol | None:
+    ) -> _GenericHTTPChannelProtocol:
         """
         Generate a channel attached to this site.
         """
+        # The parent factory's declared contract allows returning None, but
+        # Site's own implementation never does; the assert below makes that
+        # guarantee explicit rather than exposing an Optional that no caller
+        # actually needs to check.
         channel = super().buildProtocol(addr)
         assert channel is not None
         channel.requestFactory = self.requestFactory
