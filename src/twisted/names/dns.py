@@ -16,11 +16,11 @@ import inspect
 import random
 import socket
 import struct
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
-from typing import SupportsInt, overload
+from typing import IO, ClassVar, SupportsInt, TypeAlias, overload
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -2561,6 +2561,9 @@ def _compactRepr(
     return "".join(out)
 
 
+_RecordParser: TypeAlias = Callable[..., IEncodableRecord]
+
+
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
@@ -2594,13 +2597,6 @@ class Message(tputil.FancyEqMixin):
         in C{answers} and C{authority}.
     @type additional: L{list} of L{RRHeader}
 
-    @ivar _flagNames: The names of attributes representing the flag header
-        fields.
-    @ivar _fieldNames: The names of attributes representing non-flag fixed
-        header fields.
-    @ivar _sectionNames: The names of attributes representing the record
-        sections of this message.
-
     @ivar maxCompressionPointers: Per-message cap on the total number of
         compression-pointer dereferences L{decode} will follow across every
         name in the message before raising L{DNSDecodeError}.  Defaults to
@@ -2611,7 +2607,7 @@ class Message(tputil.FancyEqMixin):
 
     maxCompressionPointers: int = 1000
 
-    compareAttributes = (
+    compareAttributes: ClassVar[Sequence[str]] = (
         "id",
         "answer",
         "opCode",
@@ -2629,102 +2625,89 @@ class Message(tputil.FancyEqMixin):
         "additional",
     )
 
-    headerFmt = "!H2B4H"
-    headerSize = struct.calcsize(headerFmt)
-
-    # Question, answer, additional, and nameserver lists
-    queries = answers = add = ns = None
+    timeReceived: float | None
+    headerFmt: str = "!H2B4H"
+    headerSize: int = struct.calcsize(headerFmt)
 
     def __init__(
         self,
-        id=0,
-        answer=0,
-        opCode=0,
-        recDes=0,
-        recAv=0,
-        auth=0,
-        rCode=OK,
-        trunc=0,
-        maxSize=512,
-        authenticData=0,
-        checkingDisabled=0,
+        id: int = 0,
+        answer: int = 0,
+        opCode: int = 0,
+        recDes: int = 0,
+        recAv: int = 0,
+        auth: bool = False,
+        rCode: int = OK,
+        trunc: int = 0,
+        maxSize: int = 512,
+        authenticData: int = 0,
+        checkingDisabled: int = 0,
     ):
         """
         @param id: A 16 bit identifier assigned by the program that
             generates any kind of query.  This identifier is copied to
             the corresponding reply and can be used by the requester
             to match up replies to outstanding queries.
-        @type id: L{int}
 
         @param answer: A one bit field that specifies whether this
             message is a query (0), or a response (1).
-        @type answer: L{int}
 
         @param opCode: A four bit field that specifies kind of query in
             this message.  This value is set by the originator of a query
             and copied into the response.
-        @type opCode: L{int}
 
         @param recDes: Recursion Desired - this bit may be set in a
             query and is copied into the response.  If RD is set, it
             directs the name server to pursue the query recursively.
             Recursive query support is optional.
-        @type recDes: L{int}
 
         @param recAv: Recursion Available - this bit is set or cleared
             in a response and denotes whether recursive query support
             is available in the name server.
-        @type recAv: L{int}
 
         @param auth: Authoritative Answer - this bit is valid in
             responses and specifies that the responding name server
             is an authority for the domain name in question section.
-        @type auth: L{int}
 
         @ivar rCode: A response code, used to indicate success or failure in a
             message which is a response from a server to a client request.
-        @type rCode: C{0 <= int < 16}
 
         @param trunc: A flag indicating that this message was
             truncated due to length greater than that permitted on the
             transmission channel.
-        @type trunc: L{int}
 
         @param maxSize: The requestor's UDP payload size is the number
             of octets of the largest UDP payload that can be
             reassembled and delivered in the requestor's network
             stack.
-        @type maxSize: L{int}
 
         @param authenticData: A flag indicating in a response that all
             the data included in the answer and authority portion of
             the response has been authenticated by the server
             according to the policies of that server.
             See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
 
         @param checkingDisabled: A flag indicating in a query that
             pending (non-authenticated) data is acceptable to the
             resolver sending the query.
             See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
         """
-        self.maxSize = maxSize
-        self.id = id
-        self.answer = answer
-        self.opCode = opCode
-        self.auth = auth
-        self.trunc = trunc
-        self.recDes = recDes
-        self.recAv = recAv
-        self.rCode = rCode
-        self.authenticData = authenticData
-        self.checkingDisabled = checkingDisabled
+        self.maxSize: int = maxSize
+        self.id: int = id
+        self.answer: int = answer
+        self.opCode: int = opCode
+        self.auth: bool = auth
+        self.trunc: int = trunc
+        self.recDes: int = recDes
+        self.recAv: int = recAv
+        self.rCode: int = rCode
+        self.authenticData: int = authenticData
+        self.checkingDisabled: int = checkingDisabled
 
-        self.queries = []
-        self.answers = []
-        self.authority = []
-        self.additional = []
+        self.queries: list[Query] = []
+        self.answers: list[RRHeader] = []
+        self.authority: list[RRHeader] = []
+        self.additional: list[RRHeader] = []
 
     def __repr__(self) -> str:
         """
@@ -2751,32 +2734,29 @@ class Message(tputil.FancyEqMixin):
             alwaysShow=("id",),
         )
 
-    def addQuery(self, name, type=ALL_RECORDS, cls=IN):
+    def addQuery(
+        self, name: str | bytes, type: int = ALL_RECORDS, cls: int = IN
+    ) -> None:
         """
         Add another query to this Message.
 
-        @type name: L{bytes}
         @param name: The name to query.
-
-        @type type: L{int}
         @param type: Query type
-
-        @type cls: L{int}
         @param cls: Query class
         """
         self.queries.append(Query(name, type, cls))
 
-    def encode(self, strio):
-        compDict = {}
+    def encode(self, strio: IO[bytes]) -> None:
+        compDict: dict[bytes, int] = {}
         body_tmp = BytesIO()
-        for q in self.queries:
-            q.encode(body_tmp, compDict)
-        for q in self.answers:
-            q.encode(body_tmp, compDict)
-        for q in self.authority:
-            q.encode(body_tmp, compDict)
-        for q in self.additional:
-            q.encode(body_tmp, compDict)
+        for query in self.queries:
+            query.encode(body_tmp, compDict)
+        for record in self.answers:
+            record.encode(body_tmp, compDict)
+        for record in self.authority:
+            record.encode(body_tmp, compDict)
+        for record in self.additional:
+            record.encode(body_tmp, compDict)
         body = body_tmp.getvalue()
         size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
@@ -2810,7 +2790,7 @@ class Message(tputil.FancyEqMixin):
         )
         strio.write(body)
 
-    def decode(self, strio, length=None):
+    def decode(self, strio: IO[bytes], length: int | None = None) -> None:
         self.maxSize = 0
         header = readPrecisely(strio, self.headerSize)
         r = struct.unpack(self.headerFmt, header)
@@ -2849,7 +2829,7 @@ class Message(tputil.FancyEqMixin):
             for l, n in items:
                 self.parseRecords(l, n, strio)
 
-    def parseRecords(self, list, num, strio):
+    def parseRecords(self, list: list[RRHeader], num: int, strio: IO[bytes]) -> None:
         for i in range(num):
             header = RRHeader(auth=self.auth)
             try:
@@ -2857,8 +2837,6 @@ class Message(tputil.FancyEqMixin):
             except EOFError:
                 return
             t = self.lookupRecordType(header.type)
-            if not t:
-                continue
             header.payload = t(ttl=header.ttl)
             try:
                 header.payload.decode(strio, header.rdlength)
@@ -2870,7 +2848,7 @@ class Message(tputil.FancyEqMixin):
     # classes.  This relies on the global state which has been created so
     # far in initializing this module (so don't define Record classes after
     # this).
-    _recordTypes = {}
+    _recordTypes: ClassVar[dict[int, _RecordParser]] = {}
     for name in globals():
         if name.startswith("Record_"):
             _recordTypes[globals()[name].TYPE] = globals()[name]
@@ -2879,31 +2857,28 @@ class Message(tputil.FancyEqMixin):
     # doesn't become an attribute.
     del name
 
-    def lookupRecordType(self, type):
+    def lookupRecordType(self, type: int) -> _RecordParser:
         """
         Retrieve the L{IRecord} implementation for the given record type.
 
         @param type: A record type, such as C{A} or L{NS}.
-        @type type: L{int}
 
-        @return: An object which implements L{IRecord} or L{None} if none
-            can be found for the given type.
-        @rtype: C{Type[IRecord]}
+        @return: An object which implements L{IRecord} or L{IEncodable}.
+        L{UnknownRecord} is returned if no implementation can be found for
+        the given type.
         """
         return self._recordTypes.get(type, UnknownRecord)
 
-    def toStr(self):
+    def toStr(self) -> bytes:
         """
         Encode this L{Message} into a byte string in the format described by RFC
         1035.
-
-        @rtype: L{bytes}
         """
         strio = BytesIO()
         self.encode(strio)
         return strio.getvalue()
 
-    def fromStr(self, str):
+    def fromStr(self, str: bytes) -> None:
         """
         Decode a byte string in the format described by RFC 1035 into this
         L{Message}.
