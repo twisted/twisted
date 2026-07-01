@@ -489,6 +489,30 @@ class ConditionalTests(unittest.TestCase):
         self.assertEqual(httpHeader(result, b"Content-Type"), b"image/jpeg")
 
 
+class AddressToTupleTests(unittest.TestCase):
+    """
+    Tests for L{twisted.web.server._addressToTuple}.
+    """
+
+    def test_fallbackIterableAddress(self):
+        """
+        For any L{interfaces.IAddress} provider it has no specific handling
+        for, L{server._addressToTuple} falls back to iterating over the
+        address object directly and converting the result to a tuple.
+        """
+
+        @implementer(interfaces.IAddress)
+        class _CustomAddress(tuple):
+            """
+            An L{interfaces.IAddress} provider unknown to
+            L{server._addressToTuple}'s C{isinstance} checks, exercising its
+            generic iterable fallback path.
+            """
+
+        addr = _CustomAddress(("CUSTOM", "example", 1234))
+        self.assertEqual(server._addressToTuple(addr), ("CUSTOM", "example", 1234))
+
+
 class RequestTests(unittest.TestCase):
     """
     Tests for the HTTP request class, L{server.Request}.
