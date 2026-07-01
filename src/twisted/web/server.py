@@ -21,6 +21,7 @@ import re
 import zlib
 from binascii import hexlify
 from html import escape
+from typing import Any, Callable
 from urllib.parse import quote as _quote
 
 from zope.interface import implementer
@@ -37,8 +38,10 @@ from twisted.web.error import UnsupportedMethod
 from twisted.web.http import (
     NO_CONTENT,
     NOT_MODIFIED,
+    HTTPChannel,
     HTTPFactory,
     Request as _HTTPRequest,
+    _GenericHTTPChannelProtocol,
     datetimeToString,
     unquote,
 )
@@ -59,17 +62,20 @@ __all__ = [
 supportedMethods = (b"GET", b"HEAD", b"POST")
 
 
-def quote(string, *args, **kwargs):
+def quote(string: bytes, *args: Any, **kwargs: Any) -> bytes:
     return _quote(string.decode("charmap"), *args, **kwargs).encode("charmap")
 
 
-def _addressToTuple(addr):
+def _addressToTuple(addr: interfaces.IAddress) -> tuple[Any, ...]:
     if isinstance(addr, address.IPv4Address):
         return ("INET", addr.host, addr.port)
     elif isinstance(addr, address.UNIXAddress):
         return ("UNIX", addr.name)
     else:
-        return tuple(addr)
+        # Not all IAddress providers are iterable; this fallback exists for
+        # legacy/non-standard address implementations that historically
+        # relied on duck-typing here.
+        return tuple(addr)  # type: ignore[arg-type]
 
 
 @implementer(iweb.IRequest)
@@ -89,26 +95,42 @@ class Request(Copyable, http.Request, components.Componentized):
     """
 
     defaultContentType: bytes | None = b"text/html"
-    site = None
-    appRootURL = None
+    site: Site | None = None
+    appRootURL: bytes | None = None
     prepath: list[bytes] | None = None
     postpath: list[bytes] | None = None
+    sitepath: list[bytes] | None = None
     __pychecker__ = "unusednames=issuer"
     _inFakeHead = False
-    _encoder = None
+    _encoder: iweb._IRequestEncoder | None = None
     _log = Logger()
 
-    def __init__(self, channel, *args, parsePOSTFormSubmission=None, **kw):
+    def __init__(
+        self,
+        channel: HTTPChannel,
+        *args: Any,
+        parsePOSTFormSubmission: bool | None = None,
+        **kw: Any,
+    ) -> None:
         """
         @param parsePOSTFormSubmission: By default, get this setting from the L{Site}, but
             can also be set explicitly. If C{False}, don't parse HTTP bodies.
         @type parsePOSTFormSubmission: C{None} or C{bool}
         """
         if parsePOSTFormSubmission is None:
-            parsePOSTFormSubmissionBool = channel.site._parsePOSTFormSubmission
+            # HTTPChannel.site is set dynamically by Site.buildProtocol and is
+            # not yet part of HTTPChannel's declared attributes; that
+            # annotation belongs to the twisted.web.http phase of this
+            # cleanup (follow-up to #12574 / #12663).
+            parsePOSTFormSubmissionBool = channel.site._parsePOSTFormSubmission  # type: ignore[attr-defined]
         else:
             parsePOSTFormSubmissionBool = parsePOSTFormSubmission
-        _HTTPRequest.__init__(
+        # mypy assumes **kw could also contain a "parsePOSTFormSubmission"
+        # key, which would collide with the explicit keyword argument below.
+        # It can't in practice: Python already binds any caller-supplied
+        # parsePOSTFormSubmission to the named parameter above before **kw
+        # is assembled, so this is a false positive, not a real duplicate.
+        _HTTPRequest.__init__(  # type: ignore[misc]
             self,
             channel,
             *args,
@@ -117,7 +139,7 @@ class Request(Copyable, http.Request, components.Componentized):
         )
         components.Componentized.__init__(self)
 
-    def getStateToCopyFor(self, issuer):
+    def getStateToCopyFor(self, issuer: Any) -> dict[str, Any]:
         x = self.__dict__.copy()
         del x["transport"]
         # XXX refactor this attribute out; it's from protocol
@@ -125,6 +147,7 @@ class Request(Copyable, http.Request, components.Componentized):
         del x["channel"]
         del x["content"]
         del x["site"]
+        assert self.content is not None
         self.content.seek(0, 0)
         x["content_data"] = self.content.read()
         x["remote"] = ViewPoint(issuer, self)
@@ -140,7 +163,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
     # HTML generation helpers
 
-    def sibLink(self, name):
+    def sibLink(self, name: bytes) -> bytes:
         """
         Return the text that links to a sibling of the requested resource.
 
@@ -155,7 +178,7 @@ class Request(Copyable, http.Request, components.Componentized):
         else:
             return name
 
-    def childLink(self, name):
+    def childLink(self, name: bytes) -> bytes:
         """
         Return the text that links to a child of the requested resource.
 
@@ -165,18 +188,20 @@ class Request(Copyable, http.Request, components.Componentized):
         @return: A relative URL.
         @rtype: C{bytes}
         """
+        assert self.postpath is not None
         lpp = len(self.postpath)
         if lpp > 1:
             return ((lpp - 1) * b"../") + name
         elif lpp == 1:
             return name
         else:  # lpp == 0
+            assert self.prepath is not None
             if len(self.prepath) and self.prepath[-1]:
                 return self.prepath[-1] + b"/" + name
             else:
                 return name
 
-    def gotLength(self, length):
+    def gotLength(self, length: int | None) -> None:
         """
         Called when HTTP channel got length of content in this request.
 
@@ -187,13 +212,15 @@ class Request(Copyable, http.Request, components.Componentized):
             length.
         """
         try:
-            getContentFile = self.channel.site.getContentFile
+            # HTTPChannel.site is set dynamically by Site.buildProtocol; see
+            # the note in __init__ above.
+            getContentFile = self.channel.site.getContentFile  # type: ignore[attr-defined]
         except AttributeError:
             _HTTPRequest.gotLength(self, length)
         else:
             self.content = getContentFile(length)
 
-    def process(self):
+    def process(self) -> None:
         """
         Process a request.
 
@@ -204,7 +231,7 @@ class Request(Copyable, http.Request, components.Componentized):
         """
 
         # get site from channel
-        self.site = self.channel.site
+        self.site = self.channel.site  # type: ignore[attr-defined]
 
         # set various default headers
         self.setHeader(b"Server", version)
@@ -220,6 +247,7 @@ class Request(Copyable, http.Request, components.Componentized):
             return
 
         try:
+            assert self.site is not None
             resrc = self.site.getResourceFor(self)
             if resource._IEncodingResource.providedBy(resrc):
                 encoder = resrc.getEncoder(self)
@@ -229,7 +257,7 @@ class Request(Copyable, http.Request, components.Componentized):
         except BaseException:
             self.processingFailed(failure.Failure())
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Write data to the transport (if not responding to a HEAD request).
 
@@ -267,7 +295,7 @@ class Request(Copyable, http.Request, components.Componentized):
                 data = self._encoder.encode(data)
             _HTTPRequest.write(self, data)
 
-    def finish(self):
+    def finish(self) -> None:
         """
         Override L{twisted.web.http.Request.finish} for possible encoding.
         """
@@ -275,9 +303,10 @@ class Request(Copyable, http.Request, components.Componentized):
             data = self._encoder.finish()
             if data:
                 _HTTPRequest.write(self, data)
-        return _HTTPRequest.finish(self)
+        _HTTPRequest.finish(self)
+        return None
 
-    def render(self, resrc):
+    def render(self, resrc: resource.IResource) -> None:
         """
         Ask a resource to render itself.
 
@@ -292,7 +321,12 @@ class Request(Copyable, http.Request, components.Componentized):
         try:
             body = resrc.render(self)
         except UnsupportedMethod as e:
-            allowedMethods = e.allowedMethods
+            # twisted.web.error.UnsupportedMethod.allowedMethods is untyped
+            # (that module is out of scope for this cleanup), which left
+            # mypy unable to infer a usable element type below. Giving it an
+            # explicit type here is more correct than suppressing the
+            # errors it caused.
+            allowedMethods: list[bytes] = list(e.allowedMethods)
             if (self.method == b"HEAD") and (b"GET" in allowedMethods):
                 # We must support HEAD (RFC 2616, 5.1.1).  If the
                 # resource doesn't, fake it by giving the resource
@@ -383,7 +417,7 @@ class Request(Copyable, http.Request, components.Componentized):
             self.write(body)
         self.finish()
 
-    def processingFailed(self, reason):
+    def processingFailed(self, reason: failure.Failure) -> failure.Failure:
         """
         Finish this request with an indication that processing failed and
         possibly display a traceback.
@@ -395,6 +429,7 @@ class Request(Copyable, http.Request, components.Componentized):
         @rtype: L{twisted.python.failure.Failure}
         """
         self._log.failure("", failure=reason)
+        assert self.site is not None
         if self.site.displayTracebacks:
             body = (
                 b"<html><head><title>web.Server Traceback"
@@ -418,52 +453,56 @@ class Request(Copyable, http.Request, components.Componentized):
         self.finish()
         return reason
 
-    def view_write(self, issuer, data):
+    def view_write(self, issuer: Any, data: bytes) -> None:
         """Remote version of write; same interface."""
         self.write(data)
 
-    def view_finish(self, issuer):
+    def view_finish(self, issuer: Any) -> None:
         """Remote version of finish; same interface."""
         self.finish()
 
-    def view_addCookie(self, issuer, k, v, **kwargs):
+    def view_addCookie(self, issuer: Any, k: bytes, v: bytes, **kwargs: Any) -> None:
         """Remote version of addCookie; same interface."""
         self.addCookie(k, v, **kwargs)
 
-    def view_setHeader(self, issuer, k, v):
+    def view_setHeader(self, issuer: Any, k: bytes, v: bytes) -> None:
         """Remote version of setHeader; same interface."""
         self.setHeader(k, v)
 
-    def view_setLastModified(self, issuer, when):
+    def view_setLastModified(self, issuer: Any, when: float) -> None:
         """Remote version of setLastModified; same interface."""
         self.setLastModified(when)
 
-    def view_setETag(self, issuer, tag):
+    def view_setETag(self, issuer: Any, tag: bytes) -> None:
         """Remote version of setETag; same interface."""
         self.setETag(tag)
 
-    def view_setResponseCode(self, issuer, code, message=None):
+    def view_setResponseCode(
+        self, issuer: Any, code: int, message: bytes | None = None
+    ) -> None:
         """
         Remote version of setResponseCode; same interface.
         """
         self.setResponseCode(code, message)
 
-    def view_registerProducer(self, issuer, producer, streaming):
+    def view_registerProducer(
+        self, issuer: Any, producer: Any, streaming: bool
+    ) -> None:
         """Remote version of registerProducer; same interface.
         (requires a remote producer.)
         """
         self.registerProducer(_RemoteProducerWrapper(producer), streaming)
 
-    def view_unregisterProducer(self, issuer):
+    def view_unregisterProducer(self, issuer: Any) -> None:
         self.unregisterProducer()
 
     ### these calls remain local
 
-    _secureSession = None
-    _insecureSession = None
+    _secureSession: Session | None = None
+    _insecureSession: Session | None = None
 
     @property
-    def session(self):
+    def session(self) -> Session | None:
         """
         If a session has already been created or looked up with
         L{Request.getSession}, this will return that object.  (This will always
@@ -479,7 +518,9 @@ class Request(Copyable, http.Request, components.Componentized):
         else:
             return self._insecureSession
 
-    def getSession(self, sessionInterface=None, forceNotSecure=False):
+    def getSession(
+        self, sessionInterface: Any = None, forceNotSecure: bool = False
+    ) -> Any:
         """
         Check if there is a session cookie, and if not, create it.
 
@@ -515,15 +556,18 @@ class Request(Copyable, http.Request, components.Componentized):
 
         if session is None:
             # No session was created yet for this request.
+            assert self.sitepath is not None
             cookiename = b"_".join([cookieString] + self.sitepath)
             sessionCookie = self.getCookie(cookiename)
             if sessionCookie:
                 try:
+                    assert self.site is not None
                     session = self.site.getSession(sessionCookie)
                 except KeyError:
                     pass
             # if it still hasn't been set, fix it up.
             if not session:
+                assert self.site is not None
                 session = self.site.makeSession()
                 self.addCookie(cookiename, session.uid, path=b"/", secure=secure)
 
@@ -534,7 +578,7 @@ class Request(Copyable, http.Request, components.Componentized):
 
         return session
 
-    def _prePathURL(self, prepath):
+    def _prePathURL(self, prepath: list[bytes]) -> bytes:
         port = self.getHost().port
         if self.isSecure():
             default = 443
@@ -555,23 +599,25 @@ class Request(Copyable, http.Request, components.Componentized):
         path = b"/".join([quote(segment, safe=b"") for segment in prepath])
         return prefix + path
 
-    def prePathURL(self):
+    def prePathURL(self) -> bytes:
+        assert self.prepath is not None
         return self._prePathURL(self.prepath)
 
-    def URLPath(self):
+    def URLPath(self) -> Any:
         from twisted.python import urlpath
 
         return urlpath.URLPath.fromRequest(self)
 
-    def rememberRootURL(self):
+    def rememberRootURL(self) -> None:
         """
         Remember the currently-processed part of the URL for later
         recalling.
         """
+        assert self.prepath is not None
         url = self._prePathURL(self.prepath[:-1])
         self.appRootURL = url
 
-    def getRootURL(self):
+    def getRootURL(self) -> bytes | None:
         """
         Get a previously-remembered URL.
 
@@ -580,7 +626,7 @@ class Request(Copyable, http.Request, components.Componentized):
         """
         return self.appRootURL
 
-    def _handleStar(self):
+    def _handleStar(self) -> None:
         """
         Handle receiving a request whose path is '*'.
 
@@ -614,7 +660,7 @@ class GzipEncoderFactory:
     _gzipCheckRegex = re.compile(rb"(:?^|[\s,])gzip(:?$|[\s,])")
     compressLevel = 9
 
-    def encoderForRequest(self, request):
+    def encoderForRequest(self, request: Request) -> _GzipEncoder | None:
         """
         Check the headers if the client accepts gzip encoding, and encodes the
         request if so.
@@ -623,14 +669,18 @@ class GzipEncoderFactory:
             request.requestHeaders.getRawHeaders(b"Accept-Encoding", [])
         )
         if self._gzipCheckRegex.search(acceptHeaders):
-            encoding = request.responseHeaders.getRawHeaders(b"Content-Encoding")
-            if encoding:
-                encoding = b",".join(encoding + [b"gzip"])
+            existingEncoding = request.responseHeaders.getRawHeaders(
+                b"Content-Encoding"
+            )
+            newEncoding: bytes
+            if existingEncoding:
+                newEncoding = b",".join(list(existingEncoding) + [b"gzip"])
             else:
-                encoding = b"gzip"
+                newEncoding = b"gzip"
 
-            request.responseHeaders.setRawHeaders(b"Content-Encoding", [encoding])
+            request.responseHeaders.setRawHeaders(b"Content-Encoding", [newEncoding])
             return _GzipEncoder(self.compressLevel, request)
+        return None
 
 
 @implementer(iweb._IRequestEncoder)
@@ -646,15 +696,15 @@ class _GzipEncoder:
     @since: 12.3
     """
 
-    _zlibCompressor = None
+    _zlibCompressor: zlib._Compress | None = None
 
-    def __init__(self, compressLevel, request):
+    def __init__(self, compressLevel: int, request: Request) -> None:
         self._zlibCompressor = zlib.compressobj(
             compressLevel, zlib.DEFLATED, 16 + zlib.MAX_WBITS
         )
         self._request = request
 
-    def encode(self, data):
+    def encode(self, data: bytes) -> bytes:
         """
         Write to the request, automatically compressing data on the fly.
         """
@@ -662,20 +712,22 @@ class _GzipEncoder:
             # Remove the content-length header, we can't honor it
             # because we compress on the fly.
             self._request.responseHeaders.removeHeader(b"Content-Length")
+        assert self._zlibCompressor is not None
         return self._zlibCompressor.compress(data)
 
-    def finish(self):
+    def finish(self) -> bytes:
         """
         Finish handling the request request, flushing any data from the zlib
         buffer.
         """
+        assert self._zlibCompressor is not None
         remain = self._zlibCompressor.flush()
         self._zlibCompressor = None
         return remain
 
 
 class _RemoteProducerWrapper:
-    def __init__(self, remote):
+    def __init__(self, remote: Any) -> None:
         self.resumeProducing = remote.remoteMethod("resumeProducing")
         self.pauseProducing = remote.remoteMethod("pauseProducing")
         self.stopProducing = remote.remoteMethod("stopProducing")
@@ -709,9 +761,11 @@ class Session(components.Componentized):
 
     sessionTimeout = 900
 
-    _expireCall = None
+    _expireCall: interfaces.IDelayedCall | None = None
 
-    def __init__(self, site, uid, reactor=None):
+    def __init__(
+        self, site: Site, uid: bytes, reactor: interfaces.IReactorTime | None = None
+    ) -> None:
         """
         Initialize a session with a unique ID for that session.
 
@@ -726,11 +780,11 @@ class Session(components.Componentized):
 
         self.site = site
         self.uid = uid
-        self.expireCallbacks = []
+        self.expireCallbacks: list[Callable[[], None]] = []
         self.touch()
-        self.sessionNamespaces = {}
+        self.sessionNamespaces: dict[str, Any] = {}
 
-    def startCheckingExpiration(self):
+    def startCheckingExpiration(self) -> None:
         """
         Start expiration tracking.
 
@@ -738,13 +792,13 @@ class Session(components.Componentized):
         """
         self._expireCall = self._reactor.callLater(self.sessionTimeout, self.expire)
 
-    def notifyOnExpire(self, callback):
+    def notifyOnExpire(self, callback: Callable[[], None]) -> None:
         """
         Call this callback when the session expires or logs out.
         """
         self.expireCallbacks.append(callback)
 
-    def expire(self):
+    def expire(self) -> None:
         """
         Expire/logout of the session.
         """
@@ -757,7 +811,7 @@ class Session(components.Componentized):
             # Break reference cycle.
             self._expireCall = None
 
-    def touch(self):
+    def touch(self) -> None:
         """
         Mark the session as modified, which resets expiration timer.
         """
@@ -799,17 +853,25 @@ class Site(HTTPFactory):
     displayTracebacks = False
     sessionFactory = Session
     sessionCheckTime = 1800
-    _entropy = os.urandom
+    # Wrapped in staticmethod() so self._entropy(32) doesn't try to bind
+    # self as the first argument -- os.urandom is a plain function, and
+    # without this wrapper mypy (correctly) points out that calling it as
+    # a bound method would pass too many arguments. At runtime this was
+    # never actually a bug: os.urandom is a builtin (not a pure-Python
+    # function), so it doesn't implement the descriptor protocol that
+    # would auto-bind self. This makes the intent explicit and gives mypy
+    # the right signature.
+    _entropy = staticmethod(os.urandom)
     _parsePOSTFormSubmission: bool
 
     def __init__(
         self,
-        resource,
-        requestFactory=None,
-        *args,
-        parsePOSTFormSubmission=True,
-        **kwargs,
-    ):
+        resource: resource.IResource,
+        requestFactory: type[Request] | None = None,
+        *args: Any,
+        parsePOSTFormSubmission: bool = True,
+        **kwargs: Any,
+    ) -> None:
         """
         @param resource: The root of the resource hierarchy.  All request
             traversal for requests received by this factory will begin at this
@@ -826,30 +888,30 @@ class Site(HTTPFactory):
         @see: L{twisted.web.http.HTTPFactory.__init__}
         """
         super().__init__(*args, **kwargs)
-        self.sessions = {}
+        self.sessions: dict[bytes, Session] = {}
         self.resource = resource
         if requestFactory is not None:
             self.requestFactory = requestFactory
         self._parsePOSTFormSubmission = parsePOSTFormSubmission
 
-    def _openLogFile(self, path):
+    def _openLogFile(self, path: str | bytes) -> Any:
         from twisted.python import logfile
 
         return logfile.LogFile(os.path.basename(path), os.path.dirname(path))
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         d = self.__dict__.copy()
         d["sessions"] = {}
         return d
 
-    def _mkuid(self):
+    def _mkuid(self) -> bytes:
         """
         (internal) Generate an opaque, unique ID for a user's session.
         """
         self.counter = self.counter + 1
         return hexlify(self._entropy(32))
 
-    def makeSession(self):
+    def makeSession(self) -> Session:
         """
         Generate a new Session instance, and store it for future reference.
         """
@@ -858,7 +920,7 @@ class Site(HTTPFactory):
         session.startCheckingExpiration()
         return session
 
-    def getSession(self, uid):
+    def getSession(self, uid: bytes) -> Session:
         """
         Get a previously generated session.
 
@@ -869,32 +931,35 @@ class Site(HTTPFactory):
         """
         return self.sessions[uid]
 
-    def buildProtocol(self, addr):
+    def buildProtocol(
+        self, addr: interfaces.IAddress | None
+    ) -> _GenericHTTPChannelProtocol | None:
         """
         Generate a channel attached to this site.
         """
         channel = super().buildProtocol(addr)
+        assert channel is not None
         channel.requestFactory = self.requestFactory
         channel.site = self
         return channel
 
     isLeaf = 0
 
-    def render(self, request):
+    def render(self, request: Request) -> None:
         """
         Redirect because a Site is always a directory.
         """
         request.redirect(request.prePathURL() + b"/")
         request.finish()
 
-    def getChildWithDefault(self, pathEl, request):
+    def getChildWithDefault(self, pathEl: bytes, request: Request) -> Any:
         """
         Emulate a resource's getChild method.
         """
         request.site = self
         return self.resource.getChildWithDefault(pathEl, request)
 
-    def getResourceFor(self, request):
+    def getResourceFor(self, request: Request) -> Any:
         """
         Get a resource for a request.
 
@@ -909,7 +974,7 @@ class Site(HTTPFactory):
         return resource.getChildForRequest(self.resource, request)
 
     # IProtocolNegotiationFactory
-    def acceptableProtocols(self):
+    def acceptableProtocols(self) -> list[bytes]:
         """
         Protocols this server can speak.
         """

@@ -734,7 +734,6 @@ module = [
     'twisted.web.microdom',
     'twisted.web.proxy',
     'twisted.web.resource',
-    'twisted.web.server',
     'twisted.web.static',
     'twisted.web.sux',
     'twisted.web.tap',
