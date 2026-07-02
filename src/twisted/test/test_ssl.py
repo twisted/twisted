@@ -21,6 +21,10 @@ from twisted.trial.unittest import TestCase
 try:
     from OpenSSL import SSL, crypto
 
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.x509.oid import NameOID
+
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:
@@ -164,21 +168,31 @@ def generateCertificateObjects(organization, organizationalUnit):
     """
     pkey = crypto.PKey()
     pkey.generate_key(crypto.TYPE_RSA, 2048)
-    req = crypto.X509Req()
-    subject = req.get_subject()
-    subject.O = organization
-    subject.OU = organizationalUnit
-    req.set_pubkey(pkey)
-    req.sign(pkey, "md5")
+    req = (
+        x509.CertificateSigningRequestBuilder()
+        .subject_name(
+            x509.Name(
+                [
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
+                    x509.NameAttribute(
+                        NameOID.ORGANIZATIONAL_UNIT_NAME, organizationalUnit
+                    ),
+                ]
+            )
+        )
+        .sign(pkey.to_cryptography_key(), hashes.SHA256())
+    )
 
     # Here comes the actual certificate
     cert = crypto.X509()
     cert.set_serial_number(1)
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(60)  # Testing certificates need not be long lived
-    cert.set_issuer(req.get_subject())
-    cert.set_subject(req.get_subject())
-    cert.set_pubkey(req.get_pubkey())
+    subject = cert.get_subject()
+    subject.O = organization
+    subject.OU = organizationalUnit
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(pkey)
     cert.sign(pkey, "md5")
 
     return pkey, req, cert
@@ -191,13 +205,13 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
     """
     pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
 
-    for ext, obj, dumpFunc in [
-        ("key", pkey, crypto.dump_privatekey),
-        ("req", req, crypto.dump_certificate_request),
-        ("cert", cert, crypto.dump_certificate),
+    for ext, data in [
+        ("key", crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)),
+        ("req", req.public_bytes(serialization.Encoding.PEM)),
+        ("cert", crypto.dump_certificate(crypto.FILETYPE_PEM, cert)),
     ]:
         fName = os.extsep.join((basename, ext)).encode("utf-8")
-        FilePath(fName).setContent(dumpFunc(crypto.FILETYPE_PEM, obj))
+        FilePath(fName).setContent(data)
 
 
 class ContextGeneratingMixin:

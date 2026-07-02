@@ -43,10 +43,12 @@ from typing import Callable, Protocol, TextIO, Union
 from zope.interface import implementer
 
 from attrs import define
+from incremental import Version
 from typing_extensions import ParamSpec, TypeAlias, TypeGuard
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
+from twisted.python.deprecate import deprecated
 from twisted.trial import unittest, util
 from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
 from twisted.trial._synctest import _logObserver
@@ -92,10 +94,10 @@ def isPackageDirectory(dirname):
     return False
 
 
-def samefile(filename1, filename2):
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.path.samefile")
+def samefile(filename1: str, filename2: str) -> bool:
     """
-    A hacky implementation of C{os.path.samefile}. Used by L{filenameToModule}
-    when the platform doesn't provide C{os.path.samefile}. Do not use this.
+    A hacky implementation of C{os.path.samefile}. Do not use this.
     """
     return os.path.abspath(filename1) == os.path.abspath(filename2)
 
@@ -141,9 +143,7 @@ def filenameToModule(fn):
 
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + ".py"
-    # not all platforms (e.g. win32) have os.path.samefile
-    same = getattr(os.path, "samefile", samefile)
-    if os.path.isfile(fn) and not same(fn, retFile):
+    if os.path.isfile(fn) and not os.path.samefile(fn, retFile):
         del sys.modules[ret.__name__]
         ret = _importFromFile(fn, moduleName=moduleName)
     return ret

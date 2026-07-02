@@ -29,13 +29,13 @@ if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
         sys.modules["termios"] = None  # type: ignore[assignment]
         reload(getpass)
 
-supportedKeyTypes = dict()
+supportedKeyTypes: dict[str, Callable[[], None]] = {}
 
 
-def _keyGenerator(keyType):
-    def assignkeygenerator(keygenerator):
+def _keyGenerator(keyType: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def assignkeygenerator(keygenerator: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(keygenerator)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             return keygenerator(*args, **kwargs)
 
         supportedKeyTypes[keyType] = wrapper
