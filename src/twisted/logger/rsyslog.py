@@ -3,19 +3,56 @@ import platform
 from datetime import datetime
 from typing import Optional
 
-from zope.interface import implementer
+from zope.interface import Interface, implementer
 
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol
 from twisted.logger import ILogObserver, LogEvent, LogLevel
 
 
-class UDPSyslog(protocol.DatagramProtocol):
-    def __init__(self, address: tuple[str, int]):
+def rsyslog(server="localhost", port=514, protocol="udp", facility=8):
+    if protocol == "udp":
+        transport = UDPSyslogTransport((server, port))
+    else:
+        raise ValueError("Invalid Protocol")
+
+    return RemoteSyslogObserver(transport, facility)
+
+
+class ISyslogTransport(Interface):
+    def send(self, data: bytes) -> None:
+        """
+        Sends a single syslog message.
+
+        @param data: encoded message to send.
+        """
+
+
+@implementer(ISyslogTransport)
+class UDPSyslogTransport(protocol.DatagramProtocol):
+    """
+    UDP Transport for C{RemoteSyslogObserver}.
+    """
+
+    def __init__(self, address: tuple[str, int], *, maxDatagramBytes: int = 1024, reactor = None):
+        """
+        @param address: host and port of the remote syslog server.
+
+        @param maxDatagramBytes: override maximum length of transported messages.
+        """
         self.address = address
-        reactor.listenUDP(0, self)
+        self.maxDatagramBytes = maxDatagramBytes
+
+        if reactor is None:
+            from twisted.internet import reactor
+        self._reactor = reactor
 
     def send(self, data: bytes) -> None:
-        self.transport.write(data, self.address)
+        if not self.transport:
+            self._reactor.listenUDP(0, self)
+
+        self._reactor.callFromThread(
+            self.transport.write, data[:self.maxDatagramBytes], self.address
+        )
 
 
 @implementer(ILogObserver)
@@ -25,6 +62,9 @@ class RemoteSyslogObserver:
 
     @cvar severities: translates Twisted's C{LogLevel}s to syslog's.
     """
+
+    # NOTE: we avoid importing Python's syslog module just for its LOG_*
+    # constants, since that is not available on non-Unix systems.
 
     severities = {
         # no LogLevel equivalent for LOG_EMERG (0)
@@ -39,25 +79,18 @@ class RemoteSyslogObserver:
 
     def __init__(
         self,
-        server: str,
-        facility: int = 8,
+        transport: ISyslogTransport,
+        facility: int = 8, # LOG_USER
         *,
-        port: int = 514,
-        handler: type[UDPSyslog] = UDPSyslog,
         pid: Optional[int] = None,
         client_name: Optional[str] = None,
         encoding: str = "ASCII",
     ):
         """
-        @param server: Hostname or address of the remote syslog server.
+        @param transport: Instance of a class implementing C{ISyslogTransport}.
 
         @param facility: Syslog facility number. See Python's C{syslog} module.
             Defaults to LOG_USER.
-
-        @param port: Port the remote syslog server is listening on. Defaults to
-            514.
-
-        @param handler: Class implementing C{UDPSyslog}.
 
         @param pid: Optionally overwrite the process ID sent in syslog messages.
             Defaults to the actual PID.
@@ -68,8 +101,7 @@ class RemoteSyslogObserver:
         @param encoding: Encoding to use for log messages. Unrepresentable
             characters are dropped from the message.
         """
-        # NOTE: facility=8 is LOG_USER.
-        self.handler = handler((server, port))
+        self.transport = transport
         self.facility = facility  # syslog.LOG_* (already is n * 8)
         if self.facility & 0b111 != 0:
             raise ValueError("syslog facility must have lowest three bits cleared")
@@ -103,4 +135,4 @@ class RemoteSyslogObserver:
                 leader + message,
             )
 
-            self.handler.send(d.encode(self.encoding, "ignore")[:1024])
+            self.transport.send(d.encode(self.encoding, "ignore"))
