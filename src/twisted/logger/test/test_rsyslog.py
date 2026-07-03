@@ -6,10 +6,10 @@ Test cases for L{twisted.logger.rsyslog}.
 """
 
 from twisted.internet import protocol
+from twisted.internet.test.reactormixins import ReactorBuilder
 from twisted.logger import Logger, LogPublisher
 from twisted.logger.rsyslog import RemoteSyslogObserver
 from twisted.trial.unittest import TestCase
-from twisted.internet.test.reactormixins import ReactorBuilder
 
 
 class RsyslogReceiver(protocol.DatagramProtocol):
@@ -49,5 +49,6 @@ class RemoteSyslogTests(TestCase):
         self.assertTrue(len(self.rx.received) == 2)
         self.assertEqual(self.rx.received[0], b"")
         self.assertEqual(self.rx.received[1], b"")
+
 
 globals().update(ReactorBuilder.makeTestCaseClasses())

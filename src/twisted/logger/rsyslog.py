@@ -33,7 +33,9 @@ class UDPSyslogTransport(protocol.DatagramProtocol):
     UDP Transport for C{RemoteSyslogObserver}.
     """
 
-    def __init__(self, address: tuple[str, int], *, maxDatagramBytes: int = 1024, reactor = None):
+    def __init__(
+        self, address: tuple[str, int], *, maxDatagramBytes: int = 1024, reactor=None
+    ):
         """
         @param address: host and port of the remote syslog server.
 
@@ -51,7 +53,7 @@ class UDPSyslogTransport(protocol.DatagramProtocol):
             self._reactor.listenUDP(0, self)
 
         self._reactor.callFromThread(
-            self.transport.write, data[:self.maxDatagramBytes], self.address
+            self.transport.write, data[: self.maxDatagramBytes], self.address
         )
 
 
@@ -80,7 +82,7 @@ class RemoteSyslogObserver:
     def __init__(
         self,
         transport: ISyslogTransport,
-        facility: int = 8, # LOG_USER
+        facility: int = 8,  # LOG_USER
         *,
         pid: Optional[int] = None,
         client_name: Optional[str] = None,
