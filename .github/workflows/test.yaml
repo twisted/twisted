@@ -403,6 +403,11 @@ jobs:
         # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          setup.cfg
+          tox.ini
 
     - name: Install dependencies
       run: |
@@ -461,6 +466,11 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          setup.cfg
+          tox.ini
 
     - name: Install dependencies
       run: |
@@ -485,6 +495,12 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          setup.cfg
+          tox.ini
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox~=3.0
@@ -502,6 +518,11 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          setup.cfg
+          tox.ini
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip tox~=3.0
@@ -526,6 +547,11 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          setup.cfg
+          tox.ini
 
     - name: Test
       run: |
