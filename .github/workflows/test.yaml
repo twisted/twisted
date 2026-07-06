@@ -238,7 +238,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     # Make sure the matrix is defined in such a way that this is triggered
@@ -406,7 +405,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     - name: Install dependencies
@@ -469,7 +467,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     - name: Install dependencies
@@ -498,7 +495,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     - name: Install dependencies
@@ -521,7 +517,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
     - name: Install dependencies
       run: |
@@ -550,7 +545,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     - name: Test
