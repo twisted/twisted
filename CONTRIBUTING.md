@@ -1,5 +1,7 @@
-Contributing to Twisted
-=======================
+## Contributing to Twisted
+
+> [!IMPORTANT]
+> - If you use LLM / "AI" tools for your contributions, please read and follow our [_Generative AI / LLM Policy_][ai-policy].
 
 As an open source project, Twisted welcomes contributions of many forms.
 This document summarizes the process.
@@ -23,3 +25,5 @@ For a PR to be accepted:
 * The changeset must have 100% patch test coverage
 
 Extensive contribution guidelines are [available online](https://docs.twisted.org/en/latest/development/dev-process.html)
+
+[ai-policy]: https://github.com/twisted/twisted/blob/trunk/.github/AI_POLICY.md
