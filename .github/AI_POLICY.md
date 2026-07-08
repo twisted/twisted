@@ -1,5 +1,7 @@
 # Generative AI / LLM Policy
 
+The Twisted policy is based on the [_attrs AI policy_][attrs-policy].
+
 We appreciate that we can't realistically police how you author your pull requests,
 which includes whether you employ large-language model (LLM)-based development tools.
 So, we don't.
@@ -107,3 +109,5 @@ In practice, this means:
   Do **not** post summaries unless you've fact-checked them and take responsibility for 100% of their content.
   Remember that *all* LLM output *looks* **plausible**.
   When using these tools, it's **your** responsibility to ensure that it's also **correct** and has a reasonable signal-to-noise ratio.
+
+[attrs-policy]: https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md
