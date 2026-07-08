@@ -265,19 +265,6 @@ class FakeSocketTests(TestCase):
         self.assertEqual(skt.sendBuffer, [b"foo"])
 
 
-class FakeProtocol(Protocol):
-    """
-    An L{IProtocol} that returns a value from its dataReceived method.
-    """
-
-    def dataReceived(self, data):
-        """
-        Return something other than L{None} to trigger a deprecation warning for
-        that behavior.
-        """
-        return ()
-
-
 @implementer(IReactorFDSet)
 class _FakeFDSetReactor:
     """
@@ -383,32 +370,13 @@ class TCPConnectionTests(TestCase):
     Whitebox tests for L{twisted.internet.tcp.Connection}.
     """
 
-    def test_doReadWarningIsRaised(self):
-        """
-        When an L{IProtocol} implementation that returns a value from its
-        C{dataReceived} method, a deprecated warning is emitted.
-        """
-        skt = FakeSocket(b"someData")
-        protocol = FakeProtocol()
-        conn = Connection(skt, protocol)
-        conn.doRead()
-        warnings = self.flushWarnings([FakeProtocol.dataReceived])
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            "Returning a value other than None from "
-            "twisted.internet.test.test_tcp.FakeProtocol.dataReceived "
-            "is deprecated since Twisted 11.0.0.",
-        )
-        self.assertEqual(len(warnings), 1)
-
     def test_noTLSBeforeStartTLS(self):
         """
         The C{TLS} attribute of a L{Connection} instance is C{False} before
         L{Connection.startTLS} is called.
         """
         skt = FakeSocket(b"")
-        protocol = FakeProtocol()
+        protocol = Protocol()
         conn = Connection(skt, protocol)
         self.assertFalse(conn.TLS)
 
@@ -419,7 +387,7 @@ class TCPConnectionTests(TestCase):
         L{Connection.startTLS} is called.
         """
         skt = FakeSocket(b"")
-        protocol = FakeProtocol()
+        protocol = Protocol()
         conn = Connection(skt, protocol, reactor=_FakeFDSetReactor())
         conn._tlsClientDefault = True
         conn.startTLS(ClientContextFactory(), True)
