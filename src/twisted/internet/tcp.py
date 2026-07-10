@@ -20,6 +20,7 @@ from zope.interface import Interface, implementer
 
 import attr
 
+from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
@@ -219,21 +220,27 @@ class Connection(
     connection based socket.
 
     @ivar logstr: prefix used when logging events related to this connection.
-    @type logstr: C{str}
     """
 
-    def __init__(self, skt, protocol, reactor=None):
-        abstract.FileDescriptor.__init__(self, reactor=reactor)
-        self.socket = skt
-        self.socket.setblocking(0)
-        self.fileno = skt.fileno
-        self.protocol = protocol
+    logstr: str = "Uninitialized"
 
-    def getHandle(self):
+    def __init__(
+        self,
+        skt: socket.socket,
+        protocol: IProtocol,
+        reactor: IReactorFDSet | None = None,
+    ):
+        abstract.FileDescriptor.__init__(self, reactor=reactor)
+        self.socket: socket.socket = skt
+        self.socket.setblocking(False)
+        self.fileno: Callable[[], int] = skt.fileno
+        self.protocol: IProtocol = protocol
+
+    def getHandle(self) -> socket.socket:
         """Return the socket for this connection."""
         return self.socket
 
-    def doRead(self):
+    def doRead(self) -> ConnectionLost | ConnectionDone | None:
         """Calls self.protocol.dataReceived with all available data.
 
         This reads up to self.bufferSize bytes of data from its socket, then
@@ -245,19 +252,19 @@ class Connection(
             data = self.socket.recv(self.bufferSize)
         except OSError as se:
             if se.args[0] == EWOULDBLOCK:
-                return
+                return None
             else:
                 return main.CONNECTION_LOST
 
         return self._dataReceived(data)
 
-    def _dataReceived(self, data):
+    def _dataReceived(self, data: bytes | None) -> ConnectionDone | None:
         if not data:
             return main.CONNECTION_DONE
         self.protocol.dataReceived(data)
         return None
 
-    def writeSomeData(self, data):
+    def writeSomeData(self, data: bytes) -> int | ConnectionLost:
         """
         Write as much as possible of the given data to this TCP connection.
 
@@ -277,7 +284,7 @@ class Connection(
             else:
                 return main.CONNECTION_LOST
 
-    def _closeWriteConnection(self):
+    def _closeWriteConnection(self) -> None:
         try:
             self.socket.shutdown(1)
         except OSError:
@@ -291,7 +298,7 @@ class Connection(
                 log.err()
                 self.connectionLost(f)
 
-    def readConnectionLost(self, reason):
+    def readConnectionLost(self, reason: failure.Failure) -> None:
         p = IHalfCloseableProtocol(self.protocol, None)
         if p:
             try:
@@ -302,7 +309,7 @@ class Connection(
         else:
             self.connectionLost(reason)
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure) -> None:
         """See abstract.FileDescriptor.connectionLost()."""
         # Make sure we're not called twice, which can happen e.g. if
         # abortConnection() is called from protocol's dataReceived and then
@@ -319,16 +326,14 @@ class Connection(
         del self.fileno
         protocol.connectionLost(reason)
 
-    logstr = "Uninitialized"
-
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """Return the prefix to log with when I own the logging thread."""
         return self.logstr
 
-    def getTcpNoDelay(self):
+    def getTcpNoDelay(self) -> bool:
         return bool(self.socket.getsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY))
 
-    def setTcpNoDelay(self, enabled):
+    def setTcpNoDelay(self, enabled: bool) -> None:
         try:
             # There are bug reports about failures when setting TCP_NODELAY under certain conditions
             # on macOS: https://github.com/thespianpy/Thespian/issues/70,
@@ -342,10 +347,10 @@ class Connection(
         except OSError as e:  # pragma: no cover
             log.err(e, "got error when setting TCP_NODELAY on TCP socket")
 
-    def getTcpKeepAlive(self):
+    def getTcpKeepAlive(self) -> bool:
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE))
 
-    def setTcpKeepAlive(self, enabled):
+    def setTcpKeepAlive(self, enabled: bool) -> None:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
 
