@@ -24,7 +24,7 @@ from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
     IProtocol,
-    IReactorTCP,
+    IReactorFDSet,
     ISystemHandle,
     ITCPTransport,
 )
@@ -798,7 +798,7 @@ class Server(_TLSServerMixin, Connection):
         client: tuple[object, ...],
         server: Port,
         sessionno: int,
-        reactor: IReactorTCP,
+        reactor: IReactorFDSet,
     ) -> None:
         """
         Server(sock, protocol, client, server, sessionno)
