@@ -795,7 +795,6 @@ allow_untyped_defs = true
 module = [
     'twisted.conch.avatar',
     'twisted.conch.checkers',
-    'twisted.conch.client.connect',
     'twisted.conch.client.knownhosts',
     'twisted.conch.client.options',
     'twisted.conch.error',
@@ -803,7 +802,6 @@ module = [
     'twisted.conch.interfaces',
     'twisted.conch.manhole_ssh',
     'twisted.conch.openssh_compat.factory',
-    'twisted.conch.ssh._kex',
     'twisted.conch.ssh.address',
     'twisted.conch.ssh.common',
     'twisted.conch.test.test_unix',
