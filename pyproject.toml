@@ -463,9 +463,11 @@ module = [
     'twisted.internet._glibbase',
     'twisted.internet._newtls',
     'twisted.internet._signals',
+    'twisted.internet._sslverify',
     'twisted.internet._threadedselect',
     'twisted.internet._win32serialport',
     'twisted.internet._win32stdio',
+    'twisted.internet.abstract',
     'twisted.internet.asyncioreactor',
     'twisted.internet.cfreactor',
     'twisted.internet.endpoints',
@@ -475,12 +477,14 @@ module = [
     'twisted.internet.inotify',
     'twisted.internet.iocpreactor.abstract',
     'twisted.internet.iocpreactor.reactor',
+    'twisted.internet.iocpreactor.tcp',
     'twisted.internet.iocpreactor.udp',
     'twisted.internet.kqreactor',
     'twisted.internet.posixbase',
     'twisted.internet.process',
     'twisted.internet.protocol',
     'twisted.internet.serialport',
+    'twisted.internet.tcp',
     'twisted.internet.test._posixifaces',
     'twisted.internet.test.connectionmixins',
     'twisted.internet.test.reactormixins',
@@ -907,14 +911,4 @@ module = [
     'twisted.words.tap',
     'twisted.words.test.test_ircsupport',
     'twisted.words.xmpproutertap',
-]
-
-[[tool.mypy.overrides]]
-allow_untyped_defs = true
-check_untyped_defs = false
-module = [
-    'twisted.internet._sslverify',
-    'twisted.internet.abstract',
-    'twisted.internet.iocpreactor.tcp',
-    'twisted.internet.tcp',
 ]
