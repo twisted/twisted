@@ -72,7 +72,7 @@ When you update existing files, if there is no copyright header, add one.
 Whitespace
 ----------
 
-Code must be formatted according to the `The Black Code Style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_.
+Code must be formatted according to the `The Black Code Style <https://github.com/psf/black/blob/main/docs/the_black_code_style/current_style.md>`_.
 This entire source tree can be reformatted by running:
 
 .. code-block:: console
