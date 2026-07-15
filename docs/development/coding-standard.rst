@@ -688,7 +688,7 @@ Fallback
 
 In case of conventions not enforced in this document, the reference documents to use in fallback are:
 
-* `The Black code style <https://github.com/psf/black/blob/master/docs/the_black_code_style.md>`_
+* `The Black code style <https://github.com/psf/black/blob/main/docs/the_black_code_style/current_style.md>`_
 * `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ for Python code
 * `PEP 7 <https://www.python.org/dev/peps/pep-0007/>`_ for C code
 
