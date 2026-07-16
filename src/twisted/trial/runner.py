@@ -35,16 +35,15 @@ import sys
 import types
 import unittest as pyunit
 import warnings
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Callable, Protocol, TextIO, Union
+from typing import ParamSpec, Protocol, TextIO, TypeAlias, TypeGuard
 
 from zope.interface import implementer
 
 from attrs import define
 from incremental import Version
-from typing_extensions import ParamSpec, TypeAlias, TypeGuard
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
@@ -246,12 +245,12 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-_Loadable: TypeAlias = Union[
-    modules.PythonAttribute,
-    modules.PythonModule,
-    pyunit.TestCase,
-    type[pyunit.TestCase],
-]
+_Loadable: TypeAlias = (
+    modules.PythonAttribute
+    | modules.PythonModule
+    | pyunit.TestCase
+    | type[pyunit.TestCase]
+)
 
 
 def name(thing: _Loadable) -> str:
