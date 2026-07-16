@@ -3327,13 +3327,17 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     # Legacy unused default value.
     resends = None  # type:ignore[assignment]
 
-    def stopProtocol(self):
+    # map of message-id:address
+    _addressValidation: dict[int, tuple[str, int]]
+
+    def stopProtocol(self) -> None:
         """
         Stop protocol: reset state variables.
         """
         self.liveMessages = {}
         self.resends = {}
-        self.transport = None
+        self.transport = None  # type:ignore[assignment]
+        self._addressValidation = {}
 
     def startProtocol(self):
         """
@@ -3341,6 +3345,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         self.liveMessages = {}
         self.resends = {}
+        self._addressValidation = {}
 
     def writeMessage(self, message: Message, address: tuple[str, int]) -> None:
         """
@@ -3374,6 +3379,8 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             return
 
         if m.id in self.liveMessages:
+            if self._addressValidation[m.id] != addr:
+                return
             d, canceller = self.liveMessages[m.id]
             del self.liveMessages[m.id]
             canceller.cancel()
@@ -3426,6 +3433,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         def writeMessage(m: Message) -> None:
             self.writeMessage(m, address)
 
+        self._addressValidation[id] = address
         return self._query(queries, timeout, id, writeMessage)
 
 
