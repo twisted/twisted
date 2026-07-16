@@ -1394,6 +1394,7 @@ class DatagramProtocolTests(unittest.SynchronousTestCase):
         self.assertNoResult(d)
         self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21346))
         self.assertNoResult(d)
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
         result = self.successResultOf(d)
         payload: object = result.answers[0].payload
         assert isinstance(payload, Record_A)
