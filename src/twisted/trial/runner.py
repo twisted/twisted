@@ -164,21 +164,6 @@ def _resolveDirectory(fn):
     return fn
 
 
-def _getMethodNameInClass(method):
-    """
-    Find the attribute name on the method's class which refers to the method.
-
-    For some methods, notably decorators which have not had __name__ set correctly:
-
-    getattr(method.im_class, method.__name__) != method
-    """
-    if getattr(method.im_class, method.__name__, object()) != method:
-        for alias in dir(method.im_class):
-            if getattr(method.im_class, alias, object()) == method:
-                return alias
-    return method.__name__
-
-
 class DestructiveTestSuite(TestSuite):
     """
     A test suite which remove the tests once run, to minimize memory usage.
