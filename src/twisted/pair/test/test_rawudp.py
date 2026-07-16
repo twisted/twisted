@@ -16,8 +16,7 @@ class MyProtocol(protocol.DatagramProtocol):
     def datagramReceived(
         self,
         data: bytes,
-        # FIXME: twisted.pair.rawudp incorrectly delivers hostnames as bytes,
-        # so this annotation matches the behavior rather than the types.
+        # https://github.com/twisted/twisted/issues/12699
         peer: tuple[bytes, int],  # type:ignore[override]
     ) -> None:
         (host, port) = peer
