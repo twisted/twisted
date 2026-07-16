@@ -3405,13 +3405,11 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         Send out a message with the given queries.
 
-        @type address: L{tuple} of L{str} and L{int}
         @param address: The address to which to send the query
 
-        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @rtype: C{Deferred}
+        @return: a L{Deferred} which fires with the response when it arrives.
         """
         if not self.transport:
             # XXX transport might not get created automatically, use callLater?
