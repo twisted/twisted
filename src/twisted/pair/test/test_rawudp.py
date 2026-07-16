@@ -110,7 +110,7 @@ class RawUDPTests(unittest.TestCase):
             b"quux",
             partial=0,
             dest=b"dummy",
-            source="otherHost",
+            source=b"otherHost",
             protocol=b"dummy",
             version=b"dummy",
             ihl=b"dummy",
