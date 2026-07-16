@@ -12,9 +12,10 @@ from io import BytesIO
 
 from zope.interface.verify import verifyClass
 
-from twisted.internet import address, task
+from twisted.internet import task
 from twisted.internet.error import CannotListenError, ConnectionDone
 from twisted.names import dns
+from twisted.names.dns import Record_A
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
@@ -1320,7 +1321,7 @@ class TestController:
         self.messages.append((msg, proto, addr))
 
 
-class DatagramProtocolTests(unittest.TestCase):
+class DatagramProtocolTests(unittest.SynchronousTestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
@@ -1334,7 +1335,6 @@ class DatagramProtocolTests(unittest.TestCase):
         self.proto = dns.DNSDatagramProtocol(self.controller, reactor=self.clock)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
-        # self.proto.callLater = self.clock.callLater  # type:ignore[method-assign]
 
     def test_truncatedPacket(self) -> None:
         """
@@ -1359,9 +1359,7 @@ class DatagramProtocolTests(unittest.TestCase):
             b'ITE"\rssh_upload=no\x0ctcp_check=no\xc0\x8f\x00\x01\x00\x01\x00\x00'
             b"\x00x\x00\x04\xc0\xa8\x01)"
         )
-        self.proto.datagramReceived(
-            unparsable, address.IPv4Address("UDP", "127.0.0.1", 12345)
-        )
+        self.proto.datagramReceived(unparsable, ("127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
 
     def test_simpleQuery(self) -> None:
@@ -1375,7 +1373,31 @@ class DatagramProtocolTests(unittest.TestCase):
         m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
         self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
         result = self.successResultOf(d)
-        self.assertEqual(result.answers[0].payload.dottedQuad(), "1.2.3.4")
+        payload: object = result.answers[0].payload
+        assert isinstance(payload, Record_A)
+        self.assertEqual(payload.dottedQuad(), "1.2.3.4")
+
+    def test_discardedResponses(self) -> None:
+        """
+        Responses to queries sent with the wrong host source address or wrong
+        message ID will not be processed.
+        """
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")], id=4321)
+        self.assertEqual(len(self.proto.liveMessages.keys()), 1)
+        m = dns.Message()
+        m.id = 1234
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
+        self.assertNoResult(d)
+        m.id = 4321
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.2", 21345))
+        self.assertNoResult(d)
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21346))
+        self.assertNoResult(d)
+        result = self.successResultOf(d)
+        payload: object = result.answers[0].payload
+        assert isinstance(payload, Record_A)
+        self.assertEqual(payload.dottedQuad(), "1.2.3.4")
 
     def test_queryTimeout(self) -> None:
         """
@@ -1384,7 +1406,7 @@ class DatagramProtocolTests(unittest.TestCase):
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(10)
-        self.assertFailure(d, dns.DNSQueryTimeoutError)
+        self.failureResultOf(d, dns.DNSQueryTimeoutError)
         self.assertEqual(len(self.proto.liveMessages), 0)
 
     def test_writeError(self) -> None:
@@ -1394,10 +1416,10 @@ class DatagramProtocolTests(unittest.TestCase):
         L{DNSDatagramProtocol.query}.
         """
 
-        def writeError(message, addr):
+        def writeError(packet: bytes, addr: tuple[str, int] | None = None) -> None:
             raise RuntimeError("bar")
 
-        self.proto.transport.write = writeError
+        self.proto.transport.write = writeError  # type:ignore[method-assign]
 
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.failureResultOf(d, RuntimeError)
@@ -1409,13 +1431,12 @@ class DatagramProtocolTests(unittest.TestCase):
         L{DNSDatagramProtocol.query}.
         """
 
-        def startListeningError():
+        def startListeningError() -> None:
             raise CannotListenError(None, None, None)
 
-        self.proto.startListening = startListeningError
+        self.proto.startListening = startListeningError  # type:ignore[method-assign]
         # Clean up transport so that the protocol calls startListening again
-        self.proto.transport = None
-
+        del self.proto.transport
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.failureResultOf(d, CannotListenError)
 
