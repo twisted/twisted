@@ -155,12 +155,15 @@ class ReactorBuilder:
             ]
         )
 
-        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
         _reactors.append("twisted.internet._threadedselect.ThreadedSelectReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
         else:
+            # see https://github.com/python/cpython/issues/153117
+            _reactors.append(
+                "twisted.internet.test.reactormixins.AsyncioSelectorReactor"
+            )
             _reactors.extend(
                 [
                     "twisted.internet.pollreactor.PollReactor",
