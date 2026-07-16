@@ -12,6 +12,7 @@ import socket
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
+from typing import Sequence
 
 from twisted.internet import defer, error, reactor
 from twisted.internet.defer import succeed
@@ -23,7 +24,15 @@ from twisted.internet.testing import (
 from twisted.names import authority, client, common, dns, server
 from twisted.names.authority import BindAuthority
 from twisted.names.client import Resolver
-from twisted.names.dns import SOA, Message, Query, Record_A, Record_SOA, RRHeader
+from twisted.names.dns import (
+    SOA,
+    IRecord,
+    Message,
+    Query,
+    Record_A,
+    Record_SOA,
+    RRHeader,
+)
 from twisted.names.error import DomainError
 from twisted.names.secondary import SecondaryAuthority, SecondaryAuthorityService
 from twisted.python.compat import nativeString
@@ -74,55 +83,88 @@ my_soa = dns.Record_SOA(
     retry=100,
 )
 
+test_domain_com_records: dict[
+    bytes,
+    list[
+        dns.Record_A
+        | dns.Record_NS
+        | dns.Record_SPF
+        | dns.Record_SPF
+        | dns.Record_MX
+        | dns.Record_HINFO
+        | dns.Record_CNAME
+        | dns.Record_MB
+        | dns.Record_MG
+        | dns.Record_TXT
+        | dns.Record_A6
+        | dns.Record_A6
+        | dns.Record_A6
+        | dns.Record_TXT
+        | dns.Record_MR
+        | dns.Record_MINFO
+        | dns.Record_AFSDB
+        | dns.Record_RP
+        | dns.Record_WKS
+        | dns.Record_NAPTR
+        | dns.Record_AAAA
+        | dns.Record_SRV
+        | dns.Record_A
+        | dns.Record_A
+        | dns.Record_A
+        | dns.Record_CNAME
+        | dns.Record_A
+        | dns.Record_SOA
+    ],
+] = {
+    b"test-domain.com": [
+        soa_record,
+        dns.Record_A(b"127.0.0.1"),
+        dns.Record_NS(b"39.28.189.39"),
+        dns.Record_SPF(b"v=spf1 mx/30 mx:example.org/30 -all"),
+        dns.Record_SPF(b"v=spf1 +mx a:\0colo", b".example.com/28 -all not valid"),
+        dns.Record_MX(10, "host.test-domain.com"),
+        dns.Record_HINFO(os=b"Linux", cpu=b"A Fast One, Dontcha know"),
+        dns.Record_CNAME(b"canonical.name.com"),
+        dns.Record_MB(b"mailbox.test-domain.com"),
+        dns.Record_MG(b"mail.group.someplace"),
+        dns.Record_TXT(b"A First piece of Text", b"a SecoNd piece"),
+        dns.Record_A6(0, b"ABCD::4321", b""),
+        dns.Record_A6(12, b"0:0069::0", b"some.network.tld"),
+        dns.Record_A6(8, b"0:5634:1294:AFCB:56AC:48EF:34C3:01FF", b"tra.la.la.net"),
+        dns.Record_TXT(b"Some more text, haha!  Yes.  \0  Still here?"),
+        dns.Record_MR(b"mail.redirect.or.whatever"),
+        dns.Record_MINFO(rmailbx=b"r mail box", emailbx=b"e mail box"),
+        dns.Record_AFSDB(subtype=1, hostname=b"afsdb.test-domain.com"),
+        dns.Record_RP(mbox=b"whatever.i.dunno", txt=b"some.more.text"),
+        dns.Record_WKS(
+            b"12.54.78.12", socket.IPPROTO_TCP, b"\x12\x01\x16\xfe\xc1\x00\x01"
+        ),
+        dns.Record_NAPTR(
+            100, 10, b"u", b"sip+E2U", b"!^.*$!sip:information@domain.tld!"
+        ),
+        dns.Record_AAAA(b"AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF"),
+    ],
+    b"http.tcp.test-domain.com": [
+        dns.Record_SRV(257, 16383, 43690, b"some.other.place.fool")
+    ],
+    b"host.test-domain.com": [
+        dns.Record_A(b"123.242.1.5"),
+        dns.Record_A(b"0.255.0.255"),
+    ],
+    b"host-two.test-domain.com": [
+        #
+        #  Python bug
+        #           dns.Record_A('255.255.255.255'),
+        #
+        dns.Record_A(b"255.255.255.254"),
+        dns.Record_A(b"0.0.0.0"),
+    ],
+    b"cname.test-domain.com": [dns.Record_CNAME(b"test-domain.com")],
+    b"anothertest-domain.com": [dns.Record_A(b"1.2.3.4")],
+}
 test_domain_com = NoFileAuthority(
     soa=(b"test-domain.com", soa_record),
-    records={
-        b"test-domain.com": [
-            soa_record,
-            dns.Record_A(b"127.0.0.1"),
-            dns.Record_NS(b"39.28.189.39"),
-            dns.Record_SPF(b"v=spf1 mx/30 mx:example.org/30 -all"),
-            dns.Record_SPF(b"v=spf1 +mx a:\0colo", b".example.com/28 -all not valid"),
-            dns.Record_MX(10, "host.test-domain.com"),
-            dns.Record_HINFO(os=b"Linux", cpu=b"A Fast One, Dontcha know"),
-            dns.Record_CNAME(b"canonical.name.com"),
-            dns.Record_MB(b"mailbox.test-domain.com"),
-            dns.Record_MG(b"mail.group.someplace"),
-            dns.Record_TXT(b"A First piece of Text", b"a SecoNd piece"),
-            dns.Record_A6(0, b"ABCD::4321", b""),
-            dns.Record_A6(12, b"0:0069::0", b"some.network.tld"),
-            dns.Record_A6(8, b"0:5634:1294:AFCB:56AC:48EF:34C3:01FF", b"tra.la.la.net"),
-            dns.Record_TXT(b"Some more text, haha!  Yes.  \0  Still here?"),
-            dns.Record_MR(b"mail.redirect.or.whatever"),
-            dns.Record_MINFO(rmailbx=b"r mail box", emailbx=b"e mail box"),
-            dns.Record_AFSDB(subtype=1, hostname=b"afsdb.test-domain.com"),
-            dns.Record_RP(mbox=b"whatever.i.dunno", txt=b"some.more.text"),
-            dns.Record_WKS(
-                b"12.54.78.12", socket.IPPROTO_TCP, b"\x12\x01\x16\xfe\xc1\x00\x01"
-            ),
-            dns.Record_NAPTR(
-                100, 10, b"u", b"sip+E2U", b"!^.*$!sip:information@domain.tld!"
-            ),
-            dns.Record_AAAA(b"AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF"),
-        ],
-        b"http.tcp.test-domain.com": [
-            dns.Record_SRV(257, 16383, 43690, b"some.other.place.fool")
-        ],
-        b"host.test-domain.com": [
-            dns.Record_A(b"123.242.1.5"),
-            dns.Record_A(b"0.255.0.255"),
-        ],
-        b"host-two.test-domain.com": [
-            #
-            #  Python bug
-            #           dns.Record_A('255.255.255.255'),
-            #
-            dns.Record_A(b"255.255.255.254"),
-            dns.Record_A(b"0.0.0.0"),
-        ],
-        b"cname.test-domain.com": [dns.Record_CNAME(b"test-domain.com")],
-        b"anothertest-domain.com": [dns.Record_A(b"1.2.3.4")],
-    },
+    records=test_domain_com_records,
 )
 
 reverse_domain = NoFileAuthority(
@@ -198,7 +240,9 @@ class ServerDNSTests(unittest.TestCase):
 
         return waitUntilAllDisconnected(reactor, self.factory.connections[:])
 
-    def namesTest(self, querying, expectedRecords):
+    def namesTest(
+        self, querying: defer.Deferred[Message], expectedRecords: Sequence[IRecord]
+    ) -> defer.Deferred[Message]:
         """
         Assert that the DNS response C{querying} will eventually fire with
         contains exactly a certain collection of records.
@@ -442,13 +486,13 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_zoneTransfer(self):
+    def test_zoneTransfer(self) -> defer.Deferred[Message]:
         """
         Test DNS 'AXFR' queries (Zone transfer)
         """
         default_ttl = soa_record.expire
         results = [
-            copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())
+            copy.copy(r) for r in reduce(operator.add, test_domain_com_records.values())
         ]
         for r in results:
             if r.ttl is None:
