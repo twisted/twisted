@@ -2504,7 +2504,7 @@ class IUDPTransport(Interface):
     Transport for UDP DatagramProtocols.
     """
 
-    def write(packet: bytes, addr: tuple[str, int] | None) -> None:
+    def write(packet: bytes, addr: tuple[str, int] | None) -> int | None:
         """
         Write packet to given address.
 

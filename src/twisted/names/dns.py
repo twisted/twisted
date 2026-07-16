@@ -10,7 +10,6 @@ Future Plans:
 """
 from __future__ import annotations
 
-# System imports
 import contextvars
 import inspect
 import random
@@ -20,14 +19,16 @@ from collections.abc import Callable, Generator, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
+from os import urandom
 from typing import IO, ClassVar, SupportsInt, TypeAlias, overload
 
 from zope.interface import Attribute, Interface, implementer
 
-# Twisted imports
 from twisted.internet import defer, protocol
+from twisted.internet.defer import Deferred
 from twisted.internet.error import CannotListenError
-from twisted.python import failure, log, randbytes, util as tputil
+from twisted.internet.interfaces import IAddress, IDelayedCall, IUDPTransport
+from twisted.python import failure, log, util as tputil
 from twisted.python.compat import cmp, comparable, nativeString
 
 __all__ = [
@@ -171,14 +172,11 @@ def _nicebyteslist(list):
     return "[{}]".format(", ".join([_nicebytes(b) for b in list]))
 
 
-def randomSource():
+def randomSource() -> int:
     """
-    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to
-    return 2 random bytes.
-
-    @rtype: L{bytes}
+    2 random bytes to use for a source ID.
     """
-    return struct.unpack("H", randbytes.secureRandom(2, fallback=True))[0]
+    return int.from_bytes(urandom(2))
 
 
 PORT = 53
@@ -3244,7 +3242,10 @@ class DNSMixin:
     """
 
     id = None
-    liveMessages = None
+    liveMessages: dict[int, tuple[Deferred[Message], IDelayedCall]]
+
+    # Legacy left-over default value; unused.
+    liveMessages = None  # type:ignore[assignment]
 
     def __init__(self, controller, reactor=None):
         self.controller = controller
@@ -3253,7 +3254,7 @@ class DNSMixin:
             from twisted.internet import reactor
         self._reactor = reactor
 
-    def pickID(self):
+    def pickID(self) -> int:
         """
         Return a unique ID for queries.
         """
@@ -3268,23 +3269,24 @@ class DNSMixin:
         """
         return self._reactor.callLater(period, func, *args)
 
-    def _query(self, queries, timeout, id, writeMessage):
+    def _query(
+        self,
+        queries: list[Query],
+        timeout: float,
+        id: int,
+        writeMessage: Callable[[Message], None],
+    ) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
-        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @type timeout: L{int} or C{float}
         @param timeout: How long to wait before giving up
 
-        @type id: L{int}
         @param id: Unique key for this request
 
-        @type writeMessage: C{callable}
         @param writeMessage: One-parameter callback which writes the message
 
-        @rtype: C{Deferred}
         @return: a C{Deferred} which will be fired with the result of the
             query, or errbacked with any errors that could happen (exceptions
             during writing of the query, timeout errors, ...).
@@ -3297,7 +3299,7 @@ class DNSMixin:
         except BaseException:
             return defer.fail()
 
-        resultDeferred = defer.Deferred()
+        resultDeferred: Deferred[Message] = defer.Deferred()
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
 
@@ -3319,7 +3321,11 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     DNS protocol over UDP.
     """
 
-    resends = None
+    resends: dict[int, int]
+    transport: IUDPTransport
+
+    # Legacy unused default value.
+    resends = None  # type:ignore[assignment]
 
     def stopProtocol(self):
         """
@@ -3336,18 +3342,16 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         self.liveMessages = {}
         self.resends = {}
 
-    def writeMessage(self, message, address):
+    def writeMessage(self, message: Message, address: IAddress) -> None:
         """
         Send a message holding DNS queries.
-
-        @type message: L{Message}
         """
         self.transport.write(message.toStr(), address)
 
     def startListening(self):
         self._reactor.listenUDP(0, self, maxPacketSize=512)
 
-    def datagramReceived(self, data, addr):
+    def datagramReceived(self, data: bytes, addr: IAddress) -> None:
         """
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
@@ -3382,7 +3386,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
             if m.id not in self.resends:
                 self.controller.messageReceived(m, self, addr)
 
-    def removeResend(self, id):
+    def removeResend(self, id: int) -> None:
         """
         Mark message ID as no longer having duplication suppression.
         """
@@ -3391,7 +3395,13 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except KeyError:
             pass
 
-    def query(self, address, queries, timeout=10, id=None):
+    def query(
+        self,
+        address: IAddress,
+        queries: list[Query],
+        timeout: float = 10,
+        id: int | None = None,
+    ) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
@@ -3415,7 +3425,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         else:
             self.resends[id] = 1
 
-        def writeMessage(m):
+        def writeMessage(m: Message) -> None:
             self.writeMessage(m, address)
 
         return self._query(queries, timeout, id, writeMessage)
@@ -3452,11 +3462,14 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         self.controller.connectionLost(self)
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         self.buffer += data
 
         while self.buffer:
-            if self.length is None and len(self.buffer) >= 2:
+            if self.length is None:
+                if len(self.buffer) < 2:
+                    # Not enough buffer to parse the length yet; give up.
+                    return
                 self.length = struct.unpack("!H", self.buffer[:2])[0]
                 self.buffer = self.buffer[2:]
 
@@ -3483,7 +3496,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
             else:
                 break
 
-    def query(self, queries, timeout=60):
+    def query(self, queries: list[Query], timeout: float = 60) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
@@ -3492,5 +3505,4 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
 
         @rtype: C{Deferred}
         """
-        id = self.pickID()
-        return self._query(queries, timeout, id, self.writeMessage)
+        return self._query(queries, timeout, self.pickID(), self.writeMessage)
