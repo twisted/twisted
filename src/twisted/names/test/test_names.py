@@ -87,33 +87,24 @@ test_domain_com_records: dict[
     bytes,
     list[
         dns.Record_A
-        | dns.Record_NS
-        | dns.Record_SPF
-        | dns.Record_SPF
-        | dns.Record_MX
-        | dns.Record_HINFO
+        | dns.Record_A6
+        | dns.Record_AAAA
+        | dns.Record_AFSDB
         | dns.Record_CNAME
+        | dns.Record_HINFO
         | dns.Record_MB
         | dns.Record_MG
-        | dns.Record_TXT
-        | dns.Record_A6
-        | dns.Record_A6
-        | dns.Record_A6
-        | dns.Record_TXT
-        | dns.Record_MR
         | dns.Record_MINFO
-        | dns.Record_AFSDB
-        | dns.Record_RP
-        | dns.Record_WKS
+        | dns.Record_MR
+        | dns.Record_MX
         | dns.Record_NAPTR
-        | dns.Record_AAAA
-        | dns.Record_SRV
-        | dns.Record_A
-        | dns.Record_A
-        | dns.Record_A
-        | dns.Record_CNAME
-        | dns.Record_A
+        | dns.Record_NS
+        | dns.Record_RP
         | dns.Record_SOA
+        | dns.Record_SPF
+        | dns.Record_SRV
+        | dns.Record_TXT
+        | dns.Record_WKS
     ],
 ] = {
     b"test-domain.com": [
