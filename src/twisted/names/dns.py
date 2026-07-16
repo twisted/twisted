@@ -3243,6 +3243,11 @@ class DNSMixin:
 
     id = None
     liveMessages: dict[int, tuple[Deferred[Message], IDelayedCall]]
+    """
+    a dictionary mapping message-ID to the Deferred that will fire when it
+    completes, and the pending timeout that will cause it to fail, for all
+    outstanding queries that have not yet received a response.
+    """
 
     # Legacy left-over default value; unused.
     liveMessages = None  # type:ignore[assignment]
@@ -3305,7 +3310,7 @@ class DNSMixin:
 
         return resultDeferred
 
-    def _clearFailed(self, deferred, id):
+    def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
         """
         Clean the Deferred after a timeout.
         """
@@ -3327,8 +3332,14 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     # Legacy unused default value.
     resends = None  # type:ignore[assignment]
 
-    # map of message-id:address
     _addressValidation: dict[int, tuple[str, int]]
+    """
+    a map of C{{message-id: expected source-address}}; when issuing a DNS query
+    over UDP, the response to that query ought to come from the same network
+    address (host and port) that we issued it to.  If it doesn't, we discard
+    it.  The keys in this dictionary ought to match those in
+    L{DNSMixin.liveMessages}.
+    """
 
     def stopProtocol(self) -> None:
         """
@@ -3355,6 +3366,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
 
     def startListening(self):
         self._reactor.listenUDP(0, self, maxPacketSize=512)
+
+    def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
+        del self._addressValidation[id]
+        super()._clearFailed(deferred, id)
 
     def datagramReceived(self, data: bytes, addr: tuple[str, int]) -> None:
         """
@@ -3383,6 +3398,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
                 return
             d, canceller = self.liveMessages[m.id]
             del self.liveMessages[m.id]
+            del self._addressValidation[m.id]
             canceller.cancel()
             # XXX we shouldn't need this hack of catching exception on callback()
             try:
