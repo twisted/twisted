@@ -27,7 +27,7 @@ from zope.interface import Attribute, Interface, implementer
 from twisted.internet import defer, protocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import CannotListenError
-from twisted.internet.interfaces import IAddress, IDelayedCall, IUDPTransport
+from twisted.internet.interfaces import IDelayedCall, IUDPTransport
 from twisted.python import failure, log, util as tputil
 from twisted.python.compat import cmp, comparable, nativeString
 
@@ -3342,7 +3342,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         self.liveMessages = {}
         self.resends = {}
 
-    def writeMessage(self, message: Message, address: IAddress) -> None:
+    def writeMessage(self, message: Message, address: tuple[str, int]) -> None:
         """
         Send a message holding DNS queries.
         """
@@ -3351,7 +3351,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     def startListening(self):
         self._reactor.listenUDP(0, self, maxPacketSize=512)
 
-    def datagramReceived(self, data: bytes, addr: IAddress) -> None:
+    def datagramReceived(self, data: bytes, addr: tuple[str, int]) -> None:
         """
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
@@ -3397,7 +3397,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
 
     def query(
         self,
-        address: IAddress,
+        address: tuple[str, int],
         queries: list[Query],
         timeout: float = 10,
         id: int | None = None,

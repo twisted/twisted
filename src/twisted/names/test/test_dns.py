@@ -1341,7 +1341,7 @@ class DatagramProtocolTests(unittest.TestCase):
         Test that when a short datagram is received, datagramReceived does
         not raise an exception while processing it.
         """
-        self.proto.datagramReceived(b"", address.IPv4Address("UDP", "127.0.0.1", 12345))
+        self.proto.datagramReceived(b"", ("127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
 
     def test_malformedMessage(self) -> None:
