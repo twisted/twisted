@@ -176,7 +176,7 @@ def randomSource() -> int:
     """
     2 random bytes to use for a source ID.
     """
-    return int.from_bytes(urandom(2))
+    return int.from_bytes(urandom(2), "big", signed=False)
 
 
 PORT = 53
