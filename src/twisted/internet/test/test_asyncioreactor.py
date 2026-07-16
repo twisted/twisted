@@ -45,6 +45,11 @@ _defaultEventLoopIsSelector = isinstance(_defaultEventLoop, SelectorEventLoop)
 _defaultEventLoop.close()
 
 
+@skipIf(
+    platform.isMacOSX(),
+    "AsyncIO selector reactor disabled due to macOS kernel bug, see"
+    " https://github.com/python/cpython/issues/153117",
+)
 class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
     """
     L{AsyncioSelectorReactor} tests.
