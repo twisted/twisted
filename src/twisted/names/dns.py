@@ -28,6 +28,7 @@ from twisted.internet import defer, protocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IDelayedCall, IUDPTransport
+from twisted.protocols.basic import Int16StringReceiver
 from twisted.python import failure, log, util as tputil
 from twisted.python.compat import cmp, comparable, nativeString
 
@@ -3453,13 +3454,10 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         return self._query(queries, timeout, id, writeMessage)
 
 
-class DNSProtocol(DNSMixin, protocol.Protocol):
+class DNSProtocol(DNSMixin, Int16StringReceiver):
     """
     DNS protocol over TCP.
     """
-
-    length = None
-    buffer = b""
 
     def writeMessage(self, message):
         """
@@ -3467,8 +3465,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
 
         @type message: L{Message}
         """
-        s = message.toStr()
-        self.transport.write(struct.pack("!H", len(s)) + s)
+        self.sendString(message.toStr())
 
     def connectionMade(self):
         """
@@ -3484,39 +3481,21 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         self.controller.connectionLost(self)
 
-    def dataReceived(self, data: bytes) -> None:
-        self.buffer += data
-
-        while self.buffer:
-            if self.length is None:
-                if len(self.buffer) < 2:
-                    # Not enough buffer to parse the length yet; give up.
-                    return
-                self.length = struct.unpack("!H", self.buffer[:2])[0]
-                self.buffer = self.buffer[2:]
-
-            if len(self.buffer) >= self.length:
-                myChunk = self.buffer[: self.length]
-                m = Message()
-                m.fromStr(myChunk)
-
-                try:
-                    d, canceller = self.liveMessages[m.id]
-                except KeyError:
-                    self.controller.messageReceived(m, self)
-                else:
-                    del self.liveMessages[m.id]
-                    canceller.cancel()
-                    # XXX we shouldn't need this hack
-                    try:
-                        d.callback(m)
-                    except BaseException:
-                        log.err()
-
-                self.buffer = self.buffer[self.length :]
-                self.length = None
-            else:
-                break
+    def stringReceived(self, data: bytes) -> None:
+        m = Message()
+        m.fromStr(data)
+        try:
+            d, canceller = self.liveMessages[m.id]
+        except KeyError:
+            self.controller.messageReceived(m, self)
+        else:
+            del self.liveMessages[m.id]
+            canceller.cancel()
+            # XXX we shouldn't need this hack
+            try:
+                d.callback(m)
+            except BaseException:
+                log.err()
 
     def query(self, queries: list[Query], timeout: float = 60) -> Deferred[Message]:
         """
