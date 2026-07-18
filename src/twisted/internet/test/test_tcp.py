@@ -13,12 +13,11 @@ import gc
 import io
 import os
 import socket
-from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 from functools import wraps
 from io import BytesIO
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -54,7 +53,6 @@ from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
     ILoggingContext,
-    IProtocolFactory,
     IPullProducer,
     IPushProducer,
     IReactorFDSet,
@@ -100,7 +98,6 @@ from twisted.internet.testing import (
 from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.failure import Failure
-from twisted.python.log import textFromEventDict
 from twisted.python.modules import walkModules
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import (
@@ -178,7 +175,7 @@ def connect(client, destination):
         port a C{int}. If the C{host} is an IPv6 IP, the address is resolved
         using C{getaddrinfo} and the first version found is used.
     """
-    (host, port) = destination
+    host, port = destination
     if "%" in host or ":" in host:
         address = socket.getaddrinfo(host, port)[0][4]
     else:
@@ -248,7 +245,7 @@ class TCPPortTests(SynchronousTestCase):
         self.sktstate, self.skt = newFakeSocket(b"")
         self.factory = Factory()
         self.server = Port(4321, self.factory, reactor=self.reactor)
-        self.server.createInternetSocket = (  # type:ignore[method-assign]
+        self.server.createInternetSocket = (  # type: ignore[method-assign]
             lambda: self.skt
         )
 
@@ -280,7 +277,7 @@ class TCPServerTests(TestCase):
             self.skt,
             self.protocol,
             ("", 0),
-            FakePort(),  # type:ignore[arg-type]
+            FakePort(),  # type: ignore[arg-type]
             1111,
             self.reactor,
         )
@@ -345,7 +342,7 @@ class TCPConnectionTests(TestCase):
         protocol = Protocol()
         conn = Connection(skt, protocol, reactor=_FakeFDSetReactor())
         # this is a weird requirement of the internals of startTLS
-        conn._tlsClientDefault = True  # type:ignore[attr-defined]
+        conn._tlsClientDefault = True  # type: ignore[attr-defined]
         conn.startTLS(ClientContextFactory(), True)
         self.assertTrue(conn.TLS)
 
@@ -931,7 +928,7 @@ class SourceCacheForCoverage:
         self = cls(python, origOpen)
         for module in walkModules("twisted"):
             self.pathToContents[module.filePath.path] = module.filePath.getContent()
-        python.open = self.open  # type:ignore[assignment]
+        python.open = self.open  # type: ignore[assignment]
         return self
 
     def open(self, path: str, mode: str) -> BytesIO:
@@ -940,7 +937,7 @@ class SourceCacheForCoverage:
         return BytesIO(self.pathToContents[path])  # pragma: no cover
 
     def disable(self) -> None:
-        self.patchedModule.open = self.origOpen  # type:ignore[attr-defined]
+        self.patchedModule.open = self.origOpen  # type: ignore[attr-defined]
 
 
 @implementer(_IExhaustsFileDescriptors)
@@ -1334,31 +1331,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
     Mixin defining tests which apply to any port/connection based transport.
     """
 
-    if TYPE_CHECKING:
-
-        @abstractmethod
-        def getListeningPort(
-            self,
-            reactor: Any,
-            factory: IProtocolFactory,
-        ) -> IListeningPort:
-            ...
-
-        @abstractmethod
-        def buildReactor(self) -> Any:
-            ...
-
-        @abstractmethod
-        def getExpectedStartListeningLogMessage(
-            self, port: IListeningPort, factory: object
-        ) -> str:
-            ...
-
-        @abstractmethod
-        def assertEqual(self, a: object, b: object) -> None:
-            ...
-
-    def test_startedListeningLogMessage(self) -> None:
+    def test_startedListeningLogMessage(self):
         """
         When a port starts, a message including a description of the associated
         factory is logged.
@@ -1374,7 +1347,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         factory = SomeFactory()
         p = self.getListeningPort(reactor, factory)
         expectedMessage = self.getExpectedStartListeningLogMessage(p, "Crazy Factory")
-        self.assertEqual(expectedMessage, textFromEventDict(loggedMessages[0]))
+        self.assertEqual((expectedMessage,), loggedMessages[0]["message"])
 
     def test_connectionLostLogMsg(self):
         """
