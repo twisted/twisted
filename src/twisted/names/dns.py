@@ -3350,15 +3350,6 @@ class DNSMixin:
                 "Invalid packet from {source} ({error})", source=messageSource, error=ex
             )
             return
-        except BaseException:
-            # Nothing should trigger this, but since we're potentially
-            # invoking a lot of different decoding methods, we might as well
-            # be extra cautious.  Anything that triggers this is itself
-            # buggy.
-            _log.failure(
-                "Unexpected decoding error from {source}", source=messageSource
-            )
-            return
         if m.id in self.liveMessages:
             if not validate(m):
                 return
