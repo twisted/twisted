@@ -1348,9 +1348,7 @@ class CompareToStr:
         self._message = message
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, dns.Message):
-            return False
-        return self._message.toStr() == other.toStr()
+        return isinstance(other, dns.Message) and self._message.toStr() == other.toStr()
 
 
 class DatagramProtocolTests(unittest.SynchronousTestCase):
