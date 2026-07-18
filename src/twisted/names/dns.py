@@ -28,9 +28,12 @@ from twisted.internet import defer, protocol
 from twisted.internet.defer import Deferred
 from twisted.internet.error import CannotListenError
 from twisted.internet.interfaces import IDelayedCall, IUDPTransport
+from twisted.logger import Logger
 from twisted.protocols.basic import Int16StringReceiver
-from twisted.python import failure, log, util as tputil
+from twisted.python import failure, util as tputil
 from twisted.python.compat import cmp, comparable, nativeString
+
+_log = Logger()
 
 __all__ = [
     "IEncodable",
@@ -299,17 +302,15 @@ from twisted.names.error import (
 )
 
 
-def _nameToLabels(name):
+def _nameToLabels(name: bytes) -> list[bytes]:
     """
     Split a domain name into its constituent labels.
 
-    @type name: L{bytes}
     @param name: A fully qualified domain name (with or without a
         trailing dot).
 
     @return: A L{list} of labels ending with an empty label
         representing the DNS root zone.
-    @rtype: L{list} of L{bytes}
     """
     if name in (b"", b"."):
         return [b""]
@@ -2287,9 +2288,11 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
             self.data.append(readPrecisely(strio, L))
             soFar += L + 1
         if soFar != length:
-            log.msg(
-                "Decoded %d bytes in %s record, but rdlength is %d"
-                % (soFar, self.fancybasename, length)
+            _log.warn(
+                "Decoded {soFar} bytes in {rtype} record, but rdlength is {len}",
+                soFar=soFar,
+                rtype=self.fancybasename,
+                len=length,
             )
 
     def __hash__(self):
@@ -3308,8 +3311,62 @@ class DNSMixin:
         resultDeferred: Deferred[Message] = defer.Deferred()
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
-
         return resultDeferred
+
+    def _handleResponse(
+        self,
+        data: bytes,
+        messageSource: object,
+        notifyController: Callable[[Message], None],
+        validate: Callable[[Message], bool] = lambda m: True,
+    ) -> None:
+        """
+        Handle an incoming DNS message.
+
+        @param data: The bytes of the message (just the payload; any length
+            prefix removed)
+
+        @param messageSource: The source of the message (the address from which
+            it was received)
+
+        @param notifyController: The callable invoked when a message is I{not}
+            a response to a currently-pending query response.
+
+        @param validate: The callable invoked to ensure that a message is a
+            valid reply; the message is discarded if this returns C{False}.
+        """
+        m = Message()
+        try:
+            m.fromStr(data)
+        except EOFError:
+            _log.info(
+                "Truncated packet ({length} bytes) from {source}",
+                length=len(data),
+                source=messageSource,
+            )
+            return
+        except ValueError as ex:
+            _log.warn(
+                "Invalid packet from {source} ({error})", source=messageSource, error=ex
+            )
+            return
+        except BaseException:
+            # Nothing should trigger this, but since we're potentially
+            # invoking a lot of different decoding methods, we might as well
+            # be extra cautious.  Anything that triggers this is itself
+            # buggy.
+            _log.failure(
+                "Unexpected decoding error from {source}", source=messageSource
+            )
+            return
+        if m.id in self.liveMessages:
+            if not validate(m):
+                return
+            d, canceller = self.liveMessages.pop(m.id)
+            canceller.cancel()
+            d.callback(m)
+        else:
+            notifyController(m)
 
     def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
         """
@@ -3377,38 +3434,20 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
         """
-        m = Message()
-        try:
-            m.fromStr(data)
-        except EOFError:
-            log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
-            return
-        except ValueError as ex:
-            log.msg(f"Invalid packet ({ex}) from {addr}")
-            return
-        except BaseException:
-            # Nothing should trigger this, but since we're potentially
-            # invoking a lot of different decoding methods, we might as well
-            # be extra cautious.  Anything that triggers this is itself
-            # buggy.
-            log.err(failure.Failure(), "Unexpected decoding error")
-            return
-
-        if m.id in self.liveMessages:
-            if self._addressValidation[m.id] != addr:
-                return
-            d, canceller = self.liveMessages[m.id]
-            del self.liveMessages[m.id]
-            del self._addressValidation[m.id]
-            canceller.cancel()
-            # XXX we shouldn't need this hack of catching exception on callback()
-            try:
-                d.callback(m)
-            except BaseException:
-                log.err()
-        else:
-            if m.id not in self.resends:
-                self.controller.messageReceived(m, self, addr)
+        self._handleResponse(
+            data,
+            addr,
+            notifyController=lambda receivedMessage: (
+                self.controller.messageReceived(receivedMessage, self, addr)
+                if receivedMessage.id not in self.resends
+                else None
+            ),
+            validate=lambda receivedMessage: (
+                bool(self._addressValidation.pop(receivedMessage.id))
+                if self._addressValidation.get(receivedMessage.id) == addr
+                else False
+            ),
+        )
 
     def removeResend(self, id: int) -> None:
         """
@@ -3436,7 +3475,8 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         @return: a L{Deferred} which fires with the response when it arrives.
         """
         if not self.transport:
-            # XXX transport might not get created automatically, use callLater?
+            # If we aren't connected yet, try to connect before issuing the
+            # query.
             try:
                 self.startListening()
             except CannotListenError:
@@ -3482,20 +3522,13 @@ class DNSProtocol(DNSMixin, Int16StringReceiver):
         self.controller.connectionLost(self)
 
     def stringReceived(self, data: bytes) -> None:
-        m = Message()
-        m.fromStr(data)
-        try:
-            d, canceller = self.liveMessages[m.id]
-        except KeyError:
-            self.controller.messageReceived(m, self)
-        else:
-            del self.liveMessages[m.id]
-            canceller.cancel()
-            # XXX we shouldn't need this hack
-            try:
-                d.callback(m)
-            except BaseException:
-                log.err()
+        self._handleResponse(
+            data,
+            self,
+            lambda receivedMessage: self.controller.messageReceived(
+                receivedMessage, self
+            ),
+        )
 
     def query(self, queries: list[Query], timeout: float = 60) -> Deferred[Message]:
         """
