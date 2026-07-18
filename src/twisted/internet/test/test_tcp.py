@@ -1374,7 +1374,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         factory = SomeFactory()
         p = self.getListeningPort(reactor, factory)
         expectedMessage = self.getExpectedStartListeningLogMessage(p, "Crazy Factory")
-        self.assertEqual((expectedMessage,), textFromEventDict(loggedMessages[0]))
+        self.assertEqual(expectedMessage, textFromEventDict(loggedMessages[0]))
 
     def test_connectionLostLogMsg(self):
         """
