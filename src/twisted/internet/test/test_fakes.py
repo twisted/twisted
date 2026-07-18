@@ -107,7 +107,7 @@ class FakeSocket:
 
 def newFakeSocket(recvBuf: bytes = b"") -> tuple[SocketState, socket.socket]:
     state = SocketState(receiveBuffer=recvBuf)
-    fake: socket.socket = FakeSocket(state)  # type:ignore[assignment]
+    fake: socket.socket = FakeSocket(state)  # type: ignore[assignment]
     return state, fake
 
 
@@ -146,3 +146,10 @@ class FakeSocketTests(SynchronousTestCase):
         state.raiseOnBind(ve)
         with self.assertRaises(ValueError):
             skt.bind(("127.0.0.1", 400))
+
+    def test_fileno(self) -> None:
+        """
+        L{FakeSocket.fileno} returns a static integer value.
+        """
+        state, skt = newFakeSocket()
+        self.assertEqual(skt.fileno(), 1)
