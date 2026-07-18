@@ -11,12 +11,13 @@ from constantly import NamedConstant, Names
 
 class InvalidLogLevelError(Exception):
     """
-    Someone tried to use a L{LogLevel} that is unknown to the logging system.
+    Someone tried to use a log level that is unknown to the logging system.
     """
 
-    def __init__(self, level: NamedConstant) -> None:
+    def __init__(self, level: object) -> None:
         """
-        @param level: A log level from L{LogLevel}.
+        @param level: An invalid log level name or value that could not be
+            resolved to a L{LogLevel}.
         """
         super().__init__(str(level))
         self.level = level
