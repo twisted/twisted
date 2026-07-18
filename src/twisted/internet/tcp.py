@@ -1363,7 +1363,7 @@ class Port(base.BasePort, _SocketCloser):
                     addr = (self.interface, self.port)
                 skt.bind(addr)
             except OSError as le:
-                if skt:
+                if skt is not None:
                     skt.close()
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
