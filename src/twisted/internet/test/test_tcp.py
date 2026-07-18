@@ -2828,7 +2828,10 @@ class AbortConnectionMixin:
 
     # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
     # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(platform.isMacOSX(), "Flaky on macOS.")
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2839,7 +2842,10 @@ class AbortConnectionMixin:
 
     # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
     # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(platform.isMacOSX(), "Flaky on macOS on Azure.")
+    @skipIf(
+        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
+        "Flaky on macOS on Azure.",
+    )
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
