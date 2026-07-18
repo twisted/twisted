@@ -282,16 +282,16 @@ class TCPServerTests(TestCase):
             self.reactor,
         )
 
-    def test_writeAfterDisconnect(self):
+    def test_writeAfterDisconnect(self) -> None:
         """
         L{Server.write} discards bytes passed to it if called after it has lost
         its connection.
         """
         self.server.connectionLost(Failure(Exception("Simulated lost connection")))
         self.server.write(b"hello world")
-        self.assertEqual(self.skt.sendBuffer, [])
+        self.assertEqual(self.sktstate.sendBuffer, [])
 
-    def test_writeAfterDisconnectAfterTLS(self):
+    def test_writeAfterDisconnectAfterTLS(self) -> None:
         """
         L{Server.write} discards bytes passed to it if called after it has lost
         its connection when the connection had started TLS.
@@ -299,16 +299,16 @@ class TCPServerTests(TestCase):
         self.server.TLS = True
         self.test_writeAfterDisconnect()
 
-    def test_writeSequenceAfterDisconnect(self):
+    def test_writeSequenceAfterDisconnect(self) -> None:
         """
         L{Server.writeSequence} discards bytes passed to it if called after it
         has lost its connection.
         """
         self.server.connectionLost(Failure(Exception("Simulated lost connection")))
         self.server.writeSequence([b"hello world"])
-        self.assertEqual(self.skt.sendBuffer, [])
+        self.assertEqual(self.sktstate.sendBuffer, [])
 
-    def test_writeSequenceAfterDisconnectAfterTLS(self):
+    def test_writeSequenceAfterDisconnectAfterTLS(self) -> None:
         """
         L{Server.writeSequence} discards bytes passed to it if called after it
         has lost its connection when the connection had started TLS.
