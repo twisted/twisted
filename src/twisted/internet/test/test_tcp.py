@@ -238,16 +238,25 @@ class TCPPortTests(SynchronousTestCase):
 
     def setUp(self) -> None:
         self.reactor = _FakeFDSetReactor()
-
-        class FakePort:
-            _realPortNumber = 3
-
         self.sktstate, self.skt = newFakeSocket(b"")
         self.factory = Factory()
         self.server = Port(4321, self.factory, reactor=self.reactor)
         self.server.createInternetSocket = (  # type: ignore[method-assign]
             lambda: self.skt
         )
+
+    def test_createFailure(self) -> None:
+        """
+        L{Server.startListening} will fail with L{CannotListenError} when
+        creating the underlying socket fails with L{OSError}.
+        """
+
+        def noNewSocket() -> socket.socket:
+            raise OSError("socket creation failure")
+
+        self.server.createInternetSocket = noNewSocket  # type:ignore[method-assign]
+        with self.assertRaises(CannotListenError):
+            self.server.startListening()
 
     def test_bindFailure(self) -> None:
         """
