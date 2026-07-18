@@ -1321,6 +1321,21 @@ class TestController:
         self.messages.append((msg, proto, addr))
 
 
+class CompareToStr:
+    """
+    Compare the serialized form of the given message if it is compared via
+    C{==}.
+    """
+
+    def __init__(self, message: dns.Message) -> None:
+        self._message = message
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, dns.Message):
+            return False
+        return self._message.toStr() == other.toStr()
+
+
 class DatagramProtocolTests(unittest.SynchronousTestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
@@ -1447,11 +1462,15 @@ class DatagramProtocolTests(unittest.SynchronousTestCase):
         L{DNSDatagramProtocol.liveMessages} or L{DNSDatagramProtocol.resends},
         the message will be received by L{DNSDatagramProtocol.controller}.
         """
+
         message = dns.Message()
         message.id = 1
         message.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
-        self.proto.datagramReceived(message.toStr(), ("127.0.0.1", 21345))
-        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
+        fromAddress = ("127.0.0.1", 21345)
+        self.proto.datagramReceived(message.toStr(), fromAddress)
+        self.assertEqual(
+            [(CompareToStr(message), self.proto, fromAddress)], self.controller.messages
+        )
 
 
 class TestTCPController(TestController):
@@ -1555,7 +1574,12 @@ class DNSProtocolTests(unittest.TestCase):
         string = message.toStr()
         string = struct.pack("!H", len(string)) + string
         self.proto.dataReceived(string)
-        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
+        self.assertEqual(
+            # TCP messages don't log their address with the controller
+            # protocol.
+            [(CompareToStr(message), self.proto, None)],
+            self.controller.messages,
+        )
 
 
 class ReprTests(unittest.TestCase):
