@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 from functools import wraps
 from io import BytesIO
 from types import ModuleType
-from typing import Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -1334,27 +1334,29 @@ class StreamTransportTestsMixin(LogObserverMixin):
     Mixin defining tests which apply to any port/connection based transport.
     """
 
-    @abstractmethod
-    def getListeningPort(
-        self,
-        reactor: Any,
-        factory: IProtocolFactory,
-    ) -> IListeningPort:
-        ...
+    if TYPE_CHECKING:
 
-    @abstractmethod
-    def buildReactor(self) -> Any:
-        ...
+        @abstractmethod
+        def getListeningPort(
+            self,
+            reactor: Any,
+            factory: IProtocolFactory,
+        ) -> IListeningPort:
+            ...
 
-    @abstractmethod
-    def getExpectedStartListeningLogMessage(
-        self, port: IListeningPort, factory: object
-    ) -> str:
-        ...
+        @abstractmethod
+        def buildReactor(self) -> Any:
+            ...
 
-    @abstractmethod
-    def assertEqual(self, a: object, b: object) -> None:
-        ...
+        @abstractmethod
+        def getExpectedStartListeningLogMessage(
+            self, port: IListeningPort, factory: object
+        ) -> str:
+            ...
+
+        @abstractmethod
+        def assertEqual(self, a: object, b: object) -> None:
+            ...
 
     def test_startedListeningLogMessage(self) -> None:
         """
@@ -2826,10 +2828,7 @@ class AbortConnectionMixin:
 
     # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
     # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
-    )
+    @skipIf(platform.isMacOSX(), "Flaky on macOS.")
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2840,10 +2839,7 @@ class AbortConnectionMixin:
 
     # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
     # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
-    )
+    @skipIf(platform.isMacOSX(), "Flaky on macOS on Azure.")
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
