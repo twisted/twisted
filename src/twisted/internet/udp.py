@@ -260,11 +260,8 @@ class Port(base.BasePort):
         """
         Write a datagram.
 
-        @type datagram: L{bytes}
         @param datagram: The datagram to be sent.
 
-        @type addr: L{tuple} containing L{str} as first element and L{int} as
-            second element, or L{None}
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be L{None} in connected mode.
         """
