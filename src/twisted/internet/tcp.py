@@ -25,6 +25,7 @@ from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
     IProtocol,
+    IProtocolFactory,
     IReactorFDSet,
     ISystemHandle,
     ITCPTransport,
@@ -792,9 +793,9 @@ class Server(_TLSServerMixin, Connection):
 
     _base = Connection
 
-    _addressType: (
-        type[address.IPv4Address] | type[address.IPv6Address]
-    ) = address.IPv4Address
+    _addressType: type[address.IPv4Address] | type[
+        address.IPv6Address
+    ] = address.IPv4Address
 
     def __init__(
         self,
@@ -1278,13 +1279,20 @@ class Port(base.BasePort, _SocketCloser):
 
     # An externally initialized socket that we will use, rather than creating
     # our own.
-    _preexistingSocket = None
+    _preexistingSocket: socket.socket | None = None
 
     addressFamily = socket.AF_INET
-    _addressType = address.IPv4Address
+    _addressType: type[address.IPv4Address | address.IPv6Address] = address.IPv4Address
     _logger = Logger()
 
-    def __init__(self, port, factory, backlog=50, interface="", reactor=None):
+    def __init__(
+        self,
+        port: int,
+        factory: IProtocolFactory,
+        backlog: int = 50,
+        interface: str = "",
+        reactor: Any = None,
+    ):
         """Initialize with a numeric port to listen on."""
         base.BasePort.__init__(self, reactor=reactor)
         self.port = port
@@ -1337,13 +1345,14 @@ class Port(base.BasePort, _SocketCloser):
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s
 
-    def startListening(self):
+    def startListening(self) -> None:
         """Create and bind my socket, and begin listening on it.
 
         This is called on unserialization, and must be called after creating a
         server to begin listening on the specified port.
         """
         _reservedFD.reserve()
+        skt: socket.socket | None = None
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -1354,6 +1363,8 @@ class Port(base.BasePort, _SocketCloser):
                     addr = (self.interface, self.port)
                 skt.bind(addr)
             except OSError as le:
+                if skt is not None:
+                    skt.close()
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
@@ -1377,7 +1388,7 @@ class Port(base.BasePort, _SocketCloser):
         self.factory.doStart()
         self.connected = True
         self.socket = skt
-        self.fileno = self.socket.fileno
+        self.fileno = self.socket.fileno  # type:ignore[method-assign]
         self.numberAccepts = 100
 
         self.startReading()
