@@ -20,7 +20,7 @@ import os
 import signal
 import time
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, ContextManager, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 from zope.interface import Interface
 
@@ -182,12 +182,6 @@ class ReactorBuilder:
     originalHandler = None
     requiredInterfaces: Sequence[type[Interface]] | None = None
     skippedReactors: dict[str, str] = {}
-
-    # Fake a few type annotations for the required test-case mix-in to allow
-    # for the intended usage to type-check even though inheritance makes liars
-    # of us all.
-    patch: Callable[[object, str, object], None]
-    assertRaises: Callable[[type[Exception]], ContextManager[None]]
 
     def setUp(self):
         """
