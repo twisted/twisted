@@ -13,6 +13,7 @@ import gc
 import io
 import os
 import socket
+from abc import abstractmethod
 from collections.abc import Mapping, Sequence
 from functools import wraps
 from io import BytesIO
@@ -53,6 +54,7 @@ from twisted.internet.interfaces import (
     IHalfCloseableProtocol,
     IListeningPort,
     ILoggingContext,
+    IProtocolFactory,
     IPullProducer,
     IPushProducer,
     IReactorFDSet,
@@ -98,6 +100,7 @@ from twisted.internet.testing import (
 from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.failure import Failure
+from twisted.python.log import textFromEventDict
 from twisted.python.modules import walkModules
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import (
@@ -1331,7 +1334,29 @@ class StreamTransportTestsMixin(LogObserverMixin):
     Mixin defining tests which apply to any port/connection based transport.
     """
 
-    def test_startedListeningLogMessage(self):
+    @abstractmethod
+    def getListeningPort(
+        self,
+        reactor: Any,
+        factory: IProtocolFactory,
+    ) -> IListeningPort:
+        ...
+
+    @abstractmethod
+    def buildReactor(self) -> Any:
+        ...
+
+    @abstractmethod
+    def getExpectedStartListeningLogMessage(
+        self, port: IListeningPort, factory: object
+    ) -> str:
+        ...
+
+    @abstractmethod
+    def assertEqual(self, a: object, b: object) -> None:
+        ...
+
+    def test_startedListeningLogMessage(self) -> None:
         """
         When a port starts, a message including a description of the associated
         factory is logged.
@@ -1347,7 +1372,7 @@ class StreamTransportTestsMixin(LogObserverMixin):
         factory = SomeFactory()
         p = self.getListeningPort(reactor, factory)
         expectedMessage = self.getExpectedStartListeningLogMessage(p, "Crazy Factory")
-        self.assertEqual((expectedMessage,), loggedMessages[0]["message"])
+        self.assertEqual((expectedMessage,), textFromEventDict(loggedMessages[0]))
 
     def test_connectionLostLogMsg(self):
         """
