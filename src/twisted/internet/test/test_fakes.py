@@ -19,7 +19,7 @@ class SocketState:
     receiveBuffer: bytes = b""
     sendBuffer: list[bytes] = field(default_factory=list)
     blocking: bool = True
-    listenException: Exception | None = None
+    bindException: Exception | None = None
     closed: bool = False
 
     def raiseOnBind(self, exception: Exception) -> None:
