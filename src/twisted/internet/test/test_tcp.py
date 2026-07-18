@@ -87,6 +87,7 @@ from twisted.internet.test.reactormixins import (
     needsRunningReactor,
     stopOnError,
 )
+from twisted.internet.test.test_fakes import newFakeSocket
 from twisted.internet.testing import (
     AccumulatingProtocol,
     MemoryReactor,
@@ -180,91 +181,6 @@ def connect(client, destination):
     client.connect(address)
 
 
-class FakeSocket:
-    """
-    A fake for L{socket.socket} objects.
-
-    @ivar data: A C{str} giving the data which will be returned from
-        L{FakeSocket.recv}.
-
-    @ivar sendBuffer: A C{list} of the objects passed to L{FakeSocket.send}.
-    """
-
-    def __init__(self, data):
-        self.data = data
-        self.sendBuffer = []
-
-    def setblocking(self, blocking):
-        self.blocking = blocking
-
-    def recv(self, size):
-        return self.data
-
-    def send(self, bytes):
-        """
-        I{Send} all of C{bytes} by accumulating it into C{self.sendBuffer}.
-
-        @return: The length of C{bytes}, indicating all the data has been
-            accepted.
-        """
-        self.sendBuffer.append(bytes)
-        return len(bytes)
-
-    def shutdown(self, how):
-        """
-        Shutdown is not implemented.  The method is provided since real sockets
-        have it and some code expects it.  No behavior of L{FakeSocket} is
-        affected by a call to it.
-        """
-
-    def close(self):
-        """
-        Close is not implemented.  The method is provided since real sockets
-        have it and some code expects it.  No behavior of L{FakeSocket} is
-        affected by a call to it.
-        """
-
-    def setsockopt(self, *args):
-        """
-        Setsockopt is not implemented.  The method is provided since
-        real sockets have it and some code expects it.  No behavior of
-        L{FakeSocket} is affected by a call to it.
-        """
-
-    def fileno(self):
-        """
-        Return a fake file descriptor.  If actually used, this will have no
-        connection to this L{FakeSocket} and will probably cause surprising
-        results.
-        """
-        return 1
-
-
-class FakeSocketTests(TestCase):
-    """
-    Test that the FakeSocket can be used by the doRead method of L{Connection}
-    """
-
-    def test_blocking(self):
-        skt = FakeSocket(b"someData")
-        skt.setblocking(0)
-        self.assertEqual(skt.blocking, 0)
-
-    def test_recv(self):
-        skt = FakeSocket(b"someData")
-        self.assertEqual(skt.recv(10), b"someData")
-
-    def test_send(self):
-        """
-        L{FakeSocket.send} accepts the entire string passed to it, adds it to
-        its send buffer, and returns its length.
-        """
-        skt = FakeSocket(b"")
-        count = skt.send(b"foo")
-        self.assertEqual(count, 3)
-        self.assertEqual(skt.sendBuffer, [b"foo"])
-
-
 @implementer(IReactorFDSet)
 class _FakeFDSetReactor:
     """
@@ -318,16 +234,21 @@ class TCPServerTests(TestCase):
     Whitebox tests for L{twisted.internet.tcp.Server}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.reactor = _FakeFDSetReactor()
 
         class FakePort:
             _realPortNumber = 3
 
-        self.skt = FakeSocket(b"")
+        self.sktstate, self.skt = newFakeSocket(b"")
         self.protocol = Protocol()
         self.server = Server(
-            self.skt, self.protocol, ("", 0), FakePort(), None, self.reactor
+            self.skt,
+            self.protocol,
+            ("", 0),
+            FakePort(),  # type:ignore[arg-type]
+            1111,
+            self.reactor,
         )
 
     def test_writeAfterDisconnect(self):
@@ -370,26 +291,27 @@ class TCPConnectionTests(TestCase):
     Whitebox tests for L{twisted.internet.tcp.Connection}.
     """
 
-    def test_noTLSBeforeStartTLS(self):
+    def test_noTLSBeforeStartTLS(self) -> None:
         """
         The C{TLS} attribute of a L{Connection} instance is C{False} before
         L{Connection.startTLS} is called.
         """
-        skt = FakeSocket(b"")
+        state, skt = newFakeSocket()
         protocol = Protocol()
         conn = Connection(skt, protocol)
         self.assertFalse(conn.TLS)
 
     @skipIf(not useSSL, "No SSL support available")
-    def test_tlsAfterStartTLS(self):
+    def test_tlsAfterStartTLS(self) -> None:
         """
         The C{TLS} attribute of a L{Connection} instance is C{True} after
         L{Connection.startTLS} is called.
         """
-        skt = FakeSocket(b"")
+        state, skt = newFakeSocket()
         protocol = Protocol()
         conn = Connection(skt, protocol, reactor=_FakeFDSetReactor())
-        conn._tlsClientDefault = True
+        # this is a weird requirement of the internals of startTLS
+        conn._tlsClientDefault = True  # type:ignore[attr-defined]
         conn.startTLS(ClientContextFactory(), True)
         self.assertTrue(conn.TLS)
 
