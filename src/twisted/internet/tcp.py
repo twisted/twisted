@@ -1344,6 +1344,7 @@ class Port(base.BasePort, _SocketCloser):
         server to begin listening on the specified port.
         """
         _reservedFD.reserve()
+        skt: socket.socket | None = None
         if self._preexistingSocket is None:
             # Create a new socket and make it listen
             try:
@@ -1354,6 +1355,8 @@ class Port(base.BasePort, _SocketCloser):
                     addr = (self.interface, self.port)
                 skt.bind(addr)
             except OSError as le:
+                if skt:
+                    skt.close()
                 raise CannotListenError(self.interface, self.port, le)
             skt.listen(self.backlog)
         else:
