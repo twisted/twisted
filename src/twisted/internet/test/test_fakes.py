@@ -19,6 +19,15 @@ class SocketState:
     receiveBuffer: bytes = b""
     sendBuffer: list[bytes] = field(default_factory=list)
     blocking: bool = True
+    listenException: Exception | None = None
+    closed: bool = False
+
+    def raiseOnBind(self, exception: Exception) -> None:
+        """
+        Cause the associated socket to raise the given exception when
+        C{.bind()} is called.
+        """
+        self.bindException = exception
 
 
 @dataclass
@@ -59,10 +68,10 @@ class FakeSocket:
 
     def close(self) -> None:
         """
-        Close is not implemented.  The method is provided since real sockets
-        have it and some code expects it.  No behavior of L{FakeSocket} is
-        affected by a call to it.
+        Update L{SocketState.closed} on the associated L{SocketState}; no other
+        behavior is affected.
         """
+        self._state.closed = True
 
     def setsockopt(
         self, level: int, optname: int, value: int | bytes | None, optlen: int = 0
@@ -80,6 +89,20 @@ class FakeSocket:
         results.
         """
         return 1
+
+    def bind(self, address: tuple[str, int]) -> None:
+        """
+        Bind, possibly raising an error in the process.
+
+        @see: L{SocketState.raiseOnBind}
+        """
+        if (error := self._state.bindException) is not None:
+            raise error
+
+    def listen(self, backlog: int = 10) -> None:
+        """
+        Do nothing.
+        """
 
 
 def newFakeSocket(recvBuf: bytes = b"") -> tuple[SocketState, socket.socket]:
@@ -111,3 +134,15 @@ class FakeSocketTests(SynchronousTestCase):
         count = skt.send(b"foo")
         self.assertEqual(count, 3)
         self.assertEqual(state.sendBuffer, [b"foo"])
+
+    def test_raiseOnBind(self) -> None:
+        """
+        L{FakeSocket.bind} will raise an exception if the socket state's
+        L{SocketState.raiseOnBind} method has been called.
+        """
+        state, skt = newFakeSocket()
+        skt.bind(("127.0.0.1", 300))
+        ve = ValueError("yep it's broken")
+        state.raiseOnBind(ve)
+        with self.assertRaises(ValueError):
+            skt.bind(("127.0.0.1", 400))

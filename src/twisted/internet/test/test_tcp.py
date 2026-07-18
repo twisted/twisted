@@ -36,6 +36,7 @@ from twisted.internet.defer import (
 )
 from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
 from twisted.internet.error import (
+    CannotListenError,
     ConnectBindError,
     ConnectionAborted,
     ConnectionClosed,
@@ -61,9 +62,10 @@ from twisted.internet.interfaces import (
     IResolverSimple,
     ITLSTransport,
 )
-from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
+from twisted.internet.protocol import ClientFactory, Factory, Protocol, ServerFactory
 from twisted.internet.tcp import (
     Connection,
+    Port,
     Server,
     _BuffersLogs,
     _FileDescriptorReservation,
@@ -227,6 +229,35 @@ class _FakeFDSetReactor:
 
 
 verifyClass(IReactorFDSet, _FakeFDSetReactor)
+
+
+class TCPPortTests(SynchronousTestCase):
+    """
+    Whitebox tests for L{twisted.internet.tcp.Port}.
+    """
+
+    def setUp(self) -> None:
+        self.reactor = _FakeFDSetReactor()
+
+        class FakePort:
+            _realPortNumber = 3
+
+        self.sktstate, self.skt = newFakeSocket(b"")
+        self.factory = Factory()
+        self.server = Port(4321, self.factory, reactor=self.reactor)
+        self.server.createInternetSocket = (  # type:ignore[method-assign]
+            lambda: self.skt
+        )
+
+    def test_bindFailure(self) -> None:
+        """
+        L{Server.startListening} should clean up the created socket when
+        L{socket.socket.bind} fails.
+        """
+        self.sktstate.raiseOnBind(OSError("binding failed for some reason"))
+        with self.assertRaises(CannotListenError):
+            self.server.startListening()
+        self.assertTrue(self.sktstate.closed, "socket was not closed")
 
 
 class TCPServerTests(TestCase):
