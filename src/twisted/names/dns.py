@@ -3417,7 +3417,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         self._reactor.listenUDP(0, self, maxPacketSize=512)
 
     def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
-        del self._addressValidation[id]
+        self._addressValidation.pop(id, None)
         super()._clearFailed(deferred, id)
 
     def datagramReceived(self, data: bytes, addr: tuple[str, int]) -> None:
