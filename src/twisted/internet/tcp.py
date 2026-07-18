@@ -1379,9 +1379,8 @@ class Port(base.BasePort, _SocketCloser):
         self._realPortNumber = skt.getsockname()[1]
 
         log.msg(
-            "%(factory)s starting on %(port)s",
-            factory=self._getLogPrefix(self.factory),
-            port=self._realPortNumber,
+            "%s starting on %s"
+            % (self._getLogPrefix(self.factory), self._realPortNumber)
         )
 
         # The order of the next 5 lines is kind of bizarre.  If no one
