@@ -14,6 +14,7 @@ from zope.interface.verify import verifyClass
 
 from twisted.internet import task
 from twisted.internet.error import CannotListenError, ConnectionDone
+from twisted.logger import capturedLogs
 from twisted.names import dns
 from twisted.names.dns import Record_A
 from twisted.python.failure import Failure
@@ -774,6 +775,22 @@ class RoundtripDNSTests(unittest.TestCase):
         """
         self._recordRoundtripTest(dns.Record_TXT(b"foo", b"bar"))
 
+    def test_tooLongTXT(self) -> None:
+        """
+        When decoding a TXT record with a short RDLENGTH a message will be logged.
+        """
+        record = dns.Record_TXT()
+        data = b"\x04abcd"
+        with capturedLogs() as l1:
+            record.decode(BytesIO(data), 3)
+        self.assertEqual(record.data, [b"abcd"])
+        with capturedLogs() as l2:
+            record.decode(BytesIO(data), 5)
+        # logged when too short
+        self.assertEqual(len(l1), 1)
+        # not when the right length
+        self.assertEqual(len(l2), 0)
+
 
 MESSAGE_AUTHENTIC_DATA_BYTES = (
     b"\x00\x00"  # ID
@@ -1469,7 +1486,8 @@ class DatagramProtocolTests(unittest.SynchronousTestCase):
         fromAddress = ("127.0.0.1", 21345)
         self.proto.datagramReceived(message.toStr(), fromAddress)
         self.assertEqual(
-            [(CompareToStr(message), self.proto, fromAddress)], self.controller.messages
+            [(CompareToStr(message), self.proto, fromAddress)],
+            self.controller.messages,
         )
 
 
