@@ -2808,12 +2808,20 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
-    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
-    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
+    macKernelBug = skipIf(
+        platform.isMacOSX(),
+        """
+        These tests possibly implicate a macOS kernel bug as described in
+        https://github.com/python/cpython/issues/153117 .  However, as
+        experiments in https://github.com/twisted/twisted/pull/12695 suggest,
+        it is not sufficient to simply disable the asyncio reactor to work
+        around the issue.  The tests themselves are also somewhat poorly
+        written and simply hang rather than failing cleanly, so they do not
+        provide a lot of value.  They are skipped pending this investigation.
+        """,
     )
+
+    @macKernelBug
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2822,12 +2830,7 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
-    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
-    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
-    )
+    @macKernelBug
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
@@ -2837,6 +2840,7 @@ class AbortConnectionMixin:
             ProducerAbortingClientLater, AbortServerWritingProtocol
         )
 
+    @macKernelBug
     def test_fullWriteBuffer(self):
         """
         abortConnection() triggered by the write buffer being full.
