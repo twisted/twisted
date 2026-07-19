@@ -668,6 +668,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
         L{ITransport.write} sends normal bytes.
         """
+        oself = self
 
         @implementer(IFileDescriptorReceiver)
         class RecordEvents(ConnectableProtocol):
@@ -675,21 +676,21 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 ConnectableProtocol.connectionMade(self)
                 self.events = []
 
-            def fileDescriptorReceived(innerSelf, descriptor):
-                self.addCleanup(close, descriptor)
-                innerSelf.events.append(type(descriptor))
+            def fileDescriptorReceived(self, descriptor):
+                oself.addCleanup(close, descriptor)
+                self.events.append("file-descriptor")
 
             def dataReceived(self, data):
                 self.events.extend(data)
 
         cargo = socket()
-        server = SendFileDescriptor(cargo.fileno(), b"junk")
+        server = SendFileDescriptor(cargo.fileno(), b"example data")
         client = RecordEvents()
 
         runProtocolsWithReactor(self, server, client, self.endpoints)
 
-        self.assertEqual(int, client.events[0])
-        self.assertEqual(b"junk", bytes(client.events[1:]))
+        self.assertEqual("file-descriptor", client.events[0])
+        self.assertEqual(b"example data", bytes(client.events[1:]))
 
 
 class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):
