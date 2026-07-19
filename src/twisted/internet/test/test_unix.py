@@ -299,7 +299,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SaveAddress()
         client = SaveAddress()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
         self.assertEqual(server.addresses["host"], client.addresses["peer"])
         self.assertEqual(server.addresses["peer"], client.addresses["host"])
@@ -337,7 +337,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addErrback(err, "Sending file descriptor encountered a problem")
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
     @skipIf(not sendmsg, sendmsgSkipReason)
     def test_sendFileDescriptorTriggersPauseProducing(self):
@@ -384,7 +384,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SendsManyFileDescriptors()
         client = DoesNotRead()
         server.other = client
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
         self.assertTrue(server.paused, "sendFileDescriptor producer was not paused")
 
@@ -406,7 +406,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addBoth(result.append)
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
         self.assertIsInstance(result[0], Failure)
         result[0].trap(ConnectionClosed)
@@ -614,7 +614,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = RecordEndpointAddresses(probeClient.fileno(), b"junk")
         client = ConnectableProtocol()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
         # Get rid of the original reference to the socket.
         probeClient.close()
