@@ -2854,6 +2854,7 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(StreamingProducerClient, NoReadServer)
 
+    @macKernelBug
     def test_fullWriteBufferAfterByteExchange(self):
         """
         abortConnection() is triggered by a write buffer being full.
