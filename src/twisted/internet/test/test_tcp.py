@@ -254,7 +254,7 @@ class TCPPortTests(SynchronousTestCase):
         def noNewSocket() -> socket.socket:
             raise OSError("socket creation failure")
 
-        self.server.createInternetSocket = noNewSocket  # type:ignore[method-assign]
+        self.server.createInternetSocket = noNewSocket  # type: ignore[method-assign]
         with self.assertRaises(CannotListenError):
             self.server.startListening()
 
@@ -2443,9 +2443,9 @@ class ReadAbortServerProtocol(AbortServerWritingProtocol):
     possibly arrive.
     """
 
-    def dataReceived(self, data):
-        if data.replace(b"X", b""):
-            raise Exception("Unexpectedly received data.")
+    def dataReceived(self, data: bytes) -> None:
+        if surprise := data.replace(b"X", b""):
+            raise Exception(f"Unexpectedly received data: {repr(surprise)}")
 
 
 class NoReadServer(ConnectableProtocol):
@@ -2809,7 +2809,7 @@ class AbortConnectionMixin:
         )
 
     macKernelBug = skipIf(
-        platform.isMacOSX(),
+        False,
         """
         These tests possibly implicate a macOS kernel bug as described in
         https://github.com/python/cpython/issues/153117 .  However, as
@@ -2836,9 +2836,7 @@ class AbortConnectionMixin:
         abortConnection() is called in resumeProducing, after some
         bytes have been exchanged. The protocol should be disconnected.
         """
-        return self.runAbortTest(
-            ProducerAbortingClientLater, AbortServerWritingProtocol
-        )
+        self.runAbortTest(ProducerAbortingClientLater, AbortServerWritingProtocol)
 
     @macKernelBug
     def test_fullWriteBuffer(self):
@@ -2863,7 +2861,7 @@ class AbortConnectionMixin:
         allowing a TLS handshake if we're testing TLS. The connection will
         then be lost.
         """
-        return self.runAbortTest(StreamingProducerClientLater, EventualNoReadServer)
+        self.runAbortTest(StreamingProducerClientLater, EventualNoReadServer)
 
     def test_dataReceivedThrows(self):
         """
