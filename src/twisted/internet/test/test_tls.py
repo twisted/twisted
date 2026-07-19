@@ -377,7 +377,7 @@ class TLSPortTestsBuilder(
 
 globals().update(SSLClientTestsMixin.makeTestCaseClasses())
 globals().update(StartTLSClientTestsMixin.makeTestCaseClasses())
-globals().update(TLSPortTestsBuilder().makeTestCaseClasses())
+globals().update(TLSPortTestsBuilder.makeTestCaseClasses())
 
 
 class AbortSSLConnectionTests(

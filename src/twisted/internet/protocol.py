@@ -801,7 +801,7 @@ class AbstractDatagramProtocol:
         self.transport = transport
         self.doStart()
 
-    def datagramReceived(self, datagram: bytes, addr: Any) -> None:
+    def datagramReceived(self, datagram: bytes, addr: tuple[str, int]) -> None:
         """
         Called when a datagram is received.
 

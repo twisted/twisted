@@ -43,6 +43,7 @@ from twisted.internet.interfaces import (
     IReactorUNIX,
     IResolutionReceiver,
     ITransport,
+    IUDPTransport,
 )
 from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
@@ -148,7 +149,9 @@ class LineSendingProtocol(basic.LineReceiver):
         self.lostConn = True
 
 
-class FakeDatagramTransport:
+@implementer(IUDPTransport)
+# Implementation is incomplete; please add additional methods as time allows.
+class FakeDatagramTransport:  # type:ignore[misc]
     noAddr = object()
 
     def __init__(self):

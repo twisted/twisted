@@ -238,7 +238,6 @@ jobs:
         cache: pip
         cache-dependency-path: |
           pyproject.toml
-          setup.cfg
           tox.ini
 
     # Make sure the matrix is defined in such a way that this is triggered
@@ -255,7 +254,7 @@ jobs:
     - name: Install dependencies
       run: |
         openssl version
-        python -m pip install --upgrade pip tox~=3.0 coverage
+        python -m pip install --upgrade pip tox coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
@@ -403,6 +402,10 @@ jobs:
         # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Install dependencies
       run: |
@@ -461,10 +464,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Run the checks
       run: |
@@ -485,9 +492,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Build apidocs
       run: |
@@ -502,9 +514,13 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Run the checks
       run: |
@@ -526,10 +542,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Test
       run: |
-        python -m pip install --upgrade pip 'tox>4'
+        python -m pip install --upgrade pip tox
         tox -e release-prepare
 
     - uses: twisted/python-info-action@v1
