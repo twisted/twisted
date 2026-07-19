@@ -2444,8 +2444,9 @@ class ReadAbortServerProtocol(AbortServerWritingProtocol):
     """
 
     def dataReceived(self, data: bytes) -> None:
-        if surprise := data.replace(b"X", b""):
-            raise Exception(f"Unexpectedly received data: {repr(surprise)}")
+        assert not (
+            surprise := data.replace(b"X", b"")
+        ), f"Unexpectedly received data: {repr(surprise)}"
 
 
 class NoReadServer(ConnectableProtocol):
