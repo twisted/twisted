@@ -2808,20 +2808,6 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
-    macKernelBug = skipIf(
-        False,
-        """
-        These tests possibly implicate a macOS kernel bug as described in
-        https://github.com/python/cpython/issues/153117 .  However, as
-        experiments in https://github.com/twisted/twisted/pull/12695 suggest,
-        it is not sufficient to simply disable the asyncio reactor to work
-        around the issue.  The tests themselves are also somewhat poorly
-        written and simply hang rather than failing cleanly, so they do not
-        provide a lot of value.  They are skipped pending this investigation.
-        """,
-    )
-
-    @macKernelBug
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2830,7 +2816,6 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
-    @macKernelBug
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
@@ -2838,7 +2823,6 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClientLater, AbortServerWritingProtocol)
 
-    @macKernelBug
     def test_fullWriteBuffer(self):
         """
         abortConnection() triggered by the write buffer being full.
@@ -2852,7 +2836,6 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(StreamingProducerClient, NoReadServer)
 
-    @macKernelBug
     def test_fullWriteBufferAfterByteExchange(self):
         """
         abortConnection() is triggered by a write buffer being full.
