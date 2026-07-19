@@ -79,6 +79,14 @@ class ConnectableProtocol(Protocol):
         """
         The other end of the connection has been aborted.  Force the operating
         system to notice that an RST should be delivered, by writing some data.
+
+        As described in https://github.com/python/cpython/issues/153117 ,
+        macOS, and in particular macOS 26, may fail to deliver RST packets,
+        even over local interfaces, when connections are aborted; this prevents
+        tests from hanging while waiting for a notification that will never
+        come.  By sending data to the now-possibly-defunct peer, we force the
+        OS to emit another RST packet and I{notice} that the connection has
+        been reset.
         """
         assert self.transport is not None
         self.transport.write(b"GOODBYE")
@@ -187,6 +195,8 @@ def runProtocolsWithReactor(
             theOne: Deferred[None], theOther: ConnectableProtocol
         ) -> None:
             await theOne
+            # See docstring on L{ConnectableProtocol.goodbye} for more
+            # information.
             theOther.goodbye()
 
         oneWay = Deferred.fromCoroutine(waitForOne(serverDone, clientProtocol))
