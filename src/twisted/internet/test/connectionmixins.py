@@ -9,6 +9,7 @@ Various helpers for tests for connection-oriented transports.
 from __future__ import annotations
 
 import socket
+from functools import partial
 from gc import collect
 from typing import Any
 from weakref import ref
@@ -207,10 +208,11 @@ def runProtocolsWithReactor(
         await theOtherWay
         reactor.stop()
 
-    def report(failure: Failure) -> None:
-        _log.failure("while running reactor", failure)
-
-    reactor.callWhenRunning(lambda: Deferred.fromCoroutine(steps()).addErrback(report))
+    reactor.callWhenRunning(
+        lambda: Deferred.fromCoroutine(steps()).addErrback(
+            partial(_log.failure, "while running reactor")
+        )
+    )
     reactorBuilder.runReactor(reactor)
     return reactor
 
