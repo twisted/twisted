@@ -155,6 +155,7 @@ def runProtocolsWithReactor(
     serverProtocol: ConnectableProtocol,
     clientProtocol: ConnectableProtocol,
     endpointCreator: EndpointCreator,
+    sayGoodbye: bool = True,
 ) -> Any:
     """
     Connect two protocols using endpoints and a new reactor instance.
@@ -197,7 +198,8 @@ def runProtocolsWithReactor(
             await theOne
             # See docstring on L{ConnectableProtocol.goodbye} for more
             # information.
-            theOther.goodbye()
+            if sayGoodbye:
+                theOther.goodbye()
 
         oneWay = Deferred.fromCoroutine(waitForOne(serverDone, clientProtocol))
         theOtherWay = Deferred.fromCoroutine(waitForOne(clientDone, serverProtocol))

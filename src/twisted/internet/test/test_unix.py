@@ -687,7 +687,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SendFileDescriptor(cargo.fileno(), b"example data")
         client = RecordEvents()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, sayGoodbye=False)
 
         self.assertEqual("file-descriptor", client.events[0])
         self.assertEqual(b"example data", bytes(client.events[1:]))
