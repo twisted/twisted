@@ -2444,7 +2444,7 @@ class ReadAbortServerProtocol(AbortServerWritingProtocol):
     """
 
     def dataReceived(self, data: bytes) -> None:
-        assert not (  # pragma: no-cover
+        assert not (  # pragma: no cover
             surprise := data.replace(b"X", b"")
         ), f"Unexpectedly received data: {repr(surprise)}"
 
