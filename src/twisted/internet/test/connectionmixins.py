@@ -88,8 +88,8 @@ class ConnectableProtocol(Protocol):
         OS to emit another RST packet and I{notice} that the connection has
         been reset.
         """
-        assert self.transport is not None
-        self.transport.write(b"GOODBYE")
+        if self.transport is not None:
+            self.transport.write(b"GOODBYE")
 
     def _setAttributes(
         self, reactor: Any, done: Deferred[None], peer: ConnectableProtocol
