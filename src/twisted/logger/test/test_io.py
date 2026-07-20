@@ -96,6 +96,7 @@ class LoggingFileTests(unittest.TestCase):
         self.assertRaises(OSError, f.seek)
         self.assertRaises(OSError, f.tell)
         self.assertRaises(OSError, f.truncate)
+        self.assertRaises(OSError, f.fileno)
 
     def test_level(self) -> None:
         """
@@ -154,13 +155,6 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = LoggingFile(self.logger)
         f.flush()
-
-    def test_fileno(self) -> None:
-        """
-        L{LoggingFile.fileno} returns C{-1}.
-        """
-        f = LoggingFile(self.logger)
-        self.assertEqual(f.fileno(), -1)
 
     def test_isatty(self) -> None:
         """
