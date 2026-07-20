@@ -1,0 +1,3 @@
+twisted.internet.abstract.FileDescriptor.fileno now
+raises io.UnsupportedOperation, instead of returning -1,
+to comply with the io.IOBase.fileno description.
