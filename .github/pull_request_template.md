@@ -20,7 +20,7 @@ Below is a non-exhaustive list (as a reminder):
 * [ ] A GitHub Issue associated with the changes from this PR already exists.
   Please create one if missing.
   Someone from the core team will probably do this for you, but your review might go a bit faster if you do it yourself.
-* [ ] The title of the PR should describe the changes and starts with the associated issue number, like “#1234 Brief description”.
+* [ ] The title of the PR should describe the changes and starts with the associated issue number, like `#1234 Brief description`.
 * [ ] A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
 * [ ] The automated tests were updated.
 * [ ] Once all checks are green, request a review by leaving a comment that contains exactly the string `please review`.
