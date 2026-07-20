@@ -77,6 +77,9 @@ whether you **review** that or not.
 Human review of LLM outputs tends to decay over time, and so we have to set a hard line to prevent that gradual slide.
 You cannot copy and paste the output of the LLM into the code.
 
+The usage of AI coding tools can lead to *software necrosis* and *atrophy of software development skills*.
+Any design decisions should be done by a human and you should be able to explain line-by-line how the code works.
+
 Please understand that by opening low-quality pull requests you're not helping anyone.
 Worse, you're [poisoning the open source ecosystem](https://lwn.net/Articles/1058266/) that was precarious even before the arrival of LLM tools.
 Having to wade through plausible-looking-but-low-quality pull requests and trying to determine which ones are legit is extremely demoralizing and has already burned out many good maintainers.
