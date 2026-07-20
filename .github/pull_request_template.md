@@ -13,7 +13,7 @@ Add mentions of things that are not covered here and are planed to be done in se
 ## Contributor Checklist:
 
 This process applies to *all* pull requests - no matter how small.
-Have a look at [our developer documentation](https://docs.twisted.org/en/latest/core/development/dev-process.html) before submitting your Pull Request.
+Have a look at [our developer documentation](https://docs.twisted.org/en/latest/development/dev-process.html) before submitting your Pull Request.
 
 Below is a non-exhaustive list (as a reminder):
 
