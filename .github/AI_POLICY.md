@@ -19,6 +19,8 @@ However, due to both legal and human reasons, we have to establish boundaries.
 > - No LLM output in issues, PRs, code, documentation, or any interaction with the other contributors.
 >  LLM-based autocomplete falls under the same policy as LLM generated content.
 >
+> - You can use AI tools to help with research and investigation for new features or bugs.
+>
 > - Absolutely **no** unsupervised agentic tools or "AI pipeline".
 >
 
@@ -31,10 +33,16 @@ By submitting a pull request, you certify that:
  - You either hold the copyright to the changes or have explicit legal authorization to contribute them under this project's license.
  - As the author, you are responsible for understanding every change.
  - You accept full responsibility for it.
- - If you used AI tools in preparing your PR, you must disclose this in the description of your PR.
  - When responding to review comments, you must do so without relying on AI tools.
    Reviewers want to engage directly with you, not with generated responses.
    If you do not engage directly with reviewers, the PR will be closed.
+
+
+## Issue/bugs/security reports
+
+If you used AI tools in preparing your report, you must disclose this in report.
+
+Proper attribution helps track the evolving role of AI in the development process.
 
 
 ## Legal
@@ -60,6 +68,15 @@ The human submitter is responsible for:
 As the makers of software that is used by millions of people worldwide and with a reputation for high-quality maintenance, we take our responsibility to our users very seriously.
 No matter what LLM vendors or boosters on LinkedIn tell you, we have to manually review every change before merging, because it's **our responsibility** to keep the project stable.
 
+You can use LLM tools to help with research and investigation for new features or bugs.
+You can use "AI mode" in search engines, use AI tools to generate reports, AI spell-checkers or other code review tools.
+Make sure any output from those tools is kept outside of the Twisted code tree.
+
+Any LLM tooling cannot be allowed to write to the code,
+whether you **review** that or not.
+Human review of LLM outputs tends to decay over time, and so we have to set a hard line to prevent that gradual slide.
+You cannot copy and paste the output of the LLM into the code.
+
 Please understand that by opening low-quality pull requests you're not helping anyone.
 Worse, you're [poisoning the open source ecosystem](https://lwn.net/Articles/1058266/) that was precarious even before the arrival of LLM tools.
 Having to wade through plausible-looking-but-low-quality pull requests and trying to determine which ones are legit is extremely demoralizing and has already burned out many good maintainers.
@@ -67,26 +84,6 @@ Having to wade through plausible-looking-but-low-quality pull requests and tryin
 Put bluntly, we have no time or interest to become part of your vibe coding loop where you drop LLM slop at our door, we spend time and energy to review it, and you just feed it back into the LLM for another iteration.
 
 This dynamic is especially pernicious because it poisons the well for mentoring new contributors which we are committed to.
-
-
-## Attribution
-
-When AI tools are used, proper attribution helps track the evolving role of AI in the development process.
-Contributions should include an *Assisted-by* tag in the following format:
-
-```
-Assisted-by: AGENT_NAME:MODEL_VERSION [TOOL1] [TOOL2]
-```
-
-Where:
-
-- AGENT_NAME is the name of the AI tool or framework
-- MODEL_VERSION is the specific model version used
-- [TOOL1] [TOOL2] are optional specialized analysis tools used (e.g., coccinelle, sparse, smatch, clang-tidy)
-
-Basic development tools (git, gcc, make, editors) should not be listed.
-
-Example: `Assisted-by: Claude:claude-3-opus coccinelle sparse`
 
 
 ## Summary
