@@ -76,7 +76,7 @@ class ConnectableProtocol(Protocol):
 
     disconnectReason = None
 
-    def goodbye(self) -> None:
+    def writeToDetectPeerDisconnection(self) -> None:
         """
         The other end of the connection has been aborted.  Force the operating
         system to notice that an RST should be delivered, by writing some data.
@@ -156,7 +156,7 @@ def runProtocolsWithReactor(
     serverProtocol: ConnectableProtocol,
     clientProtocol: ConnectableProtocol,
     endpointCreator: EndpointCreator,
-    sayGoodbye: bool = True,
+    writeToPeerAfterAbort: bool = True,
 ) -> Any:
     """
     Connect two protocols using endpoints and a new reactor instance.
@@ -199,8 +199,8 @@ def runProtocolsWithReactor(
             await theOne
             # See docstring on L{ConnectableProtocol.goodbye} for more
             # information.
-            if sayGoodbye:
-                theOther.goodbye()
+            if writeToPeerAfterAbort:
+                theOther.writeToDetectPeerDisconnection()
 
         oneWay = Deferred.fromCoroutine(waitForOne(serverDone, clientProtocol))
         theOtherWay = Deferred.fromCoroutine(waitForOne(clientDone, serverProtocol))
