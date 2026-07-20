@@ -18,50 +18,74 @@ from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
 
 
+class _MyVersioned(styles.Versioned):
+    persistenceVersion = 2
+    # persistenceForgets should be a tuple
+    persistenceForgets = ["garbagedata"]  # type: ignore[assignment]
+    v3 = 0
+    v4 = 0
+
+    def __init__(self) -> None:
+        self.somedata = "xxx"
+        self.garbagedata = lambda q: "cant persist"
+
+    def upgradeToVersion3(self) -> None:
+        self.v3 += 1
+
+    def upgradeToVersion4(self) -> None:
+        self.v4 += 1
+
+
+class _ClassWithCustomHash(styles.Versioned):
+    def __init__(self, unique: str, hash: int) -> None:
+        self.unique = unique
+        self.hash = hash
+
+    def __hash__(self) -> int:
+        return self.hash
+
+
+class _ToyClassA(styles.Versioned):
+    pass
+
+
+class _ToyClassB(styles.Versioned):
+    pass
+
+
+class _NullVersioned(styles.Versioned):
+    persistenceVersion = 1
+
+    def __init__(self) -> None:
+        self.ok = 0
+
+    def upgradeToVersion1(self) -> None:
+        self.ok = 1
+
+
+class _LegacyNullVersioned:
+    """
+    Produce pickle data for _NullVersioned with old-style state: no
+    persisted version marker.
+    """
+
+    def __reduce__(self) -> tuple[type[_NullVersioned], tuple[()], dict[str, int]]:
+        return (_NullVersioned, (), {"ok": 0})
+
+
 class VersionTests(TestCase):
     def test_nullVersionUpgrade(self) -> None:
-        global NullVersioned
-
-        class NullVersioned:
-            def __init__(self) -> None:
-                self.ok = 0
-
-        pkcl = pickle.dumps(NullVersioned())
-
-        class NullVersioned(styles.Versioned):  # type: ignore[no-redef]
-            persistenceVersion = 1
-
-            def upgradeToVersion1(self) -> None:
-                self.ok = 1
+        pkcl = pickle.dumps(_LegacyNullVersioned())
 
         mnv = pickle.loads(pkcl)
         styles.doUpgrade()
         assert mnv.ok, "initial upgrade not run!"
 
     def test_versionUpgrade(self) -> None:
-        global MyVersioned
-
-        class MyVersioned(styles.Versioned):
-            persistenceVersion = 2
-            # persistenceForgets should be a tuple
-            persistenceForgets = ["garbagedata"]  # type: ignore[assignment]
-            v3 = 0
-            v4 = 0
-
-            def __init__(self) -> None:
-                self.somedata = "xxx"
-                self.garbagedata = lambda q: "cant persist"
-
-            def upgradeToVersion3(self) -> None:
-                self.v3 += 1
-
-            def upgradeToVersion4(self) -> None:
-                self.v4 += 1
-
-        mv = MyVersioned()
+        mv = _MyVersioned()
         assert not (mv.v3 or mv.v4), "hasn't been upgraded yet"
         pickl = pickle.dumps(mv)
-        MyVersioned.persistenceVersion = 4
+        _MyVersioned.persistenceVersion = 4
         obj = pickle.loads(pickl)
         styles.doUpgrade()
         assert obj.v3, "didn't do version 3 upgrade"
@@ -73,23 +97,14 @@ class VersionTests(TestCase):
         assert obj.v4 == 1, "upgraded unnecessarily"
 
     def test_nonIdentityHash(self) -> None:
-        global ClassWithCustomHash
-
-        class ClassWithCustomHash(styles.Versioned):
-            def __init__(self, unique: str, hash: int) -> None:
-                self.unique = unique
-                self.hash = hash
-
-            def __hash__(self) -> int:
-                return self.hash
-
-        v1 = ClassWithCustomHash("v1", 0)
-        v2 = ClassWithCustomHash("v2", 0)
+        v1 = _ClassWithCustomHash("v1", 0)
+        v2 = _ClassWithCustomHash("v2", 0)
+        self.assertEqual(hash(v1), hash(v2))
 
         pkl = pickle.dumps((v1, v2))
         del v1, v2
-        ClassWithCustomHash.persistenceVersion = 1
-        ClassWithCustomHash.upgradeToVersion1 = lambda self: setattr(  # type: ignore[attr-defined]
+        _ClassWithCustomHash.persistenceVersion = 1
+        _ClassWithCustomHash.upgradeToVersion1 = lambda self: setattr(  # type: ignore[attr-defined]
             self, "upgraded", True
         )
         v1, v2 = pickle.loads(pkl)
@@ -100,31 +115,23 @@ class VersionTests(TestCase):
         self.assertTrue(v2.upgraded)
 
     def test_upgradeDeserializesObjectsRequiringUpgrade(self) -> None:
-        global ToyClassA, ToyClassB
-
-        class ToyClassA(styles.Versioned):
-            pass
-
-        class ToyClassB(styles.Versioned):
-            pass
-
-        x = ToyClassA()
-        y = ToyClassB()
+        x = _ToyClassA()
+        y = _ToyClassB()
         pklA, pklB = pickle.dumps(x), pickle.dumps(y)
         del x, y
-        ToyClassA.persistenceVersion = 1
+        _ToyClassA.persistenceVersion = 1
 
         def upgradeToVersion1(self: Any) -> None:
             self.y = pickle.loads(pklB)
             styles.doUpgrade()
 
-        ToyClassA.upgradeToVersion1 = upgradeToVersion1  # type: ignore[attr-defined]
-        ToyClassB.persistenceVersion = 1
+        _ToyClassA.upgradeToVersion1 = upgradeToVersion1  # type: ignore[attr-defined]
+        _ToyClassB.persistenceVersion = 1
 
         def setUpgraded(self: object) -> None:
             setattr(self, "upgraded", True)
 
-        ToyClassB.upgradeToVersion1 = setUpgraded  # type: ignore[attr-defined]
+        _ToyClassB.upgradeToVersion1 = setUpgraded  # type: ignore[attr-defined]
 
         x = pickle.loads(pklA)
         styles.doUpgrade()

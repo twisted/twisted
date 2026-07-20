@@ -1931,6 +1931,13 @@ def _inlineCallbacks(
         # iscoroutine() is pretty expensive in this context, so avoid calling
         # it unnecessarily:
         if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
+            # cast 'object' to expected generator type
+            if TYPE_CHECKING:
+                result = cast(
+                    Generator[Deferred[Any], object, _T]
+                    | Coroutine[Deferred[Any], object, _T],
+                    result,
+                )
             result = _cancellableInlineCallbacks(result)
             isDeferred = True
 

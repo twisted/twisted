@@ -230,7 +230,7 @@ class Tag:
                 "an exception in the future",
                 DeprecationWarning,
             )
-            return obj
+            return obj  # type: ignore[return-value]
         elif iscoroutine(obj):
             warn(
                 "Cloning a Tag which contains a coroutine is unsafe, "
