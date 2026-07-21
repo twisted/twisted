@@ -1167,15 +1167,12 @@ class Deferred(Awaitable[_SelfResultT]):
 
     def __iter__(self) -> Generator[Deferred[_SelfResultT], None, _SelfResultT]:
         while True:
-            if self.paused:
-                # If we're paused, we have no result to give
+            if not self.called or self.paused:
+                # We have no result to give
                 yield self
                 continue
 
-            result = getattr(self, "result", _NO_RESULT)
-            if result is _NO_RESULT:
-                yield self
-                continue
+            result = self.result
 
             if isinstance(result, Failure):
                 # Clear the failure on debugInfo so it doesn't raise "unhandled
