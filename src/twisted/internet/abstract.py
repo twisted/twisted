@@ -9,7 +9,6 @@ Support for generic select()able objects.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from io import UnsupportedOperation
 from socket import AF_INET, AF_INET6, inet_pton
 
 from zope.interface import implementer
@@ -500,7 +499,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         This method must be overridden or assigned in subclasses to
         indicate a valid file descriptor for the operating system.
         """
-        raise UnsupportedOperation("FileDescriptor.fileno not implemented.")
+        return -1
 
 
 def isIPAddress(addr: str, family: int = AF_INET) -> bool:

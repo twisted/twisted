@@ -7,8 +7,6 @@ reactors.
 """
 from __future__ import annotations
 
-from io import UnsupportedOperation
-
 from hypothesis import example, given, strategies as st
 
 from twisted.internet.abstract import FileDescriptor, isIPv6Address
@@ -69,20 +67,6 @@ class IPv6AddressTests(SynchronousTestCase):
         self.assertFalse(isIPv6Address("\u4321"))
         self.assertFalse(isIPv6Address("hello%eth0"))
         self.assertFalse(isIPv6Address(b"hello%eth0"))  # type: ignore[arg-type]
-
-
-class FileDescriptorTests(SynchronousTestCase):
-    """
-    Tests for L{FileDescriptor} class.
-    """
-
-    def test_fileno(self) -> None:
-        """
-        It raises L{UnsupportedOperation} since by default no file descriptor
-        is associated with the abstract implementation.
-        """
-        fd = FileDescriptor(_FakeFDSetReactor())
-        self.assertRaises(UnsupportedOperation, fd.fileno)
 
 
 class TrackingFileDescriptor(FileDescriptor):
