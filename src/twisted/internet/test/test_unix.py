@@ -299,7 +299,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SaveAddress()
         client = SaveAddress()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
         self.assertEqual(server.addresses["host"], client.addresses["peer"])
         self.assertEqual(server.addresses["peer"], client.addresses["host"])
@@ -337,7 +337,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addErrback(err, "Sending file descriptor encountered a problem")
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
     @skipIf(not sendmsg, sendmsgSkipReason)
     def test_sendFileDescriptorTriggersPauseProducing(self):
@@ -384,7 +384,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = SendsManyFileDescriptors()
         client = DoesNotRead()
         server.other = client
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
         self.assertTrue(server.paused, "sendFileDescriptor producer was not paused")
 
@@ -406,7 +406,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         d.addBoth(result.append)
         d.addBoth(lambda ignored: server.transport.loseConnection())
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
         self.assertIsInstance(result[0], Failure)
         result[0].trap(ConnectionClosed)
@@ -614,7 +614,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         server = RecordEndpointAddresses(probeClient.fileno(), b"junk")
         client = ConnectableProtocol()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
         # Get rid of the original reference to the socket.
         probeClient.close()
@@ -668,6 +668,7 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
         L{IUNIXTransport.sendFileDescriptor} sends file descriptors before
         L{ITransport.write} sends normal bytes.
         """
+        oself = self
 
         @implementer(IFileDescriptorReceiver)
         class RecordEvents(ConnectableProtocol):
@@ -675,21 +676,21 @@ class UNIXTestsBuilder(UNIXFamilyMixin, ReactorBuilder, ConnectionTestsMixin):
                 ConnectableProtocol.connectionMade(self)
                 self.events = []
 
-            def fileDescriptorReceived(innerSelf, descriptor):
-                self.addCleanup(close, descriptor)
-                innerSelf.events.append(type(descriptor))
+            def fileDescriptorReceived(self, descriptor):
+                oself.addCleanup(close, descriptor)
+                self.events.append("file-descriptor")
 
             def dataReceived(self, data):
                 self.events.extend(data)
 
         cargo = socket()
-        server = SendFileDescriptor(cargo.fileno(), b"junk")
+        server = SendFileDescriptor(cargo.fileno(), b"example data")
         client = RecordEvents()
 
-        runProtocolsWithReactor(self, server, client, self.endpoints)
+        runProtocolsWithReactor(self, server, client, self.endpoints, False)
 
-        self.assertEqual(int, client.events[0])
-        self.assertEqual(b"junk", bytes(client.events[1:]))
+        self.assertEqual("file-descriptor", client.events[0])
+        self.assertEqual(b"example data", bytes(client.events[1:]))
 
 
 class UNIXDatagramTestsBuilder(UNIXFamilyMixin, ReactorBuilder):

@@ -254,7 +254,7 @@ class TCPPortTests(SynchronousTestCase):
         def noNewSocket() -> socket.socket:
             raise OSError("socket creation failure")
 
-        self.server.createInternetSocket = noNewSocket  # type:ignore[method-assign]
+        self.server.createInternetSocket = noNewSocket  # type: ignore[method-assign]
         with self.assertRaises(CannotListenError):
             self.server.startListening()
 
@@ -2443,9 +2443,10 @@ class ReadAbortServerProtocol(AbortServerWritingProtocol):
     possibly arrive.
     """
 
-    def dataReceived(self, data):
-        if data.replace(b"X", b""):
-            raise Exception("Unexpectedly received data.")
+    def dataReceived(self, data: bytes) -> None:
+        assert not (  # pragma: no cover
+            surprise := data.replace(b"X", b"")
+        ), f"Unexpectedly received data: {repr(surprise)}"
 
 
 class NoReadServer(ConnectableProtocol):
@@ -2808,12 +2809,6 @@ class AbortConnectionMixin:
             clientConnectionLostReason=ConnectionLost,
         )
 
-    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
-    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
-    )
     def test_resumeProducingAbort(self):
         """
         abortConnection() is called in resumeProducing, before any bytes have
@@ -2822,20 +2817,12 @@ class AbortConnectionMixin:
         """
         self.runAbortTest(ProducerAbortingClient, ConnectableProtocol)
 
-    # This test is flaky on macOS on Azure and we skip it due to lack of active macOS developers.
-    # If you care about Twisted on macOS, consider enabling this tests and find out why we get random failures.
-    @skipIf(
-        os.environ.get("CI", "").lower() == "true" and platform.isMacOSX(),
-        "Flaky on macOS on Azure.",
-    )
     def test_resumeProducingAbortLater(self):
         """
         abortConnection() is called in resumeProducing, after some
         bytes have been exchanged. The protocol should be disconnected.
         """
-        return self.runAbortTest(
-            ProducerAbortingClientLater, AbortServerWritingProtocol
-        )
+        self.runAbortTest(ProducerAbortingClientLater, AbortServerWritingProtocol)
 
     def test_fullWriteBuffer(self):
         """
@@ -2858,7 +2845,7 @@ class AbortConnectionMixin:
         allowing a TLS handshake if we're testing TLS. The connection will
         then be lost.
         """
-        return self.runAbortTest(StreamingProducerClientLater, EventualNoReadServer)
+        self.runAbortTest(StreamingProducerClientLater, EventualNoReadServer)
 
     def test_dataReceivedThrows(self):
         """
