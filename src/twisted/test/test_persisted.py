@@ -2,17 +2,14 @@
 # See LICENSE for details.
 from __future__ import annotations
 
-# System Imports
 import copyreg
 import io
 import pickle
 import sys
 import textwrap
-from typing import Any, Callable, NoReturn
+from collections.abc import Callable
+from typing import Any, NoReturn, TypeAlias
 
-from typing_extensions import TypeAlias
-
-# Twisted Imports
 from twisted.persisted import aot, crefutil, styles
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
