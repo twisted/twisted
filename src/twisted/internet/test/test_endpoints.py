@@ -2859,6 +2859,18 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, None)
 
+    def test_notTwoTuple(self):
+        """
+        A tuple is passed, but is not a 2-tuple
+        """
+        with self.assertRaises(ValueError):
+            endpoints.HostnameEndpoint(
+                self.drr,
+                b"www.example.com",
+                80,
+                bindAddress=(b"localhost", 1234, "not a 2-tuple")
+            )
+
 
 @skipIf(skipSSL, skipSSLReason)
 class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):

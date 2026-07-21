@@ -942,6 +942,10 @@ class HostnameEndpoint:
         elif isinstance(bindAddress, str):
             self._bindAddress = makeBinding(bindAddress, 0)
         elif isinstance(bindAddress, tuple):
+            if len(bindAddress) != 2:
+                raise ValueError(
+                    "tuple passed to bindAddress must be size 2"
+                )
             if isinstance(bindAddress[0], bytes):
                 self._bindAddress = makeBinding(bindAddress[0].decode(), bindAddress[1])
             elif isinstance(bindAddress[0], str):
