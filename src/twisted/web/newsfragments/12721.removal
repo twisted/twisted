@@ -1,1 +1,1 @@
-`_makeGetterFactory` method in `twisted.web.client` has been removed.
+`_makeGetterFactory` method in `twisted.web.client` has been removed.  We would not normally remark upon a private API's removal, but we are aware of some 3rd party usage. Please remember that you should not depend on private names within Twisted as they may be removed without notice!
