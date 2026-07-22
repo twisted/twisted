@@ -513,6 +513,7 @@ def toChunk(data: bytes) -> tuple[bytes, bytes, bytes, bytes]:
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
+    # We use bytes formatting here for best performace.
     return b"%x" % len(data), b"\r\n", data, b"\r\n"
 
 
