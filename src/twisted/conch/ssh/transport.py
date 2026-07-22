@@ -1577,12 +1577,12 @@ class SSHServerTransport(SSHTransportBase):
 
         kex = _kex.getPQHybridKex(self.kexAlg)
 
-        if len(cInit) != kex.c_pk1_len + kex.c_pk2_len:
+        if len(cInit) != kex.c_pk1_length + kex.c_pk2_length:
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid C_INIT length")
             return
 
-        c_pk1 = cInit[kex.c_pk2_len :]
-        c_pk2 = cInit[: kex.c_pk2_len]
+        c_pk1 = cInit[kex.c_pk2_length :]
+        c_pk2 = cInit[: kex.c_pk2_length]
 
         pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
 

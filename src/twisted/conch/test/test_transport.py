@@ -1368,7 +1368,7 @@ class ServerAndClientSSHTransportBaseCase:
     Tests that need to be run on both the server and the client.
     """
 
-    def checkDisconnected(self, kind=None):
+    def checkDisconnected(self, kind=None, description=None):
         """
         Helper function to check if the transport disconnected.
         """
@@ -1376,6 +1376,8 @@ class ServerAndClientSSHTransportBaseCase:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
         self.assertEqual(self.packets[-1][1][3:4], bytes((kind,)))
+        if description:
+            self.assertEqual(common.getNS(self.packets[-1][1][4:])[0], description)
 
     def connectModifiedProtocol(self, protoModification, kind=None):
         """
@@ -2191,9 +2193,14 @@ class ServerSSHTransportCurve25519SHA256Tests(
     """
 
 
-class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
+@skipWithoutMLKEM
+class ServerSSHTransportMLKEM768X25519Tests(
+    ServerSSHTransportBaseCase,
+    MLKEM768X25519SHA256Mixin,
+    TransportTestCase,
+):
     """
-    PQ/T Hybrid ML-KEM-768 + X25519 key exchange tests for SSHServerTransport.
+    mlkem768x25519-sha256 tests for SSHServerTransport.
     """
 
     def test_KEX_HYBRID_INIT(self):
@@ -2215,24 +2222,23 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         c_pk1 = c_sk1.public_key().public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
         )
-        c_init = c_pk2 + c_pk1
+        cInit = c_pk2 + c_pk1
 
-        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_init))
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(cInit))
 
         self.assertEqual(len(self.packets), 2)
-        self.assertEqual(self.packets[0][0], transport.MSG_KEXDH_REPLY)
+        self.assertEqual(self.packets[0][0], transport.OVERLAP_MSG_KEX_HYBRID_REPLY)
         self.assertEqual(self.packets[1], (transport.MSG_NEWKEYS, b""))
 
-        k_s, s_reply, signature, _ = common.getNS(self.packets[0][1], 3)
+        k_s, sReply, signature, _ = common.getNS(self.packets[0][1], 3)
 
-        self.assertEqual(len(s_reply), 1088 + 32)
-        s_ct2 = s_reply[:1088]
-        s_pk1 = s_reply[1088:]
+        self.assertEqual(len(sReply), 1088 + 32)
+        s_ct2 = sReply[:1088]
+        s_pk1 = sReply[1088:]
 
         k_pq = peerPrivateKey.decapsulate(s_ct2)
         k_cl = c_sk1.exchange(x25519.X25519PublicKey.from_public_bytes(s_pk1))
-        k_shared = self.hashProcessor(k_pq + k_cl).digest()
-        k_encoded = common.NS(k_shared)
+        sharedSecret = self.hashProcessor(k_pq + k_cl).digest()
 
         pubHostKey, _ = self.proto._getHostKeys(b"ssh-rsa")
         h = self.hashProcessor()
@@ -2241,9 +2247,9 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         h.update(common.NS(self.proto.otherKexInitPayload))
         h.update(common.NS(self.proto.ourKexInitPayload))
         h.update(common.NS(pubHostKey.blob()))
-        h.update(common.NS(c_init))
-        h.update(common.NS(s_reply))
-        h.update(k_encoded)
+        h.update(common.NS(cInit))
+        h.update(common.NS(sReply))
+        h.update(common.NS(sharedSecret))
         exchangeHash = h.digest()
 
         self.assertTrue(keys.Key.fromString(k_s).verify(signature, exchangeHash))
@@ -2260,7 +2266,10 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
 
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(b"\x00" * 100))
 
-        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        self.checkDisconnected(
+            transport.DISCONNECT_KEY_EXCHANGE_FAILED,
+            description=b"Invalid C_INIT length",
+        )
 
     def test_disconnectHYBRID_INIT_invalidX25519Key(self):
         """
@@ -2278,7 +2287,10 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         c_pk1 = b"\x00" * 32
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
 
-        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+        self.checkDisconnected(
+            transport.DISCONNECT_KEY_EXCHANGE_FAILED,
+            description=b"Invalid peer X25519 public key",
+        )
 
     def test_disconnectHYBRID_INIT_invalidMLKEMKey(self):
         """
@@ -2301,17 +2313,6 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
 
         self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
-
-
-@skipWithoutMLKEM
-class ServerSSHTransportMLKEM768X25519Tests(
-    ServerSSHTransportMLKEM768X25519BaseCase,
-    MLKEM768X25519SHA256Mixin,
-    TransportTestCase,
-):
-    """
-    mlkem768x25519-sha256 tests for SSHServerTransport.
-    """
 
 
 class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):

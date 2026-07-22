@@ -80,12 +80,13 @@ class _IPQHybridKexAlgorithm(_IKexAlgorithm):
     An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
     """
 
-    # FIXME: Rename to Twisted naming convention
-    c_pk2_len = Attribute(
-        "An L{int} giving the PQ component public key length in bytes."
-    )
-    c_pk1_len = Attribute(
+    # These variables don't comply with Twisted naming convention.
+    # The names are kept to match the RFC.
+    c_pk1_length = Attribute(
         "An L{int} giving the classical component public key length in bytes."
+    )
+    c_pk2_length = Attribute(
+        "An L{int} giving the PQ component public key length in bytes."
     )
 
 
@@ -107,9 +108,8 @@ class _MLKEM768X25519SHA256:
 
     preference = 1
     hashProcessor = sha256
-    # FIXME: Rename to Twisted naming convention
-    c_pk2_len = 1184
-    c_pk1_len = 32
+    c_pk1_length = 32
+    c_pk2_length = 1184
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
