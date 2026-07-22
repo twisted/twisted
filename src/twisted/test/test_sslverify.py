@@ -51,6 +51,7 @@ if requireModule("OpenSSL"):
     from cryptography import x509
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.asymmetric.rsa import (
         RSAPrivateKey,
         generate_private_key,
@@ -3472,3 +3473,81 @@ class KeyPairTests(TestCase):
 
         certPEM = noTrailingNewlineKeyPemPath.getContent()
         ssl.Certificate.loadPEM(certPEM)
+
+
+class CertificateRequestTests(SynchronousTestCase):
+    """
+    Tests for L{sslverify.CertificateRequest}.
+    """
+
+    if skipSSL:
+        skip = skipSSL
+
+    def _makeRequest(self):
+        """
+        Create a self-signed L{sslverify.CertificateRequest}.
+
+        @return: a fresh certificate request.
+        @rtype: L{sslverify.CertificateRequest}
+        """
+        dn = sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
+        return sslverify.KeyPair.generate().requestObject(dn)
+
+    def test_pemRoundTrip(self):
+        """
+        A L{sslverify.CertificateRequest} dumped to PEM format and loaded back
+        again preserves its subject.
+        """
+        request = self._makeRequest()
+        pem = request.dump(FILETYPE_PEM)
+        self.assertIn(b"BEGIN CERTIFICATE REQUEST", pem)
+        loaded = sslverify.CertificateRequest.load(pem, FILETYPE_PEM)
+        self.assertEqual(
+            loaded._subjectToDistinguishedName(),
+            request._subjectToDistinguishedName(),
+        )
+
+    def test_loadUnsupportedFormat(self):
+        """
+        L{sslverify.CertificateRequest.load} raises L{ValueError} when given an
+        unrecognized format.
+        """
+        request = self._makeRequest()
+        with self.assertRaises(ValueError):
+            sslverify.CertificateRequest.load(request.dump(), object())
+
+    def test_loadUnverifiableSignature(self):
+        """
+        L{sslverify.CertificateRequest.load} raises L{sslverify.VerifyError}
+        when the request's self-signature does not verify.
+        """
+        data = bytearray(self._makeRequest().dump())
+        # Corrupt the trailing signature bytes so the self-signature no longer
+        # verifies while the structure still parses.
+        data[-1] ^= 0xFF
+        with self.assertRaises(sslverify.VerifyError):
+            sslverify.CertificateRequest.load(bytes(data))
+
+    def test_dumpUnsupportedFormat(self):
+        """
+        L{sslverify.CertificateRequest.dump} raises L{ValueError} when given an
+        unrecognized format.
+        """
+        with self.assertRaises(ValueError):
+            self._makeRequest().dump(object())
+
+    def test_subjectUnknownAttribute(self):
+        """
+        L{sslverify.CertificateRequest._subjectToDistinguishedName} raises
+        L{ValueError} when the subject contains a name attribute that does not
+        correspond to a known L{sslverify.DistinguishedName} field.
+        """
+        key = ec.generate_private_key(ec.SECP256R1(), backend=default_backend())
+        csr = (
+            x509.CertificateSigningRequestBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.GIVEN_NAME, "Alice")]))
+            .sign(key, hashes.SHA256())
+        )
+        request = sslverify.CertificateRequest(csr)
+        with self.assertRaises(ValueError):
+            request._subjectToDistinguishedName()

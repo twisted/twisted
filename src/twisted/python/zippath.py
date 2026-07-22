@@ -59,9 +59,6 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         """
         self.archive: ZipArchive[_ArchiveStr] = archive
         self.pathInArchive: _ZipStr = pathInArchive
-        self._nativePathInArchive: _ArchiveStr = _coerceToFilesystemEncoding(
-            archive._zipfileFilename, pathInArchive
-        )
 
         # self.path pretends to be os-specific because that's the way the
         # 'zipimport' module does it.

@@ -8,7 +8,6 @@ Tests for implementations of L{IReactorProcess}.
     platforms and native L{str} keys/values on Windows.
 """
 
-
 import io
 import json
 import os
@@ -616,9 +615,15 @@ sys.stdout.flush()"""
                 raise TestException("processedExited raised")
 
         protocol = Protocol()
-        transport = reactor.spawnProcess(
-            protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
-        )
+        transport = None
+
+        def whenRun() -> None:
+            nonlocal transport
+            transport = reactor.spawnProcess(
+                protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
+
+        reactor.callWhenRunning(whenRun)
         self.runReactor(reactor)
 
         # Manually clean-up broken process handler.

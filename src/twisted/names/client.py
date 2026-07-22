@@ -15,6 +15,7 @@ return an C{IResolver}.
 Future plans: Proper nameserver acquisition on Windows/MacOS,
 better caching, respect timeouts
 """
+from __future__ import annotations
 
 import errno
 import os
@@ -24,10 +25,9 @@ from zope.interface import moduleProvides
 
 from twisted.internet import defer, error, interfaces, protocol
 from twisted.internet.abstract import isIPv6Address
+from twisted.internet.interfaces import IDelayedCall
 from twisted.names import cache, common, dns, hosts as hostsModule, resolve, root
 from twisted.python import failure, log
-
-# Twisted imports
 from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -249,7 +249,12 @@ class Resolver(common.ResolverBase):
         if protocol in self.connections:
             self.connections.remove(protocol)
 
-    def messageReceived(self, message, protocol, address=None):
+    def messageReceived(
+        self,
+        message: dns.Message,
+        protocol: dns.DNSDatagramProtocol,
+        address: tuple[str, int] | None = None,
+    ) -> None:
         log.msg("Unexpected message (%d) received from %r" % (message.id, address))
 
     def _query(self, *args):
@@ -414,12 +419,18 @@ class Resolver(common.ResolverBase):
         return d
 
     # This one doesn't ever belong on UDP
-    def lookupZone(self, name, timeout=10):
+    def lookupZone(
+        self, name: str, timeout: float = 10
+    ) -> defer.Deferred[
+        tuple[list[dns.RRHeader], list[dns.RRHeader], list[dns.RRHeader]]
+    ]:
         address = self.pickServer()
         if address is None:
             return defer.fail(IOError("No domain name servers available"))
         host, port = address
-        d = defer.Deferred()
+        d: defer.Deferred[
+            tuple[list[dns.RRHeader], list[dns.RRHeader], list[dns.RRHeader]]
+        ] = defer.Deferred()
         controller = AXFRController(name, d)
         factory = DNSClientFactory(controller, timeout)
         factory.noisy = False  # stfu
@@ -438,7 +449,15 @@ class Resolver(common.ResolverBase):
             self._cbLookupZone, eliminateTimeout, callbackArgs=(connector,)
         )
 
-    def _timeoutZone(self, d, controller, connector, seconds):
+    def _timeoutZone(
+        self,
+        d: defer.Deferred[
+            tuple[list[dns.RRHeader], list[dns.RRHeader], list[dns.RRHeader]]
+        ],
+        controller: AXFRController,
+        connector: interfaces.IConnector,
+        seconds: float,
+    ) -> None:
         connector.disconnect()
         controller.timeoutCall = None
         controller.deferred = None
@@ -452,7 +471,7 @@ class Resolver(common.ResolverBase):
 
 
 class AXFRController:
-    timeoutCall = None
+    timeoutCall: IDelayedCall | None = None
 
     def __init__(self, name, deferred):
         self.name = name
@@ -471,7 +490,7 @@ class AXFRController:
         # XXX Do something here - see #3428
         pass
 
-    def messageReceived(self, message, protocol):
+    def messageReceived(self, message: dns.Message, protocol: dns.DNSProtocol) -> None:
         # Caveat: We have to handle two cases: All records are in 1
         # message, or all records are in N messages.
 

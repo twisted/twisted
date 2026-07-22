@@ -1,0 +1,1 @@
+twisted.internet.tcp.Port.startListening() now closes the socket when raising CannotListenError.

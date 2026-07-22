@@ -5,7 +5,6 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-
 import errno
 import inspect
 import os
@@ -2136,7 +2135,6 @@ def stubApplicationRunnerFactoryCreator(signum):
 
 
 class ExitWithSignalTests(TestCase):
-
     """
     Tests for L{twisted.application.app._exitWithSignal}.
     """
@@ -2208,3 +2206,21 @@ class ExitWithSignalTests(TestCase):
         twistd.runApp(self.config)
         self.assertEqual(self.fakeKillArgs[0], os.getpid())
         self.assertEqual(self.fakeKillArgs[1], signal.SIGINT)
+
+
+class RunTests(TestCase):
+    """
+    Tests for L{twisted.application.app.run}.
+    """
+
+    def test_usageErrorExitsNonZero(self):
+        """
+        L{app.run} exits with a non-zero status code when L{ServerOptions}
+        raises L{usage.error} (e.g. an unknown subcommand is given).
+        """
+        self.patch(sys, "argv", ["twistd", "no-such-command"])
+        self.patch(sys, "stdout", StringIO())
+        exc = self.assertRaises(
+            SystemExit, app.run, lambda config: None, twistd.ServerOptions
+        )
+        self.assertEqual(exc.code, 1)
