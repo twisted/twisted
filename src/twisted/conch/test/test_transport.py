@@ -72,13 +72,16 @@ def skipWithoutX25519(f):
     return f
 
 
-_ml_kem_rs = requireModule("ml_kem_rs")
-ML_KEM_SUPPORTED = bool(_ml_kem_rs) and X25519_SUPPORTED
+_hpke = requireModule("cryptography.hazmat.primitives.hpke")
+ML_KEM_SUPPORTED = bool(_hpke) and X25519_SUPPORTED
+if _hpke:
+    from cryptography.hazmat.primitives.asymmetric import x25519
+    from cryptography.hazmat.primitives.asymmetric.mlkem import MLKEM768PrivateKey
 
 
 def skipWithoutMLKEM(f):
     if not ML_KEM_SUPPORTED:
-        f.skip = "ml_kem_rs not available or x25519 not supported"
+        f.skip = "hpke or x25519 not supported by cryptography version"
     return f
 
 
@@ -2200,15 +2203,14 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         S_REPLY (S_CT2 || S_PK1), and a valid signature over the exchange
         hash H.  It also sends SSH_MSG_NEWKEYS.
         """
-        import ml_kem_rs
-        from cryptography.hazmat.primitives.asymmetric import x25519
-
         self.proto.supportedKeyExchanges = [self.kexAlgorithm]
         self.proto.supportedPublicKeys = [b"ssh-rsa"]
         self.proto.dataReceived(self.transport.value())
 
-        dk, ek = ml_kem_rs.mlkem768_generate()
-        c_pk2 = bytes(ek)
+        peerPrivateKey = MLKEM768PrivateKey.generate()
+        c_pk2 = peerPrivateKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
         c_sk1 = x25519.X25519PrivateKey.generate()
         c_pk1 = c_sk1.public_key().public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
@@ -2227,7 +2229,7 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         s_ct2 = s_reply[:1088]
         s_pk1 = s_reply[1088:]
 
-        k_pq = bytes(ml_kem_rs.mlkem768_decapsulate(bytes(dk), s_ct2))
+        k_pq = peerPrivateKey.decapsulate(s_ct2)
         k_cl = c_sk1.exchange(x25519.X25519PublicKey.from_public_bytes(s_pk1))
         k_shared = self.hashProcessor(k_pq + k_cl).digest()
         k_encoded = common.NS(k_shared)
@@ -2265,14 +2267,14 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         If the C_PK1 portion of C_INIT is invalid, the
         server disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
         """
-        import ml_kem_rs
-
         self.proto.supportedKeyExchanges = [self.kexAlgorithm]
         self.proto.supportedPublicKeys = [b"ssh-rsa"]
         self.proto.dataReceived(self.transport.value())
 
-        _, ek = ml_kem_rs.mlkem768_generate()
-        c_pk2 = bytes(ek)
+        peerPrivateKey = MLKEM768PrivateKey.generate()
+        c_pk2 = peerPrivateKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
         c_pk1 = b"\x00" * 32
         self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
 
@@ -2284,7 +2286,6 @@ class ServerSSHTransportMLKEM768X25519BaseCase(ServerSSHTransportBaseCase):
         encapsulation key, the server disconnects with
         SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
         """
-        from cryptography.hazmat.primitives.asymmetric import x25519
 
         self.proto.supportedKeyExchanges = [self.kexAlgorithm]
         self.proto.supportedPublicKeys = [b"ssh-rsa"]

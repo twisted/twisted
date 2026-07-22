@@ -20,11 +20,12 @@ if TYPE_CHECKING:
     from hashlib import _Hash
 
 try:
-    import ml_kem_rs  # noqa: F401
+    import cryptography.hazmat.primitives.hpke  # noqa: F401
 except ImportError:
-    ml_kem_supported = False
+    # Most probably we have cryptography older than 48.0
+    is_ml_kem_supported = False
 else:
-    ml_kem_supported = True
+    is_ml_kem_supported = True
 
 
 class _HashFactory(Protocol):
@@ -79,6 +80,7 @@ class _IPQHybridKexAlgorithm(_IKexAlgorithm):
     An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
     """
 
+    # FIXME: Rename to Twisted naming convention
     c_pk2_len = Attribute(
         "An L{int} giving the PQ component public key length in bytes."
     )
@@ -105,6 +107,7 @@ class _MLKEM768X25519SHA256:
 
     preference = 1
     hashProcessor = sha256
+    # FIXME: Rename to Twisted naming convention
     c_pk2_len = 1184
     c_pk1_len = 32
 
@@ -360,10 +363,9 @@ def getSupportedKeyExchanges() -> list[bytes]:
         elif keyAlgorithm.startswith(b"curve25519-sha256"):
             supported = backend.x25519_supported()
         elif keyAlgorithm == b"mlkem768x25519-sha256":
-            if ml_kem_supported:
-                supported = backend.x25519_supported()
-            else:
-                supported = False
+            # If we support mklem we most probably also support x25519
+            # so just keep it simple.
+            supported = is_ml_kem_supported
         else:
             supported = True
         if not supported:

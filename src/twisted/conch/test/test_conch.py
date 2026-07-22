@@ -632,6 +632,18 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         """
         return self.assertExecuteWithKexAlgorithm("ecdh-sha2-nistp521")
 
+    def test_CURVE25519_SHA256(self):
+        """
+        The curve25519-sha256 key exchange algorithm is compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm("curve25519-sha256")
+
+    def test_MLKEM768X25519_SHA256(self):
+        """
+        The mlkem768x25519-sha256 key exchange algorithm is compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm("mlkem768x25519-sha256")
+
     def test_DH_GROUP14(self):
         """
         The diffie-hellman-group14-sha1 key exchange algorithm is compatible

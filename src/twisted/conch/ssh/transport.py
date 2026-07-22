@@ -31,6 +31,12 @@ except ImportError:
     # Deprecated path, will be removed in cryptography 48.0.0
     from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
 
+try:
+    from cryptography.hazmat.primitives.asymmetric import mlkem
+except ImportError:
+    # We have version older than 48.0.0 without support for mlkem.
+    mlkem = None  # type: ignore[assignment]
+
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
 from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
@@ -1515,9 +1521,6 @@ class SSHServerTransport(SSHTransportBase):
         key.
 
         @param packet: The message data.
-
-        Documentation at:
-        https://www.ietf.org/archive/id/draft-ietf-sshm-mlkem-hybrid-kex-10.html
         """
         # Get the raw client public key.
         pktPub, packet = getNS(packet)
@@ -1560,56 +1563,63 @@ class SSHServerTransport(SSHTransportBase):
         Called to handle PQ/T Hybrid key exchanges (e.g. mlkem768x25519-sha256).
 
         Payload::
-            string C_INIT (C_PK2 || C_PK1)
+            string C_INIT (C_PK2 concatenated with C_PK1)
+
+        C_PK1 represents a traditional (i.e., ECDH) key exchange public key.
+        C_PK2 represents the 'pk' output of the corresponding post-quantum KEM's
+        'KeyGen' at the client.
+
+        See https://www.ietf.org/archive/id/draft-ietf-sshm-mlkem-hybrid-kex-10.html
 
         @param packet: The message data.
         """
-        import ml_kem_rs
-
-        c_init, packet = getNS(packet)
+        cInit, packet = getNS(packet)
 
         kex = _kex.getPQHybridKex(self.kexAlg)
 
-        if len(c_init) != kex.c_pk2_len + kex.c_pk1_len:
+        if len(cInit) != kex.c_pk1_len + kex.c_pk2_len:
             self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid C_INIT length")
             return
 
-        c_pk2 = c_init[: kex.c_pk2_len]
-        c_pk1 = c_init[kex.c_pk2_len :]
+        c_pk1 = cInit[kex.c_pk2_len :]
+        c_pk2 = cInit[: kex.c_pk2_len]
 
         pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
 
-        s_sk1 = x25519.X25519PrivateKey.generate()
-        s_pk1 = s_sk1.public_key().public_bytes(
-            serialization.Encoding.Raw, serialization.PublicFormat.Raw
-        )
-
         # Calculate K_CL (X25519 shared secret)
+        ourKey = x25519.X25519PrivateKey.generate()
         try:
-            peer_key = x25519.X25519PublicKey.from_public_bytes(c_pk1)
-            k_cl = s_sk1.exchange(peer_key)
+            peerKey = x25519.X25519PublicKey.from_public_bytes(c_pk1)
+            traditionalExchange = ourKey.exchange(peerKey)
         except Exception:
             self.sendDisconnect(
-                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid X25519 public key"
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer X25519 public key"
             )
             return
 
         # Calculate K_PQ (ML-KEM shared secret)
         try:
             # encapsulate returns (ciphertext, shared_secret)
-            s_ct2, k_pq = ml_kem_rs.mlkem768_encapsulate(c_pk2)
-            s_ct2 = bytes(s_ct2)
-            k_pq = bytes(k_pq)
-        except ValueError:
+            peerMLKEM = mlkem.MLKEM768PublicKey.from_public_bytes(c_pk2)
+            primitiveSharedSecret, ciperText = peerMLKEM.encapsulate()
+        except Exception:
             self.sendDisconnect(
-                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid ML-KEM public key"
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer ML-KEM public key"
             )
             return
 
         hashProcessor = kex.hashProcessor
-        k_shared = NS(hashProcessor(k_pq + k_cl).digest())
+        # K = HASH(K_PQ || K_CL)
+        # K is the shared secret.
+        sharedSecret = NS(
+            hashProcessor(primitiveSharedSecret + traditionalExchange).digest()
+        )
 
-        s_reply = s_ct2 + s_pk1
+        # S_REPLY = S_CT2 || S_PK1
+        ourPublicBlob = ourKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        sReply = ciperText + ourPublicBlob
 
         h = hashProcessor()
         h.update(NS(self.otherVersionString))
@@ -1617,19 +1627,23 @@ class SSHServerTransport(SSHTransportBase):
         h.update(NS(self.otherKexInitPayload))
         h.update(NS(self.ourKexInitPayload))
         h.update(NS(pubHostKey.blob()))
-        h.update(NS(c_init))
-        h.update(NS(s_reply))
-        h.update(k_shared)
+        h.update(NS(cInit))
+        h.update(NS(sReply))
+        h.update(sharedSecret)
         exchangeHash = h.digest()
 
+        # byte     SSH_MSG_KEX_HYBRID_REPLY
+        # string   K_S, server's public host key
+        # string   S_REPLY
+        # string   the signature on the exchange hash
         self.sendPacket(
-            MSG_KEXDH_REPLY,
+            MSG_KEX_HYBRID_REPLY,
             NS(pubHostKey.blob())
-            + NS(s_reply)
+            + NS(sReply)
             + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
         )
 
-        self._keySetup(k_shared, exchangeHash)
+        self._keySetup(sharedSecret, exchangeHash)
 
     def _ssh_KEXDH_INIT(self, packet: bytes) -> None:
         """
@@ -1675,7 +1689,7 @@ class SSHServerTransport(SSHTransportBase):
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet: bytes) -> None:
         """
         This represents different key exchange methods that share the same
-        integer value.  If the message is determined to be a KEXDH_INIT,
+        integer value (30).  If the message is determined to be a KEXDH_INIT,
         L{_ssh_KEXDH_INIT} is called to handle it. If it is a KEX_ECDH_INIT,
         L{_ssh_KEX_ECDH_INIT} is called.
         Otherwise, for KEX_DH_GEX_REQUEST_OLD payload::
@@ -2322,7 +2336,11 @@ MSG_KEX_DH_GEX_REQUEST = 34
 MSG_KEX_DH_GEX_GROUP = 31
 MSG_KEX_DH_GEX_INIT = 32
 MSG_KEX_DH_GEX_REPLY = 33
-
+# FIXME: https://github.com/twisted/twisted/issues/12624
+# When defining the client-side INIT value the server fails.
+# Here as a warning when working on the client-side implementation.
+# MSG_KEX_HYBRID_INIT = 30
+MSG_KEX_HYBRID_REPLY = 31  # Same value as MSG_KEXDH_REPLY
 
 DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT = 1
 DISCONNECT_PROTOCOL_ERROR = 2

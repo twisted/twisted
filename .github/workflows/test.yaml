@@ -138,7 +138,10 @@ jobs:
           - python-version: '3.13'
 
           # Just Python 3.14 with default settings.
+          # This runs on latest Ubuntu to have OpenSSH client with
+          # post quantum key exchange support.
           - python-version: '3.14'
+            runs-on: 'ubuntu-26.04'
 
           # Oldest Intel macOS (available on GitHub)
           # and oldest Python (major) supported versions.

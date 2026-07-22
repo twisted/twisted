@@ -90,11 +90,6 @@ conch = [
     "bcrypt >= 3.2.1",
 ]
 
-conch-hpq = [
-    "twisted[conch]",
-    "ml-kem-rs >= 0.2.1; platform_python_implementation == 'CPython'",
-]
-
 serial = [
     "pyserial >= 3.0",
     "pywin32 != 226; platform_system == 'Windows'",
@@ -110,7 +105,7 @@ websocket = [
 ]
 
 all-non-platform = [
-    "twisted[test,tls,conch,conch-hpq,serial,http2,websocket]",
+    "twisted[test,tls,conch,serial,http2,websocket]",
 ]
 
 macos-platform = [
