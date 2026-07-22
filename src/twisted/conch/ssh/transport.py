@@ -1637,7 +1637,7 @@ class SSHServerTransport(SSHTransportBase):
         # string   S_REPLY
         # string   the signature on the exchange hash
         self.sendPacket(
-            MSG_KEX_HYBRID_REPLY,
+            OVERLAP_MSG_KEX_HYBRID_REPLY,
             NS(pubHostKey.blob())
             + NS(sReply)
             + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
@@ -2336,11 +2336,14 @@ MSG_KEX_DH_GEX_REQUEST = 34
 MSG_KEX_DH_GEX_GROUP = 31
 MSG_KEX_DH_GEX_INIT = 32
 MSG_KEX_DH_GEX_REPLY = 33
+
 # FIXME: https://github.com/twisted/twisted/issues/12624
 # When defining the client-side INIT value the server fails.
 # Here as a warning when working on the client-side implementation.
 # MSG_KEX_HYBRID_INIT = 30
-MSG_KEX_HYBRID_REPLY = 31  # Same value as MSG_KEXDH_REPLY
+# Uses a non standard name to work around the way messages are generated.
+# We should refactor the way messages are generated.
+OVERLAP_MSG_KEX_HYBRID_REPLY = 31  # Same value as MSG_KEXDH_REPLY
 
 DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT = 1
 DISCONNECT_PROTOCOL_ERROR = 2
