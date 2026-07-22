@@ -515,7 +515,7 @@ def toChunk(data):
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    return (networkString(f"{len(data):x}"), b"\r\n", data, b"\r\n")
+    return b"%x" % len(data), b"\r\n", data, b"\r\n"
 
 
 def fromChunk(data: bytes) -> tuple[bytes, bytes]:
