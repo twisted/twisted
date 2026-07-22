@@ -507,11 +507,9 @@ def stringToDatetime(dateString):
     return int(timegm(year, month, day, hour, min, sec))
 
 
-def toChunk(data):
+def toChunk(data: bytes) -> tuple[bytes, bytes, bytes, bytes]:
     """
     Convert string to a chunk.
-
-    @type data: C{bytes}
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
