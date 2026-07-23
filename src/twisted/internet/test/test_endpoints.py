@@ -2827,7 +2827,8 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
     """
 
     def setUp(self):
-        self.drr = deterministicResolvingReactor(MemoryReactor(), ["127.0.0.1"])
+        self.reactor = MemoryReactor()
+        self.drr = deterministicResolvingReactor(self.reactor, ["127.0.0.42"])
 
     def test_binding(self):
         ba = makeBinding("1.2.3.4", 1234)
@@ -2870,6 +2871,60 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
                 80,
                 bindAddress=(b"localhost", 1234, "not a 2-tuple")
             )
+
+    def test_notHost(self):
+        """
+        A tuple is passed, but first element isn't a str/bytes
+        """
+        with self.assertRaises(ValueError):
+            endpoints.HostnameEndpoint(
+                self.drr,
+                b"www.example.com",
+                80,
+                bindAddress=(4321, 1234)
+            )
+
+    def test_attemptDelay(self):
+        """
+        Pass a non-default attemptDelay
+        """
+
+        # we need two results for this test
+        self.drr = deterministicResolvingReactor(self.reactor, ["127.0.0.42", "127.0.0.43"])
+
+        fac = Factory.forProtocol(Protocol)
+        self.reactor.listenTCP(80, fac)
+
+        class Attempts(Factory):
+            instances = []
+
+            def buildProtocol(self, addr):
+                self.instances.append(Protocol())
+                return self.instances[-1]
+
+        ep = endpoints.HostnameEndpoint(
+            self.drr,
+            b"example.com",
+            80,
+            attemptDelay=12.5,
+        )
+        attempts = Attempts()
+        port_d = ep.connect(attempts)
+
+        comp = ConnectionCompleter(self.reactor)
+
+        assert len(Attempts.instances) == 0
+        comp.failOnce()
+
+        # one connection has already failed, but we shouldn't attempt
+        # the next one until our 12.5s delay expires
+        self.reactor.advance(6.0)
+        assert len(Attempts.instances) == 0
+
+        self.reactor.advance(7.0)
+        # now the delay has passed, so we should be trying again
+        pump = comp.succeedOnce() # debug=True)
+        assert len(Attempts.instances) == 1
 
 
 @skipIf(skipSSL, skipSSLReason)

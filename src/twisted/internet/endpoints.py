@@ -946,10 +946,18 @@ class HostnameEndpoint:
                 raise ValueError(
                     "tuple passed to bindAddress must be size 2"
                 )
+            if not isinstance(bindAddress[1], int):
+                raise ValueError(
+                    "bindAddress tuple must contain integer port"
+                )
             if isinstance(bindAddress[0], bytes):
                 self._bindAddress = makeBinding(bindAddress[0].decode(), bindAddress[1])
             elif isinstance(bindAddress[0], str):
                 self._bindAddress = makeBinding(bindAddress[0], bindAddress[1])
+            else:
+                raise ValueError(
+                    "bindAddress tuple must contain host as first argument"
+                )
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
