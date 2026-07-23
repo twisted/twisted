@@ -1367,7 +1367,7 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ""
     backlog = 50
-    factory: Optional[Factory] = None
+    factory: Optional[Factory] = None  # teach mypy "factory" exists
     port: Optional[int] = None
 
     _type = "TCP"
@@ -1481,8 +1481,7 @@ class Port(base.BasePort, _SocketCloser):
 
         # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
-        if self.factory is not None:
-            self.factory.doStart()
+        self.factory.doStart()  # type: ignore
         self.connected = True
         self.socket = skt
         self.fileno = self.socket.fileno  # type:ignore[method-assign]
