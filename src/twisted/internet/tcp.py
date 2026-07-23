@@ -14,7 +14,14 @@ import os
 import socket
 import struct
 import sys
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Optional,
+    Protocol as TypingProtocol,
+)
 
 from zope.interface import Interface, implementer
 
@@ -32,7 +39,7 @@ from twisted.internet.interfaces import (
     ITCPTransport,
     _Binding,
 )
-from twisted.internet.protocol import ClientFactory, P, Factory
+from twisted.internet.protocol import ClientFactory, Factory, P
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python.runtime import platformType
 
