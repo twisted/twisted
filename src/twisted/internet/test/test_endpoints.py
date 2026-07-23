@@ -2873,6 +2873,19 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
             )
         self.assertIn("must be size 2", str(e.exception))
 
+    def test_portNotInt(self):
+        """
+        A 2-tuple is passed, but the port is not an integer
+        """
+        with self.assertRaises(ValueError) as e:
+            endpoints.HostnameEndpoint(
+                self.drr,
+                b"www.example.com",
+                80,
+                bindAddress=(b"localhost", "1234"),
+            )
+        self.assertIn("must contain integer port", str(e.exception))
+
     def test_notHost(self):
         """
         A tuple is passed, but first element isn't a str/bytes
