@@ -2864,13 +2864,14 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
         """
         A tuple is passed, but is not a 2-tuple
         """
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as e:
             endpoints.HostnameEndpoint(
                 self.drr,
                 b"www.example.com",
                 80,
                 bindAddress=(b"localhost", 1234, "not a 2-tuple"),
             )
+        self.assertIn("must be size 2", str(e.exception))
 
     def test_notHost(self):
         """
