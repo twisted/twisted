@@ -943,13 +943,9 @@ class HostnameEndpoint:
             self._bindAddress = makeBinding(bindAddress, 0)
         elif isinstance(bindAddress, tuple):
             if len(bindAddress) != 2:
-                raise ValueError(
-                    "tuple passed to bindAddress must be size 2"
-                )
+                raise ValueError("tuple passed to bindAddress must be size 2")
             if not isinstance(bindAddress[1], int):
-                raise ValueError(
-                    "bindAddress tuple must contain integer port"
-                )
+                raise ValueError("bindAddress tuple must contain integer port")
             if isinstance(bindAddress[0], bytes):
                 self._bindAddress = makeBinding(bindAddress[0].decode(), bindAddress[1])
             elif isinstance(bindAddress[0], str):
