@@ -2908,7 +2908,7 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
             attemptDelay=12.5,
         )
         attempts = Attempts()
-        port_d = ep.connect(attempts)
+        ep.connect(attempts)
 
         comp = ConnectionCompleter(self.reactor)
 
@@ -2922,7 +2922,7 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
 
         self.reactor.advance(7.0)
         # now the delay has passed, so we should be trying again
-        pump = comp.succeedOnce()
+        comp.succeedOnce()
         assert len(Attempts.instances) == 1
 
 
