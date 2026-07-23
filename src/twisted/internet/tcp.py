@@ -14,7 +14,7 @@ import os
 import socket
 import struct
 import sys
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol, Optional
 
 from zope.interface import Interface, implementer
 
@@ -32,7 +32,7 @@ from twisted.internet.interfaces import (
     ITCPTransport,
     _Binding,
 )
-from twisted.internet.protocol import ClientFactory, P
+from twisted.internet.protocol import ClientFactory, P, Factory
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python.runtime import platformType
 
@@ -1360,7 +1360,8 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ""
     backlog = 50
-    factory = None
+    factory: Optional[Factory] = None
+    port: Optional[int] = None
 
     _type = "TCP"
 
@@ -1473,7 +1474,8 @@ class Port(base.BasePort, _SocketCloser):
 
         # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
-        self.factory.doStart()
+        if self.factory is not None:
+            self.factory.doStart()
         self.connected = True
         self.socket = skt
         self.fileno = self.socket.fileno  # type:ignore[method-assign]

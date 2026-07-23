@@ -355,7 +355,7 @@ class Port(_UNIXPort, tcp.Port):
         reactor: Any = None,
         wantPID: int = 0,
     ) -> None:
-        tcp.Port.__init__(self, None, factory, backlog, reactor=reactor)
+        tcp.Port.__init__(self, 0, factory, backlog, reactor=reactor)
         self._bindPath = self._buildAddr(fileName).name
         self.mode = mode
         self.wantPID = wantPID
