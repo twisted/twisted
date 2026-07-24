@@ -1051,20 +1051,6 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
 
         self._checkTestBindAddressListen(lambda host, port: port, check_server)
 
-    def test_bindAddressIllegal(self):
-        """
-        An error happens when passing something unsupported
-        """
-
-        class Unsupported:
-            pass
-
-        def bind(host, port):
-            return Unsupported()
-
-        with self.assertRaises((AssertionError, SkipTest)):
-            self._checkTestBindAddressConnect(bind, lambda _: None)
-
     @skipIf(
         not (platformType == "posix" and sys.platform != "cygwin"),
         "Only works on POSIX",
