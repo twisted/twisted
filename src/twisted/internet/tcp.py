@@ -249,9 +249,7 @@ def makeBindingFromArg(arg: Binding | tuple[str, int] | None) -> Binding:
     elif arg is None:
         bind = makeBinding("", 0)
     else:
-        assert isinstance(
-            arg, _Binding
-        ), "arg must be None, 2-tuple or Binding not {}".format(type(arg))
+        # not a tuple or None so it must be a Binding
         addr = "" if arg._addr is None else arg._addr
         bind = makeBinding(addr, arg._port, arg._reuseAddr, arg._reusePort)
     return bind
