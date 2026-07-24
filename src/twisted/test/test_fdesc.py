@@ -7,16 +7,13 @@ Tests for L{twisted.internet.fdesc}.
 
 import errno
 import os
-import sys
 
 try:
     import fcntl
 except ImportError:
-    skip = "not supported on this platform"
-else:
-    from twisted.internet import fdesc
+    fcntl = None  # type: ignore[assignment]
 
-from twisted.python.util import untilConcludes
+from twisted.internet import fdesc
 from twisted.trial import unittest
 
 
@@ -24,6 +21,9 @@ class NonBlockingTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc.setNonBlocking} and L{fdesc.setBlocking}.
     """
+
+    if fcntl is None:
+        skip = "fcntl is not supported on this platform"  # type: ignore[unreachable]
 
     def test_setNonBlocking(self):
         """
@@ -52,6 +52,9 @@ class ReadWriteTests(unittest.SynchronousTestCase):
     """
     Tests for L{fdesc.readFromFD}, L{fdesc.writeToFD}.
     """
+
+    if fcntl is None:
+        skip = "fcntl is not supported on this platform"  # type: ignore[unreachable]
 
     def setUp(self):
         """
@@ -201,58 +204,28 @@ class CloseOnExecTests(unittest.SynchronousTestCase):
     Tests for L{fdesc._setCloseOnExec} and L{fdesc._unsetCloseOnExec}.
     """
 
-    program = """
-import os, errno
-try:
-    os.write(%d, b'lul')
-except OSError as e:
-    if e.errno == errno.EBADF:
-        os._exit(0)
-    os._exit(5)
-except BaseException:
-    os._exit(10)
-else:
-    os._exit(20)
-"""
-
-    def _execWithFileDescriptor(self, fObj):
-        pid = os.fork()
-        if pid == 0:
-            try:
-                os.execv(
-                    sys.executable,
-                    [sys.executable, "-c", self.program % (fObj.fileno(),)],
-                )
-            except BaseException:
-                import traceback
-
-                traceback.print_exc()
-                os._exit(30)
-        else:
-            # On Linux wait(2) doesn't seem ever able to fail with EINTR but
-            # POSIX seems to allow it and on macOS it happens quite a lot.
-            return untilConcludes(os.waitpid, pid, 0)[1]
-
-    def test_setCloseOnExec(self):
+    def test_setCloseOnExec(self) -> None:
         """
-        A file descriptor passed to L{fdesc._setCloseOnExec} is not inherited
-        by a new process image created with one of the exec family of
-        functions.
+        L{fdesc._setCloseOnExec} makes a file descriptor non-inheritable.
         """
-        with open(self.mktemp(), "wb") as fObj:
-            fdesc._setCloseOnExec(fObj.fileno())
-            status = self._execWithFileDescriptor(fObj)
-            self.assertTrue(os.WIFEXITED(status))
-            self.assertEqual(os.WEXITSTATUS(status), 0)
+        readFD, writeFD = os.pipe()
+        self.addCleanup(os.close, readFD)
+        self.addCleanup(os.close, writeFD)
 
-    def test_unsetCloseOnExec(self):
+        os.set_inheritable(readFD, True)
+        fdesc._setCloseOnExec(readFD)
+
+        self.assertFalse(os.get_inheritable(readFD))
+
+    def test_unsetCloseOnExec(self) -> None:
         """
-        A file descriptor passed to L{fdesc._unsetCloseOnExec} is inherited by
-        a new process image created with one of the exec family of functions.
+        L{fdesc._unsetCloseOnExec} makes a file descriptor inheritable.
         """
-        with open(self.mktemp(), "wb") as fObj:
-            fdesc._setCloseOnExec(fObj.fileno())
-            fdesc._unsetCloseOnExec(fObj.fileno())
-            status = self._execWithFileDescriptor(fObj)
-            self.assertTrue(os.WIFEXITED(status))
-            self.assertEqual(os.WEXITSTATUS(status), 20)
+        readFD, writeFD = os.pipe()
+        self.addCleanup(os.close, readFD)
+        self.addCleanup(os.close, writeFD)
+
+        os.set_inheritable(readFD, False)
+        fdesc._unsetCloseOnExec(readFD)
+
+        self.assertTrue(os.get_inheritable(readFD))

@@ -39,27 +39,18 @@ def setBlocking(fd):
     fcntl.fcntl(fd, fcntl.F_SETFL, flags)
 
 
-if fcntl is None:
-    # fcntl isn't available on Windows.  By default, handles aren't
-    # inherited on Windows, so we can do nothing here.
-    _setCloseOnExec = _unsetCloseOnExec = lambda fd: None
-else:
+def _setCloseOnExec(fd: int) -> None:
+    """
+    Make a file descriptor non-inheritable across exec.
+    """
+    os.set_inheritable(fd, False)
 
-    def _setCloseOnExec(fd):
-        """
-        Make a file descriptor close-on-exec.
-        """
-        flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-        flags = flags | fcntl.FD_CLOEXEC
-        fcntl.fcntl(fd, fcntl.F_SETFD, flags)
 
-    def _unsetCloseOnExec(fd):
-        """
-        Make a file descriptor close-on-exec.
-        """
-        flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-        flags = flags & ~fcntl.FD_CLOEXEC
-        fcntl.fcntl(fd, fcntl.F_SETFD, flags)
+def _unsetCloseOnExec(fd: int) -> None:
+    """
+    Make a file descriptor inheritable across exec.
+    """
+    os.set_inheritable(fd, True)
 
 
 def readFromFD(fd, callback):
