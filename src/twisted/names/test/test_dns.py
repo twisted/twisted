@@ -12,9 +12,11 @@ from io import BytesIO
 
 from zope.interface.verify import verifyClass
 
-from twisted.internet import address, task
+from twisted.internet import task
 from twisted.internet.error import CannotListenError, ConnectionDone
+from twisted.logger import capturedLogs
 from twisted.names import dns
+from twisted.names.dns import Record_A
 from twisted.python.failure import Failure
 from twisted.python.util import FancyEqMixin, FancyStrMixin
 from twisted.test import proto_helpers
@@ -78,7 +80,7 @@ class DomainStringTests(unittest.SynchronousTestCase):
         """
         L{dns.domainString} encodes Unicode using IDNA.
         """
-        self.assertEqual(b"xn--fwg.test", dns.domainString("\u203D.test"))
+        self.assertEqual(b"xn--fwg.test", dns.domainString("\u203d.test"))
 
     def test_nonsense(self):
         """
@@ -237,7 +239,7 @@ class NameTests(unittest.TestCase):
             {b"example.com": 0x17, b"foo.example.com": expected}, compression
         )
 
-    def test_unknown(self):
+    def test_unknown(self) -> None:
         """
         A resource record of unknown type and class is parsed into an
         L{UnknownRecord} instance with its data preserved, and an
@@ -743,7 +745,7 @@ class RoundtripDNSTests(unittest.TestCase):
             b"\x08hmac-md5\x07sig-alg\x03reg\x03int\x00"
             b"\x00\x00\x5a\x55\x71\x2f\x00\x05\x00\x10"
             + mac
-            + b"\x00\x2A\x00\x00\x00\x00"
+            + b"\x00\x2a\x00\x00\x00\x00"
         )
         self.assertEncodedFormat(rdata, rr)
 
@@ -757,7 +759,7 @@ class RoundtripDNSTests(unittest.TestCase):
         )
         self._recordRoundtripTest(rr)
         rdata = (
-            b"\x0Bhmac-sha256\x00"
+            b"\x0bhmac-sha256\x00"
             b"\x00\x01\x0c\xec\x93\x27\x00\x05\x00\x10"
             + mac
             + b"\xff\xff\x00\x12\x00\x06"
@@ -772,6 +774,22 @@ class RoundtripDNSTests(unittest.TestCase):
         L{dns.Record_TXT} instance.
         """
         self._recordRoundtripTest(dns.Record_TXT(b"foo", b"bar"))
+
+    def test_tooLongTXT(self) -> None:
+        """
+        When decoding a TXT record with a short RDLENGTH a message will be logged.
+        """
+        record = dns.Record_TXT()
+        data = b"\x04abcd"
+        with capturedLogs() as l1:
+            record.decode(BytesIO(data), 3)
+        self.assertEqual(record.data, [b"abcd"])
+        with capturedLogs() as l2:
+            record.decode(BytesIO(data), 5)
+        # logged when too short
+        self.assertEqual(len(l1), 1)
+        # not when the right length
+        self.assertEqual(len(l2), 0)
 
 
 MESSAGE_AUTHENTIC_DATA_BYTES = (
@@ -1413,31 +1431,43 @@ class TestController:
         self.messages.append((msg, proto, addr))
 
 
-class DatagramProtocolTests(unittest.TestCase):
+class CompareToStr:
+    """
+    Compare the serialized form of the given message if it is compared via
+    C{==}.
+    """
+
+    def __init__(self, message: dns.Message) -> None:
+        self._message = message
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, dns.Message) and self._message.toStr() == other.toStr()
+
+
+class DatagramProtocolTests(unittest.SynchronousTestCase):
     """
     Test various aspects of L{dns.DNSDatagramProtocol}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a L{dns.DNSDatagramProtocol} with a deterministic clock.
         """
         self.clock = task.Clock()
         self.controller = TestController()
-        self.proto = dns.DNSDatagramProtocol(self.controller)
+        self.proto = dns.DNSDatagramProtocol(self.controller, reactor=self.clock)
         transport = proto_helpers.FakeDatagramTransport()
         self.proto.makeConnection(transport)
-        self.proto.callLater = self.clock.callLater
 
-    def test_truncatedPacket(self):
+    def test_truncatedPacket(self) -> None:
         """
         Test that when a short datagram is received, datagramReceived does
         not raise an exception while processing it.
         """
-        self.proto.datagramReceived(b"", address.IPv4Address("UDP", "127.0.0.1", 12345))
+        self.proto.datagramReceived(b"", ("127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
 
-    def test_malformedMessage(self):
+    def test_malformedMessage(self) -> None:
         """
         Test that when an unparsable message is received, datagramReceived does
         not raise an exception while processing it.
@@ -1452,12 +1482,10 @@ class DatagramProtocolTests(unittest.TestCase):
             b'ITE"\rssh_upload=no\x0ctcp_check=no\xc0\x8f\x00\x01\x00\x01\x00\x00'
             b"\x00x\x00\x04\xc0\xa8\x01)"
         )
-        self.proto.datagramReceived(
-            unparsable, address.IPv4Address("UDP", "127.0.0.1", 12345)
-        )
+        self.proto.datagramReceived(unparsable, ("127.0.0.1", 12345))
         self.assertEqual(self.controller.messages, [])
 
-    def test_simpleQuery(self):
+    def test_simpleQuery(self) -> None:
         """
         Test content received after a query.
         """
@@ -1466,68 +1494,92 @@ class DatagramProtocolTests(unittest.TestCase):
         m = dns.Message()
         m.id = next(iter(self.proto.liveMessages.keys()))
         m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
-
-        def cb(result):
-            self.assertEqual(result.answers[0].payload.dottedQuad(), "1.2.3.4")
-
-        d.addCallback(cb)
         self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
-        return d
+        result = self.successResultOf(d)
+        payload: object = result.answers[0].payload
+        assert isinstance(payload, Record_A)
+        self.assertEqual(payload.dottedQuad(), "1.2.3.4")
 
-    def test_queryTimeout(self):
+    def test_discardedResponses(self) -> None:
+        """
+        Responses to queries sent with the wrong host source address or wrong
+        message ID will not be processed.
+        """
+        d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")], id=4321)
+        self.assertEqual(len(self.proto.liveMessages.keys()), 1)
+        m = dns.Message()
+        m.id = 1234
+        m.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
+        self.assertNoResult(d)
+        m.id = 4321
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.2", 21345))
+        self.assertNoResult(d)
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21346))
+        self.assertNoResult(d)
+        self.proto.datagramReceived(m.toStr(), ("127.0.0.1", 21345))
+        result = self.successResultOf(d)
+        payload: object = result.answers[0].payload
+        assert isinstance(payload, Record_A)
+        self.assertEqual(payload.dottedQuad(), "1.2.3.4")
+
+    def test_queryTimeout(self) -> None:
         """
         Test that query timeouts after some seconds.
         """
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.assertEqual(len(self.proto.liveMessages), 1)
         self.clock.advance(10)
-        self.assertFailure(d, dns.DNSQueryTimeoutError)
+        self.failureResultOf(d, dns.DNSQueryTimeoutError)
         self.assertEqual(len(self.proto.liveMessages), 0)
-        return d
 
-    def test_writeError(self):
+    def test_writeError(self) -> None:
         """
         Exceptions raised by the transport's write method should be turned into
         C{Failure}s passed to errbacks of the C{Deferred} returned by
         L{DNSDatagramProtocol.query}.
         """
 
-        def writeError(message, addr):
+        def writeError(packet: bytes, addr: tuple[str, int] | None = None) -> None:
             raise RuntimeError("bar")
 
-        self.proto.transport.write = writeError
+        self.proto.transport.write = writeError  # type:ignore[method-assign]
 
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
-        return self.assertFailure(d, RuntimeError)
+        self.failureResultOf(d, RuntimeError)
 
-    def test_listenError(self):
+    def test_listenError(self) -> None:
         """
         Exception L{CannotListenError} raised by C{listenUDP} should be turned
         into a C{Failure} passed to errback of the C{Deferred} returned by
         L{DNSDatagramProtocol.query}.
         """
 
-        def startListeningError():
+        def startListeningError() -> None:
             raise CannotListenError(None, None, None)
 
-        self.proto.startListening = startListeningError
+        self.proto.startListening = startListeningError  # type:ignore[method-assign]
         # Clean up transport so that the protocol calls startListening again
-        self.proto.transport = None
-
+        del self.proto.transport
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
-        return self.assertFailure(d, CannotListenError)
+        self.failureResultOf(d, CannotListenError)
 
-    def test_receiveMessageNotInLiveMessages(self):
+    def test_receiveMessageNotInLiveMessages(self) -> None:
         """
         When receiving a message whose id is not in
         L{DNSDatagramProtocol.liveMessages} or L{DNSDatagramProtocol.resends},
         the message will be received by L{DNSDatagramProtocol.controller}.
         """
+
         message = dns.Message()
         message.id = 1
         message.answers = [dns.RRHeader(payload=dns.Record_A(address="1.2.3.4"))]
-        self.proto.datagramReceived(message.toStr(), ("127.0.0.1", 21345))
-        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
+        fromAddress = ("127.0.0.1", 21345)
+        self.proto.datagramReceived(message.toStr(), fromAddress)
+        self.assertEqual(
+            [(CompareToStr(message), self.proto, fromAddress)],
+            self.controller.messages,
+        )
 
 
 class TestTCPController(TestController):
@@ -1631,7 +1683,12 @@ class DNSProtocolTests(unittest.TestCase):
         string = message.toStr()
         string = struct.pack("!H", len(string)) + string
         self.proto.dataReceived(string)
-        self.assertEqual(self.controller.messages[-1][0].toStr(), message.toStr())
+        self.assertEqual(
+            # TCP messages don't log their address with the controller
+            # protocol.
+            [(CompareToStr(message), self.proto, None)],
+            self.controller.messages,
+        )
 
 
 class ReprTests(unittest.TestCase):

@@ -14,6 +14,8 @@ from io import StringIO
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
+from incremental import Version
+
 from twisted import plugin
 from twisted.internet import defer
 from twisted.plugins import twisted_trial
@@ -979,6 +981,17 @@ class DestructiveTestSuiteTests(unittest.SynchronousTestCase):
 
 
 class RunnerDeprecationTests(unittest.SynchronousTestCase):
+    def test_samefile(self) -> None:
+        """
+        Test that L{runner.samefile} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", "NEXT", 0, 0), "os.path.samefile"),
+            runner.samefile,
+            __file__,
+            os.path.abspath(__file__),
+        )
+
     class FakeReporter(reporter.Reporter):
         """
         Fake reporter that does *not* implement done() but *does* implement

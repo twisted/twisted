@@ -9,7 +9,9 @@ Various helpers for tests for connection-oriented transports.
 from __future__ import annotations
 
 import socket
+from functools import partial
 from gc import collect
+from typing import Any
 from weakref import ref
 
 from zope.interface.verify import verifyObject
@@ -17,13 +19,16 @@ from zope.interface.verify import verifyObject
 from twisted.internet.defer import Deferred, gatherResults
 from twisted.internet.interfaces import IConnector, IReactorFDSet
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
-from twisted.internet.test.reactormixins import needsRunningReactor
+from twisted.internet.test.reactormixins import ReactorBuilder, needsRunningReactor
+from twisted.logger import Logger
 from twisted.python import context, log
 from twisted.python.failure import Failure
 from twisted.python.log import ILogContext, err, msg
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import ClosingProtocol
 from twisted.trial.unittest import SkipTest
+
+_log = Logger()
 
 
 def findFreePort(interface="127.0.0.1", family=socket.AF_INET, type=socket.SOCK_STREAM):
@@ -71,7 +76,25 @@ class ConnectableProtocol(Protocol):
 
     disconnectReason = None
 
-    def _setAttributes(self, reactor, done):
+    def writeToDetectPeerDisconnection(self) -> None:
+        """
+        The other end of the connection has been aborted.  Force the operating
+        system to notice that an RST should be delivered, by writing some data.
+
+        As described in https://github.com/python/cpython/issues/153117 ,
+        macOS, and in particular macOS 26, may fail to deliver RST packets,
+        even over local interfaces, when connections are aborted; this prevents
+        tests from hanging while waiting for a notification that will never
+        come.  By sending data to the now-possibly-defunct peer, we force the
+        OS to emit another RST packet and I{notice} that the connection has
+        been reset.
+        """
+        assert self.transport is not None
+        self.transport.write(b"GOODBYE")
+
+    def _setAttributes(
+        self, reactor: Any, done: Deferred[None], peer: ConnectableProtocol
+    ) -> None:
         """
         Set attributes on the protocol that are known only externally; this
         will be called by L{runProtocolsWithReactor} when this protocol is
@@ -84,11 +107,13 @@ class ConnectableProtocol(Protocol):
         """
         self.reactor = reactor
         self._done = done
+        self.peer = peer
 
     def connectionLost(self, reason):
         self.disconnectReason = reason
         self._done.callback(None)
         del self._done
+        del self.peer
 
 
 class EndpointCreator:
@@ -127,8 +152,12 @@ class _SingleProtocolFactory(ClientFactory):
 
 
 def runProtocolsWithReactor(
-    reactorBuilder, serverProtocol, clientProtocol, endpointCreator
-):
+    reactorBuilder: ReactorBuilder,
+    serverProtocol: ConnectableProtocol,
+    clientProtocol: ConnectableProtocol,
+    endpointCreator: EndpointCreator,
+    writeToPeerAfterAbort: bool = True,
+) -> Any:
     """
     Connect two protocols using endpoints and a new reactor instance.
 
@@ -149,31 +178,41 @@ def runProtocolsWithReactor(
     @return: The reactor run by this test.
     """
     reactor = reactorBuilder.buildReactor()
-    serverProtocol._setAttributes(reactor, Deferred())
-    clientProtocol._setAttributes(reactor, Deferred())
-    serverFactory = _SingleProtocolFactory(serverProtocol)
-    clientFactory = _SingleProtocolFactory(clientProtocol)
 
-    # Listen on a port:
-    serverEndpoint = endpointCreator.server(reactor)
-    d = serverEndpoint.listen(serverFactory)
-
-    # Connect to the port:
-    def gotPort(p):
+    async def steps() -> None:
+        clientDone: Deferred[None] = Deferred()
+        serverDone: Deferred[None] = Deferred()
+        serverProtocol._setAttributes(reactor, serverDone, clientProtocol)
+        clientProtocol._setAttributes(reactor, clientDone, serverProtocol)
+        serverFactory = _SingleProtocolFactory(serverProtocol)
+        clientFactory = _SingleProtocolFactory(clientProtocol)
+        # Listen on a port:
+        serverEndpoint = endpointCreator.server(reactor)
+        p = await serverEndpoint.listen(serverFactory)
+        # Connect to the port:
         clientEndpoint = endpointCreator.client(reactor, p.getHost())
-        return clientEndpoint.connect(clientFactory)
+        await clientEndpoint.connect(clientFactory)
 
-    d.addCallback(gotPort)
+        async def waitForOne(
+            theOne: Deferred[None], theOther: ConnectableProtocol
+        ) -> None:
+            await theOne
+            # See docstring on L{ConnectableProtocol.goodbye} for more
+            # information.
+            if writeToPeerAfterAbort:
+                theOther.writeToDetectPeerDisconnection()
 
-    # Stop reactor when both connections are lost:
-    def failed(result):
-        log.err(result, "Connection setup failed.")
+        oneWay = Deferred.fromCoroutine(waitForOne(serverDone, clientProtocol))
+        theOtherWay = Deferred.fromCoroutine(waitForOne(clientDone, serverProtocol))
+        await oneWay
+        await theOtherWay
+        reactor.stop()
 
-    disconnected = gatherResults([serverProtocol._done, clientProtocol._done])
-    d.addCallback(lambda _: disconnected)
-    d.addErrback(failed)
-    d.addCallback(lambda _: needsRunningReactor(reactor, reactor.stop))
-
+    reactor.callWhenRunning(
+        lambda: Deferred.fromCoroutine(steps()).addErrback(
+            partial(_log.failure, "while running reactor")
+        )
+    )
     reactorBuilder.runReactor(reactor)
     return reactor
 
@@ -190,27 +229,6 @@ def _getWriters(reactor):
     else:
         # Cannot tell what is going on.
         raise Exception(f"Cannot find writers on {reactor!r}")
-
-
-class _AcceptOneClient(ServerFactory):
-    """
-    This factory fires a L{Deferred} with a protocol instance shortly after it
-    is constructed (hopefully long enough afterwards so that it has been
-    connected to a transport).
-
-    @ivar reactor: The reactor used to schedule the I{shortly}.
-
-    @ivar result: A L{Deferred} which will be fired with the protocol instance.
-    """
-
-    def __init__(self, reactor, result):
-        self.reactor = reactor
-        self.result = result
-
-    def buildProtocol(self, addr):
-        protocol = ServerFactory.buildProtocol(self, addr)
-        self.reactor.callLater(0, self.result.callback, protocol)
-        return protocol
 
 
 class _SimplePullProducer:

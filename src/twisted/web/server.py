@@ -89,7 +89,7 @@ class Request(Copyable, http.Request, components.Componentized):
     """
 
     defaultContentType: bytes | None = b"text/html"
-    site = None
+    site: Site | None = None
     appRootURL = None
     prepath: list[bytes] | None = None
     postpath: list[bytes] | None = None

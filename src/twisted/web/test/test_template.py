@@ -7,7 +7,6 @@ Tests for L{twisted.web.template}
 
 from __future__ import annotations
 
-import sys
 from io import StringIO
 
 from zope.interface import implementer
@@ -176,14 +175,9 @@ class ElementTests(TestCase):
         raise a comprehensible exception.
         """
         te = self.assertRaises(TypeError, renderer)
-        if sys.version_info >= (3, 10):
-            self.assertEqual(
-                str(te), "Expose.__call__() missing 1 required positional argument: 'f'"
-            )
-        else:
-            self.assertEqual(
-                str(te), "__call__() missing 1 required positional argument: 'f'"
-            )
+        self.assertEqual(
+            str(te), "Expose.__call__() missing 1 required positional argument: 'f'"
+        )
 
     def test_renderGetDirectlyError(self) -> None:
         """

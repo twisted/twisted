@@ -228,36 +228,6 @@ def _urljoin(base, url):
     return urljoin(url, b"#" + (urlFrag or baseFrag)).strip(b"#")
 
 
-def _makeGetterFactory(url, factoryFactory, contextFactory=None, *args, **kwargs):
-    """
-    Create and connect an HTTP page getting factory.
-
-    Any additional positional or keyword arguments are used when calling
-    C{factoryFactory}.
-
-    @param factoryFactory: Factory factory that is called with C{url}, C{args}
-        and C{kwargs} to produce the getter
-
-    @param contextFactory: Context factory to use when creating a secure
-        connection, defaulting to L{None}
-
-    @return: The factory created by C{factoryFactory}
-    """
-    uri = URI.fromBytes(_ensureValidURI(url.strip()))
-    factory = factoryFactory(url, *args, **kwargs)
-    from twisted.internet import reactor
-
-    if uri.scheme == b"https":
-        from twisted.internet import ssl
-
-        if contextFactory is None:
-            contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(nativeString(uri.host), uri.port, factory, contextFactory)
-    else:
-        reactor.connectTCP(nativeString(uri.host), uri.port, factory)
-    return factory
-
-
 # The code which follows is based on the new HTTP client implementation.  It
 # should be significantly better than anything above, though it is not yet
 # feature equivalent.
