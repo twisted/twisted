@@ -932,6 +932,13 @@ class Deferred(Awaitable[_SelfResultT]):
         self.paused -= 1
         if self.paused:
             return
+        if self._chainedTo is not None:
+            # Waiting on another L{Deferred}'s result.  That wait is
+            # implemented with an internal pause which C{unpause} must not
+            # release, or this L{Deferred} would resume with the wrong result
+            # and run the other one's callbacks.
+            self.paused += 1
+            return
         if self.called:
             self._runCallbacks()
 

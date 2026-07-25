@@ -749,6 +749,29 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         second.addCallback(result.append)
         self.assertEqual(result, [None])
 
+    def test_unpauseDoesNotBreakImplicitChain(self) -> None:
+        """
+        L{Deferred.unpause} does not release the internal pause which
+        implements waiting on a L{Deferred} returned from a callback, so the
+        waiting L{Deferred} still fires only once the other one has a result.
+        """
+        first: Deferred[None] = Deferred()
+        second: Deferred[None] = Deferred()
+        first.addCallback(lambda ignored: second)
+        result: list[None] = []
+        first.addCallback(result.append)
+        first.callback(None)
+        self.assertIs(first._chainedTo, second)
+
+        first.unpause()
+
+        self.assertIs(first._chainedTo, second)
+        self.assertEqual(result, [])
+
+        second.callback(None)
+        self.assertIsNone(first._chainedTo)
+        self.assertEqual(result, [None])
+
     def test_gatherResults(self) -> None:
         # test successful list of deferreds
         results: list[list[int]] = []
