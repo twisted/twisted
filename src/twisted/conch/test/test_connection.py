@@ -471,9 +471,7 @@ class ConnectionTests(unittest.TestCase):
             channel, "server requested maximum packet size too big"
         )
 
-    def _checkFailedOpenConfirmation(
-        self, channel: channel.SSHChannel, details: str
-    ) -> None:
+    def _checkFailedOpenConfirmation(self, channel: TestChannel, details: str) -> None:
         """
         Shared code for checking that a channel was not opened on the client
         side and the request was sent to close it on the server side.
