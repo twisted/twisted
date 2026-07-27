@@ -19,6 +19,7 @@ class BufferedFileDescriptor(FileDescriptor):
 
     def __init__(self) -> None:
         FileDescriptor.__init__(self, reactor=MemoryReactor())
+        self.writeLimit = self.SEND_LIMIT
 
     def startWriting(self) -> None:
         """
@@ -33,8 +34,9 @@ class BufferedFileDescriptor(FileDescriptor):
         Consume all buffered data
         """
 
-        # There is some cost with len() but should be constant between two benchmarks.
-        return len(data)
+        # To simulate a partial write, don't return values larger
+        # than the write limit. Otherwise all data is consumed.
+        return min(len(data), self.writeLimit)
 
 
 def mixedSmallChunks() -> list[bytes]:
@@ -56,7 +58,6 @@ SEQUENCES: dict[str, list[bytes]] = {
 
 
 WRITE_DATA = b"x" * 8192
-DO_WRITE_DATA = b"x" * (32 * 1024)
 
 
 def test_fileDescriptor_write(benchmark: Any) -> None:
@@ -103,15 +104,87 @@ def test_fileDescriptor_writeSequence(benchmark: Any, chunks: list[bytes]) -> No
     )
 
 
-def test_fileDescriptor_doWrite(benchmark: Any) -> None:
+def test_fileDescriptor_doWriteFlushBufferedWrites(benchmark: Any) -> None:
     """
-    Benchmark writing 32KB with L{FileDescriptor.doWrite}.
+    Benchmark flushing four buffered 8KB writes.
     """
 
     def setup():
         descriptor = BufferedFileDescriptor()
-        assert descriptor.writeSomeData(b"") == 0
-        descriptor.write(DO_WRITE_DATA)
+        for _ in range(4):
+            # Buffer 4x 8KB chunks
+            descriptor.write(WRITE_DATA)
+        return (descriptor,), {}
+
+    def teardown(descriptor: BufferedFileDescriptor) -> None:
+        assert descriptor._tempDataBuffer == []
+        assert descriptor._tempDataLen == 0
+        assert descriptor.dataBuffer == b""
+        assert descriptor.offset == 0
+
+    benchmark.pedantic(
+        BufferedFileDescriptor.doWrite,
+        setup=setup,
+        teardown=teardown,
+        rounds=100,
+        iterations=1,
+    )
+
+
+def test_fileDescriptor_doWriteAppendAfterPartialWrite(benchmark: Any) -> None:
+    """
+    Benchmark flushing new data after an earlier partial write.
+    """
+
+    def setup():
+        descriptor = BufferedFileDescriptor()
+        for _ in range(4):
+            # Buffer 4x 8KB chunks
+            descriptor.write(WRITE_DATA)
+
+        # Do a partial write, it writes only 8KB
+        descriptor.writeLimit = len(WRITE_DATA)
+        descriptor.doWrite()
+
+        # Now buffer another chunk
+        descriptor.write(WRITE_DATA)
+
+        # Revert the limit back and run benchmark
+        descriptor.writeLimit = descriptor.SEND_LIMIT
+        return (descriptor,), {}
+
+    def teardown(descriptor: BufferedFileDescriptor) -> None:
+        assert descriptor._tempDataBuffer == []
+        assert descriptor._tempDataLen == 0
+        assert descriptor.dataBuffer == b""
+        assert descriptor.offset == 0
+
+    benchmark.pedantic(
+        BufferedFileDescriptor.doWrite,
+        setup=setup,
+        teardown=teardown,
+        rounds=100,
+        iterations=1,
+    )
+
+
+def test_fileDescriptor_doWriteContinuePartialWrite(benchmark: Any) -> None:
+    """
+    Benchmark continuing a large buffer after an earlier partial write.
+    """
+
+    def setup():
+        descriptor = BufferedFileDescriptor()
+        for _ in range(17):
+            # Buffer 17 x 8KB chunks
+            descriptor.write(WRITE_DATA)
+
+        # Do a partial write, it writes only 8KB
+        descriptor.writeLimit = len(WRITE_DATA)
+        descriptor.doWrite()
+
+        # We have 16 x 8KB = 128KB left
+        descriptor.writeLimit = descriptor.SEND_LIMIT
         return (descriptor,), {}
 
     def teardown(descriptor: BufferedFileDescriptor) -> None:
