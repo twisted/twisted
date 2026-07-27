@@ -36,6 +36,9 @@ class BufferedFileDescriptor(FileDescriptor):
 
         # To simulate a partial write, don't return values larger
         # than the write limit. Otherwise all data is consumed.
+        #
+        # In the real world, the write limit here could represent
+        # the buffer size of the socket in the operating system.
         return min(len(data), self.writeLimit)
 
 
@@ -193,6 +196,38 @@ def test_fileDescriptor_doWriteContinuePartialWrite(benchmark: Any) -> None:
         assert descriptor._tempDataLen == 0
         assert descriptor.dataBuffer == b""
         assert descriptor.offset == 0
+
+    benchmark.pedantic(
+        BufferedFileDescriptor.doWrite,
+        setup=setup,
+        teardown=teardown,
+        rounds=100,
+        iterations=1,
+    )
+
+
+def test_fileDescriptor_doWriteContinueSmallPartialWrite(benchmark: Any) -> None:
+    """
+    Benchmark continuing a partial write smaller than C{SEND_LIMIT}.
+    """
+
+    def setup():
+        descriptor = BufferedFileDescriptor()
+        for _ in range(4):
+            descriptor.write(WRITE_DATA)
+
+        # Do a partial write, it writes only 8KB
+        descriptor.writeLimit = len(WRITE_DATA)
+        descriptor.doWrite()
+
+        # Now run benchmark, where we continue writing 24KB data
+        # which is less than SEND_LIMIT.
+        return (descriptor,), {}
+
+    def teardown(descriptor: BufferedFileDescriptor) -> None:
+        assert descriptor._tempDataBuffer == []
+        assert descriptor._tempDataLen == 0
+        assert len(descriptor.dataBuffer) - descriptor.offset == 2 * len(WRITE_DATA)
 
     benchmark.pedantic(
         BufferedFileDescriptor.doWrite,
