@@ -21,7 +21,9 @@ class BufferedFileDescriptor(FileDescriptor):
         FileDescriptor.__init__(self, reactor=MemoryReactor())
 
     def startWriting(self) -> None:
-        pass
+        """
+        No reactor is used, so this function is no-op
+        """
 
 
 def mixedSmallChunks() -> list[bytes]:
