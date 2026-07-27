@@ -1,0 +1,1 @@
+Initiating a TCP connection with an address literals and a port outside of the 1-65535 range in twisted.internet.tcp.BaseClient and twisted.internet.iocpreactor.tcp.Client now triggers an errback instead of an unhandled error. This change might also fix other unhandled errors occurred while connecting using address literals.
