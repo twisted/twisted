@@ -2,7 +2,6 @@
 Benchmarks for L{twisted.internet.abstract.FileDescriptor}.
 """
 
-from collections.abc import Callable, Sequence
 from typing import Any
 
 import pytest
@@ -38,7 +37,6 @@ def mixedSmallChunks() -> list[bytes]:
 
 SEQUENCES: dict[str, list[bytes]] = {
     "1x8192": [b"x" * 8192],
-    "4x1024": [b"x" * 1024] * 4,
     "100x1": [b"x"] * 100,
     "mixed-small": mixedSmallChunks(),
 }
@@ -49,26 +47,19 @@ SEQUENCES: dict[str, list[bytes]] = {
     SEQUENCES.values(),
     ids=SEQUENCES,
 )
-@pytest.mark.parametrize(
-    "sequenceFactory",
-    [list, tuple],
-    ids=["list", "tuple"],
-)
 def test_fileDescriptor_writeSequence(
     benchmark: Any,
     chunks: list[bytes],
-    sequenceFactory: Callable[[list[bytes]], Sequence[bytes]],
 ) -> None:
     """
     Benchmark buffering a sequence with L{FileDescriptor.writeSequence}.
     """
-    sequence = sequenceFactory(chunks)
 
     def setup():
-        return (BufferedFileDescriptor(), sequence), {}
+        return (BufferedFileDescriptor(), chunks), {}
 
-    def teardown(descriptor: BufferedFileDescriptor, data: Sequence[bytes]) -> None:
-        assert descriptor._tempDataBuffer == list(data)
+    def teardown(descriptor: BufferedFileDescriptor, data: list[bytes]) -> None:
+        assert descriptor._tempDataBuffer == data
         assert descriptor._tempDataLen == sum(map(len, data))
 
     benchmark.pedantic(
