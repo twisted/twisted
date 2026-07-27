@@ -15,8 +15,6 @@ import os
 import socket
 from collections.abc import Mapping, Sequence
 from functools import wraps
-from io import BytesIO
-from types import ModuleType
 from typing import Any, Callable, ClassVar
 from unittest import skipIf
 
@@ -101,7 +99,6 @@ from twisted.logger import Logger
 from twisted.python import log
 from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
-from twisted.python.modules import walkModules
 from twisted.python.runtime import platform
 from twisted.test.test_tcp import (
     ClientStartStopFactory,
@@ -1123,51 +1120,6 @@ class _IExhaustsFileDescriptors(Interface):
         """
 
 
-@attr.s(auto_attribs=True)
-class SourceCacheForCoverage:
-    """
-    Per U{this upstream issue in coverage.py
-    <https://github.com/coveragepy/coveragepy/issues/2091>}, C{coverage} may
-    need to open files at any time, on any line of code, to examine the
-    relevant source file being covered.  When it does this, under conditions of
-    file-descriptor exhaustion (which we are testing in this test suite), it
-    will (obviously) fail, raising an unexpected
-    C{coverage.exceptions.NoSource} exception out of a line of code which is of
-    course not being covered by anything.
-
-    L{SourceCacheForCoverage} prevents this issue by monkey-patching
-    C{coverage.py} in order to replace the C{open} function in the relevant
-    module to pre-allocate the source code of I{every} module in the C{twisted}
-    package and return that code back without opening any files in-line.
-    """
-
-    patchedModule: ModuleType
-    origOpen: Callable[..., Any]
-    pathToContents: dict[str, bytes] = attr.ib(default=attr.Factory(dict))
-
-    @classmethod
-    def enable(cls) -> SourceCacheForCoverage | None:
-        try:
-            from coverage import python
-        except ImportError:  # pragma: no cover
-            return None  # pragma: no cover
-
-        origOpen = getattr(python, "open", open)
-        self = cls(python, origOpen)
-        for module in walkModules("twisted"):
-            self.pathToContents[module.filePath.path] = module.filePath.getContent()
-        python.open = self.open  # type: ignore[assignment]
-        return self
-
-    def open(self, path: str, mode: str) -> BytesIO:
-        # this is called *inside* coverage, and so will not be marked as
-        # covered.
-        return BytesIO(self.pathToContents[path])  # pragma: no cover
-
-    def disable(self) -> None:
-        self.patchedModule.open = self.origOpen  # type: ignore[attr-defined]
-
-
 @implementer(_IExhaustsFileDescriptors)
 @attr.s(auto_attribs=True)
 class _ExhaustsFileDescriptors:
@@ -1190,15 +1142,12 @@ class _ExhaustsFileDescriptors:
     _fileDescriptors: list[int] = attr.ib(
         default=attr.Factory(list), init=False, repr=False
     )
-    _sourceCache: SourceCacheForCoverage | None = None
 
     def exhaust(self) -> None:
         """
         Open file descriptors until C{EMFILE} is reached.
         """
         # Force a collection to close dangling files.
-        if self._sourceCache is None:  # pragma: no branch
-            self._sourceCache = SourceCacheForCoverage.enable()
         gc.collect()
         try:
             while True:
@@ -1232,9 +1181,6 @@ class _ExhaustsFileDescriptors:
                 if e.errno == errno.EBADF:
                     continue
                 raise
-        if self._sourceCache is not None:
-            self._sourceCache.disable()
-            self._sourceCache = None
 
     def count(self):
         """
