@@ -241,7 +241,12 @@ class ConnectionTests(unittest.TestCase):
         channel2 = TestChannel()
         self.conn.openChannel(channel1)
         self.conn.openChannel(channel2)
-        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(b"\x00\x00\x00\x00" * 4)
+        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(
+            b"\x00\x00\x00\x00"
+            + b"\x00\x00\x00\xff"  # Local channel
+            + b"\x00\x00\x00\x02"  # Remote channel
+            + b"\x00\x00\x80\x00"  # Window size  # Max packet size
+        )
         self.assertTrue(channel1.gotOpen)
         self.assertFalse(channel1.gotClosed)
         self.assertFalse(channel2.gotOpen)
@@ -401,19 +406,102 @@ class ConnectionTests(unittest.TestCase):
         """
         self._lookupChannelErrorTest(123)
 
-    def test_CHANNEL_OPEN_CONFIRMATION(self):
+    def test_CHANNEL_OPEN_CONFIRMATION_success(self):
         """
         Test that channel open confirmation packets cause the channel to be
         notified that it's open.
         """
         channel = TestChannel()
         self.conn.openChannel(channel)
-        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(b"\x00\x00\x00\x00" * 5)
+        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(
+            b"\x00\x00\x00\x00"
+            + b"\x00\x00\x00\x02"  # Local channel
+            + b"\x00\x00\x00\x03"  # Remote channel
+            + b"\x00\x00\xde\x04"  # Window size.
+            + b"\x00\x00\x00\x05"  # Max packet size.  # Custom channel data.
+        )
+        self.assertEqual(channel.remoteWindowLeft, 3)
+        self.assertEqual(channel.remoteMaxPacket, 56836)
+        self.assertEqual(channel.specificData, b"\x00\x00\x00\x05")
+        self.assertEqual(self.conn.channelsToRemoteChannel[channel], 2)
+        self.assertEqual(self.conn.localToRemoteChannel[0], 2)
+        self.assertTrue(channel.gotOpen)
+
+    def test_CHANNEL_OPEN_CONFIRMATION_maxPacketSizeTooSmall(self):
+        """
+        It closes the channel right away when the server returns a value
+        that is too small.
+        """
+        channel = TestChannel()
+        # Client request the open.
+        self.conn.openChannel(channel)
+        self.transport.packets = []  # Ignore the open request packet.
+        # Server send back the response.
+        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(
+            b"\x00\x00\x00\x00"
+            + b"\x00\x00\x00\x02"  # Local channel
+            + b"\x00\x00\x00\x01"  # Remote channel
+            + b"\x00\x00\x00\x04"  # Window size.
+            + b"\x00\x00\x00\x05"  # Max packet size.  # Custom channel data.
+        )
+
+        self._checkFailedOpenConfirmation(
+            channel, "server requested maximum packet size too small"
+        )
+
+    def test_CHANNEL_OPEN_CONFIRMATION_maxPacketSizeTooLarge(self):
+        """
+        It closes the channel right away when the server returns a value
+        that is too large.
+        """
+        channel = TestChannel()
+        # Client request the open.
+        self.conn.openChannel(channel)
+        self.transport.packets = []  # Ignore the open request packet.
+        # Server send back the response.
+        self.conn.ssh_CHANNEL_OPEN_CONFIRMATION(
+            b"\x00\x00\x00\x00"
+            + b"\x00\x00\x00\x02"  # Local channel
+            + b"\x00\x00\x00\x01"  # Remote channel
+            + b"\x00\x05\x00\x00"  # Window size.
+            + b"\x00\x00\x00\x05"  # Max packet size.  # Custom channel data.
+        )
+
+        self._checkFailedOpenConfirmation(
+            channel, "server requested maximum packet size too big"
+        )
+
+    def _checkFailedOpenConfirmation(
+        self, channel: channel.SSHChannel, details: str
+    ) -> None:
+        """
+        Shared code for checking that a channel was not opened on the client
+        side and the request was sent to close it on the server side.
+        """
+
+        # The channel is not opened, but is also not closed
+        # since it was not opened yet.
         self.assertEqual(channel.remoteWindowLeft, 0)
         self.assertEqual(channel.remoteMaxPacket, 0)
-        self.assertEqual(channel.specificData, b"\x00\x00\x00\x00")
-        self.assertEqual(self.conn.channelsToRemoteChannel[channel], 0)
-        self.assertEqual(self.conn.localToRemoteChannel[0], 0)
+        self.assertFalse(channel.gotOpen)
+        self.assertFalse(channel.gotClosed)
+        self.assertEqual(channel.specificData, b"")
+
+        # Client send the messages to server.
+        self.assertEqual(
+            self.transport.packets,
+            [
+                (connection.MSG_CHANNEL_EOF, b"\x00\x00\x00\x02"),
+                (connection.MSG_CHANNEL_CLOSE, b"\x00\x00\x00\x02"),
+            ],
+        )
+
+        # The channel connections are still active, waiting for server
+        # to close the channel.
+        self.assertEqual(self.conn.channelsToRemoteChannel[channel], 2)
+        self.assertEqual(self.conn.localToRemoteChannel[0], 2)
+        self.assertIsInstance(channel.openFailureReason, error.ConchError)
+        self.assertEqual(details, channel.openFailureReason.args[0])
 
     def test_CHANNEL_OPEN_FAILURE(self):
         """
