@@ -6,7 +6,7 @@
 Support for creating a service which runs a process monitor.
 """
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 from twisted.python import usage
 from twisted.runner.procmon import ProcessMonitor
@@ -57,7 +57,7 @@ class Options(usage.Options):
         ],
     ]
 
-    optFlags: List[Sequence[str]] = []
+    optFlags: list[Sequence[str]] = []
 
     longdesc = """\
 procmon runs processes, monitors their progress, and restarts them when they

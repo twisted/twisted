@@ -8,7 +8,6 @@ Tests for implementations of L{IReactorProcess}.
     platforms and native L{str} keys/values on Windows.
 """
 
-
 import io
 import json
 import os
@@ -616,9 +615,15 @@ sys.stdout.flush()"""
                 raise TestException("processedExited raised")
 
         protocol = Protocol()
-        transport = reactor.spawnProcess(
-            protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
-        )
+        transport = None
+
+        def whenRun() -> None:
+            nonlocal transport
+            transport = reactor.spawnProcess(
+                protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
+
+        reactor.callWhenRunning(whenRun)
         self.runReactor(reactor)
 
         # Manually clean-up broken process handler.
@@ -825,7 +830,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         path to it.
         """
         script = _asFilesystemBytes(self.mktemp())
-        with open(script, "wt") as scriptFile:
+        with open(script, "w") as scriptFile:
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
@@ -842,7 +847,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(executable),
+                f"#!{executable}",
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",

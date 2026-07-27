@@ -8,15 +8,17 @@ This module implements the worker classes.
 
 @since: 12.3
 """
+from __future__ import annotations
 
 import os
-from typing import Any, Awaitable, Callable, Dict, List, Optional, TextIO, TypeVar
+from collections.abc import Awaitable
+from typing import Any, Callable, Protocol, TextIO, TypeVar
 from unittest import TestCase
 
 from zope.interface import implementer
 
 from attrs import frozen
-from typing_extensions import Protocol, TypedDict
+from typing_extensions import TypedDict
 
 from twisted.internet.defer import Deferred, DeferredList
 from twisted.internet.error import ProcessDone
@@ -171,7 +173,7 @@ class LocalWorkerAMP(AMP):
         self,
         error: WorkerException,
         errorClass: str,
-        frames: List[str],
+        frames: list[str],
     ) -> Failure:
         """
         Helper to build a C{Failure} with some traceback.
@@ -201,18 +203,16 @@ class LocalWorkerAMP(AMP):
         errorClass: str,
         errorStreamId: int,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add an error to the reporter.
 
-        @param errorStreamId: The identifier of a stream over which the text
-            of this error was previously completely sent to the peer.
+        @param errorStreamId: The identifier of a stream over which the text of
+            this error was previously completely sent to the peer.
 
         @param framesStreamId: The identifier of a stream over which the lines
             of the traceback for this error were previously completely sent to
             the peer.
-
-        @param error: A message describing the error.
         """
         error = b"".join(self._streams.finish(errorStreamId)).decode("utf-8")
         frames = [
@@ -233,7 +233,7 @@ class LocalWorkerAMP(AMP):
         failStreamId: int,
         failClass: str,
         framesStreamId: int,
-    ) -> Dict[str, bool]:
+    ) -> dict[str, bool]:
         """
         Add a failure to the reporter.
 
@@ -263,8 +263,8 @@ class LocalWorkerAMP(AMP):
 
     @managercommands.AddExpectedFailure.responder
     def addExpectedFailure(
-        self, testName: str, errorStreamId: int, todo: Optional[str]
-    ) -> Dict[str, bool]:
+        self, testName: str, errorStreamId: int, todo: str | None
+    ) -> dict[str, bool]:
         """
         Add an expected failure to the reporter.
 

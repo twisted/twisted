@@ -6,17 +6,18 @@
 Provide L{ICredentialsChecker} implementations to be used in Conch protocols.
 """
 
+from __future__ import annotations
 
 import binascii
 import errno
 import sys
 from base64 import decodebytes
-from typing import IO, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, cast
+from collections.abc import Iterable, Iterator, Mapping
+from typing import IO, Any, Callable, Literal, Protocol, cast
 
 from zope.interface import Interface, implementer, providedBy
 
 from incremental import Version
-from typing_extensions import Literal, Protocol
 
 from twisted.conch import error
 from twisted.conch.ssh import keys
@@ -34,12 +35,12 @@ from twisted.python.util import runAsEffectiveUser
 _log = Logger()
 
 
-class UserRecord(Tuple[str, str, int, int, str, str, str]):
+class UserRecord(tuple[str, str, int, int, str, str, str]):
     """
-    A record in a UNIX-style password database. See L{pwd} for field details.
+    A record in a UNIX-style password database.  See L{pwd} for field details.
 
-    This corresponds to the undocumented type L{pwd.struct_passwd}, but lacks named
-    field accessors.
+    This corresponds to the undocumented type C{pwd.struct_passwd}, but lacks
+    named field accessors.
     """
 
     @property
@@ -62,7 +63,7 @@ class UserDB(Protocol):
         """
 
 
-pwd: Optional[UserDB]
+pwd: UserDB | None
 try:
     import pwd as _pwd
 except ImportError:
@@ -83,7 +84,7 @@ class CryptedPasswordRecord(Protocol):
     """
     A sequence where the item at index 1 may be a crypted password.
 
-    Both L{pwd.struct_passwd} and L{spwd.struct_spwd} conform to this protocol.
+    Both C{pwd.struct_passwd} and C{spwd.struct_spwd} conform to this protocol.
     """
 
     def __getitem__(self, index: Literal[1]) -> str:
@@ -106,7 +107,7 @@ def _lookupUser(userdb: UserDB, username: bytes) -> UserRecord:
     return userdb.getpwnam(username.decode(sys.getfilesystemencoding()))
 
 
-def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
+def _pwdGetByName(username: str) -> CryptedPasswordRecord | None:
     """
     Look up a user in the /etc/passwd database using the pwd module.  If the
     pwd module is not available, return None.
@@ -114,7 +115,7 @@ def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     @param username: the username of the user to return the passwd database
         information for.
 
-    @returns: A L{pwd.struct_passwd}, where field 1 may contain a crypted
+    @returns: A C{pwd.struct_passwd}, where field 1 may contain a crypted
         password, or L{None} when the L{pwd} database is unavailable.
 
     @raises KeyError: when no such user exists
@@ -124,16 +125,16 @@ def _pwdGetByName(username: str) -> Optional[CryptedPasswordRecord]:
     return cast(CryptedPasswordRecord, pwd.getpwnam(username))
 
 
-def _shadowGetByName(username: str) -> Optional[CryptedPasswordRecord]:
+def _shadowGetByName(username: str) -> CryptedPasswordRecord | None:
     """
-    Look up a user in the /etc/shadow database using the spwd module. If it is
+    Look up a user in the /etc/shadow database using the spwd module.  If it is
     not available, return L{None}.
 
     @param username: the username of the user to return the shadow database
         information for.
     @type username: L{str}
 
-    @returns: A L{spwd.struct_spwd}, where field 1 may contain a crypted
+    @returns: A C{spwd.struct_spwd}, where field 1 may contain a crypted
         password, or L{None} when the L{spwd} database is unavailable.
 
     @raises KeyError: when no such user exists
@@ -506,7 +507,7 @@ class UNIXAuthorizedKeysFiles:
 
     def __init__(
         self,
-        userdb: Optional[UserDB] = None,
+        userdb: UserDB | None = None,
         parseKey: Callable[[bytes], keys.Key] = keys.Key.fromString,
     ):
         """

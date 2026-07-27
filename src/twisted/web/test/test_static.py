@@ -1795,13 +1795,8 @@ class LoadMimeTypesTests(TestCase):
         # Checking mimetypes.inited doesn't always work, because
         # something, somewhere, calls mimetypes.init. Yay global
         # mutable state :)
-        if getattr(inspect, "signature", None):
-            signature = inspect.signature(static.loadMimeTypes)
-            self.assertIs(signature.parameters["init"].default, mimetypes.init)
-        else:
-            args, _, _, defaults = inspect.getargspec(static.loadMimeTypes)
-            defaultInit = defaults[args.index("init")]
-            self.assertIs(defaultInit, mimetypes.init)
+        signature = inspect.signature(static.loadMimeTypes)
+        self.assertIs(signature.parameters["init"].default, mimetypes.init)
 
 
 class StaticDeprecationTests(TestCase):

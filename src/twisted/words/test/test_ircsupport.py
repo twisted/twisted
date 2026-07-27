@@ -16,8 +16,8 @@ class StubConversation(Conversation):
     def show(self):
         pass
 
-    def showMessage(self, message, metadata):
-        self.message = message
+    def showMessage(self, text, metadata=None):
+        self.message = text
         self.metadata = metadata
 
 

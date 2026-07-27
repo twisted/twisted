@@ -12,7 +12,7 @@ import os.path
 import shutil
 import sys
 import warnings
-from typing import Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from unittest import skipIf
 
 try:

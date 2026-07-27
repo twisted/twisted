@@ -4,10 +4,10 @@
 """
 Tests for twisted.enterprise.adbapi.
 """
+from __future__ import annotations
 
 import os
 import stat
-from typing import Dict, Optional
 
 from twisted.enterprise.adbapi import (
     Connection,
@@ -32,7 +32,7 @@ class ADBAPITestBase:
     Test the asynchronous DB-API code.
     """
 
-    openfun_called: Dict[object, bool] = {}
+    openfun_called: dict[object, bool] = {}
 
     if interfaces.IReactorThreads(reactor, None) is None:
         skip = "ADB-API requires threads, no way to test without them"
@@ -338,7 +338,7 @@ class DBTestConnector:
     """
 
     # used for creating new test cases
-    TEST_PREFIX: Optional[str] = None
+    TEST_PREFIX: str | None = None
 
     DB_NAME = "twisted_test"
     DB_USER = "twisted_test"
@@ -351,7 +351,7 @@ class DBTestConnector:
     can_rollback = True  # rollback supported
     test_failures = True  # test bad sql?
     escape_slashes = True  # escape \ in sql?
-    good_sql: Optional[str] = ConnectionPool.good_sql
+    good_sql: str | None = ConnectionPool.good_sql
     early_reconnect = True  # cursor() will fail on closed connection
     can_clear = True  # can try to clear out tables when starting
 

@@ -6,13 +6,14 @@
 Time zone utilities.
 """
 
+from __future__ import annotations
+
 from datetime import (
     datetime as DateTime,
     timedelta as TimeDelta,
     timezone,
     tzinfo as TZInfo,
 )
-from typing import Optional
 
 __all__ = [
     "FixedOffsetTimeZone",
@@ -31,7 +32,7 @@ class FixedOffsetTimeZone(TZInfo):
         offset.
     """
 
-    def __init__(self, offset: TimeDelta, name: Optional[str] = None) -> None:
+    def __init__(self, offset: TimeDelta, name: str | None = None) -> None:
         """
         Construct a L{FixedOffsetTimeZone} with a fixed offset.
 
@@ -44,7 +45,7 @@ class FixedOffsetTimeZone(TZInfo):
     @classmethod
     def fromSignHoursMinutes(
         cls, sign: str, hours: int, minutes: int
-    ) -> "FixedOffsetTimeZone":
+    ) -> FixedOffsetTimeZone:
         """
         Construct a L{FixedOffsetTimeZone} from an offset described by sign
         ('+' or '-'), hours, and minutes.
@@ -68,7 +69,7 @@ class FixedOffsetTimeZone(TZInfo):
         return cls(TimeDelta(hours=hours, minutes=minutes), name)
 
     @classmethod
-    def fromLocalTimeStamp(cls, timeStamp: float) -> "FixedOffsetTimeZone":
+    def fromLocalTimeStamp(cls, timeStamp: float) -> FixedOffsetTimeZone:
         """
         Create a time zone with a fixed offset corresponding to a time stamp in
         the system's locally configured time zone.
@@ -78,20 +79,20 @@ class FixedOffsetTimeZone(TZInfo):
         ).replace(tzinfo=None)
         return cls(offset)
 
-    def utcoffset(self, dt: Optional[DateTime]) -> TimeDelta:
+    def utcoffset(self, dt: DateTime | None) -> TimeDelta:
         """
         Return the given timezone's offset from UTC.
         """
         return self.offset
 
-    def dst(self, dt: Optional[DateTime]) -> TimeDelta:
+    def dst(self, dt: DateTime | None) -> TimeDelta:
         """
         Return a zero L{TimeDelta} for the daylight saving time
         offset, since there is never one.
         """
         return TimeDelta(0)
 
-    def tzname(self, dt: Optional[DateTime]) -> str:
+    def tzname(self, dt: DateTime | None) -> str:
         """
         Return a string describing this timezone.
         """

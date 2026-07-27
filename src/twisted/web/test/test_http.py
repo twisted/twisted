@@ -5,13 +5,15 @@
 Test HTTP support.
 """
 
+from __future__ import annotations
+
 import base64
 import calendar
 import random
+from collections.abc import Sequence
 from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
-from typing import Sequence, Union
 from unittest import skipIf
 from urllib.parse import clear_cache  # type: ignore[attr-defined]
 from urllib.parse import urlparse, urlunsplit
@@ -39,7 +41,7 @@ from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers, iweb
+from twisted.web import http, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
@@ -256,7 +258,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
+    expected_response: Sequence[Sequence[bytes]] | bytes = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -338,7 +340,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(60)
         self.assertTrue(transport.disconnecting)
         self.assertFalse(transport.disconnected)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         self.assertIn("Timing out client: {peer}", event["log_format"])
 
@@ -349,9 +351,9 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         clock.advance(1)
         self.assertTrue(transport.disconnecting)
         self.assertTrue(transport.disconnected)
-        self.assertEquals(2, len(logObserver))
+        self.assertEqual(2, len(logObserver))
         event = logObserver[1]
-        self.assertEquals("Forcibly timing out client: {peer}", event["log_format"])
+        self.assertEqual("Forcibly timing out client: {peer}", event["log_format"])
 
     def test_transportNotAbortedAfterConnectionLost(self):
         """
@@ -739,7 +741,7 @@ class PipeliningBodyTests(unittest.TestCase, ResponseTestMixin):
                 ),
             )
         a.dataReceived(self.requests)
-        self.assertEquals(b.producerState, "paused")
+        self.assertEqual(b.producerState, "paused")
 
 
 class ShutdownTests(unittest.TestCase):
@@ -2702,7 +2704,7 @@ Hello,
         self.runRequest(f, Request, 0)
         req = requests.pop()
         self.assertEqual((b"", b""), req.credentials)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, AttributeError)
@@ -3001,24 +3003,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
-
-    def _compatHeadersTest(self, oldName, newName):
-        """
-        Verify that each of two different attributes which are associated with
-        the same state properly reflect changes made through the other.
-
-        This is used to test that the C{headers}/C{responseHeaders} and
-        C{received_headers}/C{requestHeaders} pairs interact properly.
-        """
-        req = http.Request(DummyChannel(), False)
-        getattr(req, newName).setRawHeaders(b"test", [b"lemur"])
-        self.assertEqual(getattr(req, oldName)[b"test"], b"lemur")
-        setattr(req, oldName, {b"foo": b"bar"})
-        self.assertEqual(
-            list(getattr(req, newName).getAllRawHeaders()), [(b"Foo", [b"bar"])]
-        )
-        setattr(req, newName, http_headers.Headers())
-        self.assertEqual(getattr(req, oldName), {})
 
     def test_getHeader(self):
         """
@@ -3608,9 +3592,9 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
                 )
             ],
         )
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(
+        self.assertEqual(
             "Warning: last-modified specified both in"
             " header list and lastModified attribute.",
             event["log_format"],
@@ -3935,7 +3919,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
         # get back a TextIOWrapper, wrapping our BytesIO.
         logFile = factory.logFile = BytesIO()
-        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+        getBackLogFile: TextIOWrapper = factory.logFile
 
         # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
         # now, even though the property's signature is such that it isn't.
@@ -3945,7 +3929,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a text-based I/O (i.e.: anything other than an
         # io.BufferedBase) it stays exactly the same, no modification.
         self.assertIs(getBackLogFile, factory.logFile)
-        proto = factory.buildProtocol(None)  # type:ignore
+        proto = factory.buildProtocol(None)
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
@@ -3956,7 +3940,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()  # type:ignore
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
@@ -4089,7 +4073,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         request = http.Request(DummyChannel(), False)
         request.registerProducer(DummyProducer(), True)
         request.finish()
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, RuntimeError)

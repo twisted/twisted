@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from time import time
 from types import TracebackType
-from typing import Any, Callable, ContextManager, Optional, Protocol, cast
+from typing import Any, Callable, ContextManager, Protocol, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
@@ -124,9 +124,9 @@ class Logger:
 
     def __init__(
         self,
-        namespace: Optional[str] = None,
-        source: Optional[object] = None,
-        observer: Optional["ILogObserver"] = None,
+        namespace: str | None = None,
+        source: object | None = None,
+        observer: ILogObserver | None = None,
     ) -> None:
         """
         @param namespace: The namespace for this logger.  Uses a dotted
@@ -151,7 +151,7 @@ class Logger:
         else:
             self.observer = observer
 
-    def __get__(self, instance: object, owner: Optional[type] = None) -> "Logger":
+    def __get__(self, instance: object, owner: type | None = None) -> Logger:
         """
         When used as a descriptor, i.e.::
 
@@ -187,7 +187,7 @@ class Logger:
         return f"<{self.__class__.__name__} {self.namespace!r}>"
 
     def emit(
-        self, level: LogLevel, format: Optional[str] = None, **kwargs: object
+        self, level: LogLevel, format: str | None = None, **kwargs: object
     ) -> None:
         """
         Emit a log event to all log observers at the given level.
@@ -228,7 +228,7 @@ class Logger:
     def failure(
         self,
         format: str,
-        failure: Optional[Failure] = None,
+        failure: Failure | None = None,
         level: LogLevel = LogLevel.critical,
         **kwargs: object,
     ) -> None:
@@ -280,7 +280,7 @@ class Logger:
 
         self.emit(level, format, log_failure=failure, **kwargs)
 
-    def debug(self, format: Optional[str] = None, **kwargs: object) -> None:
+    def debug(self, format: str | None = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.debug}.
 
@@ -295,7 +295,7 @@ class Logger:
         """
         self.emit(LogLevel.debug, format, **kwargs)
 
-    def info(self, format: Optional[str] = None, **kwargs: object) -> None:
+    def info(self, format: str | None = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.info}.
 
@@ -310,7 +310,7 @@ class Logger:
         """
         self.emit(LogLevel.info, format, **kwargs)
 
-    def warn(self, format: Optional[str] = None, **kwargs: object) -> None:
+    def warn(self, format: str | None = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.warn}.
 
@@ -325,7 +325,7 @@ class Logger:
         """
         self.emit(LogLevel.warn, format, **kwargs)
 
-    def error(self, format: Optional[str] = None, **kwargs: object) -> None:
+    def error(self, format: str | None = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.error}.
 
@@ -340,7 +340,7 @@ class Logger:
         """
         self.emit(LogLevel.error, format, **kwargs)
 
-    def critical(self, format: Optional[str] = None, **kwargs: object) -> None:
+    def critical(self, format: str | None = None, **kwargs: object) -> None:
         """
         Emit a log event at log level L{LogLevel.critical}.
 
@@ -431,9 +431,9 @@ class Logger:
         corrective guidance can be offered to an user/administrator, and the
         impact of the condition is unknown.
 
-        @param format: a message format using new-style (PEP 3101) formatting.
-            The logging event (which is a L{dict}) is used to render this
-            format string.
+        @param staticMessage: a message format using new-style (PEP 3101)
+            formatting.  The logging event (which is a L{dict}) is used to
+            render this format string.
 
         @param level: a L{LogLevel} to use.
 

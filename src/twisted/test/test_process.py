@@ -618,9 +618,8 @@ class ProcessTests(unittest.TestCase):
         return d
 
     @skipIf(
-        os.environ.get("CI", "").lower() == "true"
-        and runtime.platform.getType() == "win32",
-        "See https://twistedmatrix.com/trac/ticket/10014",
+        runtime.platform.getType() == "win32",
+        "See https://github.com/twisted/twisted/issues/12522",
     )
     def test_manyProcesses(self):
         def _check(results, protocols):

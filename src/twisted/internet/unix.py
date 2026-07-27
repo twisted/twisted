@@ -10,18 +10,20 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import annotations
 
 import os
 import socket
 import stat
 import struct
 from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
-from typing import Optional, Type
+from typing import Any
 
 from zope.interface import implementedBy, implementer, implementer_only
 
 from twisted.internet import address, base, error, interfaces, main, protocol, tcp, udp
 from twisted.internet.abstract import FileDescriptor
+from twisted.internet.interfaces import IProtocolFactory
 from twisted.python import failure, lockfile, log, reflect
 from twisted.python.compat import lazyByteSlice
 from twisted.python.filepath import _coerceToFilesystemEncoding
@@ -66,7 +68,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
+    _writeSomeDataBase: type[FileDescriptor] | None = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):
@@ -340,9 +342,19 @@ class Port(_UNIXPort, tcp.Port):
     transport = Server
     lockFile = None
 
+    # LSP violation where UNIX ports have filenames but TCP ports have
+    # integers.
+    port: bytes  # type:ignore[assignment]
+
     def __init__(
-        self, fileName, factory, backlog=50, mode=0o666, reactor=None, wantPID=0
-    ):
+        self,
+        fileName: bytes,
+        factory: IProtocolFactory,
+        backlog: int = 50,
+        mode: int = 0o666,
+        reactor: Any = None,
+        wantPID: int = 0,
+    ) -> None:
         tcp.Port.__init__(
             self, self._buildAddr(fileName).name, factory, backlog, reactor=reactor
         )

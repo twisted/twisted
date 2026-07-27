@@ -8,7 +8,6 @@ Tests for various parts of L{twisted.web}.
 import os
 import zlib
 from io import BytesIO
-from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
@@ -612,12 +611,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -640,12 +639,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -670,7 +669,7 @@ class RequestTests(unittest.TestCase):
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -1301,9 +1300,9 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 200)
         self.assertEqual(-1, req.transport.written.getvalue().find(b"hi hi"))
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_level"], LogLevel.info)
+        self.assertEqual(event["log_level"], LogLevel.info)
 
     def test_unsupportedHeadWrite(self):
         """
@@ -1890,7 +1889,7 @@ class QueueResource(Resource):
 
     def __init__(self) -> None:
         super().__init__()
-        self.dispatchedRequests: List[Request] = []
+        self.dispatchedRequests: list[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.dispatchedRequests.append(request)

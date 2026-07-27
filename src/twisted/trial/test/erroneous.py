@@ -124,14 +124,14 @@ class TestAsynchronousFail(unittest.TestCase):
         """
         A test which fails in the callback of the returned L{defer.Deferred}.
         """
-        return deferLater(reactor, 0, self.fail, "I fail later")  # type: ignore[arg-type]
+        return deferLater(reactor, 0, self.fail, "I fail later")
 
     def test_failGreaterThan64k(self) -> defer.Deferred[None]:
         """
         A test which fails in the callback of the returned L{defer.Deferred}
         with a very long string.
         """
-        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2**16)  # type: ignore[arg-type]
+        return deferLater(reactor, 0, self.fail, "I fail later: " + "x" * 2**16)
 
     def test_exception(self) -> None:
         """

@@ -5,7 +5,7 @@
 """
 Parser for 'haproxy:' string endpoint.
 """
-from typing import Mapping, Tuple
+from collections.abc import Mapping
 
 from zope.interface import implementer
 
@@ -20,7 +20,7 @@ from twisted.plugin import IPlugin
 from . import proxyEndpoint
 
 
-def unparseEndpoint(args: Tuple[object, ...], kwargs: Mapping[str, object]) -> str:
+def unparseEndpoint(args: tuple[object, ...], kwargs: Mapping[str, object]) -> str:
     """
     Un-parse the already-parsed args and kwargs back into endpoint syntax.
 

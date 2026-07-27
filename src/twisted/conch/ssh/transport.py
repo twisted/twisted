@@ -17,14 +17,19 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from typing_extensions import Literal
+
+try:
+    from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
+except ImportError:
+    # Deprecated path, will be removed in cryptography 48.0.0
+    from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
 
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
@@ -62,7 +67,7 @@ _Hash = Any
 _DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
 
 
-class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
+class _MACParams(tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).
@@ -107,14 +112,14 @@ class SSHCiphers:
     """
 
     cipherMap = {
-        b"3des-cbc": (algorithms.TripleDES, 24, modes.CBC),
+        b"3des-cbc": (TripleDES, 24, modes.CBC),
         b"aes256-cbc": (algorithms.AES, 32, modes.CBC),
         b"aes192-cbc": (algorithms.AES, 24, modes.CBC),
         b"aes128-cbc": (algorithms.AES, 16, modes.CBC),
         b"aes128-ctr": (algorithms.AES, 16, modes.CTR),
         b"aes192-ctr": (algorithms.AES, 24, modes.CTR),
         b"aes256-ctr": (algorithms.AES, 32, modes.CTR),
-        b"3des-ctr": (algorithms.TripleDES, 24, modes.CTR),
+        b"3des-ctr": (TripleDES, 24, modes.CTR),
         b"none": (None, 0, modes.CBC),
     }
     macMap = {
@@ -509,9 +514,7 @@ class SSHTransportBase(protocol.Protocol):
     _EXT_INFO_S = b"ext-info-s"
 
     _peerSupportsExtensions = False
-    peerExtensions: Dict[bytes, bytes] = {}
-
-    factory: SSHFactory
+    peerExtensions: dict[bytes, bytes] = {}
 
     # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
     avatar: object
@@ -1443,6 +1446,7 @@ class SSHServerTransport(SSHTransportBase):
     @ivar p: the Diffie-Hellman group prime.
     """
 
+    factory: SSHFactory
     isClient = False
     ignoreNextPacket = 0
 
@@ -1907,7 +1911,7 @@ class SSHClientTransport(SSHTransportBase):
         d.addErrback(
             lambda unused: self.sendDisconnect(
                 DISCONNECT_HOST_KEY_NOT_VERIFIABLE,
-                f"bad host key [ecdh] {unused}".encode("utf-8"),
+                f"bad host key [ecdh] {unused}".encode(),
             )
         )
         return d

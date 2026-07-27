@@ -4,6 +4,7 @@
 """
 Tests for large portions of L{twisted.mail}.
 """
+from __future__ import annotations
 
 import email.message
 import email.parser
@@ -19,6 +20,7 @@ import tempfile
 import textwrap
 import time
 from hashlib import md5
+from typing import Any, NoReturn
 from unittest import skipIf
 
 from zope.interface import Interface, implementer
@@ -48,6 +50,7 @@ from twisted.internet.testing import (
     StringTransport,
 )
 from twisted.mail import pop3, smtp
+from twisted.mail.maildir import MaildirMailbox
 from twisted.mail.relaymanager import _AttemptManager
 from twisted.names import dns
 from twisted.names.dns import Record_CNAME, Record_MX, RRHeader
@@ -456,23 +459,23 @@ class _AppendTestMixin:
     for serially appending multiple messages to a mailbox.
     """
 
-    def _appendMessages(self, mbox, messages):
+    def _appendMessages(
+        self, mbox: twisted.mail.maildir.MaildirMailbox, messages: list[bytes]
+    ) -> Deferred[list[None]]:
         """
         Deliver the given messages one at a time.  Delivery is serialized to
         guarantee a predictable order in the mailbox (overlapped message deliver
         makes no guarantees about which message which appear first).
         """
-        results = []
 
-        def append():
+        async def append() -> list[None]:
+            results: list[None] = []
             for m in messages:
-                d = mbox.appendMessage(m)
-                d.addCallback(results.append)
-                yield d
+                await mbox.appendMessage(m)
+                results.append(None)
+            return results
 
-        d = task.cooperate(append()).whenDone()
-        d.addCallback(lambda ignored: results)
-        return d
+        return Deferred.fromCoroutine(append())
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
@@ -481,12 +484,12 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
     Tests for L{MaildirMailbox.appendMessage} when invoked with a C{str}.
     """
 
-    def setUp(self):
-        self.d = self.mktemp()
+    def setUp(self) -> None:
+        self.d = os.fsencode(self.mktemp())
         mail.maildir.initializeMaildir(self.d)
 
-    def _append(self, ignored, mbox):
-        d = mbox.appendMessage("TEST")
+    def _append(self, ignored: object, mbox: MaildirMailbox) -> Deferred[None]:
+        d = mbox.appendMessage(b"TEST")
         return self.assertFailure(d, Exception)
 
     def _setState(self, ignored, mbox, rename=None, write=None, open=None):
@@ -524,8 +527,7 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
             )
             mbox.AppendFactory._openstate = open
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def test_append(self):
+    def test_append(self) -> Any:
         """
         L{MaildirMailbox.appendMessage} returns a L{Deferred} which fires when
         the message has been added to the end of the mailbox.
@@ -533,10 +535,29 @@ class MaildirAppendStringTests(TestCase, _AppendTestMixin):
         mbox = mail.maildir.MaildirMailbox(self.d)
         mbox.AppendFactory = FailingMaildirMailboxAppendMessageTask
 
-        d = self._appendMessages(mbox, ["X" * i for i in range(1, 11)])
+        d = self._appendMessages(mbox, [b"X" * i for i in range(1, 11)])
         d.addCallback(self.assertEqual, [None] * 10)
         d.addCallback(self._cbTestAppend, mbox)
         return d
+
+    def test_reopenMailbox(self) -> Any:
+        """
+        Appending a message, then re-opening the mailbox by creating a new
+        MaildirMailbox, should result in seeing the message as loadable.
+        """
+
+        async def go() -> None:
+            mbox1 = mail.maildir.MaildirMailbox(self.d)
+            sample = b"xyzzy"
+            await mbox1.appendMessage(sample)
+            mbox2 = mail.maildir.MaildirMailbox(self.d)
+            listed = mbox2.listMessages()
+            self.assertEqual(len(listed), 1)
+            [messageSize] = listed
+            self.assertEqual(messageSize, len(sample))
+            self.assertEqual(mbox2.getMessage(0).read(), sample.decode())
+
+        return Deferred.fromCoroutine(go())
 
     def _cbTestAppend(self, ignored, mbox):
         """
@@ -708,7 +729,7 @@ class MaildirDirdbmDomainTests(TestCase):
     Tests for L{MaildirDirdbmDomain}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         """
         Create a temporary L{MaildirDirdbmDomain} and parent
         L{MailService} before running each test.
@@ -795,8 +816,7 @@ class MaildirDirdbmDomainTests(TestCase):
         creds = cred.credentials.UsernamePassword("user", "password")
         self.assertEqual(database.requestAvatarId(creds), "user")
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def test_userDirectory(self):
+    def test_userDirectory(self) -> None:
         """
         L{MaildirDirdbmDomain.userDirectory} is supplied with a user name
         and returns the path to that user's maildir subdirectory.
@@ -804,17 +824,18 @@ class MaildirDirdbmDomainTests(TestCase):
         non-existent user returns the 'postmaster' directory if there
         is a postmaster or returns L{None} if there is no postmaster.
         """
-        self.D.addUser("user", "password")
+        self.D.addUser(b"user", b"password")
         self.assertEqual(
-            self.D.userDirectory("user"), os.path.join(self.D.root, "user")
+            self.D.userDirectory(b"user"), os.path.join(self.D.root, b"user")
         )
 
         self.D.postmaster = False
-        self.assertIdentical(self.D.userDirectory("nouser"), None)
+        self.assertIdentical(self.D.userDirectory(b"nouser"), None)
 
         self.D.postmaster = True
         self.assertEqual(
-            self.D.userDirectory("nouser"), os.path.join(self.D.root, "postmaster")
+            self.D.userDirectory(b"nouser"),
+            os.path.join(self.D.root, b"postmaster"),
         )
 
 
@@ -852,6 +873,14 @@ class StubAliasableDomain:
         Just record the value so the test can check it later.
         """
         self.aliasGroup = aliases
+
+    def requestAvatar(
+        self, avatarId: bytes | tuple[()], mind: object, *interfaces: type[Interface]
+    ) -> NoReturn:
+        """
+        Stub domains cannot authenticate users.
+        """
+        raise NotImplementedError()
 
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
@@ -935,20 +964,16 @@ class ServiceDomainTests(TestCase):
 
 @skipIf(platformType != "posix", "twisted.mail only works on posix")
 class VirtualPOP3Tests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tmpdir = self.mktemp()
         self.S = mail.mail.MailService()
         self.D = mail.maildir.MaildirDirdbmDomain(self.S, self.tmpdir)
         self.D.addUser(b"user", b"password")
-        self.S.addDomain("test.domain", self.D)
-
-        portal = cred.portal.Portal(self.D)
-        map(portal.registerChecker, self.D.getCredentialsCheckers())
-        self.S.portals[""] = self.S.portals["test.domain"] = portal
-
+        self.S.addDomain(b"test.domain", self.D)
+        self.S.addDomain(b"", self.D)
         self.P = mail.protocols.VirtualPOP3()
         self.P.service = self.S
-        self.P.magic = "<unit test magic>"
+        self.P.magic = b"<unit test magic>"
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -980,9 +1005,8 @@ class VirtualPOP3Tests(TestCase):
             self.P.authenticateUserAPOP("user", resp), cred.error.UnauthorizedLogin
         )
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticatePASS(self):
-        return self.P.authenticateUserPASS("user", "password").addCallback(
+    def testAuthenticatePASS(self) -> Deferred[object]:
+        return self.P.authenticateUserPASS(b"user", b"password").addCallback(
             self._cbAuthenticatePASS
         )
 
@@ -992,17 +1016,15 @@ class VirtualPOP3Tests(TestCase):
         self.assertTrue(pop3.IMailbox.providedBy(result[1]))
         result[2]()
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticateBadUserPASS(self):
+    def testAuthenticateBadUserPASS(self) -> Any:
         return self.assertFailure(
-            self.P.authenticateUserPASS("resu", "password"),
+            self.P.authenticateUserPASS(b"resu", b"password"),
             cred.error.UnauthorizedLogin,
         )
 
-    @skipIf(sys.version_info >= (3,), "not ported to Python 3")
-    def testAuthenticateBadPasswordPASS(self):
+    def testAuthenticateBadPasswordPASS(self) -> Any:
         return self.assertFailure(
-            self.P.authenticateUserPASS("user", "wrong password"),
+            self.P.authenticateUserPASS(b"user", b"wrong password"),
             cred.error.UnauthorizedLogin,
         )
 

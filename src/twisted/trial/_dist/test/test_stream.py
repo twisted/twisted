@@ -1,9 +1,11 @@
 """
 Tests for L{twisted.trial._dist.stream}.
 """
+from __future__ import annotations
 
+from collections.abc import Awaitable
 from random import Random
-from typing import Awaitable, Dict, List, TypeVar, Union
+from typing import TypeVar
 
 from hamcrest import (
     all_of,
@@ -37,7 +39,7 @@ class StreamReceiverTests(SynchronousTestCase):
     """
 
     @given(lists(lists(binary())), randoms())
-    def test_streamReceived(self, streams: List[List[bytes]], random: Random) -> None:
+    def test_streamReceived(self, streams: list[list[bytes]], random: Random) -> None:
         """
         All data passed to L{StreamReceiver.write} is returned by a call to
         L{StreamReceiver.finish} with a matching C{streamId}.
@@ -121,11 +123,11 @@ class AMPStreamReceiver(AMP):
         self.streams = streams
 
     @StreamOpen.responder
-    def streamOpen(self) -> Dict[str, object]:
+    def streamOpen(self) -> dict[str, object]:
         return {"streamId": self.streams.open()}
 
     @StreamWrite.responder
-    def streamWrite(self, streamId: int, data: bytes) -> Dict[str, object]:
+    def streamWrite(self, streamId: int, data: bytes) -> dict[str, object]:
         self.streams.write(streamId, data)
         return {}
 
@@ -135,12 +137,12 @@ def interact(server: IProtocol, client: IProtocol, interaction: Awaitable[T]) ->
     Let C{server} and C{client} exchange bytes while C{interaction} runs.
     """
     finished = False
-    result: Union[Failure, T]
+    result: Failure | T
 
     async def to_coroutine() -> T:
         return await interaction
 
-    def collect_result(r: Union[Failure, T]) -> None:
+    def collect_result(r: Failure | T) -> None:
         nonlocal result, finished
         finished = True
         result = r
@@ -195,7 +197,7 @@ class StreamTests(SynchronousTestCase):
     """
 
     @given(lists(binary()))
-    def test_stream(self, chunks: List[bytes]) -> None:
+    def test_stream(self, chunks: list[bytes]) -> None:
         """
         All of the chunks passed to L{stream} are sent in order over a
         stream using the given AMP connection.

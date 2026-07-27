@@ -400,7 +400,7 @@ class XMLRPCTests(unittest.TestCase):
                 self.assertEqual(
                     factory.headers[b"content-type"], b"text/xml; charset=utf-8"
                 )
-            self.assertEquals(2, len(logObserver))
+            self.assertEqual(2, len(logObserver))
             f1 = logObserver[0]["log_failure"].value
             f2 = logObserver[1]["log_failure"].value
 
@@ -502,7 +502,7 @@ class XMLRPCTests(unittest.TestCase):
 
         def cbFailed(ignored):
             # The fakeDumps exception should have been logged.
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             self.assertIsInstance(logObserver[0]["log_failure"].value, RuntimeError)
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
 

@@ -8,9 +8,9 @@ import io
 import pickle
 import sys
 import textwrap
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, NoReturn
 
-from typing_extensions import NoReturn
+from typing_extensions import TypeAlias
 
 # Twisted Imports
 from twisted.persisted import aot, crefutil, styles
@@ -96,8 +96,8 @@ class VersionTests(TestCase):
         styles.doUpgrade()
         self.assertEqual(v1.unique, "v1")
         self.assertEqual(v2.unique, "v2")
-        self.assertTrue(v1.upgraded)  # type: ignore[attr-defined]
-        self.assertTrue(v2.upgraded)  # type: ignore[attr-defined]
+        self.assertTrue(v1.upgraded)
+        self.assertTrue(v2.upgraded)
 
     def test_upgradeDeserializesObjectsRequiringUpgrade(self) -> None:
         global ToyClassA, ToyClassB
@@ -128,7 +128,7 @@ class VersionTests(TestCase):
 
         x = pickle.loads(pklA)
         styles.doUpgrade()
-        self.assertTrue(x.y.upgraded)  # type: ignore[attr-defined]
+        self.assertTrue(x.y.upgraded)
 
 
 class VersionedSubClass(styles.Versioned):
@@ -339,7 +339,7 @@ class NonDictState:
         self.state = state
 
 
-_CircularTupleType = List[Tuple["_CircularTupleType", int]]
+_CircularTupleType: TypeAlias = list[tuple["_CircularTupleType", int]]
 
 
 class AOTTests(TestCase):

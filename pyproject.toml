@@ -17,19 +17,18 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = { text = "MIT License" }
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.8.0"
+requires-python = ">=3.10"
 authors = [
     { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "zope.interface >= 5",
@@ -52,7 +51,7 @@ dependencies = [
 # We trust semantic versioning and auto-upgrading to a bugfix release
 # should be OK.
 test = [
-    "cython-test-exception-raiser >= 1.0.2, <2",
+    "cython-test-exception-raiser ~= 26.4.1",
     "PyHamcrest >= 2",
     "hypothesis >= 6.56",
     "httpx[http2] >= 0.27",
@@ -61,24 +60,24 @@ test = [
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
 dev-release = [
-    "towncrier ~= 23.6",
-    "pydoctor ~= 24.11.1",
+    "pydoctor ~= 25.4.0",
     "sphinx-rtd-theme ~= 1.3",
     "sphinx >= 6, <7",
+    "twisted[dev]",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[test]",
-    "twisted[dev-release]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
     "coverage ~= 7.5",
+    "towncrier ~= 23.6",
 ]
 
 tls = [
-    "pyopenssl >= 21.0.0",
+    "pyopenssl >= 25.2.0",
     # service_identity 18.1.0 added support for validating IP addresses in
     # certificate subjectAltNames
     "service_identity >= 18.1.0",
@@ -86,9 +85,9 @@ tls = [
 ]
 
 conch = [
-    "cryptography >= 3.3",
+    "cryptography >= 38",
     "appdirs >= 1.4.0",
-    "bcrypt >= 3.1.3",
+    "bcrypt >= 3.2.1",
 ]
 
 serial = [
@@ -101,18 +100,19 @@ http2 = [
     "priority >= 1.1.0, < 2.0",
 ]
 
+websocket = [
+    "wsproto",
+]
+
 all-non-platform = [
-    "twisted[test,tls,conch,serial,http2]",
+    "twisted[test,tls,conch,serial,http2,websocket]",
 ]
 
 macos-platform = [
     "twisted[all-non-platform]",
-    "pyobjc-core < 11; python_version < '3.9'",
-    "pyobjc-core; python_version >= '3.9'",
-    "pyobjc-framework-CFNetwork < 11; python_version < '3.9'",
-    "pyobjc-framework-CFNetwork; python_version >= '3.9'",
-    "pyobjc-framework-Cocoa < 11; python_version < '3.9'",
-    "pyobjc-framework-Cocoa; python_version >= '3.9'",
+    "pyobjc-core >= 12",
+    "pyobjc-framework-CFNetwork >= 12",
+    "pyobjc-framework-Cocoa >= 12",
 ]
 
 windows-platform = [
@@ -132,8 +132,8 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy==1.10.1",
-    "mypy-zope==1.0.6",
+    "mypy==2.1.0",
+    "mypy-zope==1.0.15",
     "types-setuptools",
     "types-pyOpenSSL",
 ]
@@ -278,8 +278,10 @@ include = [
         name = "Misc"
         showcontent = false
 
+# Next time you need to work on black consider migration to ruff
+# https://github.com/twisted/twisted/issues/12646
 [tool.black]
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
@@ -417,7 +419,6 @@ module = [
     'twisted.conch.ssh.agent',
     'twisted.conch.ssh.channel',
     'twisted.conch.ssh.connection',
-    'twisted.conch.ssh.factory',
     'twisted.conch.ssh.filetransfer',
     'twisted.conch.ssh.forwarding',
     'twisted.conch.ssh.keys',
@@ -461,9 +462,10 @@ module = [
     'twisted.internet._glibbase',
     'twisted.internet._newtls',
     'twisted.internet._signals',
-    'twisted.internet._threadedselect',
+    'twisted.internet._sslverify',
     'twisted.internet._win32serialport',
     'twisted.internet._win32stdio',
+    'twisted.internet.abstract',
     'twisted.internet.asyncioreactor',
     'twisted.internet.cfreactor',
     'twisted.internet.endpoints',
@@ -473,12 +475,14 @@ module = [
     'twisted.internet.inotify',
     'twisted.internet.iocpreactor.abstract',
     'twisted.internet.iocpreactor.reactor',
+    'twisted.internet.iocpreactor.tcp',
     'twisted.internet.iocpreactor.udp',
     'twisted.internet.kqreactor',
     'twisted.internet.posixbase',
     'twisted.internet.process',
     'twisted.internet.protocol',
     'twisted.internet.serialport',
+    'twisted.internet.tcp',
     'twisted.internet.test._posixifaces',
     'twisted.internet.test.connectionmixins',
     'twisted.internet.test.reactormixins',
@@ -519,8 +523,6 @@ module = [
     'twisted.internet.utils',
     'twisted.internet.win32eventreactor',
     'twisted.internet.wxreactor',
-    'twisted.internet.wxsupport',
-    'twisted.logger._json',
     'twisted.mail._cred',
     'twisted.mail._pop3client',
     'twisted.mail.alias',
@@ -539,7 +541,6 @@ module = [
     'twisted.mail.test.test_imap',
     'twisted.mail.test.test_mail',
     'twisted.mail.test.test_mailmail',
-    'twisted.mail.test.test_options',
     'twisted.mail.test.test_pop3',
     'twisted.mail.test.test_pop3client',
     'twisted.mail.test.test_smtp',
@@ -551,7 +552,6 @@ module = [
     'twisted.names.hosts',
     'twisted.names.root',
     'twisted.names.secondary',
-    'twisted.names.server',
     'twisted.names.srvconnect',
     'twisted.names.tap',
     'twisted.names.test.test_cache',
@@ -569,7 +569,6 @@ module = [
     'twisted.persisted._tokenize',
     'twisted.persisted.aot',
     'twisted.persisted.sob',
-    'twisted.persisted.styles',
     'twisted.plugin',
     'twisted.plugins.cred_unix',
     'twisted.positioning._sentence',
@@ -602,7 +601,6 @@ module = [
     'twisted.python.rebuild',
     'twisted.python.reflect',
     'twisted.python.test.test_components',
-    'twisted.python.test.test_constants',
     'twisted.python.test.test_deprecate',
     'twisted.python.test.test_fakepwd',
     'twisted.python.test.test_inotify',
@@ -621,7 +619,6 @@ module = [
     'twisted.python.win32',
     'twisted.python.zipstream',
     'twisted.runner.inetd',
-    'twisted.runner.procmon',
     'twisted.runner.test.test_procmon',
     'twisted.scripts._twistd_unix',
     'twisted.scripts.test.test_scripts',
@@ -653,7 +650,6 @@ module = [
     'twisted.test.test_compat',
     'twisted.test.test_context',
     'twisted.test.test_cooperator',
-    'twisted.test.test_defgen',
     'twisted.test.test_factories',
     'twisted.test.test_fdesc',
     'twisted.test.test_ftp',
@@ -697,7 +693,6 @@ module = [
     'twisted.trial._dist.test.test_stream',
     'twisted.trial._dist.test.test_worker',
     'twisted.trial._dist.test.test_workertrial',
-    'twisted.trial._dist.workerreporter',
     'twisted.trial._synctest',
     'twisted.trial.reporter',
     'twisted.trial.runner',
@@ -729,14 +724,12 @@ module = [
     'twisted.web.domhelpers',
     'twisted.web.error',
     'twisted.web.http',
-    'twisted.web.http_headers',
     'twisted.web.microdom',
     'twisted.web.proxy',
     'twisted.web.resource',
     'twisted.web.server',
     'twisted.web.static',
     'twisted.web.sux',
-    'twisted.web.tap',
     'twisted.web.test.injectionhelpers',
     'twisted.web.test.requesthelper',
     'twisted.web.test.test_agent',
@@ -792,7 +785,6 @@ allow_untyped_defs = true
 module = [
     'twisted.conch.avatar',
     'twisted.conch.checkers',
-    'twisted.conch.client.connect',
     'twisted.conch.client.knownhosts',
     'twisted.conch.client.options',
     'twisted.conch.error',
@@ -800,9 +792,9 @@ module = [
     'twisted.conch.interfaces',
     'twisted.conch.manhole_ssh',
     'twisted.conch.openssh_compat.factory',
-    'twisted.conch.ssh._kex',
     'twisted.conch.ssh.address',
     'twisted.conch.ssh.common',
+    'twisted.conch.ssh.factory',
     'twisted.conch.test.test_unix',
     'twisted.conch.ui.ansi',
     'twisted.cred._digest',
@@ -811,7 +803,7 @@ module = [
     'twisted.internet._posixserialport',
     'twisted.internet._posixstdio',
     'twisted.internet._producer_helpers',
-    'twisted.internet.address',
+    'twisted.internet._threadedselect',
     'twisted.internet.default',
     'twisted.internet.epollreactor',
     'twisted.internet.gireactor',
@@ -826,12 +818,16 @@ module = [
     'twisted.internet.test.fakeendpoint',
     'twisted.internet.test.modulehelpers',
     'twisted.internet.test.test_win32serialport',
+    'twisted.internet.wxsupport',
+    'twisted.logger._json',
     'twisted.mail._except',
     'twisted.mail.bounce',
     'twisted.mail.interfaces',
+    'twisted.mail.test.test_options',
     'twisted.names._rfc1982',
     'twisted.names.error',
     'twisted.names.resolve',
+    'twisted.names.server',
     'twisted.names.test.test_rfc1982',
     'twisted.names.test.test_util',
     'twisted.pair.ethernet',
@@ -842,6 +838,7 @@ module = [
     'twisted.persisted._token',
     'twisted.persisted.crefutil',
     'twisted.persisted.dirdbm',
+    'twisted.persisted.styles',
     'twisted.persisted.test.test_styles',
     'twisted.plugins.cred_anonymous',
     'twisted.plugins.cred_file',
@@ -885,6 +882,7 @@ module = [
     'twisted.trial._dist.options',
     'twisted.trial._dist.worker',
     'twisted.trial._dist.workertrial',
+    'twisted.trial._dist.workerreporter',
     'twisted.trial.itrial',
     'twisted.trial.test.mockdoctest',
     'twisted.trial.test.packages',
@@ -893,9 +891,11 @@ module = [
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',
+    'twisted.web.http_headers',
     'twisted.web.iweb',
     'twisted.web.rewrite',
     'twisted.web.script',
+    'twisted.web.tap',
     'twisted.web.test._util',
     'twisted.web.vhost',
     'twisted.words.im.baseaccount',
@@ -909,14 +909,4 @@ module = [
     'twisted.words.tap',
     'twisted.words.test.test_ircsupport',
     'twisted.words.xmpproutertap',
-]
-
-[[tool.mypy.overrides]]
-allow_untyped_defs = true
-check_untyped_defs = false
-module = [
-    'twisted.internet._sslverify',
-    'twisted.internet.abstract',
-    'twisted.internet.iocpreactor.tcp',
-    'twisted.internet.tcp',
 ]

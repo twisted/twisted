@@ -12,8 +12,8 @@ from asyncio import (
     DefaultEventLoopPolicy,
     Future,
     SelectorEventLoop,
-    get_event_loop,
     get_event_loop_policy,
+    get_running_loop,
     set_event_loop,
     set_event_loop_policy,
 )
@@ -74,14 +74,26 @@ class AsyncioSelectorReactorTests(ReactorBuilder, SynchronousTestCase):
         Make a new asyncio loop from a policy for use with a reactor, and add
         appropriate cleanup to restore any global state.
         """
-        existingLoop = get_event_loop()
+        try:
+            existingLoop = get_running_loop()
+        except RuntimeError:  # pragma: no branch
+            # For most runs, we should not have any existing loop,
+            # since the tests should leave a clean reactor.
+            # For some cases, like GTK tests,
+            # there might be a running reactor.
+            # To revert the state found at the start of the test
+            # we keep a reference and restore it later.
+            existingLoop = None
         existingPolicy = get_event_loop_policy()
         result = policy.new_event_loop()
 
         @self.addCleanup
         def cleanUp():
             result.close()
-            set_event_loop(existingLoop)
+            if existingLoop is not None:  # pragma: no cover
+                # Revert the loop found at the start of the test.
+                # See https://github.com/twisted/twisted/pull/11706
+                set_event_loop(existingLoop)
             set_event_loop_policy(existingPolicy)
 
         return result

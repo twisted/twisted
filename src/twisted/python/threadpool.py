@@ -12,9 +12,9 @@ instead of creating a thread pool directly.
 from __future__ import annotations
 
 from threading import Thread, current_thread
-from typing import Any, Callable, List, Optional, TypeVar
+from typing import Any, Callable, Protocol, TypeVar
 
-from typing_extensions import ParamSpec, Protocol, TypedDict
+from typing_extensions import ParamSpec, TypedDict
 
 from twisted._threads import pool as _pool
 from twisted.python import context, log
@@ -72,7 +72,7 @@ class ThreadPool:
     _pool = staticmethod(_pool)
 
     def __init__(
-        self, minthreads: int = 5, maxthreads: int = 20, name: Optional[str] = None
+        self, minthreads: int = 5, maxthreads: int = 20, name: str | None = None
     ):
         """
         Create a new threadpool.
@@ -91,7 +91,7 @@ class ThreadPool:
         self.min = minthreads
         self.max = maxthreads
         self.name = name
-        self.threads: List[Thread] = []
+        self.threads: list[Thread] = []
 
         def trackingThreadFactory(*a: Any, **kw: Any) -> Thread:
             thread = self.threadFactory(  # type: ignore[misc]
@@ -226,7 +226,7 @@ class ThreadPool:
 
     def callInThreadWithCallback(
         self,
-        onResult: Optional[Callable[[bool, _R], object]],
+        onResult: Callable[[bool, _R], object] | None,
         func: Callable[_P, _R],
         *args: _P.args,
         **kw: _P.kwargs,
@@ -300,7 +300,7 @@ class ThreadPool:
             thread.join()
 
     def adjustPoolsize(
-        self, minthreads: Optional[int] = None, maxthreads: Optional[int] = None
+        self, minthreads: int | None = None, maxthreads: int | None = None
     ) -> None:
         """
         Adjust the number of available threads by setting C{min} and C{max} to

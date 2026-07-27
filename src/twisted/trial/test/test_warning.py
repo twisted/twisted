@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import sys
 import warnings
+from collections.abc import Mapping, Sequence
 from io import StringIO
-from typing import Mapping, Sequence, TypeVar
+from typing import TypeVar
 from unittest import TestResult
 
 from twisted.python.filepath import FilePath

@@ -11,7 +11,7 @@ import errno
 import socket
 import struct
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from zope.interface import implementer
 
@@ -53,7 +53,7 @@ class Port(abstract.FileHandle):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber: Optional[int] = None
+    _realPortNumber: int | None = None
 
     def __init__(
         self,

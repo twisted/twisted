@@ -5,7 +5,7 @@ from __future__ import annotations
 import errno
 import socket
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from twisted.internet import error
 from twisted.trial import unittest

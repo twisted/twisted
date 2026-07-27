@@ -13,9 +13,10 @@ from __future__ import annotations
 import hmac
 import sys
 from binascii import Error as DecodeError, a2b_base64, b2a_base64
+from collections.abc import Iterable
 from contextlib import closing
 from hashlib import sha1
-from typing import IO, Callable, Iterable, Literal
+from typing import IO, Callable, Literal
 
 from zope.interface import implementer
 

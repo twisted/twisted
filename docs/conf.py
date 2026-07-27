@@ -207,6 +207,7 @@ pydoctor_url_path = "/en/{rtd_version}/api/"
 intersphinx_mapping = {
     "py3": ("https://docs.python.org/3", None),
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
+    "pyOpenSSL": ("https://pyopenssl.readthedocs.io/en/latest", None),
 }
 # How long to cache remote inventories. Positive is a number of days,
 # negative means infinite. The default is 5 days, which should be fine

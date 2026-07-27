@@ -6,13 +6,11 @@ Test cases for using NMEA sentences.
 from __future__ import annotations
 
 import datetime
+from collections.abc import Iterable
 from operator import attrgetter
-from typing import Callable, Iterable, TypedDict
+from typing import Callable, Protocol, TypedDict
 
 from zope.interface import implementer
-
-from constantly import NamedConstant
-from typing_extensions import Literal, Protocol
 
 from twisted.positioning import base, ipositioning, nmea
 from twisted.positioning.base import Angles
@@ -674,53 +672,6 @@ class DatestampFixerTests(FixerTestMixin, TestCase):
         """
         self._fixerTest({"datestamp": "320101"}, exceptionClass=ValueError)
         self._fixerTest({"datestamp": "300201"}, exceptionClass=ValueError)
-
-
-def _nmeaFloat(degrees: int, minutes: float) -> str:
-    """
-    Builds an NMEA float representation for a given angle in degrees and
-    decimal minutes.
-
-    @param degrees: The integer degrees for this angle.
-    @type degrees: C{int}
-    @param minutes: The decimal minutes value for this angle.
-    @type minutes: C{float}
-    @return: The NMEA float representation for this angle.
-    @rtype: C{str}
-    """
-    return "%i%0.3f" % (degrees, minutes)
-
-
-def _coordinateSign(hemisphere: str) -> Literal[1, -1]:
-    """
-    Return the sign of a coordinate.
-
-    This is C{1} if the coordinate is in the northern or eastern hemispheres,
-    C{-1} otherwise.
-
-    @param hemisphere: NMEA shorthand for the hemisphere. One of "NESW".
-    @type hemisphere: C{str}
-
-    @return: The sign of the coordinate value.
-    @rtype: C{int}
-    """
-    return 1 if hemisphere in "NE" else -1
-
-
-def _coordinateType(hemisphere: str) -> NamedConstant:
-    """
-    Return the type of a coordinate.
-
-    This is L{Angles.LATITUDE} if the coordinate is in the northern or
-    southern hemispheres, L{Angles.LONGITUDE} otherwise.
-
-    @param hemisphere: NMEA shorthand for the hemisphere. One of "NESW".
-    @type hemisphere: C{str}
-
-    @return: The type of the coordinate (L{Angles.LATITUDE} or
-        L{Angles.LONGITUDE})
-    """
-    return Angles.LATITUDE if hemisphere in "NS" else Angles.LONGITUDE
 
 
 class CoordinateFixerTests(FixerTestMixin, TestCase):

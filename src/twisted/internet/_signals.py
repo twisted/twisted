@@ -38,13 +38,14 @@ import errno
 import os
 import signal
 import socket
+from collections.abc import Sequence
 from types import FrameType
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Protocol
 
 from zope.interface import Attribute, Interface, implementer
 
 from attrs import define, frozen
-from typing_extensions import Protocol, TypeAlias
+from typing_extensions import TypeAlias
 
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
@@ -213,7 +214,7 @@ class _ChildSignalHandling:
 
     _addInternalReader: Callable[[IReadDescriptor], object]
     _removeInternalReader: Callable[[IReadDescriptor], object]
-    _childWaker: Optional[_SIGCHLDWaker] = None
+    _childWaker: _SIGCHLDWaker | None = None
 
     def install(self) -> None:
         """

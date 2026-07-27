@@ -6,7 +6,7 @@ Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
 from __future__ import annotations
 
-from typing_extensions import Protocol
+from typing import Protocol
 
 from twisted.internet.defer import gatherResults
 from twisted.names.dns import (

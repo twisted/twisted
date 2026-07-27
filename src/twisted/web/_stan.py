@@ -21,9 +21,10 @@ cumbersome.
     output.
 """
 
+from __future__ import annotations
 
 from inspect import iscoroutine, isgenerator
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 from warnings import warn
 
 import attr
@@ -45,12 +46,12 @@ class slot:
     The key which must be used in L{Tag.fillSlots} to fill it.
     """
 
-    children: List["Tag"] = attr.ib(init=False, factory=list)
+    children: list[Tag] = attr.ib(init=False, factory=list)
     """
     The L{Tag} objects included in this L{slot}'s template.
     """
 
-    default: Optional["Flattenable"] = None
+    default: Flattenable | None = None
     """
     The default contents of this slot, if it is left unfilled.
 
@@ -58,14 +59,14 @@ class slot:
     L{None} actually being used.
     """
 
-    filename: Optional[str] = None
+    filename: str | None = None
     """
     The name of the XML file from which this tag was parsed.
 
     If it was not parsed from an XML file, L{None}.
     """
 
-    lineNumber: Optional[int] = None
+    lineNumber: int | None = None
     """
     The line number on which this tag was encountered in the XML file
     from which it was parsed.
@@ -73,7 +74,7 @@ class slot:
     If it was not parsed from an XML file, L{None}.
     """
 
-    columnNumber: Optional[int] = None
+    columnNumber: int | None = None
     """
     The column number at which this tag was encountered in the XML file
     from which it was parsed.
@@ -92,20 +93,20 @@ class Tag:
     using pure python syntax.
     """
 
-    tagName: Union[bytes, str]
+    tagName: bytes | str
     """
     The name of the represented element.
 
     For a tag like C{<div></div>}, this would be C{"div"}.
     """
 
-    attributes: Dict[Union[bytes, str], "Flattenable"] = attr.ib(factory=dict)
+    attributes: dict[bytes | str, Flattenable] = attr.ib(factory=dict)
     """The attributes of the element."""
 
-    children: List["Flattenable"] = attr.ib(factory=list)
+    children: list[Flattenable] = attr.ib(factory=list)
     """The contents of this C{Tag}."""
 
-    render: Optional[str] = None
+    render: str | None = None
     """
     The name of the render method to use for this L{Tag}.
 
@@ -115,14 +116,14 @@ class Tag:
     to determine which method to call.
     """
 
-    filename: Optional[str] = None
+    filename: str | None = None
     """
     The name of the XML file from which this tag was parsed.
 
     If it was not parsed from an XML file, L{None}.
     """
 
-    lineNumber: Optional[int] = None
+    lineNumber: int | None = None
     """
     The line number on which this tag was encountered in the XML file
     from which it was parsed.
@@ -130,7 +131,7 @@ class Tag:
     If it was not parsed from an XML file, L{None}.
     """
 
-    columnNumber: Optional[int] = None
+    columnNumber: int | None = None
     """
     The column number at which this tag was encountered in the XML file
     from which it was parsed.
@@ -138,7 +139,7 @@ class Tag:
     If it was not parsed from an XML file, L{None}.
     """
 
-    slotData: Optional[Dict[str, "Flattenable"]] = attr.ib(init=False, default=None)
+    slotData: dict[str, Flattenable] | None = attr.ib(init=False, default=None)
     """
     The data which can fill slots.
 
@@ -147,7 +148,7 @@ class Tag:
     the child of a L{Tag}: strings, lists, L{Tag}s, generators, etc.
     """
 
-    def fillSlots(self, **slots: "Flattenable") -> "Tag":
+    def fillSlots(self, **slots: Flattenable) -> Tag:
         """
         Remember the slots provided at this position in the DOM.
 
@@ -162,7 +163,7 @@ class Tag:
         self.slotData.update(slots)
         return self
 
-    def __call__(self, *children: "Flattenable", **kw: "Flattenable") -> "Tag":
+    def __call__(self, *children: Flattenable, **kw: Flattenable) -> Tag:
         """
         Add children and change attributes on this tag.
 
@@ -203,7 +204,7 @@ class Tag:
                 self.attributes[k] = v
         return self
 
-    def _clone(self, obj: "Flattenable", deep: bool) -> "Flattenable":
+    def _clone(self, obj: Flattenable, deep: bool) -> Flattenable:
         """
         Clone a C{Flattenable} object; used by L{Tag.clone}.
 
@@ -242,7 +243,7 @@ class Tag:
         else:
             return obj
 
-    def clone(self, deep: bool = True) -> "Tag":
+    def clone(self, deep: bool = True) -> Tag:
         """
         Return a clone of this tag. If deep is True, clone all of this tag's
         children. Otherwise, just shallow copy the children list without copying
@@ -275,7 +276,7 @@ class Tag:
 
         return newtag
 
-    def clear(self) -> "Tag":
+    def clear(self) -> Tag:
         """
         Clear any existing children from this tag.
         """

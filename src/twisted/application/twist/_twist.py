@@ -7,7 +7,7 @@ Run a Twisted application.
 """
 
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from twisted.application.app import _exitWithSignal
 from twisted.internet.interfaces import IReactorCore, _ISupportsExitSignalCapturing

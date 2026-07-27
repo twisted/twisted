@@ -5,7 +5,9 @@
 Tests for L{twisted.conch.tap}.
 """
 
-from typing import Any, Tuple, Union
+from __future__ import annotations
+
+from typing import Any
 
 from twisted.application.internet import StreamServerEndpointService
 from twisted.cred import error
@@ -131,7 +133,7 @@ class MakeServiceTests(TestCase):
         correct = UsernamePassword(*self.usernamePassword)
         d = checker.requestAvatarId(correct)
 
-        def checkSuccess(username: Union[bytes, Tuple[()]]) -> None:
+        def checkSuccess(username: bytes | tuple[()]) -> None:
             self.assertEqual(username, correct.username)
 
         return d.addCallback(checkSuccess)

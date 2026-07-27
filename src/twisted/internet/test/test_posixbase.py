@@ -29,15 +29,20 @@ class WarningCheckerTestCase(TestCase):
     A test case that will make sure that no warnings are left unchecked at the end of a test run.
     """
 
+    @staticmethod
+    def _skipWarningCheck():
+        # FIXME:
+        # https://github.com/twisted/twisted/issues/10332
+        # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
+        # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
+        # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
+        # the warnings can be generated while another test is running.
+        return os.environ.get("CI", "").lower() == "true" and platform.isWindows()
+
     def setUp(self):
         super().setUp()
-        # FIXME:
-        # https://twistedmatrix.com/trac/ticket/10332
-        # For now, try to start each test without previous warnings
-        # on Windows CI environment.
-        # We still want to see failures on local Windows development environment to make it easier to fix them,
-        # rather than ignoring the errors.
-        if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
+
+        if self._skipWarningCheck():
             self.flushWarnings()
 
     def tearDown(self):
@@ -45,17 +50,12 @@ class WarningCheckerTestCase(TestCase):
             super().tearDown()
         finally:
             warnings = self.flushWarnings()
-            if os.environ.get("CI", "").lower() == "true" and platform.isWindows():
-                # FIXME:
-                # https://twistedmatrix.com/trac/ticket/10332
-                # For now don't raise errors on Windows as the existing tests are dirty and we don't have the dev resources to fix this.
-                # If you care about Twisted on Windows, enable this check and hunt for the test that is generating the warnings.
-                # Note that even with this check disabled, you can still see flaky tests on Windows, as due to stray delayed calls
-                # the warnings can be generated while another test is running.
-                return
-            self.assertEqual(
-                len(warnings), 0, f"Warnings found at the end of the test:\n{warnings}"
-            )
+            if not self._skipWarningCheck():
+                self.assertEqual(
+                    len(warnings),
+                    0,
+                    f"Warnings found at the end of the test:\n{warnings}",
+                )
 
 
 class TrivialReactor(PosixReactorBase):

@@ -47,7 +47,7 @@ class StandardIO:
         reactor: IReactorFDSet | None = None,
     ):
         if reactor is None:
-            from twisted.internet import reactor  # type:ignore[assignment]
+            from twisted.internet import reactor
         self.protocol: IProtocol = proto
 
         self._writer = process.ProcessWriter(reactor, self, "write", stdout)

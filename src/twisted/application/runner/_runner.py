@@ -6,10 +6,11 @@
 Twisted application runner.
 """
 
+from collections.abc import Mapping
 from os import kill
 from signal import SIGTERM
 from sys import stderr
-from typing import Any, Callable, Mapping, TextIO
+from typing import Any, Callable, TextIO
 
 from attr import Factory, attrib, attrs
 from constantly import NamedConstant

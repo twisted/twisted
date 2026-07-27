@@ -5,7 +5,6 @@
 Tests for L{twisted.application.app} and L{twisted.scripts.twistd}.
 """
 
-
 import errno
 import inspect
 import os
@@ -712,7 +711,7 @@ class ApplicationRunnerTests(TestCase):
             {"profile": False, "profiler": "profile", "debug": False}
         )
         runner.startReactor(reactor, None, None)
-        self.assertEquals(2, runner._exitSignal)
+        self.assertEqual(2, runner._exitSignal)
 
     def test_applicationRunnerIgnoresNoSignal(self):
         """
@@ -743,7 +742,7 @@ class ApplicationRunnerTests(TestCase):
             {"profile": False, "profiler": "profile", "debug": False}
         )
         runner.startReactor(reactor, None, None)
-        self.assertEquals(None, runner._exitSignal)
+        self.assertEqual(None, runner._exitSignal)
 
 
 @skipIf(not _twistd_unix, "twistd unix not available")
@@ -2136,7 +2135,6 @@ def stubApplicationRunnerFactoryCreator(signum):
 
 
 class ExitWithSignalTests(TestCase):
-
     """
     Tests for L{twisted.application.app._exitWithSignal}.
     """
@@ -2179,10 +2177,10 @@ class ExitWithSignalTests(TestCase):
         self.patch(signal, "signal", fake_signal)
         app._exitWithSignal(signal.SIGINT)
 
-        self.assertEquals(fakeSignalArgs[0], signal.SIGINT)
-        self.assertEquals(fakeSignalArgs[1], signal.SIG_DFL)
-        self.assertEquals(self.fakeKillArgs[0], os.getpid())
-        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
+        self.assertEqual(fakeSignalArgs[0], signal.SIGINT)
+        self.assertEqual(fakeSignalArgs[1], signal.SIG_DFL)
+        self.assertEqual(self.fakeKillArgs[0], os.getpid())
+        self.assertEqual(self.fakeKillArgs[1], signal.SIGINT)
 
     def test_normalExit(self):
         """
@@ -2206,5 +2204,23 @@ class ExitWithSignalTests(TestCase):
             stubApplicationRunnerFactoryCreator(signal.SIGINT),
         )
         twistd.runApp(self.config)
-        self.assertEquals(self.fakeKillArgs[0], os.getpid())
-        self.assertEquals(self.fakeKillArgs[1], signal.SIGINT)
+        self.assertEqual(self.fakeKillArgs[0], os.getpid())
+        self.assertEqual(self.fakeKillArgs[1], signal.SIGINT)
+
+
+class RunTests(TestCase):
+    """
+    Tests for L{twisted.application.app.run}.
+    """
+
+    def test_usageErrorExitsNonZero(self):
+        """
+        L{app.run} exits with a non-zero status code when L{ServerOptions}
+        raises L{usage.error} (e.g. an unknown subcommand is given).
+        """
+        self.patch(sys, "argv", ["twistd", "no-such-command"])
+        self.patch(sys, "stdout", StringIO())
+        exc = self.assertRaises(
+            SystemExit, app.run, lambda config: None, twistd.ServerOptions
+        )
+        self.assertEqual(exc.code, 1)

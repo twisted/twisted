@@ -8,8 +8,6 @@ insults/SSH integration support.
 @author: Jp Calderone
 """
 
-from typing import Dict
-
 from zope.interface import implementer
 
 from twisted.conch import avatar, error as econch, interfaces as iconch
@@ -141,8 +139,8 @@ class TerminalRealm:
 
 
 class ConchFactory(factory.SSHFactory):
-    publicKeys: Dict[bytes, bytes] = {}
-    privateKeys: Dict[bytes, bytes] = {}
+    publicKeys: dict[bytes, bytes] = {}
+    privateKeys: dict[bytes, bytes] = {}
 
     def __init__(self, portal):
         self.portal = portal

@@ -7,12 +7,11 @@ Top level thread pool interface, used to implement
 L{twisted.python.threadpool}.
 """
 
+from __future__ import annotations
 
 from queue import Queue
 from threading import Lock, Thread, local as LocalStorage
-from typing import Callable, Optional
-
-from typing_extensions import Protocol
+from typing import Callable, Protocol
 
 from twisted.python.log import err
 from ._ithreads import IWorker
@@ -59,7 +58,7 @@ def pool(
     def startThread(target: Callable[..., object]) -> None:
         return threadFactory(target=target).start()
 
-    def limitedWorkerCreator() -> Optional[IWorker]:
+    def limitedWorkerCreator() -> IWorker | None:
         stats = team.statistics()
         if stats.busyWorkerCount + stats.idleWorkerCount >= currentLimit():
             return None

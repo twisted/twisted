@@ -1,0 +1,1 @@
+twisted.trial.runner.samefile is deprecated and replaced by os.path.samefile.

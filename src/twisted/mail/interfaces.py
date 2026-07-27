@@ -6,9 +6,13 @@ Interfaces for L{twisted.mail}.
 
 @since: 16.5
 """
+from __future__ import annotations
 
+from typing import overload
 
 from zope.interface import Interface
+
+from twisted.cred.portal import IRealm
 
 
 class IChallengeResponse(Interface):
@@ -138,13 +142,20 @@ class IMailboxPOP3(Interface):
         remain on the server before being deleted.
     """
 
-    def listMessages(index=None):
+    @overload
+    def listMessages() -> list[int]:
+        ...
+
+    @overload
+    def listMessages(i: int) -> int:
+        ...
+
+    def listMessages(i: int | None = None) -> int | list[int]:
         """
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
 
-        @type index: L{int} or L{None}
-        @param index: The 0-based index of the message.
+        @param i: The 0-based index of the message.
 
         @rtype: L{int}, sequence of L{int}, or L{Deferred <defer.Deferred>}
         @return: The number of octets in the specified message, or, if an
@@ -215,7 +226,7 @@ class IMailboxPOP3(Interface):
         """
 
 
-class IDomain(Interface):
+class IDomain(IRealm):
     """
     An interface for email domains.
     """

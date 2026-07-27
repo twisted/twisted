@@ -10,12 +10,14 @@ Plugin system for Twisted.
 @author: Glyph Lefkowitz
 """
 
+from __future__ import annotations
 
 import os
 import pickle
 import sys
 import types
-from typing import Iterable, Optional, Type, TypeVar
+from collections.abc import Iterable
+from typing import TypeVar
 
 from zope.interface import Interface, providedBy
 
@@ -196,7 +198,7 @@ _TInterface = TypeVar("_TInterface", bound=Interface)
 
 
 def getPlugins(
-    interface: Type[_TInterface], package: Optional[types.ModuleType] = None
+    interface: type[_TInterface], package: types.ModuleType | None = None
 ) -> Iterable[_TInterface]:
     """
     Retrieve all plugins implementing the given interface beneath the given module.

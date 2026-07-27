@@ -5,21 +5,10 @@
 """
 An API for storing HTTP header names and values.
 """
+from __future__ import annotations
 
-from typing import (
-    AnyStr,
-    ClassVar,
-    Dict,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Iterator, Mapping, Sequence
+from typing import AnyStr, ClassVar, TypeVar, overload
 
 from twisted.python.compat import cmp, comparable
 from twisted.web._abnf import _istoken
@@ -69,9 +58,9 @@ class Headers:
 
     def __init__(
         self,
-        rawHeaders: Optional[Mapping[AnyStr, Sequence[AnyStr]]] = None,
+        rawHeaders: Mapping[AnyStr, Sequence[AnyStr]] | None = None,
     ) -> None:
-        self._rawHeaders: Dict[bytes, List[bytes]] = {}
+        self._rawHeaders: dict[bytes, list[bytes]] = {}
         if rawHeaders is not None:
             for name, values in rawHeaders.items():
                 self.setRawHeaders(name, values)
@@ -96,13 +85,15 @@ class Headers:
             )
         return NotImplemented
 
-    def copy(self):
+    def copy(self) -> Headers:
         """
         Return a copy of itself with the same headers set.
 
         @return: A new L{Headers}
         """
-        return self.__class__(self._rawHeaders)
+        # pretty sure this type:ignore is a mypy bug:
+        # https://github.com/python/mypy/issues/18279
+        return self.__class__(self._rawHeaders)  # type:ignore[arg-type]
 
     def hasHeader(self, name: AnyStr) -> bool:
         """
@@ -124,9 +115,7 @@ class Headers:
         """
         self._rawHeaders.pop(_nameEncoder.encode(name), None)
 
-    def setRawHeaders(
-        self, name: Union[str, bytes], values: Sequence[Union[str, bytes]]
-    ) -> None:
+    def setRawHeaders(self, name: str | bytes, values: Sequence[str | bytes]) -> None:
         """
         Sets the raw representation of the given header.
 
@@ -141,7 +130,7 @@ class Headers:
         @return: L{None}
         """
         _name = _nameEncoder.encode(name)
-        encodedValues: List[bytes] = []
+        encodedValues: list[bytes] = []
         for v in values:
             if isinstance(v, str):
                 _v = v.encode("utf8")
@@ -151,7 +140,7 @@ class Headers:
 
         self._rawHeaders[_name] = encodedValues
 
-    def addRawHeader(self, name: Union[str, bytes], value: Union[str, bytes]) -> None:
+    def addRawHeader(self, name: str | bytes, value: str | bytes) -> None:
         """
         Add a new raw value for the given header.
 
@@ -166,16 +155,16 @@ class Headers:
         )
 
     @overload
-    def getRawHeaders(self, name: AnyStr) -> Optional[Sequence[AnyStr]]:
+    def getRawHeaders(self, name: AnyStr) -> Sequence[AnyStr] | None:
         ...
 
     @overload
-    def getRawHeaders(self, name: AnyStr, default: _T) -> Union[Sequence[AnyStr], _T]:
+    def getRawHeaders(self, name: AnyStr, default: _T) -> Sequence[AnyStr] | _T:
         ...
 
     def getRawHeaders(
-        self, name: AnyStr, default: Optional[_T] = None
-    ) -> Union[Sequence[AnyStr], Optional[_T]]:
+        self, name: AnyStr, default: _T | None = None
+    ) -> Sequence[AnyStr] | _T | None:
         """
         Returns a sequence of headers matching the given name as the raw string
         given.
@@ -197,7 +186,7 @@ class Headers:
             return [v.decode("utf8") for v in values]
         return values
 
-    def getAllRawHeaders(self) -> Iterator[Tuple[bytes, Sequence[bytes]]]:
+    def getAllRawHeaders(self) -> Iterator[tuple[bytes, Sequence[bytes]]]:
         """
         Return an iterator of key, value pairs of all headers contained in this
         object, as L{bytes}.  The keys are capitalized in canonical
@@ -220,9 +209,9 @@ class _NameEncoder:
     """
 
     __slots__ = ("_canonicalHeaderCache",)
-    _canonicalHeaderCache: Dict[Union[bytes, str], bytes]
+    _canonicalHeaderCache: dict[bytes | str, bytes]
 
-    _caseMappings: ClassVar[Dict[bytes, bytes]] = {
+    _caseMappings: ClassVar[dict[bytes, bytes]] = {
         b"Content-Md5": b"Content-MD5",
         b"Dnt": b"DNT",
         b"Etag": b"ETag",
@@ -237,7 +226,7 @@ class _NameEncoder:
     def __init__(self):
         self._canonicalHeaderCache = {}
 
-    def encode(self, name: Union[str, bytes]) -> bytes:
+    def encode(self, name: str | bytes) -> bytes:
         """
         Encode the name of a header (eg 'Content-Type') to an ISO-8859-1
         bytestring if required. It will be canonicalized to Http-Header-Case.

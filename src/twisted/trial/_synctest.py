@@ -7,7 +7,7 @@ Things likely to be used by writers of unit tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 import inspect
 import os
@@ -16,21 +16,9 @@ import tempfile
 import types
 import unittest as pyunit
 import warnings
+from collections.abc import Coroutine, Generator, Iterable
 from dis import findlinestarts as _findlinestarts
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generator,
-    Iterable,
-    List,
-    NoReturn,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, NoReturn, TypeVar
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
@@ -78,7 +66,7 @@ class Todo:
     """
 
     reason: str
-    errors: Optional[Iterable[Type[BaseException]]] = None
+    errors: Iterable[type[BaseException]] | None = None
 
     def __repr__(self) -> str:
         return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
@@ -98,9 +86,7 @@ class Todo:
 
 
 def makeTodo(
-    value: Union[
-        str, Tuple[Union[Type[BaseException], Iterable[Type[BaseException]]], str]
-    ]
+    value: (str | tuple[type[BaseException] | Iterable[type[BaseException]], str])
 ) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
@@ -119,7 +105,7 @@ def makeTodo(
     if isinstance(value, tuple):
         errors, reason = value
         if isinstance(errors, type):
-            iterableErrors: Iterable[Type[BaseException]] = [errors]
+            iterableErrors: Iterable[type[BaseException]] = [errors]
         else:
             iterableErrors = errors
         return Todo(reason=reason, errors=iterableErrors)
@@ -371,7 +357,7 @@ class _Assertions(pyunit.TestCase):
     callbacks.
     """
 
-    def fail(self, msg: Optional[object] = None) -> NoReturn:
+    def fail(self, msg: object | None = None) -> NoReturn:
         """
         Absolutely fail the test.  Do not pass go, do not collect $200.
 
@@ -429,10 +415,13 @@ class _Assertions(pyunit.TestCase):
 
         return context._handle(lambda: f(*args, **kwargs))
 
-    # unittest.TestCase.assertRaises() is defined with 4 arguments
-    # but we define it with 5 arguments.  So we need to tell mypy
-    # to ignore the following assignment to failUnlessRaises
-    failUnlessRaises = assertRaises  # type: ignore[assignment]
+    # The type-ignore below is present to address the evolving incompatible
+    # signature between assertRaises and failUnlessRaises in the stdlib.
+    # Depending on which version of Python you are developing with you might
+    # get a spurious error here *or not* which is why there's also the
+    # unused-ignore ignore here; in upstream unittest this method is now
+    # entirely removed, since Python 3.12, so there's nothing to conflict with.
+    failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
         """
@@ -444,9 +433,10 @@ class _Assertions(pyunit.TestCase):
         super().assertEqual(first, second, msg)
         return first
 
+    # We keep all these aliases for backward compatibility.
+    assertEquals = assertEqual
     failUnlessEqual = assertEqual
     failUnlessEquals = assertEqual
-    assertEquals = assertEqual
 
     def assertIs(self, first, second, msg=None):
         """
@@ -491,6 +481,7 @@ class _Assertions(pyunit.TestCase):
             raise self.failureException(msg or f"{first!r} == {second!r}")
         return first
 
+    # We keep all these aliases for backward compatibility.
     assertNotEquals = assertNotEqual
     failIfEquals = assertNotEqual
     failIfEqual = assertNotEqual
@@ -545,8 +536,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertNotAlmostEquals = assertNotAlmostEqual  # type:ignore[assignment]
-    failIfAlmostEqual = assertNotAlmostEqual  # type:ignore[assignment]
+    assertNotAlmostEquals = assertNotAlmostEqual
+    failIfAlmostEqual = assertNotAlmostEqual
     failIfAlmostEquals = assertNotAlmostEqual
 
     def assertAlmostEqual(self, first, second, places=7, msg=None, delta=None):
@@ -567,8 +558,8 @@ class _Assertions(pyunit.TestCase):
             )
         return first
 
-    assertAlmostEquals = assertAlmostEqual  # type:ignore[assignment]
-    failUnlessAlmostEqual = assertAlmostEqual  # type:ignore[assignment]
+    assertAlmostEquals = assertAlmostEqual
+    failUnlessAlmostEqual = assertAlmostEqual
 
     def assertApproximates(self, first, second, tolerance, msg=None):
         """
@@ -686,11 +677,11 @@ class _Assertions(pyunit.TestCase):
 
     def successResultOf(
         self,
-        deferred: Union[
-            Coroutine[Deferred[T], Any, T],
-            Generator[Deferred[T], Any, T],
-            Deferred[T],
-        ],
+        deferred: (
+            Coroutine[Deferred[T], Any, T]
+            | Generator[Deferred[T], Any, T]
+            | Deferred[T]
+        ),
     ) -> T:
         """
         Return the current success result of C{deferred} or raise
@@ -716,7 +707,7 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        results: List[Union[T, failure.Failure]] = []
+        results: list[T | failure.Failure] = []
         deferred.addBoth(results.append)
 
         if not results:
@@ -992,7 +983,7 @@ class SynchronousTestCase(_Assertions):
             return self._testMethodName
         return desc
 
-    def getSkip(self) -> Tuple[bool, Optional[str]]:
+    def getSkip(self) -> tuple[bool, str | None]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
@@ -1260,7 +1251,7 @@ class SynchronousTestCase(_Assertions):
         }
         if message is not None:
             expectedWarning = expectedWarning + ": " + message
-        self.assert_(
+        self.assertTrue(
             observedWarning.startswith(expectedWarning),
             f"Expected {observedWarning!r} to start with {expectedWarning!r}",
         )

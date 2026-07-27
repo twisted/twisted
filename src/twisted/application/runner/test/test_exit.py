@@ -5,8 +5,9 @@
 Tests for L{twisted.application.runner._exit}.
 """
 
+from __future__ import annotations
+
 from io import StringIO
-from typing import Optional, Union
 
 import twisted.trial.unittest
 from ...runner import _exit
@@ -75,7 +76,7 @@ class DummyExit:
     def __init__(self) -> None:
         self.exited = False
 
-    def __call__(self, arg: Optional[Union[int, str]] = None) -> None:
+    def __call__(self, arg: int | str | None = None) -> None:
         assert not self.exited
 
         self.arg = arg

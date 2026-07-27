@@ -46,5 +46,5 @@ if __name__ == "__main__":
 
     protocolLoseConnChild = LoseConnChild()
     stdio.StandardIO(protocolLoseConnChild)
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()
     sys.exit(protocolLoseConnChild.exitCode)

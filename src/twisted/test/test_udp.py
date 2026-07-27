@@ -9,6 +9,7 @@ Tests for implementations of L{IReactorUDP} and L{IReactorMulticast}.
 from __future__ import annotations
 
 import os
+from platform import mac_ver
 from socket import (
     AF_INET,
     AF_INET6,
@@ -37,6 +38,32 @@ from twisted.internet.task import deferLater
 from twisted.python import runtime
 from twisted.test.testutils import skipWithoutIPv6
 from twisted.trial.unittest import SkipTest, TestCase
+
+cantClickLocalNetworkPermission = (
+    runtime.platform.isMacOSX()
+    and int(mac_ver()[0].split(".")[0]) >= 15
+    and (
+        # Can't run in CI
+        os.environ.get("CI", "").lower() == "true"
+        # *Probably* can't run on any app except Terminal due to bugs in the
+        # Local Network Permission prompt in macOS. (In particular, cannot run
+        # as a subprocess of Emacs without either hanging or getting an
+        # EHOSTUNREACH.)
+        or os.environ.get("__CFBundleIdentifier", "") != "com.apple.Terminal"
+    )
+)
+
+requiresLocalNetworkPermission = skipIf(
+    cantClickLocalNetworkPermission,
+    """
+    These tests require the 'local network' permission that can only be granted
+    interactively in a GUI, and thus we can no longer run them on macOS in
+    Sequoia and later on Github Actions until a workaround has been
+    implemented.
+
+    https://github.com/actions/runner-images/issues/10924#issuecomment-3549809706
+    """,
+)
 
 
 class Mixin:
@@ -669,6 +696,7 @@ class MulticastTests(TestCase):
         checkttl(self.client)
         checkttl(self.server)
 
+    @requiresLocalNetworkPermission
     async def test_loopback(self) -> None:
         """
         Test that after loopback mode has been set, multicast packets are
@@ -750,6 +778,7 @@ class MulticastTests(TestCase):
             self.client.transport.joinGroup(self.invalidGroup), error.MulticastJoinError
         )
 
+    @requiresLocalNetworkPermission
     def test_multicast(self):
         """
         Test that a multicast group can be joined and messages sent to and
@@ -782,6 +811,7 @@ class MulticastTests(TestCase):
 
         return joined
 
+    @requiresLocalNetworkPermission
     @skipIf(
         runtime.platform.isWindows(),
         "on non-linux platforms it appears multiple "
@@ -859,7 +889,7 @@ class MulticastTestsIPv6(MulticastTests):
     clientAddress: str = "::1"
     multicastGroup: str = "ff03::1"
     alternateInterface: str | int = next(
-        (idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo"))
+        idxnm[0] for idxnm in if_nameindex() if idxnm[1].startswith("lo")
     )
     interfaceSynonym: str | int = alternateInterface
     invalidGroup: str = "::1"

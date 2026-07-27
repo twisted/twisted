@@ -8,9 +8,10 @@ Tests for L{twisted.web.client.Agent} and related new client APIs.
 from __future__ import annotations
 
 import zlib
+from collections.abc import Sequence
 from http.cookiejar import CookieJar
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 from unittest import SkipTest, skipIf
 
 from zope.interface.declarations import implementer
@@ -42,7 +43,6 @@ from twisted.python.components import proxyForInterface
 from twisted.python.deprecate import getDeprecationWarningString
 from twisted.python.failure import Failure
 from twisted.test.iosim import FakeTransport, IOPump
-from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import client, error, http_headers
 from twisted.web._newclient import (
@@ -96,10 +96,11 @@ except ImportError:
 else:
     ssl = _ssl
     sslPresent = True
-    from twisted.internet._sslverify import ClientTLSOptions, IOpenSSLTrustRoot
+    from twisted.internet._sslverify import IOpenSSLTrustRoot
     from twisted.internet.ssl import optionsForClientTLS
     from twisted.protocols import tls
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.test.test_sslverify import certificatesForAuthorityAndServer
 
     @implementer(IOpenSSLTrustRoot)
     class CustomOpenSSLTrustRoot:
@@ -122,7 +123,7 @@ class StubHTTPProtocol(Protocol):
     """
 
     def __init__(self) -> None:
-        self.requests: List[Tuple[Request, Deferred[IResponse]]] = []
+        self.requests: list[tuple[Request, Deferred[IResponse]]] = []
         self.state = "QUIESCENT"
 
     def request(self, request):
@@ -688,7 +689,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
 
         protocol.state = "NOTQUIESCENT"
         self.pool._putConnection(("http", b"example.com", 80), protocol)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
@@ -918,9 +919,7 @@ class IntegrationTestingMixin:
         )
         pump.flush()
         response = self.successResultOf(deferred)
-        self.assertEquals(
-            response.headers.getRawHeaders(b"x-an-header")[0], b"an-value"
-        )
+        self.assertEqual(response.headers.getRawHeaders(b"x-an-header")[0], b"an-value")
 
 
 @implementer(IAgentEndpointFactory)
@@ -1394,6 +1393,15 @@ class AgentURIInjectionTests(
         agent.request(method, uri, Headers(), None)
 
 
+def dummyTLSProtocol() -> TLSMemoryBIOProtocol:
+    factory = TLSMemoryBIOFactory(
+        optionsForClientTLS("example.com"), True, Factory.forProtocol(Protocol)
+    )
+    result = factory.buildProtocol(None)
+    assert result is not None
+    return result
+
+
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMixin):
     """
@@ -1444,15 +1452,6 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         endpoint = self.makeEndpoint(port=expectedPort)
         self.assertEqual(endpoint._wrappedEndpoint._port, expectedPort)
 
-    def test_contextFactoryType(self):
-        """
-        L{Agent} wraps its connection creator creator and uses modern TLS APIs.
-        """
-        endpoint = self.makeEndpoint()
-        contextFactory = endpoint._wrapperFactory(None)._connectionCreator
-        self.assertIsInstance(contextFactory, ClientTLSOptions)
-        self.assertEqual(contextFactory._hostname, "example.com")
-
     def test_connectHTTPSCustomConnectionCreator(self):
         """
         If a custom L{WebClientConnectionCreator}-like object is passed to
@@ -1480,6 +1479,21 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
                 The connection started.  Record that fact.
                 """
                 self.connectState = True
+
+            def get_context(self):
+                """
+                Get the context object.
+                """
+
+            def set_app_data(self, app_data):
+                """
+                Set app data.
+                """
+
+            def get_app_data(self):
+                """
+                Get the app data.
+                """
 
         contextArgs = []
 
@@ -1563,7 +1577,7 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
             "Since Twisted 14.0, you must pass a provider of IPolicyForHTTPS.",
         )
 
-    def test_alternateTrustRoot(self):
+    def test_alternateTrustRoot(self) -> None:
         """
         L{BrowserLikePolicyForHTTPS.creatorForNetloc} returns an
         L{IOpenSSLClientConnectionCreator} provider which will add certificates
@@ -1572,8 +1586,8 @@ class AgentHTTPSTests(TestCase, FakeReactorAndConnectMixin, IntegrationTestingMi
         trustRoot = CustomOpenSSLTrustRoot()
         policy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         creator = policy.creatorForNetloc(b"thingy", 4321)
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertTrue(trustRoot.called)
-        connection = creator.clientConnectionForTLS(None)
         self.assertIs(trustRoot.context, connection.get_context())
 
     def integrationTest(self, hostName, expectedAddress, addressType):
@@ -2680,7 +2694,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
         crossScheme: bool = False,
         crossDomain: bool = False,
         crossPort: bool = False,
-        requestHeaders: Optional[Headers] = None,
+        requestHeaders: Headers | None = None,
     ) -> Request:
         """
         When getting a redirect, L{client.RedirectAgent} follows the URL
@@ -2788,11 +2802,11 @@ class _RedirectAgentTestsMixin(testMixinClass):
         allHeaders = Headers({**sensitiveHeaderValues, **otherHeaderValues})
         redirected = self._testRedirectDefault(301, requestHeaders=allHeaders)
 
-        def normHeaders(headers: Headers) -> Dict[bytes, Sequence[bytes]]:
+        def normHeaders(headers: Headers) -> dict[bytes, Sequence[bytes]]:
             return {k.lower(): v for (k, v) in headers.getAllRawHeaders()}
 
         sameOriginHeaders = normHeaders(redirected.headers)
-        self.assertEquals(
+        self.assertEqual(
             sameOriginHeaders,
             {
                 b"host": [b"example.com"],
@@ -2806,7 +2820,7 @@ class _RedirectAgentTestsMixin(testMixinClass):
             requestHeaders=Headers({**sensitiveHeaderValues, **otherHeaderValues}),
         )
         otherOriginHeaders = normHeaders(redirectedElsewhere.headers)
-        self.assertEquals(
+        self.assertEqual(
             otherOriginHeaders,
             {
                 b"host": [expectedHostHeader],
@@ -3292,7 +3306,7 @@ class ReadBodyTests(TestCase):
 
 @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
 class HostnameCachingHTTPSPolicyTests(TestCase):
-    def test_cacheIsUsed(self):
+    def test_cacheIsUsed(self) -> None:
         """
         Verify that the connection creator is added to the
         policy's cache, and that it is reused on subsequent calls
@@ -3303,10 +3317,12 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         wrappedPolicy = BrowserLikePolicyForHTTPS(trustRoot=trustRoot)
         policy = HostnameCachingHTTPSPolicy(wrappedPolicy)
         creator = policy.creatorForNetloc(b"foo", 1589)
+        firstConnection = creator.clientConnectionForTLS(dummyTLSProtocol())
+        self.assertIs(trustRoot.context, firstConnection.get_context())
         self.assertTrue(trustRoot.called)
         trustRoot.called = False
-        self.assertEquals(1, len(policy._cache))
-        connection = creator.clientConnectionForTLS(None)
+        self.assertEqual(1, len(policy._cache))
+        connection = creator.clientConnectionForTLS(dummyTLSProtocol())
         self.assertIs(trustRoot.context, connection.get_context())
 
         policy.creatorForNetloc(b"foo", 1589)
@@ -3328,14 +3344,14 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         host0 = "host0"
         policy.creatorForNetloc(host0.encode("ascii"), 309)
         self.assertIn(host0, policy._cache)
-        self.assertEquals(20, len(policy._cache))
+        self.assertEqual(20, len(policy._cache))
 
         hostn = "new"
         policy.creatorForNetloc(hostn.encode("ascii"), 309)
 
         host1 = "host1"
         self.assertNotIn(host1, policy._cache)
-        self.assertEquals(20, len(policy._cache))
+        self.assertEqual(20, len(policy._cache))
 
         self.assertIn(hostn, policy._cache)
         self.assertIn(host0, policy._cache)
@@ -3349,7 +3365,7 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
         policy.creatorForNetloc(hostNPlus1.encode("ascii"), 800)
 
         self.assertNotIn("host2", policy._cache)
-        self.assertEquals(20, len(policy._cache))
+        self.assertEqual(20, len(policy._cache))
 
         self.assertIn(hostNPlus1, policy._cache)
         self.assertIn(hostn, policy._cache)
@@ -3370,12 +3386,12 @@ class HostnameCachingHTTPSPolicyTests(TestCase):
 
         first = "host0"
         self.assertIn(first, policy._cache)
-        self.assertEquals(5, len(policy._cache))
+        self.assertEqual(5, len(policy._cache))
 
         hostn = "new"
         policy.creatorForNetloc(hostn.encode("ascii"), 309)
         self.assertNotIn(first, policy._cache)
-        self.assertEquals(5, len(policy._cache))
+        self.assertEqual(5, len(policy._cache))
 
         self.assertIn(hostn, policy._cache)
 

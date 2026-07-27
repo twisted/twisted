@@ -6,11 +6,11 @@
 asyncio-based reactor implementation.
 """
 
+from __future__ import annotations
 
 import errno
 import sys
-from asyncio import AbstractEventLoop, get_event_loop
-from typing import Dict, Optional, Type
+from asyncio import AbstractEventLoop, get_running_loop, new_event_loop, set_event_loop
 
 from zope.interface import implementer
 
@@ -45,9 +45,13 @@ class AsyncioSelectorReactor(PosixReactorBase):
     _asyncClosed = False
     _log = Logger()
 
-    def __init__(self, eventloop: Optional[AbstractEventLoop] = None):
+    def __init__(self, eventloop: AbstractEventLoop | None = None):
         if eventloop is None:
-            _eventloop: AbstractEventLoop = get_event_loop()
+            try:
+                _eventloop: AbstractEventLoop = get_running_loop()
+            except RuntimeError:
+                _eventloop = new_event_loop()
+            set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
 
@@ -63,8 +67,8 @@ class AsyncioSelectorReactor(PosixReactorBase):
                 )
 
         self._asyncioEventloop: AbstractEventLoop = _eventloop
-        self._writers: Dict[Type[FileDescriptor], int] = {}
-        self._readers: Dict[Type[FileDescriptor], int] = {}
+        self._writers: dict[type[FileDescriptor], int] = {}
+        self._readers: dict[type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
 
         self._scheduledAt = None

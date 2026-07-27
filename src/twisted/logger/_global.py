@@ -7,9 +7,12 @@ This module includes process-global state associated with the logging system,
 and implementation of logic for managing that global state.
 """
 
+from __future__ import annotations
+
 import sys
 import warnings
-from typing import IO, Any, Iterable, Optional, Type
+from collections.abc import Iterable
+from typing import IO, Any
 
 from twisted.python.compat import currentframe
 from twisted.python.reflect import qual
@@ -73,7 +76,7 @@ class LogBeginner:
         errorStream: IO[Any],
         stdio: object,
         warningsModule: Any,
-        initialBufferSize: Optional[int] = None,
+        initialBufferSize: int | None = None,
     ) -> None:
         """
         Initialize this L{LogBeginner}.
@@ -89,7 +92,7 @@ class LogBeginner:
         self._log = Logger(observer=publisher)
         self._stdio = stdio
         self._warningsModule = warningsModule
-        self._temporaryObserver: Optional[ILogObserver] = LogPublisher(
+        self._temporaryObserver: ILogObserver | None = LogPublisher(
             self._initialBuffer,
             FilteringLogObserver(
                 FileLogObserver(
@@ -185,11 +188,11 @@ class LogBeginner:
     def showwarning(
         self,
         message: str,
-        category: Type[Warning],
+        category: type[Warning],
         filename: str,
         lineno: int,
-        file: Optional[IO[Any]] = None,
-        line: Optional[str] = None,
+        file: IO[Any] | None = None,
+        line: str | None = None,
     ) -> None:
         """
         Twisted-enabled wrapper around L{warnings.showwarning}.

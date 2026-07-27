@@ -10,12 +10,12 @@ configurations.  Instead of sending mail directly to the recipient, a sender
 sends mail to a smart host.  The smart host finds the mail exchange server for
 the recipient and sends on the message.
 """
+from __future__ import annotations
 
 import email.utils
 import os
 import pickle
 import time
-from typing import Type
 
 from twisted.application import internet
 from twisted.internet import protocol
@@ -69,7 +69,7 @@ class ManagedRelayerMixin:
         self.manager.notifyDone(self.factory)
 
 
-class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignore[misc]
+class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):
     """
     An SMTP managed relayer.
 
@@ -100,7 +100,7 @@ class SMTPManagedRelayer(ManagedRelayerMixin, relay.SMTPRelayer):  # type: ignor
         relay.SMTPRelayer.__init__(self, messages, *args, **kw)
 
 
-class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):  # type: ignore[misc]
+class ESMTPManagedRelayer(ManagedRelayerMixin, relay.ESMTPRelayer):
     """
     An ESMTP managed relayer.
 
@@ -154,7 +154,7 @@ class SMTPManagedRelayerFactory(protocol.ClientFactory):
     @ivar pKwArgs: Keyword arguments for L{SMTPClient.__init__}
     """
 
-    protocol: "Type[protocol.Protocol]" = SMTPManagedRelayer
+    protocol: type[protocol.Protocol] = SMTPManagedRelayer
 
     def __init__(self, messages, manager, *args, **kw):
         """
@@ -674,7 +674,7 @@ class SmartHostSMTPRelayingManager:
         filenames of messages the managed relayer is responsible for.
     """
 
-    factory: Type[protocol.ClientFactory] = SMTPManagedRelayerFactory
+    factory: type[protocol.ClientFactory] = SMTPManagedRelayerFactory
 
     PORT = 25
 

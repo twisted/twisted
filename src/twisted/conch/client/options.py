@@ -1,8 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
 import sys
-from typing import List, Optional, Union
 
 #
 from twisted.conch.ssh.transport import SSHCiphers, SSHClientTransport
@@ -10,7 +11,7 @@ from twisted.python import usage
 
 
 class ConchOptions(usage.Options):
-    optParameters: List[List[Optional[Union[str, int]]]] = [
+    optParameters: list[list[str | int | None]] = [
         ["user", "l", None, "Log in using this user name."],
         ["identity", "i", None],
         ["ciphers", "c", None],

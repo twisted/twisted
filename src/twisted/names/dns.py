@@ -10,22 +10,30 @@ Future Plans:
 """
 from __future__ import annotations
 
-# System imports
+import contextvars
 import inspect
 import random
 import socket
 import struct
+from collections.abc import Callable, Generator, Sequence
+from contextlib import contextmanager
 from io import BytesIO
 from itertools import chain
-from typing import Optional, Sequence, SupportsInt, Union, overload
+from os import urandom
+from typing import IO, ClassVar, SupportsInt, TypeAlias, overload
 
 from zope.interface import Attribute, Interface, implementer
 
-# Twisted imports
 from twisted.internet import defer, protocol
+from twisted.internet.defer import Deferred
 from twisted.internet.error import CannotListenError
-from twisted.python import failure, log, randbytes, util as tputil
+from twisted.internet.interfaces import IDelayedCall, IUDPTransport
+from twisted.logger import Logger
+from twisted.protocols.basic import Int16StringReceiver
+from twisted.python import failure, util as tputil
 from twisted.python.compat import cmp, comparable, nativeString
+
+_log = Logger()
 
 __all__ = [
     "IEncodable",
@@ -126,6 +134,7 @@ __all__ = [
     "OP_UPDATE",
     "PORT",
     "AuthoritativeDomainError",
+    "DNSDecodeError",
     "DNSQueryTimeoutError",
     "DomainError",
 ]
@@ -167,14 +176,11 @@ def _nicebyteslist(list):
     return "[{}]".format(", ".join([_nicebytes(b) for b in list]))
 
 
-def randomSource():
+def randomSource() -> int:
     """
-    Wrapper around L{twisted.python.randbytes.RandomFactory.secureRandom} to
-    return 2 random bytes.
-
-    @rtype: L{bytes}
+    2 random bytes to use for a source ID.
     """
-    return struct.unpack("H", randbytes.secureRandom(2, fallback=True))[0]
+    return int.from_bytes(urandom(2), "big", signed=False)
 
 
 PORT = 53
@@ -296,17 +302,15 @@ from twisted.names.error import (
 )
 
 
-def _nameToLabels(name):
+def _nameToLabels(name: bytes) -> list[bytes]:
     """
     Split a domain name into its constituent labels.
 
-    @type name: L{bytes}
     @param name: A fully qualified domain name (with or without a
         trailing dot).
 
     @return: A L{list} of labels ending with an empty label
         representing the DNS root zone.
-    @rtype: L{list} of L{bytes}
     """
     if name in (b"", b"."):
         return [b""]
@@ -402,7 +406,7 @@ def _str2time(s: str) -> int:
 
 
 @overload
-def str2time(s: Union[str, bytes, int]) -> int:
+def str2time(s: str | bytes | int) -> int:
     ...
 
 
@@ -411,7 +415,7 @@ def str2time(s: None) -> None:
     ...
 
 
-def str2time(s: Union[str, bytes, int, None]) -> Union[int, None]:
+def str2time(s: str | bytes | int | None) -> int | None:
     """
     Parse a string description of an interval into an integer number of seconds.
 
@@ -442,6 +446,87 @@ def readPrecisely(file, l):
     if len(buff) < l:
         raise EOFError
     return buff
+
+
+class DNSDecodeError(ValueError):
+    """
+    Raised when a DNS message cannot be decoded because it violates a
+    protocol-level safety limit.
+    """
+
+
+class _DecodeContext:
+    """
+    Mutable state shared between the L{IEncodable} decoders invoked while
+    reading a single DNS message.
+
+    The primary purpose is to bound the total number of compression-pointer
+    jumps taken across every name in the message, defending against packets
+    that fan out thousands of records pointing to deeply chained pointers.
+
+    This class is private.  External callers must not rely on it; the
+    per-message scope is installed and torn down by L{Message.decode}
+    through L{_decodeContextVar}.
+
+    @ivar jumps: The number of compression pointers followed so far.
+    @ivar maxJumps: The inclusive upper bound on L{jumps}.  Exceeding it
+        causes L{registerJump} to raise L{DNSDecodeError}.
+    """
+
+    __slots__ = ("jumps", "maxJumps")
+
+    def __init__(self, maxJumps: int = 1000) -> None:
+        self.jumps = 0
+        self.maxJumps = maxJumps
+
+    def registerJump(self) -> None:
+        """
+        Record that a compression pointer has been followed.
+
+        The check is performed before any further bytes are read so the
+        caller fails fast as soon as the aggregate limit is breached, even
+        if additional records remain in the buffer.
+
+        @raise DNSDecodeError: if the cumulative number of jumps exceeds
+            L{maxJumps}.
+        """
+        self.jumps += 1
+        if self.jumps > self.maxJumps:
+            raise DNSDecodeError(
+                "Too many compression pointers while decoding DNS message "
+                f"(limit is {self.maxJumps})"
+            )
+
+
+# Private module-level L{contextvars.ContextVar} used to share a single
+# L{_DecodeContext} across the re-entrant calls performed while decoding one
+# DNS message.  L{contextvars} (rather than a plain module attribute) is used
+# on purpose: although Twisted's reactor is single-threaded, message decoding
+# is re-entrant across many records in a single pass and L{ContextVar}
+# guarantees the scope is restored correctly on exit -- and remains isolated
+# per-task should a future caller decode messages from multiple
+# L{asyncio}-style contexts concurrently.
+_decodeContextVar: contextvars.ContextVar[
+    _DecodeContext | None
+] = contextvars.ContextVar("_dnsDecodeContext", default=None)
+
+
+@contextmanager
+def _installDecodeContext(context: _DecodeContext) -> Generator[_DecodeContext]:
+    """
+    Install C{context} on L{_decodeContextVar} for the duration of the
+    C{with} block and restore the previous value on exit.
+
+    This wraps the L{contextvars.ContextVar.set} / L{contextvars.ContextVar.reset}
+    token dance so call sites can use a plain C{with} statement.
+
+    @param context: The L{_DecodeContext} to install as the active context.
+    """
+    token = _decodeContextVar.set(context)
+    try:
+        yield context
+    finally:
+        _decodeContextVar.reset(token)
 
 
 class IEncodable(Interface):
@@ -549,7 +634,16 @@ class Name:
 
     @ivar name: A byte string giving the name.
     @type name: L{bytes}
+
+    @ivar maxCompressionPointers: Per-message cap on the total number of
+        compression-pointer dereferences L{decode} will follow before
+        raising L{DNSDecodeError}.  Defaults to C{1000}.  Override it on
+        a subclass or individual instance to tune the trade-off between
+        tolerance for legitimately verbose messages and resistance to
+        denial-of-service attacks.
     """
+
+    maxCompressionPointers: int = 1000
 
     def __init__(self, name: bytes | str = b""):
         """
@@ -595,16 +689,33 @@ class Name:
         """
         Decode a byte string into this Name.
 
+        When invoked from L{Message.decode}, a shared compression-pointer
+        counter is picked up transparently from the private
+        L{_decodeContextVar}.  Standalone callers get a fresh per-call
+        counter seeded from L{maxCompressionPointers}, so existing code
+        keeps working unchanged while still being protected against
+        pathological inputs.
+
         @type strio: file
         @param strio: Bytes will be read from this file until the full Name
-        is decoded.
+            is decoded.
+
+        @type length: L{int} or L{None}
+        @param length: Present for compatibility with the L{IEncodable}
+            interface; ignored by this decoder.
 
         @raise EOFError: Raised when there are not enough bytes available
-        from C{strio}.
+            from C{strio}.
 
-        @raise ValueError: Raised when the name cannot be decoded (for example,
-            because it contains a loop).
+        @raise ValueError: Raised when the name cannot be decoded because
+            it contains a compression loop.
+
+        @raise DNSDecodeError: Raised when the cumulative number of
+            compression-pointer jumps exceeds the configured limit.
         """
+        context = _decodeContextVar.get()
+        if context is None:
+            context = _DecodeContext(maxJumps=self.maxCompressionPointers)
         visited = set()
         self.name = b""
         off = 0
@@ -616,6 +727,7 @@ class Name:
                 return
             if (l >> 6) == 3:
                 new_off = (l & 63) << 8 | ord(readPrecisely(strio, 1))
+                context.registerJump()
                 if new_off in visited:
                     raise ValueError("Compression loop in encoded name")
                 visited.add(new_off)
@@ -660,7 +772,7 @@ class Query:
     @type cls: L{int}
     """
 
-    def __init__(self, name: Union[bytes, str] = b"", type: int = A, cls: int = IN):
+    def __init__(self, name: bytes | str = b"", type: int = A, cls: int = IN):
         """
         @type name: L{bytes} or L{str}
         @param name: See L{Query.name}
@@ -989,11 +1101,11 @@ class RRHeader(tputil.FancyEqMixin):
 
     def __init__(
         self,
-        name: Union[bytes, str] = b"",
+        name: bytes | str = b"",
         type: int = A,
         cls: int = IN,
         ttl: SupportsInt = 0,
-        payload: Optional[IEncodableRecord] = None,
+        payload: IEncodableRecord | None = None,
         auth: bool = False,
     ):
         """
@@ -1093,7 +1205,7 @@ class SimpleRecord(tputil.FancyStrMixin, tputil.FancyEqMixin):
     showAttributes = (("name", "name", "%s"), "ttl")
     compareAttributes = ("name", "ttl")
 
-    TYPE: Optional[int] = None
+    TYPE: int | None = None
     name = None
 
     def __init__(self, name=b"", ttl=None):
@@ -1568,7 +1680,7 @@ class Record_A6(tputil.FancyStrMixin, tputil.FancyEqMixin):
         prefixLen: int = 0,
         suffix: bytes | str = "::",
         prefix: bytes | str = b"",
-        ttl: Union[str, bytes, int, None] = None,
+        ttl: str | bytes | int | None = None,
     ):
         """
         @param suffix: An IPv6 address suffix in in RFC 2373 format.
@@ -1943,7 +2055,7 @@ class Record_HINFO(tputil.FancyStrMixin, tputil.FancyEqMixin):
         self,
         cpu: bytes = b"",
         os: bytes = b"",
-        ttl: Union[str, bytes, int, None] = None,
+        ttl: str | bytes | int | None = None,
     ):
         self.cpu, self.os = cpu, os
         self.ttl = str2time(ttl)
@@ -2176,9 +2288,11 @@ class Record_TXT(tputil.FancyEqMixin, tputil.FancyStrMixin):
             self.data.append(readPrecisely(strio, L))
             soFar += L + 1
         if soFar != length:
-            log.msg(
-                "Decoded %d bytes in %s record, but rdlength is %d"
-                % (soFar, self.fancybasename, length)
+            _log.warn(
+                "Decoded {soFar} bytes in {rtype} record, but rdlength is {len}",
+                soFar=soFar,
+                rtype=self.fancybasename,
+                len=length,
             )
 
     def __hash__(self):
@@ -2449,6 +2563,9 @@ def _compactRepr(
     return "".join(out)
 
 
+_RecordParser: TypeAlias = Callable[..., IEncodableRecord]
+
+
 class Message(tputil.FancyEqMixin):
     """
     L{Message} contains all the information represented by a single
@@ -2482,15 +2599,17 @@ class Message(tputil.FancyEqMixin):
         in C{answers} and C{authority}.
     @type additional: L{list} of L{RRHeader}
 
-    @ivar _flagNames: The names of attributes representing the flag header
-        fields.
-    @ivar _fieldNames: The names of attributes representing non-flag fixed
-        header fields.
-    @ivar _sectionNames: The names of attributes representing the record
-        sections of this message.
+    @ivar maxCompressionPointers: Per-message cap on the total number of
+        compression-pointer dereferences L{decode} will follow across every
+        name in the message before raising L{DNSDecodeError}.  Defaults to
+        C{1000}.  Override it on a subclass or individual instance to tune
+        the trade-off between tolerance for legitimately verbose messages
+        and resistance to denial-of-service attacks.
     """
 
-    compareAttributes = (
+    maxCompressionPointers: int = 1000
+
+    compareAttributes: ClassVar[Sequence[str]] = (
         "id",
         "answer",
         "opCode",
@@ -2508,102 +2627,89 @@ class Message(tputil.FancyEqMixin):
         "additional",
     )
 
-    headerFmt = "!H2B4H"
-    headerSize = struct.calcsize(headerFmt)
-
-    # Question, answer, additional, and nameserver lists
-    queries = answers = add = ns = None
+    timeReceived: float | None
+    headerFmt: str = "!H2B4H"
+    headerSize: int = struct.calcsize(headerFmt)
 
     def __init__(
         self,
-        id=0,
-        answer=0,
-        opCode=0,
-        recDes=0,
-        recAv=0,
-        auth=0,
-        rCode=OK,
-        trunc=0,
-        maxSize=512,
-        authenticData=0,
-        checkingDisabled=0,
+        id: int = 0,
+        answer: int = 0,
+        opCode: int = 0,
+        recDes: int = 0,
+        recAv: int = 0,
+        auth: bool = False,
+        rCode: int = OK,
+        trunc: int = 0,
+        maxSize: int = 512,
+        authenticData: int = 0,
+        checkingDisabled: int = 0,
     ):
         """
         @param id: A 16 bit identifier assigned by the program that
             generates any kind of query.  This identifier is copied to
             the corresponding reply and can be used by the requester
             to match up replies to outstanding queries.
-        @type id: L{int}
 
         @param answer: A one bit field that specifies whether this
             message is a query (0), or a response (1).
-        @type answer: L{int}
 
         @param opCode: A four bit field that specifies kind of query in
             this message.  This value is set by the originator of a query
             and copied into the response.
-        @type opCode: L{int}
 
         @param recDes: Recursion Desired - this bit may be set in a
             query and is copied into the response.  If RD is set, it
             directs the name server to pursue the query recursively.
             Recursive query support is optional.
-        @type recDes: L{int}
 
         @param recAv: Recursion Available - this bit is set or cleared
             in a response and denotes whether recursive query support
             is available in the name server.
-        @type recAv: L{int}
 
         @param auth: Authoritative Answer - this bit is valid in
             responses and specifies that the responding name server
             is an authority for the domain name in question section.
-        @type auth: L{int}
 
         @ivar rCode: A response code, used to indicate success or failure in a
             message which is a response from a server to a client request.
-        @type rCode: C{0 <= int < 16}
 
         @param trunc: A flag indicating that this message was
             truncated due to length greater than that permitted on the
             transmission channel.
-        @type trunc: L{int}
 
         @param maxSize: The requestor's UDP payload size is the number
             of octets of the largest UDP payload that can be
             reassembled and delivered in the requestor's network
             stack.
-        @type maxSize: L{int}
 
         @param authenticData: A flag indicating in a response that all
             the data included in the answer and authority portion of
             the response has been authenticated by the server
             according to the policies of that server.
             See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
 
         @param checkingDisabled: A flag indicating in a query that
             pending (non-authenticated) data is acceptable to the
             resolver sending the query.
             See U{RFC2535 section-6.1<https://tools.ietf.org/html/rfc2535#section-6.1>}.
-        @type authenticData: L{int}
         """
-        self.maxSize = maxSize
-        self.id = id
-        self.answer = answer
-        self.opCode = opCode
-        self.auth = auth
-        self.trunc = trunc
-        self.recDes = recDes
-        self.recAv = recAv
-        self.rCode = rCode
-        self.authenticData = authenticData
-        self.checkingDisabled = checkingDisabled
+        self.maxSize: int = maxSize
+        self.id: int = id
+        self.answer: int = answer
+        self.opCode: int = opCode
+        self.auth: bool = auth
+        self.trunc: int = trunc
+        self.recDes: int = recDes
+        self.recAv: int = recAv
+        self.rCode: int = rCode
+        self.authenticData: int = authenticData
+        self.checkingDisabled: int = checkingDisabled
 
-        self.queries = []
-        self.answers = []
-        self.authority = []
-        self.additional = []
+        self.queries: list[Query] = []
+        self.answers: list[RRHeader] = []
+        self.authority: list[RRHeader] = []
+        self.additional: list[RRHeader] = []
 
     def __repr__(self) -> str:
         """
@@ -2630,32 +2736,29 @@ class Message(tputil.FancyEqMixin):
             alwaysShow=("id",),
         )
 
-    def addQuery(self, name, type=ALL_RECORDS, cls=IN):
+    def addQuery(
+        self, name: str | bytes, type: int = ALL_RECORDS, cls: int = IN
+    ) -> None:
         """
         Add another query to this Message.
 
-        @type name: L{bytes}
         @param name: The name to query.
-
-        @type type: L{int}
         @param type: Query type
-
-        @type cls: L{int}
         @param cls: Query class
         """
         self.queries.append(Query(name, type, cls))
 
-    def encode(self, strio):
-        compDict = {}
+    def encode(self, strio: IO[bytes]) -> None:
+        compDict: dict[bytes, int] = {}
         body_tmp = BytesIO()
-        for q in self.queries:
-            q.encode(body_tmp, compDict)
-        for q in self.answers:
-            q.encode(body_tmp, compDict)
-        for q in self.authority:
-            q.encode(body_tmp, compDict)
-        for q in self.additional:
-            q.encode(body_tmp, compDict)
+        for query in self.queries:
+            query.encode(body_tmp, compDict)
+        for record in self.answers:
+            record.encode(body_tmp, compDict)
+        for record in self.authority:
+            record.encode(body_tmp, compDict)
+        for record in self.additional:
+            record.encode(body_tmp, compDict)
         body = body_tmp.getvalue()
         size = len(body) + self.headerSize
         if self.maxSize and size > self.maxSize:
@@ -2689,7 +2792,7 @@ class Message(tputil.FancyEqMixin):
         )
         strio.write(body)
 
-    def decode(self, strio, length=None):
+    def decode(self, strio: IO[bytes], length: int | None = None) -> None:
         self.maxSize = 0
         header = readPrecisely(strio, self.headerSize)
         r = struct.unpack(self.headerFmt, header)
@@ -2704,21 +2807,31 @@ class Message(tputil.FancyEqMixin):
         self.checkingDisabled = (byte4 >> 4) & 1
         self.rCode = byte4 & 0xF
 
-        self.queries = []
-        for i in range(nqueries):
-            q = Query()
-            try:
-                q.decode(strio)
-            except EOFError:
-                return
-            self.queries.append(q)
+        # A single shared counter bounds the total compression-pointer work
+        # performed across every name in this message.  It is installed on
+        # the private context variable so nested record decoders pick it up
+        # without needing to thread it through each signature.
+        decodeContext = _DecodeContext(maxJumps=self.maxCompressionPointers)
+        with _installDecodeContext(decodeContext):
+            self.queries = []
+            for i in range(nqueries):
+                q = Query()
+                try:
+                    q.decode(strio)
+                except EOFError:
+                    return
+                self.queries.append(q)
 
-        items = ((self.answers, nans), (self.authority, nns), (self.additional, nadd))
+            items = (
+                (self.answers, nans),
+                (self.authority, nns),
+                (self.additional, nadd),
+            )
 
-        for l, n in items:
-            self.parseRecords(l, n, strio)
+            for l, n in items:
+                self.parseRecords(l, n, strio)
 
-    def parseRecords(self, list, num, strio):
+    def parseRecords(self, list: list[RRHeader], num: int, strio: IO[bytes]) -> None:
         for i in range(num):
             header = RRHeader(auth=self.auth)
             try:
@@ -2726,8 +2839,6 @@ class Message(tputil.FancyEqMixin):
             except EOFError:
                 return
             t = self.lookupRecordType(header.type)
-            if not t:
-                continue
             header.payload = t(ttl=header.ttl)
             try:
                 header.payload.decode(strio, header.rdlength)
@@ -2739,7 +2850,7 @@ class Message(tputil.FancyEqMixin):
     # classes.  This relies on the global state which has been created so
     # far in initializing this module (so don't define Record classes after
     # this).
-    _recordTypes = {}
+    _recordTypes: ClassVar[dict[int, _RecordParser]] = {}
     for name in globals():
         if name.startswith("Record_"):
             _recordTypes[globals()[name].TYPE] = globals()[name]
@@ -2748,31 +2859,28 @@ class Message(tputil.FancyEqMixin):
     # doesn't become an attribute.
     del name
 
-    def lookupRecordType(self, type):
+    def lookupRecordType(self, type: int) -> _RecordParser:
         """
         Retrieve the L{IRecord} implementation for the given record type.
 
         @param type: A record type, such as C{A} or L{NS}.
-        @type type: L{int}
 
-        @return: An object which implements L{IRecord} or L{None} if none
-            can be found for the given type.
-        @rtype: C{Type[IRecord]}
+        @return: An object which implements L{IRecord} or L{IEncodable}.
+        L{UnknownRecord} is returned if no implementation can be found for
+        the given type.
         """
         return self._recordTypes.get(type, UnknownRecord)
 
-    def toStr(self):
+    def toStr(self) -> bytes:
         """
         Encode this L{Message} into a byte string in the format described by RFC
         1035.
-
-        @rtype: L{bytes}
         """
         strio = BytesIO()
         self.encode(strio)
         return strio.getvalue()
 
-    def fromStr(self, str):
+    def fromStr(self, str: bytes) -> None:
         """
         Decode a byte string in the format described by RFC 1035 into this
         L{Message}.
@@ -3138,7 +3246,15 @@ class DNSMixin:
     """
 
     id = None
-    liveMessages = None
+    liveMessages: dict[int, tuple[Deferred[Message], IDelayedCall]]
+    """
+    a dictionary mapping message-ID to the Deferred that will fire when it
+    completes, and the pending timeout that will cause it to fail, for all
+    outstanding queries that have not yet received a response.
+    """
+
+    # Legacy left-over default value; unused.
+    liveMessages = None  # type:ignore[assignment]
 
     def __init__(self, controller, reactor=None):
         self.controller = controller
@@ -3147,7 +3263,7 @@ class DNSMixin:
             from twisted.internet import reactor
         self._reactor = reactor
 
-    def pickID(self):
+    def pickID(self) -> int:
         """
         Return a unique ID for queries.
         """
@@ -3162,23 +3278,24 @@ class DNSMixin:
         """
         return self._reactor.callLater(period, func, *args)
 
-    def _query(self, queries, timeout, id, writeMessage):
+    def _query(
+        self,
+        queries: list[Query],
+        timeout: float,
+        id: int,
+        writeMessage: Callable[[Message], None],
+    ) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
-        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @type timeout: L{int} or C{float}
         @param timeout: How long to wait before giving up
 
-        @type id: L{int}
         @param id: Unique key for this request
 
-        @type writeMessage: C{callable}
         @param writeMessage: One-parameter callback which writes the message
 
-        @rtype: C{Deferred}
         @return: a C{Deferred} which will be fired with the result of the
             query, or errbacked with any errors that could happen (exceptions
             during writing of the query, timeout errors, ...).
@@ -3191,13 +3308,58 @@ class DNSMixin:
         except BaseException:
             return defer.fail()
 
-        resultDeferred = defer.Deferred()
+        resultDeferred: Deferred[Message] = defer.Deferred()
         cancelCall = self.callLater(timeout, self._clearFailed, resultDeferred, id)
         self.liveMessages[id] = (resultDeferred, cancelCall)
-
         return resultDeferred
 
-    def _clearFailed(self, deferred, id):
+    def _handleResponse(
+        self,
+        data: bytes,
+        messageSource: object,
+        notifyController: Callable[[Message], None],
+        validate: Callable[[Message], bool] = lambda m: True,
+    ) -> None:
+        """
+        Handle an incoming DNS message.
+
+        @param data: The bytes of the message (just the payload; any length
+            prefix removed)
+
+        @param messageSource: The source of the message (the address from which
+            it was received)
+
+        @param notifyController: The callable invoked when a message is I{not}
+            a response to a currently-pending query response.
+
+        @param validate: The callable invoked to ensure that a message is a
+            valid reply; the message is discarded if this returns C{False}.
+        """
+        m = Message()
+        try:
+            m.fromStr(data)
+        except EOFError:
+            _log.info(
+                "Truncated packet ({length} bytes) from {source}",
+                length=len(data),
+                source=messageSource,
+            )
+            return
+        except ValueError as ex:
+            _log.warn(
+                "Invalid packet from {source} ({error})", source=messageSource, error=ex
+            )
+            return
+        if m.id in self.liveMessages:
+            if not validate(m):
+                return
+            d, canceller = self.liveMessages.pop(m.id)
+            canceller.cancel()
+            d.callback(m)
+        else:
+            notifyController(m)
+
+    def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
         """
         Clean the Deferred after a timeout.
         """
@@ -3213,15 +3375,29 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     DNS protocol over UDP.
     """
 
-    resends = None
+    resends: dict[int, int]
+    transport: IUDPTransport
 
-    def stopProtocol(self):
+    # Legacy unused default value.
+    resends = None  # type:ignore[assignment]
+
+    _addressValidation: dict[int, tuple[str, int]]
+    """
+    a map of C{{message-id: expected source-address}}; when issuing a DNS query
+    over UDP, the response to that query ought to come from the same network
+    address (host and port) that we issued it to.  If it doesn't, we discard
+    it.  The keys in this dictionary ought to match those in
+    L{DNSMixin.liveMessages}.
+    """
+
+    def stopProtocol(self) -> None:
         """
         Stop protocol: reset state variables.
         """
         self.liveMessages = {}
         self.resends = {}
-        self.transport = None
+        self.transport = None  # type:ignore[assignment]
+        self._addressValidation = {}
 
     def startProtocol(self):
         """
@@ -3229,54 +3405,42 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         self.liveMessages = {}
         self.resends = {}
+        self._addressValidation = {}
 
-    def writeMessage(self, message, address):
+    def writeMessage(self, message: Message, address: tuple[str, int]) -> None:
         """
         Send a message holding DNS queries.
-
-        @type message: L{Message}
         """
         self.transport.write(message.toStr(), address)
 
     def startListening(self):
         self._reactor.listenUDP(0, self, maxPacketSize=512)
 
-    def datagramReceived(self, data, addr):
+    def _clearFailed(self, deferred: Deferred[Message], id: int) -> None:
+        self._addressValidation.pop(id, None)
+        super()._clearFailed(deferred, id)
+
+    def datagramReceived(self, data: bytes, addr: tuple[str, int]) -> None:
         """
         Read a datagram, extract the message in it and trigger the associated
         Deferred.
         """
-        m = Message()
-        try:
-            m.fromStr(data)
-        except EOFError:
-            log.msg("Truncated packet (%d bytes) from %s" % (len(data), addr))
-            return
-        except ValueError as ex:
-            log.msg(f"Invalid packet ({ex}) from {addr}")
-            return
-        except BaseException:
-            # Nothing should trigger this, but since we're potentially
-            # invoking a lot of different decoding methods, we might as well
-            # be extra cautious.  Anything that triggers this is itself
-            # buggy.
-            log.err(failure.Failure(), "Unexpected decoding error")
-            return
+        self._handleResponse(
+            data,
+            addr,
+            notifyController=lambda receivedMessage: (
+                self.controller.messageReceived(receivedMessage, self, addr)
+                if receivedMessage.id not in self.resends
+                else None
+            ),
+            validate=lambda receivedMessage: (
+                bool(self._addressValidation.pop(receivedMessage.id))
+                if self._addressValidation.get(receivedMessage.id) == addr
+                else False
+            ),
+        )
 
-        if m.id in self.liveMessages:
-            d, canceller = self.liveMessages[m.id]
-            del self.liveMessages[m.id]
-            canceller.cancel()
-            # XXX we shouldn't need this hack of catching exception on callback()
-            try:
-                d.callback(m)
-            except BaseException:
-                log.err()
-        else:
-            if m.id not in self.resends:
-                self.controller.messageReceived(m, self, addr)
-
-    def removeResend(self, id):
+    def removeResend(self, id: int) -> None:
         """
         Mark message ID as no longer having duplication suppression.
         """
@@ -3285,20 +3449,25 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         except KeyError:
             pass
 
-    def query(self, address, queries, timeout=10, id=None):
+    def query(
+        self,
+        address: tuple[str, int],
+        queries: list[Query],
+        timeout: float = 10,
+        id: int | None = None,
+    ) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
-        @type address: L{tuple} of L{str} and L{int}
         @param address: The address to which to send the query
 
-        @type queries: L{list} of C{Query} instances
         @param queries: The queries to transmit
 
-        @rtype: C{Deferred}
+        @return: a L{Deferred} which fires with the response when it arrives.
         """
         if not self.transport:
-            # XXX transport might not get created automatically, use callLater?
+            # If we aren't connected yet, try to connect before issuing the
+            # query.
             try:
                 self.startListening()
             except CannotListenError:
@@ -3309,19 +3478,17 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         else:
             self.resends[id] = 1
 
-        def writeMessage(m):
+        def writeMessage(m: Message) -> None:
             self.writeMessage(m, address)
 
+        self._addressValidation[id] = address
         return self._query(queries, timeout, id, writeMessage)
 
 
-class DNSProtocol(DNSMixin, protocol.Protocol):
+class DNSProtocol(DNSMixin, Int16StringReceiver):
     """
     DNS protocol over TCP.
     """
-
-    length = None
-    buffer = b""
 
     def writeMessage(self, message):
         """
@@ -3329,8 +3496,7 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
 
         @type message: L{Message}
         """
-        s = message.toStr()
-        self.transport.write(struct.pack("!H", len(s)) + s)
+        self.sendString(message.toStr())
 
     def connectionMade(self):
         """
@@ -3346,38 +3512,16 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
         """
         self.controller.connectionLost(self)
 
-    def dataReceived(self, data):
-        self.buffer += data
+    def stringReceived(self, data: bytes) -> None:
+        self._handleResponse(
+            data,
+            self,
+            lambda receivedMessage: self.controller.messageReceived(
+                receivedMessage, self
+            ),
+        )
 
-        while self.buffer:
-            if self.length is None and len(self.buffer) >= 2:
-                self.length = struct.unpack("!H", self.buffer[:2])[0]
-                self.buffer = self.buffer[2:]
-
-            if len(self.buffer) >= self.length:
-                myChunk = self.buffer[: self.length]
-                m = Message()
-                m.fromStr(myChunk)
-
-                try:
-                    d, canceller = self.liveMessages[m.id]
-                except KeyError:
-                    self.controller.messageReceived(m, self)
-                else:
-                    del self.liveMessages[m.id]
-                    canceller.cancel()
-                    # XXX we shouldn't need this hack
-                    try:
-                        d.callback(m)
-                    except BaseException:
-                        log.err()
-
-                self.buffer = self.buffer[self.length :]
-                self.length = None
-            else:
-                break
-
-    def query(self, queries, timeout=60):
+    def query(self, queries: list[Query], timeout: float = 60) -> Deferred[Message]:
         """
         Send out a message with the given queries.
 
@@ -3386,5 +3530,4 @@ class DNSProtocol(DNSMixin, protocol.Protocol):
 
         @rtype: C{Deferred}
         """
-        id = self.pickID()
-        return self._query(queries, timeout, id, self.writeMessage)
+        return self._query(queries, timeout, self.pickID(), self.writeMessage)

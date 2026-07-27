@@ -17,7 +17,6 @@ import uuid
 from collections import OrderedDict
 from io import BytesIO
 from itertools import chain
-from typing import Optional, Type
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -1880,8 +1879,8 @@ class SimpleClient(imap4.IMAP4Client):
 
 
 class IMAP4HelperMixin:
-    serverCTX: Optional[ServerTLSContext] = None
-    clientCTX: Optional[ClientTLSContext] = None
+    serverCTX: ServerTLSContext | None = None
+    clientCTX: ClientTLSContext | None = None
 
     def setUp(self):
         d = defer.Deferred()
@@ -4577,7 +4576,7 @@ class PreauthIMAP4ClientMixin:
         C{transport}.
     """
 
-    clientProtocol: Type[imap4.IMAP4Client] = imap4.IMAP4Client
+    clientProtocol: type[imap4.IMAP4Client] = imap4.IMAP4Client
 
     def setUp(self):
         """
@@ -7118,7 +7117,7 @@ class CopyWorkerTests(TestCase):
         return d.addCallback(cbCopy)
 
 
-@skipIf(not ClientTLSContext, "OpenSSL not present")
+@skipIf(not ClientTLSContext, "OpenSSL not present")  # type:ignore[truthy-function]
 @skipIf(not interfaces.IReactorSSL(reactor, None), "Reactor doesn't support SSL")
 class TLSTests(IMAP4HelperMixin, TestCase):
     serverCTX = None

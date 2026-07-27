@@ -10,8 +10,8 @@ from __future__ import annotations
 import locale
 import os
 import sys
+from collections.abc import Generator
 from io import StringIO
-from typing import Generator
 
 from zope.interface import implementer
 
@@ -598,7 +598,7 @@ class ListToPhraseTests(SynchronousTestCase):
         If things is a generator, a TypeError is raised.
         """
 
-        def sample() -> Generator[int, None, None]:
+        def sample() -> Generator[int]:
             yield from range(2)
 
         error = self.assertRaises(TypeError, util._listToPhrase, sample, "and")

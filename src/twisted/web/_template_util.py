@@ -5,24 +5,15 @@
 twisted.web.util and twisted.web.template merged to avoid cyclic deps
 """
 
+from __future__ import annotations
+
 import io
 import linecache
 import warnings
 from collections import OrderedDict
+from collections.abc import Mapping
 from html import escape
-from typing import (
-    IO,
-    Any,
-    AnyStr,
-    Callable,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import IO, Any, AnyStr, Callable, Union, cast
 from xml.sax import handler, make_parser
 from xml.sax.xmlreader import AttributesNSImpl, Locator
 
@@ -321,18 +312,18 @@ class _NSContext:
     A mapping from XML namespaces onto their prefixes in the document.
     """
 
-    def __init__(self, parent: Optional["_NSContext"] = None):
+    def __init__(self, parent: _NSContext | None = None):
         """
         Pull out the parent's namespaces, if there's no parent then default to
         XML.
         """
         self.parent = parent
         if parent is not None:
-            self.nss: Dict[Optional[str], Optional[str]] = OrderedDict(parent.nss)
+            self.nss: dict[str | None, str | None] = OrderedDict(parent.nss)
         else:
             self.nss = {"http://www.w3.org/XML/1998/namespace": "xml"}
 
-    def get(self, k: Optional[str], d: Optional[str] = None) -> Optional[str]:
+    def get(self, k: str | None, d: str | None = None) -> str | None:
         """
         Get a prefix for a namespace.
 
@@ -340,13 +331,13 @@ class _NSContext:
         """
         return self.nss.get(k, d)
 
-    def __setitem__(self, k: Optional[str], v: Optional[str]) -> None:
+    def __setitem__(self, k: str | None, v: str | None) -> None:
         """
         Proxy through to setting the prefix for the namespace.
         """
         self.nss.__setitem__(k, v)
 
-    def __getitem__(self, k: Optional[str]) -> Optional[str]:
+    def __getitem__(self, k: str | None) -> str | None:
         """
         Proxy through to getting the prefix for the namespace.
         """
@@ -362,7 +353,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
     Document Object Model.
     """
 
-    def __init__(self, sourceFilename: Optional[str]):
+    def __init__(self, sourceFilename: str | None):
         """
         @param sourceFilename: the filename the XML was loaded out of.
         """
@@ -383,10 +374,10 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         # Depending on our active context, the element type can be Tag, slot
         # or str. Since mypy doesn't understand that context, it would be
         # a pain to not use Any here.
-        self.document: List[Any] = []
+        self.document: list[Any] = []
         self.current = self.document
-        self.stack: List[Any] = []
-        self.xmlnsAttrs: List[Tuple[str, str]] = []
+        self.stack: list[Any] = []
+        self.xmlnsAttrs: list[tuple[str, str]] = []
 
     def endDocument(self) -> None:
         """
@@ -398,7 +389,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         Processing instructions are ignored.
         """
 
-    def startPrefixMapping(self, prefix: Optional[str], uri: str) -> None:
+    def startPrefixMapping(self, prefix: str | None, uri: str) -> None:
         """
         Set up the prefix mapping, which maps fully qualified namespace URIs
         onto namespace prefixes.
@@ -420,7 +411,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         else:
             self.xmlnsAttrs.append(("xmlns:%s" % prefix, uri))
 
-    def endPrefixMapping(self, prefix: Optional[str]) -> None:
+    def endPrefixMapping(self, prefix: str | None) -> None:
         """
         "Pops the stack" on the prefix mapping.
 
@@ -432,8 +423,8 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
 
     def startElementNS(
         self,
-        namespaceAndName: Tuple[str, str],
-        qname: Optional[str],
+        namespaceAndName: tuple[str | None, str],
+        qname: str | None,
         attrs: AttributesNSImpl,
     ) -> None:
         """
@@ -455,7 +446,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             if name == "transparent":
                 name = ""
             elif name == "slot":
-                default: Optional[str]
+                default: str | None
                 try:
                     # Try to get the default value for the slot
                     default = attrs[(None, "default")]
@@ -560,7 +551,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
             return
         self.current.append(ch)
 
-    def endElementNS(self, name: Tuple[str, str], qname: Optional[str]) -> None:
+    def endElementNS(self, name: tuple[str | None, str], qname: str | None) -> None:
         """
         A namespace tag is closed.  Pop the stack, if there's anything left in
         it, otherwise return to the document's namespace.
@@ -604,7 +595,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
         self.current.append(Comment(content))
 
 
-def _flatsaxParse(fl: Union[IO[AnyStr], str]) -> List["Flattenable"]:
+def _flatsaxParse(fl: IO[AnyStr] | str) -> list[Flattenable]:
     """
     Perform a SAX parse of an XML document with the _ToStan class.
 
@@ -634,7 +625,7 @@ class XMLString:
     An L{ITemplateLoader} that loads and parses XML from a string.
     """
 
-    def __init__(self, s: Union[str, bytes]):
+    def __init__(self, s: str | bytes):
         """
         Run the parser on a L{io.StringIO} copy of the string.
 
@@ -644,10 +635,10 @@ class XMLString:
         if not isinstance(s, str):
             s = s.decode("utf8")
 
-        self._loadedTemplate: List["Flattenable"] = _flatsaxParse(io.StringIO(s))
+        self._loadedTemplate: list[Flattenable] = _flatsaxParse(io.StringIO(s))
         """The loaded document."""
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list[Flattenable]:
         """
         Return the document.
 
@@ -810,15 +801,15 @@ class TagLoader:
     An L{ITemplateLoader} that loads an existing flattenable object.
     """
 
-    def __init__(self, tag: "Flattenable"):
+    def __init__(self, tag: Flattenable):
         """
         @param tag: The object which will be loaded.
         """
 
-        self.tag: "Flattenable" = tag
+        self.tag: Flattenable = tag
         """The object which will be loaded."""
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list[Flattenable]:
         return [self.tag]
 
 
@@ -842,13 +833,13 @@ class XMLFile:
                 stacklevel=2,
             )
 
-        self._loadedTemplate: Optional[List["Flattenable"]] = None
+        self._loadedTemplate: list[Flattenable] | None = None
         """The loaded document, or L{None}, if not loaded."""
 
         self._path: FilePath[Any] = path
         """The file that is being loaded from."""
 
-    def _loadDoc(self) -> List["Flattenable"]:
+    def _loadDoc(self) -> list[Flattenable]:
         """
         Read and parse the XML.
 
@@ -863,7 +854,7 @@ class XMLFile:
     def __repr__(self) -> str:
         return f"<XMLFile of {self._path!r}>"
 
-    def load(self) -> List["Flattenable"]:
+    def load(self) -> list[Flattenable]:
         """
         Return the document, first loading it if necessary.
 
@@ -1032,8 +1023,8 @@ tags = _TagFactory()
 def renderElement(
     request: IRequest,
     element: IRenderable,
-    doctype: Optional[bytes] = b"<!DOCTYPE html>",
-    _failElement: Optional[Callable[[Failure], "Element"]] = None,
+    doctype: bytes | None = b"<!DOCTYPE html>",
+    _failElement: Callable[[Failure], Element] | None = None,
 ) -> object:
     """
     Render an element or other L{IRenderable}.
@@ -1058,7 +1049,7 @@ def renderElement(
 
     d = flatten(request, element, request.write)
 
-    def eb(failure: Failure) -> Optional[Deferred[None]]:
+    def eb(failure: Failure) -> Deferred[None] | None:
         _moduleLog.failure(
             "An error occurred while rendering the response.", failure=failure
         )

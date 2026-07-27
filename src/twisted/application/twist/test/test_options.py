@@ -5,8 +5,13 @@
 Tests for L{twisted.application.twist._options}.
 """
 
+from __future__ import annotations
+
 from sys import stderr, stdout
-from typing import Callable, Dict, List, Optional, TextIO, Tuple
+from typing import TYPE_CHECKING, Callable, TextIO
+
+if TYPE_CHECKING:
+    from types import NotImplementedType
 
 import twisted.trial.unittest
 from twisted.copyright import version
@@ -44,14 +49,15 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         """
         Patch L{_options.open} so we can capture usage and prevent actual opens.
         """
-        self.opened: List[Tuple[str, Optional[str]]] = []
+        self.opened: list[tuple[str, str | None]] = []
 
-        def fakeOpen(name: str, mode: Optional[str] = None) -> TextIO:
+        def fakeOpen(name: str, mode: str | None = None) -> TextIO | NotImplementedType:
             if name == "nocanopen":
                 raise OSError(None, None, name)
 
             self.opened.append((name, mode))
-            return NotImplemented
+            # https://github.com/python/mypy/issues/18914
+            return NotImplemented  # type:ignore[no-any-return]
 
         self.patch(_options, "openFile", fakeOpen)
 
@@ -60,7 +66,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         Patch C{_options.installReactor} so we can capture usage and prevent
         actual installs.
         """
-        self.installedReactors: Dict[str, IReactorCore] = {}
+        self.installedReactors: dict[str, IReactorCore] = {}
 
         def installReactor(name: str) -> IReactorCore:
             if name != "fusion":
@@ -90,8 +96,8 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_version()
 
-        self.assertEquals(self.exit.status, ExitStatus.EX_OK)  # type: ignore[unreachable]
-        self.assertEquals(self.exit.message, version)
+        self.assertEqual(self.exit.status, ExitStatus.EX_OK)  # type: ignore[unreachable]
+        self.assertEqual(self.exit.message, version)
 
     def test_reactor(self) -> None:
         """
@@ -104,7 +110,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options.opt_reactor("fusion")
 
         self.assertEqual(set(self.installedReactors), {"fusion"})
-        self.assertEquals(options["reactorName"], "fusion")
+        self.assertEqual(options["reactorName"], "fusion")
 
     def test_installCorrectReactor(self) -> None:
         """
@@ -201,7 +207,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
         options = TwistOptions()
         options.opt_log_file("nocanopen")
 
-        self.assertEquals(self.exit.status, ExitStatus.EX_IOERR)
+        self.assertEqual(self.exit.status, ExitStatus.EX_IOERR)
         self.assertIsNotNone(self.exit.message)
         self.assertTrue(
             self.exit.message.startswith(  # type: ignore[union-attr]

@@ -6,10 +6,16 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
+from __future__ import annotations
 
+from abc import abstractmethod
+from collections.abc import Sequence
+from dataclasses import dataclass
 from errno import EPERM
+from functools import cache
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
+from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 from unittest import skipIf
 
@@ -36,25 +42,40 @@ from twisted.internet.address import (
     UNIXAddress,
     _ProcessAddress,
 )
-from twisted.internet.endpoints import StandardErrorBehavior
-from twisted.internet.error import ConnectingCancelledError
+from twisted.internet.endpoints import (
+    StandardErrorBehavior,
+    TCP4ClientEndpoint,
+    TCP6ServerEndpoint,
+    _WrapperEndpoint,
+    wrapClientTLS,
+)
+from twisted.internet.error import ConnectingCancelledError, ConnectionLost
 from twisted.internet.interfaces import (
+    IAddress,
     IConsumer,
+    IHandshakeListener,
     IHostnameResolver,
+    IProtocolFactory,
     IPushProducer,
     IReactorPluggableNameResolver,
+    IReactorTCP,
+    IReactorTime,
+    IStreamClientEndpoint,
+    IStreamServerEndpoint,
     ITransport,
 )
 from twisted.internet.protocol import ClientFactory, Factory, Protocol
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.internet.testing import (
+    EventLoggingObserver,
+    MemoryReactorClock,
     MemoryReactorClock as MemoryReactor,
     RaisingMemoryReactor,
     StringTransport,
     StringTransportWithDisconnection,
 )
-from twisted.logger import ILogObserver, globalLogPublisher
+from twisted.logger import ILogObserver, formatEvent, globalLogPublisher
 from twisted.plugin import getPlugins
 from twisted.protocols import basic, policies
 from twisted.python import log
@@ -63,7 +84,11 @@ from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
 from twisted.python.systemd import ListenFDs
-from twisted.test.iosim import connectableEndpoint, connectedServerAndClient
+from twisted.test.iosim import (
+    ConnectionCompleter,
+    connectableEndpoint,
+    connectedServerAndClient,
+)
 from twisted.trial import unittest
 
 pemPath = getModule("twisted.test").filePath.sibling("server.pem")
@@ -87,8 +112,10 @@ escapedChainPathName = endpoints.quoteStringArgument(chainPath.path)
 
 
 try:
+    from OpenSSL.crypto import FILETYPE_PEM
     from OpenSSL.SSL import (
         TLS_METHOD,
+        Context,
         Context as ContextType,
         OP_NO_SSLv3,
         TLSv1_2_METHOD,
@@ -100,9 +127,14 @@ try:
         DiffieHellmanParameters,
         KeyPair,
         PrivateCertificate,
+        optionsForClientTLS,
     )
-    from twisted.protocols.tls import TLSMemoryBIOFactory
-    from twisted.test.test_sslverify import makeCertificate
+    from twisted.protocols._sni import SNIConnectionCreator
+    from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
+    from twisted.test.test_sslverify import (
+        certificatesForAuthorityAndServer,
+        makeCertificate,
+    )
 
     testCertificate = Certificate.loadPEM(pemPath.getContent())
     testPrivateCertificate = PrivateCertificate.loadPEM(pemPath.getContent())
@@ -112,6 +144,16 @@ try:
 except ImportError as e:
     skipSSL = True
     skipSSLReason = str(e)
+
+
+@cache
+def _certificatesForEndpointTests(
+    serviceIdentity: str,
+) -> tuple[Certificate, PrivateCertificate]:
+    """
+    Generate and cache certificates for L{TLSEndpointsTests}.
+    """
+    return certificatesForAuthorityAndServer(serviceIdentity)
 
 
 class TestProtocol(Protocol):
@@ -482,10 +524,41 @@ class WrappingFactoryTests(unittest.TestCase):
         self.assertEqual(listener.handshakeCompletedCalls, 1)
 
 
-class ClientEndpointTestCaseMixin:
+if TYPE_CHECKING:
+    FakeTestBase = unittest.TestCase
+else:
+    FakeTestBase = object
+
+
+class ClientEndpointTestCaseMixin(FakeTestBase):
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
+
+    @abstractmethod
+    def createClientEndpoint(
+        self, reactor: IReactorTCP, clientFactory: IProtocolFactory, **connectArgs: Any
+    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]:
+        ...
+
+    @abstractmethod
+    def connectArgs(self) -> dict[str, object]:
+        ...
+
+    @abstractmethod
+    def expectedClients(self, reactor: MemoryReactor) -> Sequence[tuple[object, ...]]:
+        ...
+
+    @abstractmethod
+    def assertConnectArgs(
+        self, receivedArgs: tuple[object, ...], expectedArgs: tuple[object, ...]
+    ) -> None:
+        ...
+
+    @property
+    @abstractmethod
+    def expectedAddress(self) -> str:
+        ...
 
     def test_interface(self):
         """
@@ -507,48 +580,45 @@ class ClientEndpointTestCaseMixin:
         """
         return self.expectedClients(reactor)[0][2]
 
-    def test_endpointConnectSuccess(self):
+    def test_endpointConnectSuccess(self) -> None:
         """
         A client endpoint can connect and returns a deferred who gets called
         back with a protocol instance.
         """
-        proto = object()
+        expectedProto = object()
         mreactor = MemoryReactor()
-
-        clientFactory = object()
-
+        clientFactory: Any = object()
         ep, expectedArgs, ignoredDest = self.createClientEndpoint(
             mreactor, clientFactory
         )
-
         d = ep.connect(clientFactory)
-
-        receivedProtos = []
-
-        def checkProto(p):
-            receivedProtos.append(p)
-
-        d.addCallback(checkProto)
-
         factory = self.retrieveConnectedFactory(mreactor)
-        factory._onConnection.callback(proto)
-        self.assertEqual(receivedProtos, [proto])
-
+        self.satisfyPendingConnect(factory, expectedProto)
+        receivedProto = self.successResultOf(d)
+        self.assertEqual(receivedProto, expectedProto)
         expectedClients = self.expectedClients(mreactor)
-
         self.assertEqual(len(expectedClients), 1)
         self.assertConnectArgs(expectedClients[0], expectedArgs)
 
-    def test_endpointConnectFailure(self):
+    def satisfyPendingConnect(
+        self, connectingFactory: Any, expectedProto: object
+    ) -> None:
+        """
+        Satisfy the L{Deferred} returned from the endpoint under test's
+        C{connect}.
+        """
+        connectingFactory._onConnection.callback(expectedProto)
+
+    def test_endpointConnectFailure(self) -> None:
         """
         If an endpoint tries to connect to a non-listening port it gets
         a C{ConnectError} failure.
         """
         expectedError = error.ConnectError(string="Connection Failed")
 
-        mreactor = RaisingMemoryReactor(connectException=expectedError)
+        mreactor = RaisingMemoryReactorWithClock(connectException=expectedError)
 
-        clientFactory = object()
+        clientFactory = Factory.forProtocol(Protocol)
 
         ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
             mreactor, clientFactory
@@ -600,14 +670,29 @@ class ClientEndpointTestCaseMixin:
         self.assertIsInstance(failure.value, error.ConnectingCancelledError)
         self.assertEqual(failure.value.address, address)
 
-    def test_endpointConnectNonDefaultArgs(self):
+    def test_endpointConnectNonDefaultArgs(self) -> None:
         """
         The endpoint should pass it's connectArgs parameter to the reactor's
         listen methods.
         """
-        factory = object()
+        factory: Any = object()
 
         mreactor = MemoryReactor()
+        mreactor.installNameResolver(
+            endpoints._SimpleHostnameResolver(
+                lambda host, port: defer.succeed(
+                    [
+                        (
+                            AF_INET,
+                            SOCK_STREAM,
+                            IPPROTO_TCP,
+                            "",
+                            (self.expectedAddress, port),
+                        )
+                    ]
+                )
+            )
+        )
 
         ep, expectedArgs, ignoredHost = self.createClientEndpoint(
             mreactor, factory, **self.connectArgs()
@@ -616,15 +701,20 @@ class ClientEndpointTestCaseMixin:
         ep.connect(factory)
 
         expectedClients = self.expectedClients(mreactor)
-
         self.assertEqual(len(expectedClients), 1)
         self.assertConnectArgs(expectedClients[0], expectedArgs)
 
 
-class ServerEndpointTestCaseMixin:
+class ServerEndpointTestCaseMixin(FakeTestBase):
     """
     Generic test methods to be mixed into all client endpoint test classes.
     """
+
+    @abstractmethod
+    def createServerEndpoint(
+        self, reactor: IReactorTCP, serverFactory: IProtocolFactory, **connectArgs: Any
+    ) -> tuple[IStreamServerEndpoint, tuple[object, ...], IAddress]:
+        ...
 
     def test_interface(self):
         """
@@ -659,18 +749,18 @@ class ServerEndpointTestCaseMixin:
         self.assertEqual(receivedHosts, [expectedHost])
         self.assertEqual(self.expectedServers(mreactor), [expectedArgs])
 
-    def test_endpointListenFailure(self):
+    def test_endpointListenFailure(self) -> None:
         """
         When an endpoint tries to listen on an already listening port, a
         C{CannotListenError} failure is errbacked.
         """
-        factory = object()
+        factory = Factory.forProtocol(Protocol)
         exception = error.CannotListenError("", 80, factory)
-        mreactor = RaisingMemoryReactor(listenException=exception)
+        mreactor = RaisingMemoryReactorWithClock(listenException=exception)
 
         ep, ignoredArgs, ignoredDest = self.createServerEndpoint(mreactor, factory)
 
-        d = ep.listen(object())
+        d = ep.listen(factory)
 
         receivedExceptions = []
 
@@ -1356,7 +1446,9 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             address,
         )
 
-    def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
+    def createClientEndpoint(
+        self, reactor: IReactorTCP, clientFactory: IProtocolFactory, **connectArgs: Any
+    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]:
         """
         Create an L{TCP4ClientEndpoint} and return the values needed to verify
         its behavior.
@@ -1591,13 +1683,14 @@ class TCP6EndpointNameResolutionTests(ClientEndpointTestCaseMixin, unittest.Test
         While resolving hostnames, _nameResolution calls
         _deferToThread with _getaddrinfo.
         """
+        mreactor = MemoryReactor()
         calls = []
 
         def fakeDeferToThread(f, *args, **kwargs):
             calls.append((f, args, kwargs))
             return defer.Deferred()
 
-        endpoint = endpoints.TCP6ClientEndpoint(reactor, "ipv6.example.com", 1234)
+        endpoint = endpoints.TCP6ClientEndpoint(mreactor, "ipv6.example.com", 1234)
         fakegetaddrinfo = object()
         endpoint._getaddrinfo = fakegetaddrinfo
         endpoint._deferToThread = fakeDeferToThread
@@ -1842,6 +1935,12 @@ class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
         return resolutionDeferred.addCallback(assertHostPortFamilySockType)
 
 
+class NoNameReactor:
+    """
+    This class does I{not} implement L{IReactorPluggableNameResolver}
+    """
+
+
 class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
     """
     Common methods for testing L{HostnameEndpoint} against
@@ -1936,26 +2035,26 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         self.assertEqual(self.failureResultOf(d).value, expectedError)
         self.assertEqual([], mreactor.getDelayedCalls())
 
-    def test_deprecation(self):
+    def test_deprecation(self) -> None:
         """
         Instantiating L{HostnameEndpoint} with a reactor that does not
         provide L{IReactorPluggableResolver} emits a deprecation warning.
         """
-        mreactor = MemoryReactor()
+        clientFactory: Any = object()
 
-        clientFactory = object()
-
+        mreactor: Any = NoNameReactor()
         self.createClientEndpoint(mreactor, clientFactory)
 
         warnings = self.flushWarnings()
         self.assertEqual(1, len(warnings))
         self.assertIs(DeprecationWarning, warnings[0]["category"])
 
+        message = warnings[0]["message"]
         self.assertTrue(
-            warnings[0]["message"].startswith(
+            message.startswith(
                 "Passing HostnameEndpoint a reactor that does not provide"
                 " IReactorPluggableNameResolver"
-                " (twisted.internet.testing.MemoryReactorClock)"
+                " (twisted.internet.test.test_endpoints.NoNameReactor)"
                 " was deprecated in Twisted 17.5.0;"
                 " please use a reactor that provides"
                 " IReactorPluggableNameResolver instead"
@@ -1967,20 +2066,20 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
         Hostname resolution errors are logged.
         """
         mreactor = MemoryReactor()
-
         clientFactory = object()
-
-        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
-            mreactor, clientFactory
-        )
 
         def getaddrinfoThatFails(*args, **kwargs):
             raise gaierror(-5, "No address associated with hostname")
 
-        ep._getaddrinfo = getaddrinfoThatFails
-
+        ep, ignoredArgs, ignoredDest = self.createClientEndpoint(
+            mreactor, clientFactory
+        )
+        mreactor.installNameResolver(
+            endpoints._SimpleHostnameResolver(
+                lambda host, port: defer.execute(getaddrinfoThatFails, host, port)
+            )
+        )
         d = ep.connect(clientFactory)
-
         self.assertIsInstance(self.failureResultOf(d).value, error.DNSLookupError)
         self.assertEqual(1, len(self.flushLoggedErrors(gaierror)))
 
@@ -1993,6 +2092,8 @@ class HostnameEndpointMemoryIPv4ReactorTests(
     L{MemoryReactor} subclasses that do not provide
     L{IReactorPluggableNameResolver}.
     """
+
+    expectedAddress = "1.2.3.4"
 
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         """
@@ -2010,24 +2111,34 @@ class HostnameEndpointMemoryIPv4ReactorTests(
             expectedPort, clientFactory, timeout, localBindAddress,
             hostnameAddress))}
         """
-        expectedAddress = "1.2.3.4"
         address = HostnameAddress(b"example.com", 80)
+
+        resolverPlug = IReactorPluggableNameResolver(reactor, None)
+        if resolverPlug is not None:
+            reactor.installNameResolver(
+                endpoints._SimpleHostnameResolver(
+                    lambda hostName, portNumber: self.synchronousDeferredToThread(
+                        lambda: [
+                            (
+                                AF_INET,
+                                SOCK_STREAM,
+                                IPPROTO_TCP,
+                                self.expectedAddress,
+                                (self.expectedAddress, portNumber),
+                            ),
+                        ]
+                    )
+                )
+            )
+
         endpoint = endpoints.HostnameEndpoint(
             reactor, b"example.com", address.port, **connectArgs
         )
 
-        def fakegetaddrinfo(host, port, family, socktype):
-            return [
-                (AF_INET, SOCK_STREAM, IPPROTO_TCP, "", (expectedAddress, 80)),
-            ]
-
-        endpoint._getaddrinfo = fakegetaddrinfo
-        endpoint._deferToThread = self.synchronousDeferredToThread
-
         return (
             endpoint,
             (
-                expectedAddress,
+                self.expectedAddress,
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
@@ -2045,6 +2156,8 @@ class HostnameEndpointMemoryIPv6ReactorTests(
     L{MemoryReactor} subclasses that do not provide
     L{IReactorPluggableNameResolver}.
     """
+
+    expectedAddress = "1:2::3:4"
 
     def createClientEndpoint(self, reactor, clientFactory, **connectArgs):
         """
@@ -2064,18 +2177,26 @@ class HostnameEndpointMemoryIPv6ReactorTests(
         """
         expectedAddress = "1:2::3:4"
         address = HostnameAddress(b"ipv6.example.com", 80)
+        resolverPlug = IReactorPluggableNameResolver(reactor, None)
+        if resolverPlug is not None:
+            reactor.installNameResolver(
+                endpoints._SimpleHostnameResolver(
+                    lambda hostName, portNumber: self.synchronousDeferredToThread(
+                        lambda: [
+                            (
+                                AF_INET6,
+                                SOCK_STREAM,
+                                IPPROTO_TCP,
+                                self.expectedAddress,
+                                (self.expectedAddress, portNumber),
+                            ),
+                        ]
+                    )
+                )
+            )
         endpoint = endpoints.HostnameEndpoint(
             reactor, b"ipv6.example.com", address.port, **connectArgs
         )
-
-        def fakegetaddrinfo(host, port, family, socktype):
-            return [
-                (AF_INET6, SOCK_STREAM, IPPROTO_TCP, "", (expectedAddress, 80)),
-            ]
-
-        endpoint._getaddrinfo = fakegetaddrinfo
-        endpoint._deferToThread = self.synchronousDeferredToThread
-
         return (
             endpoint,
             (
@@ -2878,6 +2999,376 @@ class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         )
 
 
+class Oops(Exception):
+    """
+    A sample custom exception.
+    """
+
+
+@dataclass(eq=False)
+class TLSWrapperFactoryChecker:
+    """
+    Verify that the factory passed to the endpoint is actually being used by
+    the TLS wrapper; this will compare as equal to a wrapper using desired
+    server factory.
+    """
+
+    testCase: unittest.TestCase
+    protocolFactory: IProtocolFactory
+
+    def __eq__(self, other: object) -> bool:
+        assert isinstance(other, TLSMemoryBIOFactory), "must be a TLS factory"
+        self.testCase.assertIs(other.wrappedFactory, self.protocolFactory)
+        return True
+
+
+@skipIf(skipSSL, skipSSLReason)
+class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
+    """
+    Tests for TLS Endpoints.
+    """
+
+    def expectedServers(
+        self, reactor: MemoryReactor
+    ) -> list[tuple[int, IProtocolFactory, int, str]]:
+        """
+        @return: List of calls to L{IReactorTCP.listenTCP}
+        """
+        return reactor.tcpServers
+
+    def satisfyPendingConnect(
+        self, connectingFactory: Any, expectedProto: object
+    ) -> None:
+        """
+        Satisfy the pending connection deferred for the wrapper factory created
+        by wrapClientTLS.
+
+        @note: This is engaging in a bit of open-box chicanery to hit a
+            particular path through the endpoint without touching the reactor,
+            and is somewhat gross as a result.
+        """
+        connectingFactory._onConnection.callback(
+            TLSMemoryBIOProtocol(connectingFactory, expectedProto)
+        )
+
+    def expectedClients(
+        self, reactor: MemoryReactor
+    ) -> Sequence[tuple[str, int, ClientFactory, int, str | None]]:
+        """
+        @return: List of calls to L{IReactorSSL.connectSSL}
+        """
+        return reactor.tcpClients
+
+    def assertConnectArgs(self, receivedArgs, expectedArgs):
+        """
+        Compare host, port, contextFactory, timeout, and bindAddress in
+        C{receivedArgs} to C{expectedArgs}.  We ignore the factory because we
+        don't only care what protocol comes out of the
+        C{IStreamClientEndpoint.connect} call.
+
+        @param receivedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that was passed to
+            L{IReactorSSL.connectTCP}.
+
+        @param expectedArgs: C{tuple} of (C{host}, C{port}, C{factory},
+            C{timeout}, C{bindAddress}) that we expect to have been passed to
+            L{IReactorSSL.connectTCP}.
+        """
+        (
+            host,
+            port,
+            ignoredFactory,
+            timeout,
+            bindAddress,
+        ) = receivedArgs
+
+        (
+            expectedHost,
+            expectedPort,
+            _ignoredFactory,
+            expectedTimeout,
+            expectedBindAddress,
+        ) = expectedArgs
+
+        self.assertEqual(host, expectedHost)
+        self.assertEqual(port, expectedPort)
+        self.assertEqual(timeout, expectedTimeout)
+        self.assertEqual(bindAddress, expectedBindAddress)
+
+    def connectArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to connect.
+        """
+        return {"timeout": 10, "bindAddress": ("localhost", 49595)}
+
+    def listenArgs(self):
+        """
+        @return: C{dict} of keyword arguments to pass to listen
+        """
+        return {"backlog": 100, "interface": "127.0.0.1"}
+
+    def setUp(self):
+        """
+        Set up client and server SSL contexts for use later.
+        """
+        testMethod = getattr(self, self.id().split(".")[-1])
+        self.certificatesDirectory = FilePath(self.mktemp())
+        self.certificatesDirectory.createDirectory()
+
+        self.serverServiceIdentity = getattr(
+            testMethod,
+            "serverServiceIdentity",
+            "endpoint-test.example.com",
+        )
+        clientServiceIdentity = getattr(
+            testMethod,
+            "clientServiceIdentity",
+            self.serverServiceIdentity,
+        )
+        ca, server = _certificatesForEndpointTests(self.serverServiceIdentity)
+
+        self.serverCert = server
+        shouldSendServerName = getattr(
+            testMethod,
+            "sendServerName",
+            True,
+        )
+        self.clientSSLContext = optionsForClientTLS(
+            clientServiceIdentity,
+            trustRoot=ca,
+            sendServerName=shouldSendServerName,
+        )
+
+    def createServerEndpoint(
+        self,
+        reactor: IReactorTCP,
+        serverFactory: IProtocolFactory,
+        **listenArgs: object,
+    ) -> tuple[IStreamServerEndpoint, tuple[object, ...], IPv6Address]:
+        """
+        Create a TLS endpoint and return the tools to verify its behaviour.
+
+        @param factory: The thing that we expect to be passed to our
+            L{IStreamServerEndpoint.listen} implementation.
+
+        @param reactor: A fake L{IReactorTCP} that L{TLSServerEndpoint} can
+            call L{IReactorSSL.listenTCP} on.
+
+        @param listenArgs: Optional dictionary of arguments to
+            L{IReactorSSL.listenTCP}.
+        """
+        address = IPv6Address("TCP", "::", 0)
+
+        testMethod = getattr(self, self.id().split(".")[-1])
+
+        def oopsie(name: bytes | None) -> Context | None:
+            if name is None:
+                return None
+            raise Oops()
+
+        lookupper = (
+            endpoints.autoReloadingDirectoryOfPEMs(self.certificatesDirectory)
+            if not getattr(testMethod, "brokenSNILookup", False)
+            else oopsie
+        )
+        if not getattr(testMethod, "noCertsAtAll", False):
+            self.certificatesDirectory.child("stuff.pem").setContent(
+                self.serverCert.dumpPEM()
+            )
+        return (
+            endpoints.wrapServerTLS(
+                SNIConnectionCreator(lookupper),
+                TCP6ServerEndpoint(reactor, address.port, **listenArgs),
+                clock=IReactorTime(reactor),
+            ),
+            (
+                address.port,
+                TLSWrapperFactoryChecker(self, serverFactory),
+                listenArgs.get("backlog", 50),
+                listenArgs.get("interface", "::"),
+            ),
+            address,
+        )
+
+    def createClientEndpoint(
+        self, reactor: IReactorTCP, clientFactory: IProtocolFactory, **connectArgs: Any
+    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]:
+        """
+        Create an L{TLSClientEndpoint} and return the values needed to verify
+        its behaviour.
+
+        @param reactor: A fake L{IReactorTCP} that L{TLSClientEndpoint} can
+            call L{IReactorSSL.connectTCP} on.
+        @param clientFactory: The thing that we expect to be passed to our
+            L{IStreamClientEndpoint.connect} implementation.
+        @param connectArgs: Optional dictionary of arguments to
+            L{IReactorTCP.connectTCP}
+        """
+        address = IPv4Address("TCP", "localhost", 80)
+
+        return (
+            endpoints.wrapClientTLS(
+                self.clientSSLContext,
+                endpoints.TCP4ClientEndpoint(
+                    reactor,
+                    address.host,
+                    address.port,
+                    **connectArgs,
+                ),
+                clock=IReactorTime(reactor),
+            ),
+            (
+                address.host,
+                address.port,
+                TLSWrapperFactoryChecker(self, clientFactory),
+                connectArgs.get("timeout", 30),
+                connectArgs.get("bindAddress", None),
+            ),
+            address,
+        )
+
+    def connectionTest(self, error: type[Exception] | None = None) -> None:
+        """
+        Test that a client fully connects and verifies the certificate without
+        disconnecting.
+        """
+        memr = MemoryReactorClock()
+        mades = []
+        recvs = []
+        reasons = []
+
+        @implementer(IHandshakeListener)
+        class DataCatcher(Protocol):
+            def handshakeCompleted(self) -> None:
+                assert self.transport is not None
+                self.transport.write(b"hello")
+
+            def connectionMade(self) -> None:
+                mades.append(self)
+
+            def dataReceived(self, data: bytes) -> None:
+                recvs.append(data)
+
+            def connectionLost(self, reason: Failure | None = None) -> None:
+                assert reason is not None
+                reasons.append(reason)
+
+        fact = Factory.forProtocol(DataCatcher)
+        ep, args, host = self.createServerEndpoint(memr, fact)
+        self.successResultOf(ep.listen(fact))
+
+        clientf = Factory.forProtocol(Protocol)
+
+        cep = wrapClientTLS(
+            self.clientSSLContext,
+            TCP4ClientEndpoint(memr, host.host, host.port),
+            clock=memr,
+        )
+        compl = ConnectionCompleter(memr)
+        d = cep.connect(clientf)
+        pump = compl.succeedOnce()
+        assert pump is not None
+        pump.flush()
+        cconn = self.successResultOf(d)
+        pump.flush()
+        transport: ITransport = cconn.transport  # type:ignore[attr-defined]
+        transport.write(b"some bytes")
+        pump.flush()
+        if error is None:
+            self.assertEqual(recvs, [b"some bytes"])
+            self.assertEqual(reasons, [])
+        else:
+            [reason] = reasons
+            reason.check(error)
+
+    def test_connectDefaultCert(self) -> None:
+        """
+        Connect with no SNI to get the default certificate, which should still verify.
+        """
+        self.connectionTest()
+
+    setattr(test_connectDefaultCert, "sendServerName", False)
+
+    def test_connectWildcard(self) -> None:
+        """
+        Connect with SNI that identifies a specific host, respond with a wildcard.
+        """
+        self.connectionTest()
+
+    setattr(
+        test_connectWildcard,
+        "serverServiceIdentity",
+        "*.service.example.net",
+    )
+    setattr(
+        test_connectWildcard,
+        "clientServiceIdentity",
+        "arbitrary.service.example.net",
+    )
+
+    def test_lookupException(self) -> None:
+        """
+        Exceptions when looking up a certificate are logged.
+        """
+        self.connectionTest(ConnectionLost)
+        self.assertEqual(len(self.flushLoggedErrors(Oops)), 1)
+
+    setattr(test_lookupException, "brokenSNILookup", True)
+
+    def test_lookupFailure(self) -> None:
+        """
+        Connect with SNI that identifies a specific host that we have no
+        certificate for.
+        """
+        self.connectionTest(ConnectionLost)
+
+    setattr(
+        test_lookupFailure,
+        "clientServiceIdentity",
+        "incorrect.example.org",
+    )
+
+    def test_noCertsAtAll(self) -> None:
+        """
+        If the certificate lookup function cannot find any certificates at all,
+        we will see a legible logged error.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+        self.connectionTest(ConnectionLost)
+        self.assertEqual(
+            formatEvent(logObserver[-1]),
+            "no server certificate for name b'endpoint-test.example.com'",
+        )
+
+    setattr(test_noCertsAtAll, "noCertsAtAll", True)
+
+    def test_mismatchedKeys(self) -> None:
+        """
+        If dangling certificates are found they are ignored, if dangling
+        private keys are found a warning is logged.
+        """
+        logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+        untrustedCA, unusedCert = certificatesForAuthorityAndServer(
+            self.serverServiceIdentity
+        )
+        # superclass (Certificate.dumpPEM) does not include private key in
+        # its output, just the certificate
+        self.certificatesDirectory.child("ignored-cert.pem").setContent(
+            Certificate.dumpPEM(unusedCert)
+        )
+        danglingKey = self.certificatesDirectory.child("ignored-key.pem")
+        danglingKey.setContent(KeyPair.generate().dump(FILETYPE_PEM))
+        self.unusedCert = unusedCert
+        self.connectionTest()
+        relevant = [
+            each
+            for each in logObserver
+            if each["log_format"] == "unused private key at {path} with hash {hash}"
+        ]
+        self.assertGreaterEqual(len(relevant), 1)
+        self.assertEqual(relevant[0]["path"], danglingKey.path)
+
+
 class UNIXEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
     Tests for UnixSocket Endpoints.
@@ -3162,6 +3653,37 @@ class ServerStringTests(unittest.TestCase):
         self.assertEqual(server._sslContextFactory.method, TLSv1_2_METHOD)
         ctx = server._sslContextFactory.getContext()
         self.assertIsInstance(ctx, ContextType)
+
+    @skipIf(skipSSL, skipSSLReason)
+    def test_tls(self) -> None:
+        """
+        The TLS endpoint
+        """
+        reactor = MemoryReactorClock()
+        tmp = self.mktemp()
+        p = FilePath(tmp)
+        p.createDirectory()
+        # create a temporary directory with a certificate in it, so we have a default certificate
+        authCert, serverCert = certificatesForAuthorityAndServer()
+        p.child("some.pem").setContent(serverCert.dumpPEM())
+        server = endpoints.serverFromString(
+            reactor,
+            f"tls:{tmp}:1234:backlog=12:interface=10.0.0.1",
+        )
+        self.assertIsInstance(server, endpoints._TLSServerEndpoint)
+        subendpoint = server.endpoint
+        self.assertIs(subendpoint._reactor, reactor)
+        self.assertEqual(subendpoint._port, 1234)
+        self.assertEqual(subendpoint._backlog, 12)
+        self.assertEqual(subendpoint._interface, "10.0.0.1")
+        ctx = server.connectionCreator
+        self.assertIsInstance(ctx, endpoints.SNIConnectionCreator)
+        factory = TLSMemoryBIOFactory(ctx, False, Factory.forProtocol(Protocol))
+        proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
+        st = StringTransport()
+        proto.makeConnection(st)
+        builtCtx = proto._tlsConnection.get_context()
+        self.assertIsInstance(builtCtx, Context)
 
     @skipIf(skipSSL, skipSSLReason)
     def test_sslWithDefaults(self):
@@ -4186,10 +4708,12 @@ class WrapperClientEndpointTests(unittest.TestCase):
         self.assertIs(proto.transport.transport, pump.clientIO)
 
 
-def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
+def tlsHostnameFromEndpoint(
+    memoryReactor: IReactorTCP, tlsEndpoint: _WrapperEndpoint
+) -> str:
     """
     Given a L{MemoryReactor} and the result of calling L{wrapClientTLS},
-    extract the L{IOpenSSLClientConnectionCreator} associated with it.
+    extract the hostname that TLS will be verified against.
 
     Implementation presently uses private attributes but could (and should) be
     refactored to just call C{.connect()} on the endpoint, when
@@ -4202,11 +4726,18 @@ def connectionCreatorFromEndpoint(memoryReactor, tlsEndpoint):
 
     @param tlsEndpoint: The result of calling L{wrapClientTLS}.
 
-    @return: the client connection creator associated with the endpoint
-        wrapper.
-    @rtype: L{IOpenSSLClientConnectionCreator}
+    @return: the IDNA-decoded str hostname.
     """
-    return tlsEndpoint._wrapperFactory(None)._connectionCreator
+    tlsMemoryBIOFactory: TLSMemoryBIOFactory = tlsEndpoint._wrapperFactory(
+        Factory.forProtocol(Protocol)
+    )
+    protocol = tlsMemoryBIOFactory.buildProtocol(None)
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+        protocol
+    ).get_servername()
+    assert tlsExtServerNameBytes is not None
+    hostname = tlsExtServerNameBytes.decode("idna")
+    return hostname
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -4262,8 +4793,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(
             endpoint._wrappedEndpoint._hostBytes, b"xn--xample-9ua.example.com"
         )
-        connectionCreator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(connectionCreator._hostname, "\xe9xample.example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "\xe9xample.example.com")
 
     def test_tls(self):
         """
@@ -4342,8 +4873,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         """
         reactor = object()
         endpoint = endpoints.clientFromString(reactor, b"tls:example.com:443")
-        creator = connectionCreatorFromEndpoint(reactor, endpoint)
-        self.assertEqual(creator._hostname, "example.com")
+        tlsHostname = tlsHostnameFromEndpoint(reactor, endpoint)
+        self.assertEqual(tlsHostname, "example.com")
         self.assertEqual(endpoint._wrappedEndpoint._hostBytes, b"example.com")
 
 
@@ -4378,7 +4909,7 @@ def replacingGlobals(function, **newGlobals):
     mergedGlobals = {}
     mergedGlobals.update(funcGlobals)
     mergedGlobals.update(newGlobals)
-    newFunction = FunctionType(codeObject, mergedGlobals)
+    newFunction = FunctionType(codeObject, mergedGlobals, argdefs=function.__defaults__)
     mergedGlobals[function.__name__] = newFunction
     return newFunction
 

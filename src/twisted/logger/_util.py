@@ -6,8 +6,6 @@
 Logging utilities.
 """
 
-from typing import List
-
 from ._interfaces import LogTrace
 from ._logger import Logger
 
@@ -31,7 +29,7 @@ def formatTrace(trace: LogTrace) -> str:
             return f"{obj}"
 
     result = []
-    lineage: List[Logger] = []
+    lineage: list[Logger] = []
 
     for parent, child in trace:
         if not lineage or lineage[-1] is not parent:

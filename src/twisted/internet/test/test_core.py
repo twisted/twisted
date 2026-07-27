@@ -5,11 +5,12 @@
 Tests for implementations of L{IReactorCore}.
 """
 
+from __future__ import annotations
 
 import signal
 import time
 from types import FrameType
-from typing import Callable, List, Optional, Tuple, Union, cast
+from typing import Callable, cast
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.defer import Deferred
@@ -49,7 +50,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         L{reactor.callWhenRunning}.
         """
         reactor = self.buildReactor()
-        events: List[str] = []
+        events: list[str] = []
         reactor.callWhenRunning(events.append, "first")
         reactor.callWhenRunning(events.append, "second")
         reactor.callWhenRunning(reactor.stop)
@@ -90,7 +91,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{"startup"}.
         """
         reactor = self.buildReactor()
-        phase: Optional[str] = None
+        phase: str | None = None
 
         def beforeStartup() -> None:
             nonlocal phase
@@ -147,7 +148,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         L{reactor.stop}.
         """
         reactor = self.buildReactor()
-        events: List[str] = []
+        events: list[str] = []
         reactor.addSystemEventTrigger(
             "before", "shutdown", events.append, "before shutdown"
         )
@@ -200,7 +201,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} raises L{ReactorAlreadyRunning} when called when
         the reactor is already running.
         """
-        events: List[str] = []
+        events: list[str] = []
 
         testCase = cast(SynchronousTestCase, self)
 
@@ -275,7 +276,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} restarts the reactor after it has been stopped by
         C{reactor.crash()}.
         """
-        events: List[Union[str, Tuple[str, bool]]] = []
+        events: list[str | tuple[str, bool]] = []
 
         def crash() -> None:
             events.append("crash")
@@ -298,7 +299,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
         C{reactor.run()} raises L{ReactorNotRestartable} when called when
         the reactor is being run after getting stopped priorly.
         """
-        events: List[str] = []
+        events: list[str] = []
 
         testCase = cast(SynchronousTestCase, self)
 

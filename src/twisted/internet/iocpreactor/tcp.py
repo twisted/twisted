@@ -10,7 +10,7 @@ from __future__ import annotations
 import errno
 import socket
 import struct
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 from zope.interface import classImplements, implementer
 
@@ -356,8 +356,8 @@ class Server(Connection):
         self,
         sock: socket.socket,
         protocol: IProtocol,
-        clientAddr: Union[IPv4Address, IPv6Address],
-        serverAddr: Union[IPv4Address, IPv6Address],
+        clientAddr: IPv4Address | IPv6Address,
+        serverAddr: IPv4Address | IPv6Address,
         sessionno: int,
         reactor: IOCPReactor,
     ):
@@ -422,7 +422,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
-    _realPortNumber: Optional[int] = None
+    _realPortNumber: int | None = None
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS

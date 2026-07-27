@@ -44,7 +44,7 @@ class Options(usage.Options):
         extraActions=[usage.CompleteFiles("*.py", descr="source python file")]
     )
 
-    def parseArgs(self, filename):
+    def parseArgs(self, filename):  # type:ignore[override]
         self["filename"] = filename
 
 

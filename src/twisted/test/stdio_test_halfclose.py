@@ -64,5 +64,5 @@ if __name__ == "__main__":
 
     halfCloseProtocol = HalfCloseProtocol()
     stdio.StandardIO(halfCloseProtocol)
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()
     sys.exit(halfCloseProtocol.exitCode)

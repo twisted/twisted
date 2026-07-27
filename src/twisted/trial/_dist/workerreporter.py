@@ -8,13 +8,14 @@ Test reporter forwarding test results over trial distributed AMP commands.
 
 @since: 12.3
 """
+from __future__ import annotations
 
+from collections.abc import Sequence
 from types import TracebackType
-from typing import Callable, List, Optional, Sequence, Type, TypeVar
+from typing import Callable, Literal, TypeVar
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define
-from typing_extensions import Literal
 
 from twisted.internet.defer import Deferred, maybeDeferred
 from twisted.protocols.amp import AMP, MAX_VALUE_LENGTH
@@ -29,7 +30,7 @@ T = TypeVar("T")
 
 
 async def addError(
-    amp: AMP, testName: str, errorClass: str, error: str, frames: List[str]
+    amp: AMP, testName: str, errorClass: str, error: str, frames: list[str]
 ) -> None:
     """
     Send an error to the worker manager over an AMP connection.
@@ -58,7 +59,7 @@ async def addError(
 
 
 async def addFailure(
-    amp: AMP, testName: str, fail: str, failClass: str, frames: List[str]
+    amp: AMP, testName: str, fail: str, failClass: str, frames: list[str]
 ) -> None:
     """
     Like L{addError} but for failures.
@@ -123,8 +124,8 @@ class ReportingResults:
         interface.
     """
 
-    _reporter: "WorkerReporter"
-    _results: List[Deferred[object]] = Factory(list)
+    _reporter: WorkerReporter
+    _results: list[Deferred[object]] = Factory(list)
 
     def __enter__(self) -> Sequence[Deferred[object]]:
         """
@@ -140,7 +141,7 @@ class ReportingResults:
 
     def __exit__(
         self,
-        excType: Type[BaseException],
+        excType: type[BaseException],
         excValue: BaseException,
         excTraceback: TracebackType,
     ) -> Literal[False]:
@@ -173,7 +174,7 @@ class WorkerReporter(TestResult):
     _DEFAULT_TODO = "Test expected to fail"
 
     ampProtocol: AMP
-    _reporting: Optional[ReportingResults] = None
+    _reporting: ReportingResults | None = None
 
     def __init__(self, ampProtocol):
         """
@@ -202,11 +203,11 @@ class WorkerReporter(TestResult):
             return Failure(error[1], error[0], error[2])
         return error
 
-    def _getFrames(self, failure: Failure) -> List[str]:
+    def _getFrames(self, failure: Failure) -> list[str]:
         """
         Extract frames from a C{Failure} instance.
         """
-        frames: List[str] = []
+        frames: list[str] = []
         for frame in failure.frames:
             # The code object's name, the code object's filename, and the line
             # number.
@@ -215,7 +216,7 @@ class WorkerReporter(TestResult):
 
     def _call(self, f: Callable[[], T]) -> None:
         """
-        Call L{f} if and only if a "result reporting" context is active.
+        Call C{f} if and only if a "result reporting" context is active.
 
         @param f: A function to call.  Its result is accumulated into the
             result reporting context.  It may return a L{Deferred} or a

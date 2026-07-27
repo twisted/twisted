@@ -2,17 +2,10 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
 import itertools
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 
 from zope.interface import implementer
 
@@ -70,7 +63,7 @@ class Expose:
         @return: The first of C{funcObjs}.
         """
         for fObj in itertools.chain([f], funcObjs):
-            exposedThrough: List[Expose] = getattr(fObj, "exposedThrough", [])
+            exposedThrough: list[Expose] = getattr(fObj, "exposedThrough", [])
             exposedThrough.append(self)
             setattr(fObj, "exposedThrough", exposedThrough)
         return f
@@ -84,7 +77,7 @@ class Expose:
     @overload
     def get(
         self, instance: object, methodName: str, default: T
-    ) -> Union[Callable[..., Any], T]:
+    ) -> Callable[..., Any] | T:
         ...
 
     def get(
@@ -166,15 +159,15 @@ class Element:
         return from C{render}.
     """
 
-    loader: Optional[ITemplateLoader] = None
+    loader: ITemplateLoader | None = None
 
-    def __init__(self, loader: Optional[ITemplateLoader] = None):
+    def __init__(self, loader: ITemplateLoader | None = None):
         if loader is not None:
             self.loader = loader
 
     def lookupRenderMethod(
         self, name: str
-    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
+    ) -> Callable[[IRequest | None, Tag], Flattenable]:
         """
         Look up and return the named render method.
         """
@@ -183,7 +176,7 @@ class Element:
             raise MissingRenderMethod(self, name)
         return method
 
-    def render(self, request: Optional[IRequest]) -> "Flattenable":
+    def render(self, request: IRequest | None) -> Flattenable:
         """
         Implement L{IRenderable} to allow one L{Element} to be embedded in
         another's template or rendering output.

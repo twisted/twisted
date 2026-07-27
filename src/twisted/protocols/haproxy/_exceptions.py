@@ -7,7 +7,8 @@ HAProxy specific exceptions.
 """
 
 import contextlib
-from typing import Callable, Generator, Type
+from collections.abc import Generator
+from typing import Callable
 
 
 class InvalidProxyHeader(Exception):
@@ -30,7 +31,7 @@ class MissingAddressData(InvalidProxyHeader):
 
 @contextlib.contextmanager
 def convertError(
-    sourceType: Type[BaseException], targetType: Callable[[], BaseException]
+    sourceType: type[BaseException], targetType: Callable[[], BaseException]
 ) -> Generator[None, None, None]:
     """
     Convert an error into a different error type.

@@ -9,7 +9,7 @@ import sys
 import textwrap
 import types
 from io import StringIO
-from typing import List
+from typing import Any
 from unittest import skipIf
 
 from hamcrest import assert_that, contains_string
@@ -51,7 +51,7 @@ def logSomething() -> None:
     Logger().info("something")
 
 
-def parseArguments(argv: List[str]) -> trial.Options:
+def parseArguments(argv: list[str]) -> trial.Options:
     """
     Parse an argument list using trial's argument parser.
     """
@@ -504,13 +504,15 @@ class WithoutModuleTests(unittest.SynchronousTestCase):
         self.assertRaises(ImportError, self._checkSMTP)
 
 
+sched_getaffinity: Any = getattr(os, "sched_getaffinity", None)
+
+
 class AutoJobsTests(unittest.SynchronousTestCase):
     """
     Test {twisted.scripts.trial._autoJobs}
     """
 
     hasProcessCpuCount = sys.version_info[:2] >= (3, 13)
-    hasSchedGetaffinity = getattr(os, "sched_getaffinity", None) is not None
 
     @skipIf(not hasProcessCpuCount, "Requires os.process_cpu_count()")
     def test_processCpuCount(self) -> None:
@@ -522,7 +524,7 @@ class AutoJobsTests(unittest.SynchronousTestCase):
         self.assertEqual(trial._autoJobs(), count)
 
     @skipIf(
-        hasProcessCpuCount or not hasSchedGetaffinity,
+        hasProcessCpuCount or sched_getaffinity is None,
         "Requires os.sched_getaffinity() without os.process_cpu_count()",
     )
     def test_schedGetAffinity(self) -> None:
@@ -532,7 +534,7 @@ class AutoJobsTests(unittest.SynchronousTestCase):
         `_autoJobs` uses it to returns the number of CPUs that the current
         process is restricted to.
         """
-        self.assertEqual(trial._autoJobs(), len(os.sched_getaffinity(0)))
+        self.assertEqual(trial._autoJobs(), len(getattr(os, "sched_getaffinity")(0)))
 
     def test_cpuCount(self) -> None:
         """
@@ -551,7 +553,7 @@ class AutoJobsTests(unittest.SynchronousTestCase):
         """
         if self.hasProcessCpuCount:
             self.patch(os, "process_cpu_count", lambda: None)
-        if self.hasSchedGetaffinity:
+        if sched_getaffinity is not None:
             self.patch(os, "sched_getaffinity", lambda pid: set())
         self.patch(os, "cpu_count", lambda: None)
 

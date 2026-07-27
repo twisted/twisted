@@ -8,25 +8,13 @@ complex or arbitrarily nested, as strings.
 """
 from __future__ import annotations
 
+from collections.abc import Coroutine, Generator, Mapping, Sequence
 from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
 from traceback import extract_tb
-from types import GeneratorType
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+from types import FrameType, GeneratorType
+from typing import Any, Callable, TypeVar, Union, cast
 
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python.compat import nativeString
@@ -51,8 +39,8 @@ Flattenable = Union[
     CDATA,
     Comment,
     Tag,
-    Tuple[FlattenableRecursive, ...],
-    List[FlattenableRecursive],
+    tuple[FlattenableRecursive, ...],
+    list[FlattenableRecursive],
     Generator[FlattenableRecursive, None, None],
     CharRef,
     Deferred[FlattenableRecursive],
@@ -68,7 +56,7 @@ Type alias containing all types that can be flattened by L{flatten()}.
 BUFFER_SIZE = 2**16
 
 
-def escapeForContent(data: Union[bytes, str]) -> bytes:
+def escapeForContent(data: bytes | str) -> bytes:
     """
     Escape some character or UTF-8 byte data for inclusion in an HTML or XML
     document, by replacing metacharacters (C{&<>}) with their entity
@@ -87,7 +75,7 @@ def escapeForContent(data: Union[bytes, str]) -> bytes:
     return data
 
 
-def attributeEscapingDoneOutside(data: Union[bytes, str]) -> bytes:
+def attributeEscapingDoneOutside(data: bytes | str) -> bytes:
     """
     Escape some character or UTF-8 byte data for inclusion in the top level of
     an attribute.  L{attributeEscapingDoneOutside} actually passes the data
@@ -107,7 +95,7 @@ def attributeEscapingDoneOutside(data: Union[bytes, str]) -> bytes:
 
 
 def writeWithAttributeEscaping(
-    write: Callable[[bytes], object]
+    write: Callable[[bytes], object],
 ) -> Callable[[bytes], None]:
     """
     Decorate a C{write} callable so that all output written is properly quoted
@@ -153,7 +141,7 @@ def writeWithAttributeEscaping(
     return _write
 
 
-def escapedCDATA(data: Union[bytes, str]) -> bytes:
+def escapedCDATA(data: bytes | str) -> bytes:
     """
     Escape CDATA for inclusion in a document.
 
@@ -167,7 +155,7 @@ def escapedCDATA(data: Union[bytes, str]) -> bytes:
     return data.replace(b"]]>", b"]]]]><![CDATA[>")
 
 
-def escapedComment(data: Union[bytes, str]) -> bytes:
+def escapedComment(data: bytes | str) -> bytes:
     """
     Within comments the sequence C{-->} can be mistaken as the end of the comment.
     To ensure consistent parsing and valid output the sequence is replaced with C{--&gt;}.
@@ -189,8 +177,8 @@ def escapedComment(data: Union[bytes, str]) -> bytes:
 
 def _getSlotValue(
     name: str,
-    slotData: Sequence[Optional[Mapping[str, Flattenable]]],
-    default: Optional[Flattenable] = None,
+    slotData: Sequence[Mapping[str, Flattenable] | None],
+    default: Flattenable | None = None,
 ) -> Flattenable:
     """
     Find the value of the named slot in the given stack of slot data.
@@ -224,16 +212,16 @@ def _fork(d: Deferred[T]) -> Deferred[T]:
 
 
 def _flattenElement(
-    request: Optional[IRequest],
+    request: IRequest | None,
     root: Flattenable,
     write: Callable[[bytes], object],
-    slotData: List[Optional[Mapping[str, Flattenable]]],
-    renderFactory: Optional[IRenderable],
-    dataEscaper: Callable[[Union[bytes, str]], bytes],
+    slotData: list[Mapping[str, Flattenable] | None],
+    renderFactory: IRenderable | None,
+    dataEscaper: Callable[[bytes | str], bytes],
     # This is annotated as Generator[T, None, None] instead of Iterator[T]
     # because mypy does not consider an Iterator to be an instance of
     # GeneratorType.
-) -> Generator[Union[Generator[Any, Any, Any], Deferred[Flattenable]], None, None]:
+) -> Generator[Generator[Any, Any, Any] | Deferred[Flattenable], None, None]:
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -272,10 +260,10 @@ def _flattenElement(
 
     def keepGoing(
         newRoot: Flattenable,
-        dataEscaper: Callable[[Union[bytes, str]], bytes] = dataEscaper,
-        renderFactory: Optional[IRenderable] = renderFactory,
+        dataEscaper: Callable[[bytes | str], bytes] = dataEscaper,
+        renderFactory: IRenderable | None = renderFactory,
         write: Callable[[bytes], object] = write,
-    ) -> Generator[Union[Flattenable, Deferred[Flattenable]], None, None]:
+    ) -> Generator[Flattenable | Deferred[Flattenable], None, None]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )
@@ -369,7 +357,7 @@ def _flattenElement(
 
 
 async def _flattenTree(
-    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+    request: IRequest | None, root: Flattenable, write: Callable[[bytes], object]
 ) -> None:
     """
     Make C{root} into an iterable of L{bytes} and L{Deferred} by doing a depth
@@ -412,7 +400,7 @@ async def _flattenTree(
             del buf[:]
             bufSize = 0
 
-    stack: List[Generator[Any, Any, Any]] = [
+    stack: list[Generator[Any, Any, Any]] = [
         _flattenElement(request, root, bufferedWrite, [], None, escapeForContent)
     ]
 
@@ -429,8 +417,12 @@ async def _flattenTree(
         except Exception as e:
             roots = []
             for generator in stack:
-                if generator.gi_frame is not None:
-                    roots.append(generator.gi_frame.f_locals["root"])
+                generatorFrame: FrameType = (
+                    # FIXME: typeshed bug?
+                    generator.gi_frame  # type:ignore[attr-defined]
+                )
+                if generatorFrame is not None:
+                    roots.append(generatorFrame.f_locals["root"])
             stack.pop()
             raise FlattenerError(e, roots, extract_tb(exc_info()[2]))
         else:
@@ -441,7 +433,7 @@ async def _flattenTree(
 
 
 def flatten(
-    request: Optional[IRequest], root: Flattenable, write: Callable[[bytes], object]
+    request: IRequest | None, root: Flattenable, write: Callable[[bytes], object]
 ) -> Deferred[None]:
     """
     Incrementally write out a string representation of C{root} using C{write}.
@@ -468,7 +460,7 @@ def flatten(
     return ensureDeferred(_flattenTree(request, root, write))
 
 
-def flattenString(request: Optional[IRequest], root: Flattenable) -> Deferred[bytes]:
+def flattenString(request: IRequest | None, root: Flattenable) -> Deferred[bytes]:
     """
     Collate a string representation of C{root} into a single string.
 

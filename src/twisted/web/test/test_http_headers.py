@@ -7,7 +7,7 @@ Tests for L{twisted.web.http_headers}.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web.http_headers import Headers, InvalidHeaderName, _nameEncoder

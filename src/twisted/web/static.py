@@ -13,14 +13,14 @@ import mimetypes
 import os
 import time
 import warnings
+from collections.abc import Sequence
 from html import escape
-from typing import Any, Callable, Dict, Sequence
+from typing import Any, Callable, Literal
 from urllib.parse import quote, unquote
 
 from zope.interface import implementer
 
 from incremental import Version
-from typing_extensions import Literal
 
 from twisted.internet import abstract, interfaces
 from twisted.python import components, filepath, log
@@ -200,9 +200,10 @@ class File(resource.Resource, filepath.FilePath[str]):
 
     contentEncodings = {".gz": "gzip", ".bz2": "bzip2"}
 
-    processors: Dict[str, Callable[[str, Any], Data]] = {}
+    processors: dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
+    ignoredExts: Sequence[str]
 
     type = None
 
@@ -245,7 +246,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         filepath.FilePath.__init__(self, path)
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
-            warnings.warn("ignoredExts should receive a list, not a boolean")
+            warnings.warn(  # type:ignore[unreachable]
+                "ignoredExts should receive a list, not a boolean"
+            )
             if ignoredExts or allowExt:
                 self.ignoredExts = ["*"]
             else:
@@ -283,8 +286,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         If this L{File}"s path refers to a directory, return a L{File}
         referring to the file named C{path} in that directory.
 
-        If C{path} is the empty string, return a L{DirectoryLister}
-        instead.
+        If C{path} is the empty string, return a L{DirectoryLister} instead.
 
         @param path: The current path segment.
         @type path: L{bytes}
@@ -292,9 +294,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         @param request: The incoming request.
         @type request: An that provides L{twisted.web.iweb.IRequest}.
 
-        @return: A resource representing the requested file or
-            directory, or L{NoResource} if the path cannot be
-            accessed.
+        @return: A resource representing the requested file or directory, or a
+            resource returning a NOT_FOUND error to clients if the path cannot
+            be accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
         if isinstance(path, bytes):

@@ -55,7 +55,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-22.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-24.04' }}"
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -101,34 +101,32 @@ jobs:
 
           # `nodeps` is created to make sure we don't have import errors in the
           # runtime and production code.
+
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
+
           # Distributed test run is disabled here so that we also have
           # end to end functional test usage for non-distributed trial runs.
           # When updating the minimum Python version here, also update the
           # `python_requires` from `setup.cfg`.
-          - python-version: '3.8.0'
+          # Here we should have the oldest Python version supported
+          # by GitHub. The availability of the Python version
+          # depends on the version of Ubuntu in use.
+          # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+          - python-version: '3.10.4'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
-            # Older pyhon is only on 20.04.
-            runs-on: 'ubuntu-20.04'
 
           # `noipv6` is created to make sure all is OK on an OS which doesn't
           # have IPv6 available.
           # Any supported Python version is OK for this job.
           # We go with latest micro release for the smallest minor release
-          # that we support.
+          # that is supported by GitHub Actions for the target OS.
           # This is also used to run tests with minimum dependency versions.
-          - python-version: '3.8'
+          - python-version: '3.10'
             noipv6: '-noipv6'
             tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
-
-          # Just Python 3.8 with default settings.
-          - python-version: '3.8'
-
-          # Just Python 3.9 with default settings.
-          - python-version: '3.9'
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
@@ -139,20 +137,24 @@ jobs:
           # Just Python 3.13 with default settings.
           - python-version: '3.13'
 
-          # Newest Intel macOS and oldest Python (major) supported versions.
-          - python-version: '3.8'
-            runs-on: 'macos-13'
-            job-name: 'macos-13-default-tests'
-            tox-env: 'macos-withcov-alldeps'
+          # Just Python 3.14 with default settings.
+          - python-version: '3.14'
 
-          # Newest ARM macOS and newest Python supported versions.
-          - python-version: '3.13'
+          # Oldest Intel macOS (available on GitHub)
+          # and oldest Python (major) supported versions.
+          - python-version: '3.10'
             runs-on: 'macos-14'
             job-name: 'macos-14-default-tests'
             tox-env: 'macos-withcov-alldeps'
 
+          # Newest ARM macOS and newest Python supported versions.
+          - python-version: '3.14'
+            runs-on: 'macos-15'
+            job-name: 'macos-15-default-tests'
+            tox-env: 'macos-withcov-alldeps'
+
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.8'
+          - python-version: '3.10'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -161,64 +163,82 @@ jobs:
             # select a reactor.
             trial-args: '--reactor=select'
 
+          # Windows, newest Python supported version with select reactor.
+          - python-version: '3.14'
+            tox-env: 'nodeps-withcov-windows'
+            job-name: 'nodeps-windows-select'
+            runs-on: 'windows-2022'
+            # Should be removed once we can run distributed tests on Windows
+            # https://github.com/twisted/twisted/issues/12521
+            trial-args: '--reactor=select'
+
           # Windows, newest Python supported version with iocp reactor.
-          - python-version: '3.13'
+          - python-version: '3.14'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.
+            # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=iocp'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: 'pypy3.10-v7.3.14'
+          - python-version: 'pypy3.11-v7.3.23'
             tox-env: 'alldeps-nocov-posix'
             job-name: 'no-coverage'
             skip-coverage: yes
 
           # We still run some tests with coverage,
           # as there are test with specific code branches for pypy.
-          - python-version: 'pypy3.10-v7.3.13'
-            trial-target: 'twisted.internet.test.test_tcp twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
+          - python-version: 'pypy3.11-v7.3.23'
+            tox-env: 'nodeps-withcov-posix'
+            trial-target: '-- twisted.test.test_compat twisted.test.test_defer twisted.internet.test.test_socket twisted.trial.test.test_tests'
             job-name: 'with-coverage'
 
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          - python-version: '3.8'
+          # This is executed using the oldest Python that we support.
+          - python-version: '3.10'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
             job-name: 'gtk-tests'
             trial-args: '--reactor=gi -j 4'
 
+          # Future Python 3.15 work in progress.
+          # These tests might have various exceptions and
+          # we will remove the exceptions as support is added.
+          - python-version: '3.15.0-beta.1'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-linux'
+            # The arguments can be removed once trial tests are fixed.
+            # https://github.com/twisted/twisted/issues/12645
+            trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
+
+          - python-version: '3.15.0-beta.1'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-macos'
+            runs-on: 'macos-14'
+            # The arguments can be removed once trial tests are fixed.
+            # https://github.com/twisted/twisted/issues/12645
+            trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
         check-latest: true
-
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "cache-dir=$(pip cache dir)" >> $GITHUB_OUTPUT
-
-    - name: pip cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.pip-cache.outputs.cache-dir }}
-        key:
-          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'setup.py',
-          'setup.cfg', 'tox.ini') }}
-        restore-keys: |
-            ${{ runner.os }}-pip-
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
@@ -234,7 +254,7 @@ jobs:
     - name: Install dependencies
       run: |
         openssl version
-        python -m pip install --upgrade pip tox~=3.0 coverage
+        python -m pip install --upgrade pip tox coverage
 
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
@@ -242,10 +262,10 @@ jobs:
       if: matrix.platform-deps == 'gtk-platform'
       run: |
         # *-dev dependencies are for pygobject
-        # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.42.0/setup.py#L129-L134
+        # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.56.3/meson.build#L35-44
         sudo apt-get update
         sudo apt-get install -y \
-          libgirepository1.0-dev \
+          libgirepository-2.0-dev \
           libglib2.0-dev \
           libcairo2-dev \
           libffi-dev \
@@ -283,7 +303,7 @@ jobs:
 
     - name: Store coverage file
       if: ${{ !cancelled() && !matrix.skip-coverage }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: coverage-${{ matrix.python-version || env.DEFAULT_PYTHON_VERSION }}-${{ matrix.job-name || 'default-tests' }}
         include-hidden-files: true
@@ -294,11 +314,13 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
-    if: always()  # Always run the coverage report, even when the tests fail.
+    # Always run the coverage report, even when the tests fail.
+    # As long as the job is not cancelled.
+    if: ${{ !cancelled() }}
     needs:
       - testing  # Code coverage only needs to wait for test jobs.
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -308,7 +330,7 @@ jobs:
         python -m pip install --upgrade coverage[toml] diff_cover
 
     - name: Download coverage reports
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: coverage-*
         merge-multiple: true
@@ -344,13 +366,13 @@ jobs:
 
     - name: Upload HTML report on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: html-report
         path: htmlcov
 
     - name: Publish to codecov.io
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() }}
       with:
         files: coverage.xml
@@ -359,13 +381,16 @@ jobs:
 
 
   benchmarks:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read  # required for actions/checkout
+      id-token: write # required for OIDC authentication with CodSpeed
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         # When you will need to change this to run the benchmarks
         # on a different Python version,
@@ -377,6 +402,10 @@ jobs:
         # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
         python-version: '3.12'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Install dependencies
       run: |
@@ -384,9 +413,9 @@ jobs:
         python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v3
+      uses: CodSpeedHQ/action@v4
       with:
-        token: ${{ secrets.CODSPEED_TOKEN }}
+        mode: simulation
         # codspeed runs this command under a CPU emulator, so it's super-slow,
         # so we try to just do the benchmarks and nothing else.
         run: python -m pytest --codspeed benchmarks/
@@ -405,7 +434,7 @@ jobs:
           benchmarks
 
     - name: Publish benchmarks coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() }}
       with:
         files: coverage.xml
@@ -421,24 +450,28 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         # Need full history for various diff checks to work.
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Run the checks
       run: |
@@ -452,16 +485,21 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
+
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Build apidocs
       run: |
@@ -469,16 +507,20 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.DEFAULT_PYTHON_VERSION }}
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip tox~=3.0
+        python -m pip install --upgrade pip tox
 
     - name: Run the checks
       run: |
@@ -492,19 +534,22 @@ jobs:
   # The files are published only when a tag is created using the next job, release-publish
   release-build:
     name: Build and check release, then upload artifact
-    runs-on: 'ubuntu-22.04'
+    runs-on: 'ubuntu-24.04'
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '${{ env.DEFAULT_PYTHON_VERSION }}'
+        cache: pip
+        cache-dependency-path: |
+          pyproject.toml
+          tox.ini
 
     - name: Test
       run: |
-        python -m pip install --upgrade pip tox~=3.0 pep517
-        rm -rf dist/*
+        python -m pip install --upgrade pip tox
         tox -e release-prepare
 
     - uses: twisted/python-info-action@v1
@@ -513,14 +558,16 @@ jobs:
       run: |
         ls -R dist/
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: dist
         path: dist
 
     - name: Check matched tag version and branch version - on tag
       if: startsWith(github.ref, 'refs/tags/twisted-')
-      run: python admin/check_tag_version_match.py "${{ github.ref }}"
+      run: |
+        python -m pip install pep517==0.13.1
+        python admin/check_tag_version_match.py "${{ github.ref }}"
 
   # Used exclusively for PyPi release publishing.
   # This is only executed on tags and only does the publishing.
@@ -539,13 +586,13 @@ jobs:
     name: publish on twisted-* tag
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: dist
         path: dist
 
     - name: Publish to PyPI - on tag
-      uses: pypa/gh-action-pypi-publish@v1.12.2
+      uses: pypa/gh-action-pypi-publish@release/v1
 
 
   # We have this job so that the PR can be blocked on a single job.
@@ -556,7 +603,7 @@ jobs:
   all-successful:
     # Is very important to force running this always, as otherwise it will be
     #  skipped by default.
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     # Here should be the list of all the other jobs defined in this file.
     needs:

@@ -10,13 +10,10 @@ Maintainer: Paul Swartz
 """
 
 
-from typing import Dict, List, Tuple
-
-
-def parseModuliFile(filename: str) -> Dict[int, List[Tuple[int, int]]]:
+def parseModuliFile(filename: str) -> dict[int, list[tuple[int, int]]]:
     with open(filename) as f:
         lines = f.readlines()
-    primes: Dict[int, List[Tuple[int, int]]] = {}
+    primes: dict[int, list[tuple[int, int]]] = {}
     for l in lines:
         l = l.strip()
         if not l or l[0] == "#":

@@ -24,17 +24,11 @@ implementation of Deferreds.  AMP provides the following base-level features:
     - Command dispatching (like HTTP Verbs): the protocol is extensible, and
       multiple AMP sub-protocols can be grouped together easily.
 
-The protocol implementation also provides a few additional features which are
-not part of the core wire protocol, but are nevertheless very useful:
-
-    - Tight TLS integration, with an included StartTLS command.
-
-    - Handshaking to other protocols: because AMP has well-defined message
-      boundaries and maintains all incoming and outgoing requests for you, you
-      can start a connection over AMP and then switch to another protocol.
-      This makes it ideal for firewall-traversal applications where you may
-      have only one forwarded port but multiple applications that want to use
-      it.
+You can also use AMP to tunnel other protocols: because AMP has well-defined
+message boundaries and maintains all incoming and outgoing requests for you,
+you can start a connection over AMP and then switch to another protocol.  This
+makes it ideal for firewall-traversal applications where you may have only one
+forwarded port but multiple applications that want to use it.
 
 Using AMP with Twisted is simple.  Each message is a command, with a response.
 You begin by defining a command type.  Commands specify their input and output
@@ -65,8 +59,8 @@ a L{Deferred} which will fire with the result::
         lambda p: p.callRemote(Sum, a=13, b=81)).addCallback(
             lambda result: result['total'])
 
-Command responders may also return Deferreds, causing the response to be
-sent only once the Deferred fires::
+Command responders may also return Deferreds, causing the response to be sent
+only once the Deferred fires::
 
     class DelayedSum(amp.AMP):
         def slowSum(self, a, b):
@@ -202,18 +196,7 @@ from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, ClassVar, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -622,7 +605,7 @@ class IncompatibleVersions(AmpError):
 PROTOCOL_ERRORS = {UNHANDLED_ERROR_CODE: UnhandledCommand}
 
 
-class AmpBox(Dict[bytes, bytes]):
+class AmpBox(dict[bytes, bytes]):
     """
     I am a packet in the AMP protocol, much like a
     regular bytes:bytes dictionary.
@@ -630,7 +613,7 @@ class AmpBox(Dict[bytes, bytes]):
 
     # be like a regular dictionary don't magically
     # acquire a __dict__...
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __init__(self, *args, **kw):
         """
@@ -726,7 +709,7 @@ class QuitBox(AmpBox):
     I am an AmpBox that, upon being sent, terminates the connection.
     """
 
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __repr__(self) -> str:
         return f"QuitBox(**{super().__repr__()})"
@@ -1097,7 +1080,7 @@ class _CommandLocatorMeta(type):
     metaclass.
     """
 
-    _currentClassCommands: "list[tuple[type[Command], Callable[..., Any]]]" = []
+    _currentClassCommands: list[tuple[type[Command], Callable[..., Any]]] = []
 
     def __new__(cls, name, bases, attrs):
         commands = cls._currentClassCommands[:]
@@ -1710,12 +1693,12 @@ class _CommandMeta(type):
 
     def __new__(
         cls: type[_Self], name: str, bases: tuple[type], attrs: dict[str, object]
-    ) -> Type[Command]:
+    ) -> type[Command]:
         reverseErrors = attrs["reverseErrors"] = {}
         er = attrs["allErrors"] = {}
         if "commandName" not in attrs:
             attrs["commandName"] = name.encode("ascii")
-        newtype: Type[Command] = type.__new__(cls, name, bases, attrs)  # type:ignore
+        newtype: type[Command] = type.__new__(cls, name, bases, attrs)  # type:ignore
 
         if not isinstance(newtype.commandName, bytes):
             raise TypeError(
@@ -1730,8 +1713,8 @@ class _CommandMeta(type):
             if not isinstance(bname, bytes):
                 raise TypeError(f"Response names must be byte strings, got: {bname!r}")
 
-        errors: Dict[Type[Exception], bytes] = {}
-        fatalErrors: Dict[Type[Exception], bytes] = {}
+        errors: dict[type[Exception], bytes] = {}
+        fatalErrors: dict[type[Exception], bytes] = {}
         accumulateClassDict(newtype, "errors", errors)
         accumulateClassDict(newtype, "fatalErrors", fatalErrors)
 
@@ -1803,14 +1786,14 @@ class Command(metaclass=_CommandMeta):
     """
 
     commandName: ClassVar[bytes]
-    arguments: ClassVar[List[Tuple[bytes, Argument]]] = []
-    response: ClassVar[List[Tuple[bytes, Argument]]] = []
-    extra: ClassVar[List[Any]] = []
-    errors: ClassVar[Dict[Type[Exception], bytes]] = {}
-    fatalErrors: ClassVar[Dict[Type[Exception], bytes]] = {}
+    arguments: ClassVar[list[tuple[bytes, Argument]]] = []
+    response: ClassVar[list[tuple[bytes, Argument]]] = []
+    extra: ClassVar[list[Any]] = []
+    errors: ClassVar[dict[type[Exception], bytes]] = {}
+    fatalErrors: ClassVar[dict[type[Exception], bytes]] = {}
 
-    commandType: "ClassVar[Union[Type[Command], Type[Box]]]" = Box
-    responseType: ClassVar[Type[AmpBox]] = Box
+    commandType: ClassVar[type[Command] | type[Box]] = Box
+    responseType: ClassVar[type[AmpBox]] = Box
 
     requiresAnswer = True
 
@@ -2044,7 +2027,7 @@ class _TLSBox(AmpBox):
     I am an AmpBox that, upon being sent, initiates a TLS connection.
     """
 
-    __slots__: List[str] = []
+    __slots__: list[str] = []
 
     def __init__(self):
         if ssl is None:
@@ -2083,18 +2066,28 @@ class _LocalArgument(String):
 
 class StartTLS(Command):
     """
-    Use, or subclass, me to implement a command that starts TLS.
+    If your protocol requires a complex plaintext preamble to begin a secure
+    connection, and you are I{ABSOLUTELY SURE} that you understand the
+    consequences of sending that data insecurely, you can use, or subclass,
+    L{StartTLS} to define a command that switches from an unencrypted
+    connection to a TLS connection.
+
+    In general, you should prefer using TLS endpoints as defined by
+    L{twisted.internet.endpoints.wrapClientTLS} and
+    L{twisted.internet.endpoints.wrapServerTLS}, and using server hostname
+    indication and/or application layer protocol negotiation to negotiate the
+    parameters of the TLS connection.
 
     Callers of StartTLS may pass several special arguments, which affect the
     TLS negotiation:
 
         - tls_localCertificate: This is a
-        twisted.internet.ssl.PrivateCertificate which will be used to secure
-        the side of the connection it is returned on.
+          twisted.internet.ssl.PrivateCertificate which will be used to secure
+          the side of the connection it is returned on.
 
         - tls_verifyAuthorities: This is a list of
-        twisted.internet.ssl.Certificate objects that will be used as the
-        certificate authorities to verify our peer's certificate.
+          twisted.internet.ssl.Certificate objects that will be used as the
+          certificate authorities to verify our peer's certificate.
 
     Each of those special parameters may also be present as a key in the
     response dictionary.
@@ -2298,7 +2291,7 @@ class BinaryBoxProtocol(
 
     hostCertificate = None
     noPeerCertificate = False  # for tests
-    innerProtocol: Optional[Protocol] = None
+    innerProtocol: Protocol | None = None
     innerProtocolClientFactory = None
 
     def __init__(self, boxReceiver):

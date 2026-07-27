@@ -8,23 +8,14 @@ responsible for coordinating all of trial's behavior at the highest level.
 
 @since: 12.3
 """
+from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Awaitable, Iterable, Sequence
 from functools import partial
 from os.path import isabs
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    TextIO,
-    Union,
-    cast,
-)
+from typing import Any, Callable, TextIO, cast
 from unittest import TestCase, TestSuite
 
 from attrs import define, field, frozen
@@ -119,8 +110,8 @@ class StartedWorkerPool:
     workingDirectory: FilePath[Any]
     testDirLock: FilesystemLock
     testLog: TextIO
-    workers: List[LocalWorker]
-    ampWorkers: List[LocalWorkerAMP]
+    workers: list[LocalWorker]
+    ampWorkers: list[LocalWorkerAMP]
 
     _logger = Logger()
 
@@ -168,7 +159,7 @@ class WorkerPool:
         protocols: Iterable[LocalWorkerAMP],
         workingDirectory: FilePath[Any],
         logFile: TextIO,
-    ) -> List[LocalWorker]:
+    ) -> list[LocalWorker]:
         """
         Create local worker protocol instances and return them.
 
@@ -273,7 +264,7 @@ async def runTests(
     testCases: Iterable[ITestCase],
     result: DistReporter,
     driveWorker: Callable[
-        [DistReporter, Sequence[ITestCase], LocalWorkerAMP], Awaitable[None]
+        [DistReporter, Iterable[ITestCase], LocalWorkerAMP], Awaitable[None]
     ],
 ) -> None:
     try:
@@ -310,7 +301,7 @@ class DistTrialRunner:
     # on the argument annotation
     _reporterFactory: Callable[..., IReporter]
     _maxWorkers: int
-    _workerArguments: List[str]
+    _workerArguments: list[str]
     _exitFirst: bool = False
     _reactor: IDistTrialReactor = field(
         # mypy doesn't understand the converter
@@ -349,7 +340,7 @@ class DistTrialRunner:
     async def _driveWorker(
         self,
         result: DistReporter,
-        testCases: Sequence[ITestCase],
+        testCases: Iterable[ITestCase],
         worker: LocalWorkerAMP,
     ) -> None:
         """
@@ -377,7 +368,7 @@ class DistTrialRunner:
 
     async def runAsync(
         self,
-        suite: Union[TestCase, TestSuite],
+        suite: TestCase | TestSuite,
         untilFailure: bool = False,
     ) -> DistReporter:
         """
@@ -451,16 +442,16 @@ class DistTrialRunner:
             # Shut down the worker pool.
             await startedPool.join()
 
-    def _run(self, test: Union[TestCase, TestSuite], untilFailure: bool) -> IReporter:
-        result: Union[Failure, DistReporter, None] = None
+    def _run(self, test: TestCase | TestSuite, untilFailure: bool) -> IReporter:
+        result: Failure | DistReporter | None = None
         reactorStopping: bool = False
         testsInProgress: Deferred[object]
 
-        def capture(r: Union[Failure, DistReporter]) -> None:
+        def capture(r: Failure | DistReporter) -> None:
             nonlocal result
             result = r
 
-        def maybeStopTests() -> Optional[Deferred[object]]:
+        def maybeStopTests() -> Deferred[object] | None:
             nonlocal reactorStopping
             reactorStopping = True
             if result is None:
@@ -495,7 +486,7 @@ class DistTrialRunner:
         # object.  DistReporter isn't type annotated correctly so fix it here.
         return cast(IReporter, result.original)
 
-    def run(self, test: Union[TestCase, TestSuite]) -> IReporter:
+    def run(self, test: TestCase | TestSuite) -> IReporter:
         """
         Run a reactor and a test suite.
 
@@ -503,7 +494,7 @@ class DistTrialRunner:
         """
         return self._run(test, untilFailure=False)
 
-    def runUntilFailure(self, test: Union[TestCase, TestSuite]) -> IReporter:
+    def runUntilFailure(self, test: TestCase | TestSuite) -> IReporter:
         """
         Run the tests with local worker processes until they fail.
 

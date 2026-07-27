@@ -10,10 +10,11 @@ import pdb
 import sys
 import unittest as pyunit
 from io import StringIO
-from typing import List
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
+
+from incremental import Version
 
 from twisted import plugin
 from twisted.internet import defer
@@ -580,7 +581,7 @@ class UntilFailureTests(unittest.SynchronousTestCase):
         A test case that fails when run 3 times in a row.
         """
 
-        count: List[None] = []
+        count: list[None] = []
 
         def test_foo(self):
             self.count.append(None)
@@ -980,6 +981,17 @@ class DestructiveTestSuiteTests(unittest.SynchronousTestCase):
 
 
 class RunnerDeprecationTests(unittest.SynchronousTestCase):
+    def test_samefile(self) -> None:
+        """
+        Test that L{runner.samefile} is deprecated.
+        """
+        self.callDeprecated(
+            (Version("Twisted", "NEXT", 0, 0), "os.path.samefile"),
+            runner.samefile,
+            __file__,
+            os.path.abspath(__file__),
+        )
+
     class FakeReporter(reporter.Reporter):
         """
         Fake reporter that does *not* implement done() but *does* implement
@@ -987,7 +999,7 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
         without deprecations.
         """
 
-        done = None
+        done = None  # type:ignore[assignment]
         separator = None
         stream = None
 

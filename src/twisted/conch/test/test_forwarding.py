@@ -32,12 +32,13 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
         on C{reactor}.
 
         @param reactor: Reactor on which to fake the connection.
-        @type  reactor: A reactor.
         """
         factory = reactor.tcpClients[0][2]
         connector = reactor.connectors[0]
-        protocol = factory.buildProtocol(None)
+        protocol = factory.buildProtocol(IPv6Address("TCP", "::", 4321))
+        assert protocol is not None, "connection refused by system under test"
         transport = StringTransport(peerAddress=connector.getDestination())
+        assert protocol is not None
         protocol.makeConnection(transport)
 
     def test_channelOpenHostnameRequests(self) -> None:
