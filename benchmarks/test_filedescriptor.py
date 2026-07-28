@@ -12,7 +12,13 @@ from twisted.internet.testing import MemoryReactor
 
 class BufferedFileDescriptor(FileDescriptor):
     """
-    A connected L{FileDescriptor} with no-op reactor integration.
+    A connected L{FileDescriptor} using a fake reactor.
+
+    This object is both a transport L{ITransport} and a writable file descriptor L{IWriteDescriptor}.
+
+    The fake reactor does not call L{IWriteDescriptor.doWrite} since we don't want to rely
+    on the operating system for a writable notification/event. Because of this, the benchmark
+    tests call it manually after buffering data with L{ITransport.write}
     """
 
     connected = True
@@ -20,14 +26,6 @@ class BufferedFileDescriptor(FileDescriptor):
     def __init__(self) -> None:
         FileDescriptor.__init__(self, reactor=MemoryReactor())
         self.writeLimit = self.SEND_LIMIT
-
-    def startWriting(self) -> None:
-        """
-        No reactor is used, so this function is no-op
-        """
-
-    # No-op
-    stopWriting = startWriting
 
     def writeSomeData(self, data: bytes) -> int:
         """
@@ -65,16 +63,16 @@ WRITE_DATA = b"x" * 8192
 
 def test_fileDescriptor_write(benchmark: Any) -> None:
     """
-    Benchmark writing 8KB with L{FileDescriptor.write}.
+    Benchmark writing 8KB with L{ITransport.write}.
     """
 
     def setup():
         return (BufferedFileDescriptor(), WRITE_DATA), {}
 
-    def teardown(descriptor: BufferedFileDescriptor, data: bytes) -> None:
+    def teardown(transport: BufferedFileDescriptor, data: bytes) -> None:
         # Verify state of buffer and counter
-        assert descriptor._tempDataBuffer == [data]
-        assert descriptor._tempDataLen == len(data)
+        assert transport._tempDataBuffer == [data]
+        assert transport._tempDataLen == len(data)
 
     benchmark.pedantic(
         BufferedFileDescriptor.write,
@@ -88,15 +86,15 @@ def test_fileDescriptor_write(benchmark: Any) -> None:
 @pytest.mark.parametrize("chunks", SEQUENCES.values(), ids=SEQUENCES)
 def test_fileDescriptor_writeSequence(benchmark: Any, chunks: list[bytes]) -> None:
     """
-    Benchmark buffering a sequence with L{FileDescriptor.writeSequence}.
+    Benchmark buffering a sequence with L{ITransport.writeSequence}.
     """
 
     def setup():
         return (BufferedFileDescriptor(), chunks), {}
 
-    def teardown(descriptor: BufferedFileDescriptor, data: list[bytes]) -> None:
-        assert descriptor._tempDataBuffer == data
-        assert descriptor._tempDataLen == sum(map(len, data))
+    def teardown(transport: BufferedFileDescriptor, data: list[bytes]) -> None:
+        assert transport._tempDataBuffer == data
+        assert transport._tempDataLen == sum(map(len, data))
 
     benchmark.pedantic(
         BufferedFileDescriptor.writeSequence,
@@ -109,21 +107,21 @@ def test_fileDescriptor_writeSequence(benchmark: Any, chunks: list[bytes]) -> No
 
 def test_fileDescriptor_doWriteFlushBufferedWrites(benchmark: Any) -> None:
     """
-    Benchmark flushing four buffered 8KB writes.
+    Benchmark flushing four buffered 8KB writes with L{IWriteDescriptor.doWrite}.
     """
 
     def setup():
-        descriptor = BufferedFileDescriptor()
+        transport = BufferedFileDescriptor()
         for _ in range(4):
             # Buffer 4x 8KB chunks
-            descriptor.write(WRITE_DATA)
-        return (descriptor,), {}
+            transport.write(WRITE_DATA)
+        return (transport,), {}
 
-    def teardown(descriptor: BufferedFileDescriptor) -> None:
-        assert descriptor._tempDataBuffer == []
-        assert descriptor._tempDataLen == 0
-        assert descriptor.dataBuffer == b""
-        assert descriptor.offset == 0
+    def teardown(transport: BufferedFileDescriptor) -> None:
+        assert transport._tempDataBuffer == []
+        assert transport._tempDataLen == 0
+        assert transport.dataBuffer == b""
+        assert transport.offset == 0
 
     benchmark.pedantic(
         BufferedFileDescriptor.doWrite,
@@ -140,27 +138,27 @@ def test_fileDescriptor_doWriteAppendAfterPartialWrite(benchmark: Any) -> None:
     """
 
     def setup():
-        descriptor = BufferedFileDescriptor()
+        transport = BufferedFileDescriptor()
         for _ in range(4):
             # Buffer 4x 8KB chunks
-            descriptor.write(WRITE_DATA)
+            transport.write(WRITE_DATA)
 
         # Do a partial write, it writes only 8KB
-        descriptor.writeLimit = len(WRITE_DATA)
-        descriptor.doWrite()
+        transport.writeLimit = len(WRITE_DATA)
+        transport.doWrite()
 
         # Now buffer another chunk
-        descriptor.write(WRITE_DATA)
+        transport.write(WRITE_DATA)
 
         # Revert the limit back and run benchmark
-        descriptor.writeLimit = descriptor.SEND_LIMIT
-        return (descriptor,), {}
+        transport.writeLimit = transport.SEND_LIMIT
+        return (transport,), {}
 
-    def teardown(descriptor: BufferedFileDescriptor) -> None:
-        assert descriptor._tempDataBuffer == []
-        assert descriptor._tempDataLen == 0
-        assert descriptor.dataBuffer == b""
-        assert descriptor.offset == 0
+    def teardown(transport: BufferedFileDescriptor) -> None:
+        assert transport._tempDataBuffer == []
+        assert transport._tempDataLen == 0
+        assert transport.dataBuffer == b""
+        assert transport.offset == 0
 
     benchmark.pedantic(
         BufferedFileDescriptor.doWrite,
@@ -177,25 +175,25 @@ def test_fileDescriptor_doWriteContinuePartialWrite(benchmark: Any) -> None:
     """
 
     def setup():
-        descriptor = BufferedFileDescriptor()
+        transport = BufferedFileDescriptor()
         for _ in range(17):
             # Buffer 17 x 8KB chunks
-            descriptor.write(WRITE_DATA)
+            transport.write(WRITE_DATA)
 
         # Do a partial write, it writes only 8KB
-        descriptor.writeLimit = len(WRITE_DATA)
-        descriptor.doWrite()
+        transport.writeLimit = len(WRITE_DATA)
+        transport.doWrite()
 
         # We have 16 x 8KB = 128KB left
-        descriptor.writeLimit = descriptor.SEND_LIMIT
-        return (descriptor,), {}
+        transport.writeLimit = transport.SEND_LIMIT
+        return (transport,), {}
 
-    def teardown(descriptor: BufferedFileDescriptor) -> None:
+    def teardown(transport: BufferedFileDescriptor) -> None:
         # Verify state of buffer and counter
-        assert descriptor._tempDataBuffer == []
-        assert descriptor._tempDataLen == 0
-        assert descriptor.dataBuffer == b""
-        assert descriptor.offset == 0
+        assert transport._tempDataBuffer == []
+        assert transport._tempDataLen == 0
+        assert transport.dataBuffer == b""
+        assert transport.offset == 0
 
     benchmark.pedantic(
         BufferedFileDescriptor.doWrite,
@@ -212,22 +210,24 @@ def test_fileDescriptor_doWriteContinueSmallPartialWrite(benchmark: Any) -> None
     """
 
     def setup():
-        descriptor = BufferedFileDescriptor()
+        transport = BufferedFileDescriptor()
         for _ in range(4):
-            descriptor.write(WRITE_DATA)
+            transport.write(WRITE_DATA)
 
         # Do a partial write, it writes only 8KB
-        descriptor.writeLimit = len(WRITE_DATA)
-        descriptor.doWrite()
+        transport.writeLimit = len(WRITE_DATA)
+        transport.doWrite()
 
         # Now run benchmark, where we continue writing 24KB data
         # which is less than SEND_LIMIT.
-        return (descriptor,), {}
+        return (transport,), {}
 
-    def teardown(descriptor: BufferedFileDescriptor) -> None:
-        assert descriptor._tempDataBuffer == []
-        assert descriptor._tempDataLen == 0
-        assert len(descriptor.dataBuffer) - descriptor.offset == 2 * len(WRITE_DATA)
+    def teardown(transport: BufferedFileDescriptor) -> None:
+        assert transport._tempDataBuffer == []
+        assert transport._tempDataLen == 0
+
+        # There should be 16KB left of data since writeLimit is 8KB
+        assert len(transport.dataBuffer) - transport.offset == 2 * len(WRITE_DATA)
 
     benchmark.pedantic(
         BufferedFileDescriptor.doWrite,
