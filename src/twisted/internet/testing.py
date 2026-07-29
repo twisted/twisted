@@ -831,8 +831,10 @@ class MemoryReactor:
         Fake L{IReactorFDSet.removeAll} which removed all readers and writers
         from the local sets.
         """
+        removed = list(self.readers | self.writers)
         self.readers.clear()
         self.writers.clear()
+        return removed
 
 
 for iface in implementedBy(MemoryReactor):
