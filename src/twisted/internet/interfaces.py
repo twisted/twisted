@@ -9,7 +9,7 @@ Maintainer: Itamar Shtull-Trauring
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, AnyStr, Callable, NewType, Optional
+from typing import TYPE_CHECKING, Any, AnyStr, Callable, NewType
 
 from zope.interface import Attribute, Interface
 
@@ -679,9 +679,9 @@ class IResolver(IResolverSimple):
 
 @frozen
 class _Binding:
-    _addr: Optional[str] = None
+    _address: str | None = None
     _port: int = 0
-    _reuseAddr: bool = False
+    _reuseAddress: bool = False
     _reusePort: bool = False
 
 

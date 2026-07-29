@@ -19,7 +19,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Optional,
     Protocol as TypingProtocol,
 )
 
@@ -1365,8 +1364,8 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ""
     backlog = 50
-    factory: Optional[Factory] = None  # teach mypy "factory" exists
-    port: Optional[int] = None
+    factory: Factory | None = None  # teach mypy "factory" exists
+    port: int | None = None
 
     _type = "TCP"
 
