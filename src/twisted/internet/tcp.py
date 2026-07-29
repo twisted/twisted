@@ -219,7 +219,7 @@ class _AbortingMixin:
 
 
 def makeBinding(
-    iface: str = "", port: int = 0, reuseAddr: bool = False, reusePort: bool = False
+    interface: str = "", port: int = 0, reuseAddress: bool = False, reusePort: bool = False
 ) -> Binding:
     """
     Create an object describing how to bind locally.
@@ -227,10 +227,10 @@ def makeBinding(
     This may include an address, a port and other options -- which
     end up using e.g. C{setsockopt} on Posix.
 
-    C{reuseAddr} maps to C{SO_REUSEADDR} and C{reusePort} maps to
+    C{reuseAddress} maps to C{SO_REUSEADDR} and C{reusePort} maps to
     C{SO_REUSEPORT} on Posix systems.
     """
-    return Binding(_Binding(iface, port, reuseAddr, reusePort))
+    return Binding(_Binding(interface, port, reuseAddress, reusePort))
 
 
 # note: it could make sense to have a makeExclusiveBinding() function
@@ -249,8 +249,8 @@ def makeBindingFromArg(arg: Binding | tuple[str, int] | None) -> Binding:
         bind = makeBinding("", 0)
     else:
         # not a tuple or None so it must be a Binding
-        addr = "" if arg._addr is None else arg._addr
-        bind = makeBinding(addr, arg._port, arg._reuseAddr, arg._reusePort)
+        addr = "" if arg._address is None else arg._address
+        bind = makeBinding(addr, arg._port, arg._reuseAddress, arg._reusePort)
     return bind
 
 
@@ -798,16 +798,16 @@ class _BaseTCPClient:
             whenDone = None
         if whenDone and bindAddress is not None:
             assert isinstance(bindAddress, _Binding)
-            if bindAddress._reuseAddr:
+            if bindAddress._reuseAddress:
                 skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             if platformType == "posix" and sys.platform != "cygwin":
                 if bindAddress._reusePort:
                     skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             try:
-                if abstract.isIPv6Address(bindAddress._addr):
-                    bindinfo = _resolveIPv6(bindAddress._addr, bindAddress._port)
+                if abstract.isIPv6Address(bindAddress._address):
+                    bindinfo = _resolveIPv6(bindAddress._address, bindAddress._port)
                 else:
-                    bindinfo = bindAddress._addr, bindAddress._port
+                    bindinfo = bindAddress._address, bindAddress._port
                 skt.bind(bindinfo)
             except OSError as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
@@ -1300,19 +1300,19 @@ def _constructTCPPort(self, port, factory, backlog, interface):
         # what does port of "None" really mean? socket.bind()
         # doesn't say and it gets called like this below in
         # _fromListeningDescriptor
-        binding = makeBinding(interface, port, reuseAddr=True)
+        binding = makeBinding(interface, port, reuseAddress=True)
     if isinstance(binding, int):
-        binding = makeBinding(interface, port, reuseAddr=True)
+        binding = makeBinding(interface, port, reuseAddress=True)
     else:
         assert isinstance(binding, _Binding), "Binding is {}".format(binding)
-        if interface != "" and binding._addr != interface:
+        if interface != "" and binding._address != interface:
             raise ValueError("Inconsistent interface vs Binding specifiers")
     # we need to be backwards-compatible to when Port had settable
     # .port and .interface attributes .. so we extract everything
     # from Binding here (thus leaving Binding immutable).
     self.port = binding._port
-    self.interface = "" if binding._addr is None else binding._addr
-    self._reuseAddr = binding._reuseAddr
+    self.interface = "" if binding._address is None else binding._address
+    self._reuseAddress = binding._reuseAddress
     self._reusePort = binding._reusePort
     self.factory = factory
     self.backlog = backlog
@@ -1432,7 +1432,7 @@ class Port(base.BasePort, _SocketCloser):
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
         if platformType == "posix" and sys.platform != "cygwin":
-            if self._reuseAddr:
+            if self._reuseAddress:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             if self._reusePort:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)

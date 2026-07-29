@@ -130,7 +130,7 @@ For endpoints, types such as :py:class:`HostnameEndpoint <twisted.internet.endpo
 - ``Binding``: an instance returned from :py:func:`makeBinding <twisted.internet.tcp.makeBinding>`
 
 The modern preference is to use :py:func:`makeBinding <twisted.internet.tcp.makeBinding>`.
-This is also the only way to specify the ``SO_REUSEADDR`` and ``SO_REUSEPORT`` options -- corresponding to the ``reuseAddr`` and ``reusePort`` keyword arguments to ``makeBinding``.
+This is also the only way to specify the ``SO_REUSEADDR`` and ``SO_REUSEPORT`` options -- corresponding to the ``reuseAddress`` and ``reusePort`` keyword arguments to ``makeBinding``.
 
 Legacy ClientCreator
 --------------------

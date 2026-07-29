@@ -1091,7 +1091,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
                 self.assertEqual(reusePort, True)
 
         def bind(a, b):
-            return makeBinding(a, b, reusePort=True, reuseAddr=False)
+            return makeBinding(a, b, reusePort=True, reuseAddress=False)
 
         self._checkTestBindAddressConnect(bind, check)
         self._checkTestBindAddressListen(bind, check)
@@ -1112,7 +1112,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
             self.assertEqual(reusePort, False)
 
         def bind(a, b):
-            return makeBinding(a, b, reuseAddr=True)
+            return makeBinding(a, b, reuseAddress=True)
 
         self._checkTestBindAddressConnect(bind, check)
         self._checkTestBindAddressListen(bind, check)
@@ -1136,7 +1136,7 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
             self.assertEqual(reusePort, True)
 
         def bind(a, b):
-            return makeBinding(a, b, reuseAddr=True, reusePort=True)
+            return makeBinding(a, b, reuseAddress=True, reusePort=True)
 
         self._checkTestBindAddressConnect(bind, check)
         self._checkTestBindAddressListen(bind, check)
