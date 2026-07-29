@@ -1166,32 +1166,6 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
 globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
 
 
-class PotentialZombieWarningTests(TestCase):
-    """
-    Tests for L{twisted.internet.error.PotentialZombieWarning}.
-    """
-
-    def test_deprecated(self):
-        """
-        Accessing L{PotentialZombieWarning} via the
-        I{PotentialZombieWarning} attribute of L{twisted.internet.error}
-        results in a deprecation warning being emitted.
-        """
-        from twisted.internet import error
-
-        error.PotentialZombieWarning
-
-        warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            "twisted.internet.error.PotentialZombieWarning was deprecated in "
-            "Twisted 10.0.0: There is no longer any potential for zombie "
-            "process.",
-        )
-        self.assertEqual(len(warnings), 1)
-
-
 class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):
     """
     Tests to ensure that L{twisted.internet.process} is unimportable on
