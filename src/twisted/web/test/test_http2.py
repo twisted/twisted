@@ -3060,9 +3060,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         token bucket refills causes the connection to be closed with a GOAWAY
         frame carrying ENHANCE_YOUR_CALM.
         """
-        _, connection, transport, frameFactory, nextStreamID = (
-            self.connectRapidReset()
-        )
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
         self.openThenReset(
             connection, frameFactory, nextStreamID, connection._resetTokenBurst + 1
         )
@@ -3082,9 +3080,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         trips. This pins the lower side of the boundary so an off-by-one cannot
         disconnect a client that uses its full documented burst allowance.
         """
-        _, connection, transport, frameFactory, nextStreamID = (
-            self.connectRapidReset()
-        )
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
         self.openThenReset(
             connection, frameFactory, nextStreamID, connection._resetTokenBurst
         )
@@ -3104,9 +3100,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         disconnected.  This pins the peer-versus-server distinction the defence
         depends on.
         """
-        _, connection, transport, frameFactory, nextStreamID = (
-            self.connectRapidReset()
-        )
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
         for _ in range(connection._resetTokenBurst + 1):
             streamID = nextStreamID[0]
             nextStreamID[0] += 2
@@ -3129,9 +3123,13 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         a GOAWAY, even when their number greatly exceeds a single burst: a
         client that steadily cancels requests is not disconnected.
         """
-        reactor, connection, transport, frameFactory, nextStreamID = (
-            self.connectRapidReset()
-        )
+        (
+            reactor,
+            connection,
+            transport,
+            frameFactory,
+            nextStreamID,
+        ) = self.connectRapidReset()
         for _ in range(connection._resetTokenBurst * 2):
             self.openThenReset(connection, frameFactory, nextStreamID, 1)
             reactor.advance(1.0 / connection._resetTokenRate)
@@ -3148,9 +3146,13 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         a pause and a second burst, is accepted because the pause restores
         capacity.
         """
-        reactor, connection, transport, frameFactory, nextStreamID = (
-            self.connectRapidReset()
-        )
+        (
+            reactor,
+            connection,
+            transport,
+            frameFactory,
+            nextStreamID,
+        ) = self.connectRapidReset()
         burst = connection._resetTokenBurst
         self.openThenReset(connection, frameFactory, nextStreamID, burst)
         reactor.advance(burst / connection._resetTokenRate + 1)
