@@ -2184,27 +2184,37 @@ class ServiceIdentityTests(SynchronousTestCase):
             called, will move data between the created client and server
             protocol instances
         """
-        clientAuthority = TestingAuthority.create()
         serverAuthority = TestingAuthority.create()
-        untrustedAuthority = TestingAuthority.create()
         serverCA = serverAuthority.authorityCertificate()
-        serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
         other: dict[str, Any] = {}
         passClientCert = None
-        clientCA = clientAuthority.authorityCertificate()
-        clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
-        if serverVerifies:
-            other.update(trustRoot=clientCA)
+        if serverVerifies or (clientPresentsCertificate and validClientCertificate):
+            clientAuthority = TestingAuthority.create()
+
+            if serverVerifies:
+                clientCA = clientAuthority.authorityCertificate()
+                other.update(trustRoot=clientCA)
+
+        if not validCertificate or (
+            clientPresentsCertificate and not validClientCertificate
+        ):
+            untrustedAuthority = TestingAuthority.create()
 
         if clientPresentsCertificate:
             if validClientCertificate:
-                passClientCert = clientCert
+                passClientCert = clientAuthority.serverCertificate(
+                    "Client Cert", ["client"]
+                )
             else:
                 passClientCert = untrustedAuthority.serverCertificate(
                     "Client Cert", ["client"]
                 )
 
-        if not validCertificate:
+        if validCertificate:
+            serverCert = serverAuthority.serverCertificate(
+                "Valid Cert", [serverHostname]
+            )
+        else:
             serverCert = untrustedAuthority.serverCertificate(
                 "Invalid Cert", [serverHostname]
             )
