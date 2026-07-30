@@ -769,24 +769,36 @@ class OpenSSLOptionsTestsMixin:
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-    # Not all tests require a certificate. So lazily create them only when the attribute is acessed.
-    def __getattr__(self, name):
-        if name in ("sKey", "sCert"):
+    def _setUpCertificates(
+        self,
+        *,
+        serverCertificate: bool = True,
+        client: bool = False,
+        authorities: bool = False,
+    ) -> None:
+        """
+        Only create certificates and keys required by a test.
+
+        A server key is always created. The server certificate, client certificate,
+        and authority certificates are optional.
+        """
+        if serverCertificate:
             self.sKey, self.sCert = makeCertificate(
                 O=b"Server Test Certificate", CN=b"server"
             )
-        elif name in ("cKey", "cCert"):
+        else:
+            self.sKey = _keyPair(b"server").original
+
+        if client:
             self.cKey, self.cCert = makeCertificate(
                 O=b"Client Test Certificate", CN=b"client"
             )
-        elif name in ("caCert1", "caCert2", "caCerts", "extraCertChain"):
+
+        if authorities:
             self.caCert1 = makeCertificate(O=b"CA Test Certificate 1", CN=b"ca1")[1]
             self.caCert2 = makeCertificate(O=b"CA Test Certificate", CN=b"ca2")[1]
             self.caCerts = [self.caCert1, self.caCert2]
             self.extraCertChain = self.caCerts
-        else:
-            raise AttributeError(name)
-        return getattr(self, name)
 
     def tearDown(self):
         if self.serverPort is not None:
@@ -839,8 +851,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
 
     def setUp(self):
         """
-        Same as L{OpenSSLOptionsTestsMixin.setUp}, but it also patches
-        L{sslverify._ChooseDiffieHellmanEllipticCurve}.
+        Patches L{sslverify._ChooseDiffieHellmanEllipticCurve}.
         """
         super().setUp()
         self.patch(
@@ -853,6 +864,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         C{privateKey} and C{certificate} make only sense if both are set.
         """
+        self._setUpCertificates(serverCertificate=False)
         self.assertRaises(
             ValueError, sslverify.OpenSSLCertificateOptions, privateKey=self.sKey
         )
@@ -861,6 +873,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         C{privateKey} and C{certificate} make only sense if both are set.
         """
+        self._setUpCertificates()
         self.assertRaises(
             ValueError, sslverify.OpenSSLCertificateOptions, certificate=self.sCert
         )
@@ -869,6 +882,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Specifying C{privateKey} and C{certificate} initializes correctly.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey, certificate=self.sCert
         )
@@ -880,6 +894,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         C{verify} must not be C{True} without specifying C{caCerts}.
         """
+        self._setUpCertificates()
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
@@ -894,6 +909,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         by the caller (to be I{any} value, even the default!) when specifying
         C{trustRoot}.
         """
+        self._setUpCertificates(authorities=True)
         self.assertRaises(
             TypeError,
             sslverify.OpenSSLCertificateOptions,
@@ -916,6 +932,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         It's currently a NOP, but valid.
         """
+        self._setUpCertificates(authorities=True)
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey, certificate=self.sCert, caCerts=self.caCerts
         )
@@ -926,6 +943,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Specifying C{verify} and C{caCerts} initializes correctly.
         """
+        self._setUpCertificates(authorities=True)
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -940,6 +958,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Setting C{extraCertChain} works if C{certificate} and C{privateKey} are
         set along with it.
         """
+        self._setUpCertificates(authorities=True)
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -952,6 +971,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         A C{extraCertChain} without C{privateKey} doesn't make sense and is
         thus rejected.
         """
+        self._setUpCertificates(authorities=True)
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
@@ -964,6 +984,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         A C{extraCertChain} without C{certificate} doesn't make sense and is
         thus rejected.
         """
+        self._setUpCertificates(serverCertificate=False, authorities=True)
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
@@ -977,6 +998,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         specified chain certificates are added to C{Context}s that get
         created.
         """
+        self._setUpCertificates(authorities=True)
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -992,6 +1014,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         C{extraCertChain} doesn't break C{OpenSSL.SSL.Context} creation.
         """
+        self._setUpCertificates(authorities=True)
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1006,6 +1029,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         default is used.  We can't check directly for it because the effective
         cipher string we set varies with platforms.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1019,6 +1043,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         If there is no valid cipher that matches the user's wishes,
         a L{ValueError} is raised.
         """
+        self._setUpCertificates()
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
@@ -1033,6 +1058,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         If acceptable ciphers are passed, they are used.
         """
+
+        self._setUpCertificates()
 
         @implementer(interfaces.IAcceptableCiphers)
         class FakeAcceptableCiphers:
@@ -1053,6 +1080,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Every context must have C{OP_NO_SSLv2}, C{OP_NO_COMPRESSION}, and
         C{OP_CIPHER_SERVER_PREFERENCE} set.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1068,6 +1096,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Every context must be in C{MODE_RELEASE_BUFFERS} mode.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1081,6 +1110,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         If C{singleUseKeys} is set, every context must have
         C{OP_SINGLE_DH_USE} and C{OP_SINGLE_ECDH_USE} set.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1096,6 +1126,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Passing C{method} to L{sslverify.OpenSSLCertificateOptions} is
         deprecated.
         """
+        self._setUpCertificates()
         sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1121,6 +1152,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         TLS version v1.2, if no C{method}, or C{insecurelyLowerMinimumTo} is
         given.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey, certificate=self.sCert
         )
@@ -1142,6 +1174,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
         exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(TypeError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1160,6 +1193,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
         exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(TypeError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1178,6 +1212,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
         exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(TypeError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1196,6 +1231,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         L{sslverify.OpenSSLCertificateOptions} will cause it to raise an
         exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(TypeError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1246,6 +1282,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Passing out of order TLS versions to C{insecurelyLowerMinimumTo} and
         C{lowerMaximumSecurityTo} will cause it to raise an exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(ValueError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1269,6 +1306,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Passing out of order TLS versions to C{raiseMinimumTo} and
         C{lowerMaximumSecurityTo} will cause it to raise an exception.
         """
+        self._setUpCertificates()
         with self.assertRaises(ValueError) as e:
             sslverify.OpenSSLCertificateOptions(
                 privateKey=self.sKey,
@@ -1289,6 +1327,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} set, and C{lowerMaximumSecurityTo} is
         below the minimum default, the minimum will be made the new maximum.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1313,6 +1352,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to
         SSLv3, it will exclude all others.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1340,6 +1380,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.0,
         it will exclude all others.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1367,6 +1408,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.1,
         it will exclude all others.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1394,6 +1436,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} and C{lowerMaximumSecurityTo} set to v1.2,
         it will exclude all others.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1422,6 +1465,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{lowerMaximumSecurityTo} to TLSv1.2, it will exclude both SSLv2/v3 and
         TLSv1.3.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1447,6 +1491,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{raiseMinimumTo} set to TLSv1.2, it will ignore all TLSs below
         1.2 and SSL.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1470,6 +1515,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{raiseMinimumTo} set to a value lower than Twisted's default will
         cause it to use the more secure default.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1497,6 +1543,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         C{insecurelyLowerMinimumTo} set to TLSv1.2, it will ignore all TLSs below
         1.2 and SSL.
         """
+        self._setUpCertificates()
         opts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1518,6 +1565,8 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         If C{dhParams} is set, they are loaded into each new context.
         """
+
+        self._setUpCertificates()
 
         class FakeDiffieHellmanParameters:
             _dhFile = FilePath(b"dh.params")
@@ -1721,6 +1770,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Test that __setstate__(__getstate__()) round-trips properly.
         """
+        self._setUpCertificates()
         firstOpts = sslverify.OpenSSLCertificateOptions(
             privateKey=self.sKey,
             certificate=self.sCert,
@@ -1784,6 +1834,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Check that anonymous connections are allowed when certificates aren't
         required on the server.
         """
+        self._setUpCertificates()
         onData = defer.Deferred()
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
@@ -1802,6 +1853,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Check that anonymous connections are refused when certificates are
         required on the server.
         """
+        self._setUpCertificates()
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
         self.loopback(
@@ -1836,6 +1888,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Check that connecting with a certificate not accepted by the server CA
         fails.
         """
+        self._setUpCertificates(client=True)
         onServerLost = defer.Deferred()
         onClientLost = defer.Deferred()
         self.loopback(
@@ -1866,6 +1919,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Test a successful connection with client certificate validation on
         server side.
         """
+        self._setUpCertificates()
         onData = defer.Deferred()
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
@@ -1889,6 +1943,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         Test a successful connection with validation on both server and client
         sides.
         """
+        self._setUpCertificates(client=True)
         onData = defer.Deferred()
         self.loopback(
             sslverify.OpenSSLCertificateOptions(
@@ -1970,6 +2025,7 @@ class OpenSSLOptionsECDHIntegrationTests(OpenSSLOptionsTestsMixin, TestCase):
         if not get_elliptic_curves():
             raise SkipTest("OpenSSL does not support ECDH.")
 
+        self._setUpCertificates()
         onData = defer.Deferred()
         # TLS 1.3 cipher suites do not specify the key exchange
         # mechanism:
