@@ -276,12 +276,7 @@ class TelnetTransportTests(unittest.TestCase):
         h = self.p.protocol
         cap = telnet.Telnet.MAX_SUBNEGOTIATION_LENGTH
         cmd = (
-            telnet.IAC
-            + telnet.SB
-            + b"\x12"
-            + b"B" * (cap * 2)
-            + telnet.IAC
-            + telnet.SE
+            telnet.IAC + telnet.SB + b"\x12" + b"B" * (cap * 2) + telnet.IAC + telnet.SE
         )
         self.p.dataReceived(cmd)
         self.assertEqual(len(h.subcmd), cap - 1)
