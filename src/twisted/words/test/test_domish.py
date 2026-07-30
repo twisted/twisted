@@ -369,12 +369,11 @@ class DomishStreamTestsMixin:
         """
         self.stream.maxElementCount = 100
         self.stream.parse(b"<stream><container>")
-
-        def flood():
-            for _ in range(200):
-                self.stream.parse(b"<child/>")
-
-        self.assertRaisesRegex(domish.ParserError, "Maximum element count", flood)
+        # A burst of more than maxElementCount child elements is rejected.
+        burst = b"<child/>" * 200
+        self.assertRaisesRegex(
+            domish.ParserError, "Maximum element count", self.stream.parse, burst
+        )
 
     def test_stanzaSizeLimit(self):
         """
@@ -387,12 +386,14 @@ class DomishStreamTestsMixin:
         self.stream.maxStanzaSize = 1024
         self.stream.parse(b"<stream>")
         self.stream.parse(b"<message>")
-
-        def flood():
-            for _ in range(16):
-                self.stream.parse(b"<body>" + b"x" * 256 + b"</body>")
-
-        self.assertRaisesRegex(domish.ParserError, "Maximum stanza size", flood)
+        chunk = b"<body>" + b"x" * 256 + b"</body>"
+        # Chunks under the cap are accepted as the stanza grows...
+        for _ in range(3):
+            self.stream.parse(chunk)
+        # ...until a further chunk pushes the open stanza over the limit.
+        self.assertRaisesRegex(
+            domish.ParserError, "Maximum stanza size", self.stream.parse, chunk
+        )
 
     def test_stanzaSizeCountsAttributeValues(self):
         """
