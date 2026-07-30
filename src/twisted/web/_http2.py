@@ -805,13 +805,12 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         return streamID in self.streams
 
-    def _terminate(self, reason):
+    def _terminate(self, reason: Failure) -> None:
         """
         Flush any pending control data and tear the connection down, leaving
         timers armed so that a peer who never reads our data is timed out.
 
         @param reason: The failure to report to the connection's streams.
-        @type reason: L{Failure}
         """
         if self._tryToWriteControlData():
             self.transport.loseConnection()
