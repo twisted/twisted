@@ -12,7 +12,6 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from errno import EPERM
-from functools import cache
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
 from typing import TYPE_CHECKING, Any
@@ -132,7 +131,7 @@ try:
     from twisted.protocols._sni import SNIConnectionCreator
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
     from twisted.test.test_sslverify import (
-        certificatesForAuthorityAndServer,
+        _certificatesForAuthorityAndServer,
         makeCertificate,
     )
 
@@ -144,16 +143,6 @@ try:
 except ImportError as e:
     skipSSL = True
     skipSSLReason = str(e)
-
-
-@cache
-def _certificatesForEndpointTests(
-    serviceIdentity: str,
-) -> tuple[Certificate, PrivateCertificate]:
-    """
-    Generate and cache certificates for L{TLSEndpointsTests}.
-    """
-    return certificatesForAuthorityAndServer(serviceIdentity)
 
 
 class TestProtocol(Protocol):
@@ -3125,7 +3114,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             "clientServiceIdentity",
             self.serverServiceIdentity,
         )
-        ca, server = _certificatesForEndpointTests(self.serverServiceIdentity)
+        ca, server = _certificatesForAuthorityAndServer(self.serverServiceIdentity)
 
         self.serverCert = server
         shouldSendServerName = getattr(
@@ -3348,7 +3337,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         private keys are found a warning is logged.
         """
         logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
-        untrustedCA, unusedCert = certificatesForAuthorityAndServer(
+        untrustedCA, unusedCert = _certificatesForAuthorityAndServer(
             self.serverServiceIdentity
         )
         # superclass (Certificate.dumpPEM) does not include private key in
@@ -3664,7 +3653,7 @@ class ServerStringTests(unittest.TestCase):
         p = FilePath(tmp)
         p.createDirectory()
         # create a temporary directory with a certificate in it, so we have a default certificate
-        authCert, serverCert = certificatesForAuthorityAndServer()
+        authCert, serverCert = _certificatesForAuthorityAndServer()
         p.child("some.pem").setContent(serverCert.dumpPEM())
         server = endpoints.serverFromString(
             reactor,
