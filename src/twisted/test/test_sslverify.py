@@ -2213,7 +2213,10 @@ class ServiceIdentityTests(SynchronousTestCase):
         if not validCertificate or (
             clientPresentsCertificate and not validClientCertificate
         ):
-            untrustedAuthority = TestingAuthority.create()
+            if not validCertificate and useDefaultTrust and not fakePlatformTrust:
+                untrustedAuthority = serverAuthority
+            else:
+                untrustedAuthority = TestingAuthority.create()
 
         if clientPresentsCertificate:
             if validClientCertificate:
