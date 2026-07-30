@@ -142,6 +142,20 @@ def _keyPair(role: bytes) -> sslverify.KeyPair:
     """
     return sslverify.KeyPair.generate(kind=TYPE_RSA, size=2048)
 
+
+@cache
+def _authorityKey(role: str) -> RSAPrivateKey:
+    """
+    Generate one RSA-4096 private key for an authority, client or server.
+    The role parameter used to provide a unique identifier for the cache.
+    """
+    return generate_private_key(
+        public_exponent=65537,
+        key_size=4096,
+        backend=default_backend(),
+    )
+
+
 def makeCertificate(**kw):
     distinguishedName = sslverify.DistinguishedName(**kw)
     keyPair = _keyPair(distinguishedName.commonName)
@@ -168,14 +182,14 @@ class TestingAuthority:
 
     @classmethod
     def create(
-        cls, aroundTimestamp: datetime.datetime = datetime.datetime.today()
+        cls,
+        aroundTimestamp: datetime.datetime = datetime.datetime.today(),
+        role: str = "authority",
     ) -> TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForCA = _authorityKey(role)
         publicKeyForCA = privateKeyForCA.public_key()
         caCertificate = (
             x509.CertificateBuilder()
@@ -201,9 +215,7 @@ class TestingAuthority:
     def serverCertificate(
         self, commonName: str, subjects: list[str]
     ) -> sslverify.PrivateCertificate:
-        privateKeyForServer = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForServer = _authorityKey(commonName)
         publicKeyForServer = privateKeyForServer.public_key()
         commonNameForServer = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
@@ -2259,12 +2271,12 @@ class ServiceIdentityTests(SynchronousTestCase):
             called, will move data between the created client and server
             protocol instances
         """
-        serverAuthority = TestingAuthority.create()
+        serverAuthority = TestingAuthority.create(role="server")
         serverCA = serverAuthority.authorityCertificate()
         other: dict[str, Any] = {}
         passClientCert = None
         if serverVerifies or (clientPresentsCertificate and validClientCertificate):
-            clientAuthority = TestingAuthority.create()
+            clientAuthority = TestingAuthority.create(role="client")
 
         if serverVerifies:
             clientCA = clientAuthority.authorityCertificate()
@@ -2276,7 +2288,7 @@ class ServiceIdentityTests(SynchronousTestCase):
             if not validCertificate and useDefaultTrust and not fakePlatformTrust:
                 untrustedAuthority = serverAuthority
             else:
-                untrustedAuthority = TestingAuthority.create()
+                untrustedAuthority = TestingAuthority.create(role="untrusted")
 
         if clientPresentsCertificate:
             if validClientCertificate:
