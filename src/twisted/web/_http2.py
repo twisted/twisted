@@ -813,6 +813,7 @@ class H2Connection(Protocol, TimeoutMixin):
         @param reason: The failure to report to the connection's streams.
         """
         if self._tryToWriteControlData():
+            assert self.transport is not None
             self.transport.loseConnection()
             self.connectionLost(reason, _cancelTimeouts=False)
 
