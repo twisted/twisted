@@ -1,0 +1,1 @@
+twisted.conch.telnet.Telnet now limits how much data it buffers for a single telnet subnegotiation, so a peer can no longer exhaust server memory by sending a subnegotiation that is never terminated.

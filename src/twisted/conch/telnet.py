@@ -377,6 +377,9 @@ class Telnet(protocol.Protocol):
     # One of a lot of things
     state = "data"
 
+    # Cap the per-subnegotiation buffer against an unterminated IAC SB.
+    MAX_SUBNEGOTIATION_LENGTH = 4096
+
     def __init__(self):
         self.options = {}
         self.negotiationMap = {}
@@ -517,6 +520,11 @@ class Telnet(protocol.Protocol):
         data = data.replace(IAC, IAC * 2)
         self._write(IAC + SB + about + data + IAC + SE)
 
+    def _bufferSubnegotiation(self, b):
+        # Append until the cap, then drop the rest.
+        if len(self.commands) < self.MAX_SUBNEGOTIATION_LENGTH:
+            self.commands.append(b)
+
     def dataReceived(self, data):
         appDataBuffer = []
 
@@ -579,7 +587,7 @@ class Telnet(protocol.Protocol):
                 if b == IAC:
                     self.state = "subnegotiation-escaped"
                 else:
-                    self.commands.append(b)
+                    self._bufferSubnegotiation(b)
             elif self.state == "subnegotiation-escaped":
                 if b == SE:
                     self.state = "data"
@@ -591,7 +599,7 @@ class Telnet(protocol.Protocol):
                     self.negotiate(commands)
                 else:
                     self.state = "subnegotiation"
-                    self.commands.append(b)
+                    self._bufferSubnegotiation(b)
             else:
                 raise ValueError("How'd you do this?")
 

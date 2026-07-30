@@ -263,6 +263,33 @@ class TelnetTransportTests(unittest.TestCase):
             self.assertEqual(h.data, b"".join(L).replace(cmd, b""))
             self.assertEqual(h.subcmd, [telnet.SE] + list(iterbytes(b"hello")))
 
+    def test_subnegotiationBufferIsBounded(self):
+        # An unterminated subnegotiation is capped and the connection stays open.
+        cap = telnet.Telnet.MAX_SUBNEGOTIATION_LENGTH
+        self.p.dataReceived(telnet.IAC + telnet.SB + b"\x12")
+        self.p.dataReceived(b"A" * (cap * 4))
+        self.assertEqual(len(self.p.commands), cap)
+        self.assertFalse(self.t.disconnecting)
+
+    def test_oversizedSubnegotiationIsTruncated(self):
+        # An over-long subnegotiation is delivered truncated, not dropped.
+        h = self.p.protocol
+        cap = telnet.Telnet.MAX_SUBNEGOTIATION_LENGTH
+        cmd = (
+            telnet.IAC + telnet.SB + b"\x12" + b"B" * (cap * 2) + telnet.IAC + telnet.SE
+        )
+        self.p.dataReceived(cmd)
+        self.assertEqual(len(h.subcmd), cap - 1)
+        self.assertFalse(self.t.disconnecting)
+
+    def test_subnegotiationEscapedBytesCountTowardCap(self):
+        # IAC-escaped bytes (IAC IAC) also count toward the cap.
+        cap = telnet.Telnet.MAX_SUBNEGOTIATION_LENGTH
+        self.p.dataReceived(telnet.IAC + telnet.SB + b"\x12")
+        self.p.dataReceived((telnet.IAC + telnet.IAC) * (cap * 2))
+        self.assertEqual(len(self.p.commands), cap)
+        self.assertFalse(self.t.disconnecting)
+
     def _enabledHelper(self, o, eL=[], eR=[], dL=[], dR=[]):
         self.assertEqual(o.enabledLocal, eL)
         self.assertEqual(o.enabledRemote, eR)
