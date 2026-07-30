@@ -14,13 +14,7 @@ import os
 import socket
 import struct
 import sys
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Protocol as TypingProtocol,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol
 
 from zope.interface import Interface, implementer
 
@@ -219,7 +213,10 @@ class _AbortingMixin:
 
 
 def makeBinding(
-    interface: str = "", port: int = 0, reuseAddress: bool = False, reusePort: bool = False
+    interface: str = "",
+    port: int = 0,
+    reuseAddress: bool = False,
+    reusePort: bool = False,
 ) -> Binding:
     """
     Create an object describing how to bind locally.
