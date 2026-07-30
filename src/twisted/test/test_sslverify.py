@@ -765,20 +765,24 @@ class OpenSSLOptionsTestsMixin:
     serverPort = clientConn = None
     onServerLost = onClientLost = None
 
-    def setUp(self):
-        """
-        Create class variables of client and server certificates.
-        """
-        self.sKey, self.sCert = makeCertificate(
-            O=b"Server Test Certificate", CN=b"server"
-        )
-        self.cKey, self.cCert = makeCertificate(
-            O=b"Client Test Certificate", CN=b"client"
-        )
-        self.caCert1 = makeCertificate(O=b"CA Test Certificate 1", CN=b"ca1")[1]
-        self.caCert2 = makeCertificate(O=b"CA Test Certificate", CN=b"ca2")[1]
-        self.caCerts = [self.caCert1, self.caCert2]
-        self.extraCertChain = self.caCerts
+    # Not all tests require a certificate. So lazily create them only when the attribute is acessed.
+    def __getattr__(self, name):
+        if name in ("sKey", "sCert"):
+            self.sKey, self.sCert = makeCertificate(
+                O=b"Server Test Certificate", CN=b"server"
+            )
+        elif name in ("cKey", "cCert"):
+            self.cKey, self.cCert = makeCertificate(
+                O=b"Client Test Certificate", CN=b"client"
+            )
+        elif name in ("caCert1", "caCert2", "caCerts", "extraCertChain"):
+            self.caCert1 = makeCertificate(O=b"CA Test Certificate 1", CN=b"ca1")[1]
+            self.caCert2 = makeCertificate(O=b"CA Test Certificate", CN=b"ca2")[1]
+            self.caCerts = [self.caCert1, self.caCert2]
+            self.extraCertChain = self.caCerts
+        else:
+            raise AttributeError(name)
+        return getattr(self, name)
 
     def tearDown(self):
         if self.serverPort is not None:
