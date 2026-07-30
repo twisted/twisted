@@ -3004,3 +3004,162 @@ class EndToEndTests(unittest.TestCase):
         (httpVersion, content) = await deferToThread(run_http2_query)
         self.assertEqual(httpVersion, "HTTP/2")
         self.assertEqual(content, b"hello world")
+
+
+class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
+    """
+    Tests for the peer stream-reset (RST_STREAM) rate limit that defends
+    against the HTTP/2 Rapid Reset attack (CVE-2023-44487).
+    """
+
+    getRequestHeaders = [
+        (b":method", b"GET"),
+        (b":path", b"/"),
+        (b":scheme", b"https"),
+        (b":authority", b"localhost"),
+    ]
+
+    def connectRapidReset(self):
+        """
+        Build an L{H2Connection} driven by a L{task.Clock} and complete the
+        client connection preface.
+
+        @return: A tuple of the reactor, the connection, its transport, a
+            L{FrameFactory}, and a one-element list holding the next client
+            stream id to use.
+        """
+        reactor = task.Clock()
+        connection = H2Connection(reactor)
+        connection.requestFactory = DummyHTTPHandlerProxy
+        transport = StringTransport()
+        connection.makeConnection(transport)
+        frameFactory = FrameFactory()
+        connection.dataReceived(frameFactory.clientConnectionPreface())
+        return reactor, connection, transport, frameFactory, [1]
+
+    def openThenReset(self, connection, frameFactory, nextStreamID, count):
+        """
+        Feed C{count} (HEADERS, RST_STREAM) pairs, each opening a request on a
+        fresh stream id that the peer immediately cancels.
+        """
+        data = b""
+        for _ in range(count):
+            streamID = nextStreamID[0]
+            nextStreamID[0] += 2
+            data += frameFactory.buildHeadersFrame(
+                self.getRequestHeaders, streamID=streamID
+            ).serialize()
+            data += frameFactory.buildRstStreamFrame(
+                streamID, errorCode=h2.errors.ErrorCodes.CANCEL
+            ).serialize()
+        connection.dataReceived(data)
+
+    def test_resetFloodIsRejected(self):
+        """
+        More than C{_resetTokenBurst} peer resets arriving faster than the
+        token bucket refills causes the connection to be closed with a GOAWAY
+        frame carrying ENHANCE_YOUR_CALM.
+        """
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
+        self.openThenReset(
+            connection, frameFactory, nextStreamID, connection._resetTokenBurst + 1
+        )
+
+        # Assert on GOAWAY presence, not list position, so a later control frame
+        # after teardown cannot silently flip the assertion.
+        frames = framesFromBytes(transport.value())
+        goaways = [f for f in frames if isinstance(f, hyperframe.frame.GoAwayFrame)]
+        self.assertEqual(len(goaways), 1)
+        self.assertEqual(goaways[0].error_code, h2.errors.ErrorCodes.ENHANCE_YOUR_CALM)
+        self.assertTrue(transport.disconnecting)
+
+    def test_exactBurstAllowed(self):
+        """
+        Exactly C{_resetTokenBurst} peer resets with no time to refill are
+        allowed because the bucket starts full. Only the reset beyond the burst
+        trips. This pins the lower side of the boundary so an off-by-one cannot
+        disconnect a client that uses its full documented burst allowance.
+        """
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
+        self.openThenReset(
+            connection, frameFactory, nextStreamID, connection._resetTokenBurst
+        )
+
+        frames = framesFromBytes(transport.value())
+        self.assertFalse(
+            any(isinstance(f, hyperframe.frame.GoAwayFrame) for f in frames)
+        )
+        self.assertFalse(transport.disconnecting)
+
+    def test_serverInitiatedResetsDoNotConsumeTokens(self):
+        """
+        Server-initiated aborts (L{H2Connection.abortRequest}, e.g. a request
+        handler cancelling its own stream) must not consume peer-reset tokens:
+        only the remote peer's RST_STREAM floods are rate limited.  A server
+        that aborts far more than a burst of its own streams is never
+        disconnected.  This pins the peer-versus-server distinction the defence
+        depends on.
+        """
+        _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
+        for _ in range(connection._resetTokenBurst + 1):
+            streamID = nextStreamID[0]
+            nextStreamID[0] += 2
+            connection.dataReceived(
+                frameFactory.buildHeadersFrame(
+                    self.getRequestHeaders, streamID=streamID
+                ).serialize()
+            )
+            connection.abortRequest(streamID)
+
+        frames = framesFromBytes(transport.value())
+        self.assertFalse(
+            any(isinstance(f, hyperframe.frame.GoAwayFrame) for f in frames)
+        )
+        self.assertFalse(transport.disconnecting)
+
+    def test_sustainedResetsWithinRateAreAllowed(self):
+        """
+        Peer resets that arrive no faster than the bucket refills never trigger
+        a GOAWAY, even when their number greatly exceeds a single burst: a
+        client that steadily cancels requests is not disconnected.
+        """
+        (
+            reactor,
+            connection,
+            transport,
+            frameFactory,
+            nextStreamID,
+        ) = self.connectRapidReset()
+        for _ in range(connection._resetTokenBurst * 2):
+            self.openThenReset(connection, frameFactory, nextStreamID, 1)
+            reactor.advance(1.0 / connection._resetTokenRate)
+
+        frames = framesFromBytes(transport.value())
+        self.assertFalse(
+            any(isinstance(f, hyperframe.frame.GoAwayFrame) for f in frames)
+        )
+        self.assertFalse(transport.disconnecting)
+
+    def test_resetTokensRefillOverTime(self):
+        """
+        The bucket refills as time passes: a burst that drains it, followed by
+        a pause and a second burst, is accepted because the pause restores
+        capacity.
+        """
+        (
+            reactor,
+            connection,
+            transport,
+            frameFactory,
+            nextStreamID,
+        ) = self.connectRapidReset()
+        burst = connection._resetTokenBurst
+        self.openThenReset(connection, frameFactory, nextStreamID, burst)
+        reactor.advance(burst / connection._resetTokenRate + 1)
+        self.openThenReset(connection, frameFactory, nextStreamID, burst)
+
+        frames = framesFromBytes(transport.value())
+        self.assertFalse(
+            any(isinstance(f, hyperframe.frame.GoAwayFrame) for f in frames)
+        )
+        self.assertFalse(transport.disconnecting)

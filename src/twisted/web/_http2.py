@@ -111,6 +111,11 @@ class H2Connection(Protocol, TimeoutMixin):
     _log = Logger()
     _abortingCall = None
 
+    # Token bucket that rate-limits peer stream resets (RST_STREAM) to defend
+    # against HTTP/2 Rapid Reset (CVE-2023-44487), the same shape nghttp2 uses.
+    _resetTokenBurst = 1000
+    _resetTokenRate = 33
+
     def __init__(self, reactor=None):
         config = h2.config.H2Configuration(client_side=False, header_encoding=None)
         self.conn = h2.connection.H2Connection(config=config)
@@ -132,6 +137,10 @@ class H2Connection(Protocol, TimeoutMixin):
         if reactor is None:
             from twisted.internet import reactor
         self._reactor = reactor
+
+        # Reset-rate token bucket, starts full.
+        self._resetTokens = float(self._resetTokenBurst)
+        self._resetTokenTimestamp = self._reactor.seconds()
 
         # Start the data sending function.
         self._reactor.callLater(0, self._sendPrioritisedData)
@@ -159,10 +168,7 @@ class H2Connection(Protocol, TimeoutMixin):
         try:
             events = self.conn.receive_data(data)
         except h2.exceptions.ProtocolError:
-            stillActive = self._tryToWriteControlData()
-            if stillActive:
-                self.transport.loseConnection()
-                self.connectionLost(Failure(), _cancelTimeouts=False)
+            self._terminate(Failure())
             return
 
         # Only reset the timeout if we've received an actual H2
@@ -499,6 +505,25 @@ class H2Connection(Protocol, TimeoutMixin):
         )
         self._requestDone(event.stream_id)
 
+        # Refill for elapsed time, then spend one token. An empty bucket means a
+        # Rapid Reset flood (CVE-2023-44487), so drop the connection with GOAWAY.
+        now = self._reactor.seconds()
+        # reactor.seconds() is a wall clock, so clamp elapsed to stop a backward
+        # NTP step from draining the bucket and disconnecting a well-behaved peer.
+        elapsed = max(0.0, now - self._resetTokenTimestamp)
+        self._resetTokens = min(
+            self._resetTokenBurst,
+            self._resetTokens + elapsed * self._resetTokenRate,
+        )
+        self._resetTokenTimestamp = now
+        if self._resetTokens < 1:
+            self.conn.close_connection(
+                error_code=h2.errors.ErrorCodes.ENHANCE_YOUR_CALM
+            )
+            self._terminate(Failure(ConnectionLost("Too many stream resets")))
+        else:
+            self._resetTokens -= 1
+
     def _handlePriorityUpdate(self, event):
         """
         Internal handler for when a stream priority is updated.
@@ -779,6 +804,18 @@ class H2Connection(Protocol, TimeoutMixin):
         @rtype: L{bool}
         """
         return streamID in self.streams
+
+    def _terminate(self, reason):
+        """
+        Flush any pending control data and tear the connection down, leaving
+        timers armed so that a peer who never reads our data is timed out.
+
+        @param reason: The failure to report to the connection's streams.
+        @type reason: L{Failure}
+        """
+        if self._tryToWriteControlData():
+            self.transport.loseConnection()
+            self.connectionLost(reason, _cancelTimeouts=False)
 
     def _tryToWriteControlData(self):
         """
