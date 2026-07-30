@@ -520,7 +520,7 @@ class Telnet(protocol.Protocol):
         data = data.replace(IAC, IAC * 2)
         self._write(IAC + SB + about + data + IAC + SE)
 
-    def _bufferSubnegotiation(self, b):
+    def _bufferSubnegotiation(self, b: bytes) -> None:
         # Append until the cap, then drop the rest.
         if len(self.commands) < self.MAX_SUBNEGOTIATION_LENGTH:
             self.commands.append(b)
