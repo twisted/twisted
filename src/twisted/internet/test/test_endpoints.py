@@ -131,7 +131,7 @@ try:
     from twisted.protocols._sni import SNIConnectionCreator
     from twisted.protocols.tls import TLSMemoryBIOFactory, TLSMemoryBIOProtocol
     from twisted.test.test_sslverify import (
-        _certificatesForAuthorityAndServer,
+        certificatesForAuthorityAndServer,
         makeCertificate,
     )
 
@@ -3114,7 +3114,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             "clientServiceIdentity",
             self.serverServiceIdentity,
         )
-        ca, server = _certificatesForAuthorityAndServer(self.serverServiceIdentity)
+        ca, server = certificatesForAuthorityAndServer(self.serverServiceIdentity)
 
         self.serverCert = server
         shouldSendServerName = getattr(
@@ -3337,7 +3337,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         private keys are found a warning is logged.
         """
         logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
-        untrustedCA, unusedCert = _certificatesForAuthorityAndServer(
+        untrustedCA, unusedCert = certificatesForAuthorityAndServer(
             self.serverServiceIdentity
         )
         # superclass (Certificate.dumpPEM) does not include private key in
@@ -3653,7 +3653,7 @@ class ServerStringTests(unittest.TestCase):
         p = FilePath(tmp)
         p.createDirectory()
         # create a temporary directory with a certificate in it, so we have a default certificate
-        authCert, serverCert = _certificatesForAuthorityAndServer()
+        authCert, serverCert = certificatesForAuthorityAndServer()
         p.child("some.pem").setContent(serverCert.dumpPEM())
         server = endpoints.serverFromString(
             reactor,

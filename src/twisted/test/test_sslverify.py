@@ -294,16 +294,6 @@ def certificatesForAuthorityAndServer(
     )
 
 
-@cache
-def _certificatesForAuthorityAndServer(
-    serviceIdentity: str = "example.com",
-) -> tuple[sslverify.Certificate, sslverify.PrivateCertificate]:
-    """
-    Generate and cache certificates shared by TLS connection tests.
-    """
-    return certificatesForAuthorityAndServer(serviceIdentity)
-
-
 class GreetingServer(protocol.Protocol):
     greeting = b"greetings!"
 
@@ -2146,7 +2136,7 @@ class TrustRootTests(TestCase):
         completely invalid / unknown root CA certificates.  This is simply a
         smoke test to make sure that verification is happening at all.
         """
-        caSelfCert, serverCert = _certificatesForAuthorityAndServer()
+        caSelfCert, serverCert = certificatesForAuthorityAndServer()
         chainedCert = pathContainingDumpOf(self, serverCert, caSelfCert)
         privateKey = pathContainingDumpOf(self, serverCert.privateKey)
 
@@ -2170,7 +2160,7 @@ class TrustRootTests(TestCase):
         Specifying a L{Certificate} object for L{trustRoot} will result in that
         certificate being the only trust root for a client.
         """
-        caCert, serverCert = _certificatesForAuthorityAndServer()
+        caCert, serverCert = certificatesForAuthorityAndServer()
         sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
@@ -2674,7 +2664,7 @@ def negotiateProtocol(
     @return: A L{tuple} of the negotiated protocol and the reason the
         connection was lost.
     """
-    caCertificate, serverCertificate = _certificatesForAuthorityAndServer()
+    caCertificate, serverCertificate = certificatesForAuthorityAndServer()
     trustRoot = sslverify.OpenSSLCertificateAuthorities([caCertificate.original])
 
     sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnectionInMemory(
@@ -2936,7 +2926,7 @@ class MultipleCertificateTrustRootTests(TestCase):
         L{optionsForClientTLS} to accept client connections to a server with
         certificate B where B is signed by A.
         """
-        caCert, serverCert = _certificatesForAuthorityAndServer()
+        caCert, serverCert = certificatesForAuthorityAndServer()
 
         trust = sslverify.trustRootFromCertificates([caCert])
 
