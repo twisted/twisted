@@ -2206,9 +2206,9 @@ class ServiceIdentityTests(SynchronousTestCase):
         if serverVerifies or (clientPresentsCertificate and validClientCertificate):
             clientAuthority = TestingAuthority.create()
 
-            if serverVerifies:
-                clientCA = clientAuthority.authorityCertificate()
-                other.update(trustRoot=clientCA)
+        if serverVerifies:
+            clientCA = clientAuthority.authorityCertificate()
+            other.update(trustRoot=clientCA)
 
         if not validCertificate or (
             clientPresentsCertificate and not validClientCertificate
