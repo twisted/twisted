@@ -774,22 +774,17 @@ class OpenSSLOptionsTestsMixin:
     def _setUpCertificates(
         self,
         *,
-        serverCertificate: bool = True,
         client: bool = False,
         authorities: bool = False,
     ) -> None:
         """
         Only create certificates and keys required by a test.
 
-        A server key is always created. The server certificate, client certificate,
-        and authority certificates are optional.
+        A server certificate is always created. Client certificate and authority certificates are optional.
         """
-        if serverCertificate:
-            self.sKey, self.sCert = makeCertificate(
-                O=b"Server Test Certificate", CN=b"server"
-            )
-        else:
-            self.sKey = _keyPair(b"server").original
+        self.sKey, self.sCert = makeCertificate(
+            O=b"Server Test Certificate", CN=b"server"
+        )
 
         if client:
             self.cKey, self.cCert = makeCertificate(
@@ -866,7 +861,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         C{privateKey} and C{certificate} make only sense if both are set.
         """
-        self._setUpCertificates(serverCertificate=False)
+        self._setUpCertificates()
         self.assertRaises(
             ValueError, sslverify.OpenSSLCertificateOptions, privateKey=self.sKey
         )
@@ -986,7 +981,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         A C{extraCertChain} without C{certificate} doesn't make sense and is
         thus rejected.
         """
-        self._setUpCertificates(serverCertificate=False, authorities=True)
+        self._setUpCertificates(authorities=True)
         self.assertRaises(
             ValueError,
             sslverify.OpenSSLCertificateOptions,
