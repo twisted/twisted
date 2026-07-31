@@ -2211,6 +2211,28 @@ class ParsingTests(unittest.TestCase):
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
             )
 
+    def test_invalidHeaderValueCRLF(self):
+        """
+        A header value containing a bare CR or LF is rejected with a 400, as
+        required by RFC 9110 section 5.5; accepting it would let a following
+        header be hidden from the parser and enable request smuggling. The bytes
+        are fed directly because L{runRequest} normalises a bare LF to CRLF.
+        """
+        for value in [
+            b"a\nContent-Length: 5",  # bare LF hiding a header
+            b"a\rContent-Length: 5",  # bare CR hiding a header
+            b"a\nb",  # bare LF
+            b"a\rb",  # bare CR
+        ]:
+            channel = http.HTTPChannel()
+            transport = StringTransport()
+            channel.makeConnection(transport)
+            channel.dataReceived(
+                b"GET / HTTP/1.1\r\nHost: foo.example\r\nx-foo: " + value + b"\r\n\r\n"
+            )
+            self.assertTrue(transport.disconnecting)
+            self.assertEqual(transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
+
     def test_headerLimitPerRequest(self):
         """
         C{HTTPChannel} enforces the limit of C{HTTPChannel.maxHeaders} per

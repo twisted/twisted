@@ -2499,7 +2499,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return False
 
         data = data.strip(b" \t")
-        if b"\x00" in data:
+        # Reject NUL, CR, and LF in a header value (RFC 9110 section 5.5); a
+        # bare CR or LF would let a lenient proxy smuggle a following header.
+        if b"\x00" in data or b"\r" in data or b"\n" in data:
             self._respondToBadRequestAndDisconnect()
             return False
 
