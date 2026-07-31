@@ -12,8 +12,9 @@ import datetime
 import gc
 import itertools
 import textwrap
-from collections.abc import Iterable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from typing import Any
 from weakref import ref
 
 from zope.interface import implementer
@@ -265,12 +266,9 @@ def certificatesForAuthorityAndServer(
     CA.
 
     @param serviceIdentity: The identity (hostname) of the server.
-    @type serviceIdentity: L{unicode}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
-    @rtype: L{tuple} of (L{sslverify.Certificate},
-        L{sslverify.PrivateCertificate})
     """
     authority = TestingAuthority.create()
     return (
@@ -310,7 +308,6 @@ class NegotiatingFactory(protocol.Factory):
 
         @param acceptableProtocols: The protocols the client will accept
             speaking after the TLS handshake is complete.
-        @type acceptableProtocols: L{list} of L{bytes}
         """
         self._acceptableProtocols = acceptableProtocols
 
@@ -321,7 +318,6 @@ class NegotiatingFactory(protocol.Factory):
         for ALPN tokens.
 
         @return: a list of ALPN tokens in order of preference.
-        @rtype: L{list} of L{bytes}
         """
         return self._acceptableProtocols
 
@@ -351,7 +347,6 @@ def _loopbackTLSConnection(
 
     @return: 5-tuple of server-tls-protocol, server-inner-protocol,
         client-tls-protocol, client-inner-protocol and L{IOPump}
-    @rtype: L{tuple}
     """
 
     clientWrappedProto = ListeningClient()
@@ -400,16 +395,12 @@ def loopbackTLSConnection(
 
     @param trustRoot: the C{trustRoot} argument for the client connection's
         context.
-    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
 
     @param privateKeyFile: The name of the file containing the private key.
-    @type privateKeyFile: L{str} (native string; file name)
 
     @param chainedCertFile: The name of the chained certificate file.
-    @type chainedCertFile: L{str} (native string; file name)
 
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
-    @rtype: L{tuple}
     """
 
     @implementer(IOpenSSLContextFactory)
@@ -457,8 +448,6 @@ def loopbackTLSConnectionInMemory(
     @param privateKey: The private key.
 
     @param serverCertificate: The certificate used by the server.
-
-    @type chainedCertFile: L{str} (native string)
 
     @param clientProtocols: The protocols the client is willing to negotiate
         using ALPN.
@@ -2095,7 +2084,6 @@ class TrustRootTests(TestCase):
         certificate being the only trust root for a client.
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
-        otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
@@ -2115,7 +2103,7 @@ class ServiceIdentitySetup:
     pump: IOPump
     authority: TestingAuthority
 
-    def __iter__(self) -> Iterable[object]:
+    def __iter__(self) -> Iterator[Any]:
         return iter(
             (
                 self.clientProtocol,
@@ -2138,70 +2126,70 @@ class ServiceIdentityTests(SynchronousTestCase):
 
     def serviceIdentitySetup(
         self,
-        clientHostname,
-        serverHostname,
+        clientHostname: str,
+        serverHostname: str,
         *,
-        serverNameCallback=None,
-        validCertificate=True,
-        clientPresentsCertificate=False,
-        validClientCertificate=True,
-        serverVerifies=False,
-        fakePlatformTrust=False,
-        useDefaultTrust=False,
-        clientSkipSNI=False,
-        immediately=True,
-    ):
+        serverNameCallback: Callable[[bytes | None], SSL.Context | None] | None = None,
+        validCertificate: bool = True,
+        clientPresentsCertificate: bool = False,
+        validClientCertificate: bool = True,
+        serverVerifies: bool = False,
+        fakePlatformTrust: bool = False,
+        useDefaultTrust: bool = False,
+        clientSkipSNI: bool = False,
+        immediately: bool = True,
+    ) -> ServiceIdentitySetup:
         """
         Connect a server and a client.
 
         @param clientHostname: The I{client's idea} of the server's hostname;
-            passed as the C{hostname} to the
-            L{sslverify.OpenSSLCertificateOptions} instance.
-        @type clientHostname: L{unicode}
+            passed as the C{hostname} to the L{sslverify.optionsForClientTLS} instance.
 
         @param serverHostname: The I{server's own idea} of the server's
             hostname; present in the certificate presented by the server.
-        @type serverHostname: L{unicode}
+
+        @param serverNameCallback: A callback invoked with the client's SNI hostname,
+            or L{None} when SNI is omitted. It may return a replacement L{SSL.Context}.
+            Returns L{None} otherwise. Defaults to L{None}.
 
         @param validCertificate: Is the server's certificate valid?  L{True} if
             so, L{False} otherwise.
-        @type validCertificate: L{bool}
 
         @param clientPresentsCertificate: Should the client present a
             certificate to the server?  Defaults to 'no'.
-        @type clientPresentsCertificate: L{bool}
 
         @param validClientCertificate: If the client presents a certificate,
             should it actually be a valid one, i.e. signed by the same CA that
             the server is checking?  Defaults to 'yes'.
-        @type validClientCertificate: L{bool}
 
         @param serverVerifies: Should the server verify the client's
             certificate?  Defaults to 'no'.
-        @type serverVerifies: L{bool}
 
         @param fakePlatformTrust: Should we fake the platformTrust to be the
             same as our fake server certificate authority, so that we can test
             it's being used?  Defaults to 'no' and we just pass platform trust.
-        @type fakePlatformTrust: L{bool}
 
         @param useDefaultTrust: Should we avoid passing the C{trustRoot} to
             L{ssl.optionsForClientTLS}?  Defaults to 'no'.
-        @type useDefaultTrust: L{bool}
+
+        @param clientSkipSNI: Whether to omit SNI while still verifying the server
+            hostname. Defaults to L{False}.
+
+        @param immediately: Whether to flush the connection, processing the TLS
+            handshake and initial greetings, before returning. Defaults to L{True}.
 
         @return: the client TLS protocol, the client wrapped protocol,
             the server TLS protocol, the server wrapped protocol and
             an L{IOPump} which, when its C{pump} and C{flush} methods are
             called, will move data between the created client and server
             protocol instances
-        @rtype: L{ServiceIdentitySetup}
         """
         clientAuthority = TestingAuthority.create()
         serverAuthority = TestingAuthority.create()
         untrustedAuthority = TestingAuthority.create()
         serverCA = serverAuthority.authorityCertificate()
         serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
-        other = {}
+        other: dict[str, Any] = {}
         passClientCert = None
         clientCA = clientAuthority.authorityCertificate()
         clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
@@ -2228,7 +2216,7 @@ class ServiceIdentityTests(SynchronousTestCase):
             **other,
         )
 
-        signature = {"hostname": clientHostname}
+        signature: dict[str, Any] = {"hostname": clientHostname}
         if passClientCert:
             signature.update(clientCertificate=passClientCert)
         if not useDefaultTrust:
@@ -2388,7 +2376,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         When SNI is not sent by the client, the server name callback will be
         invoked with C{None}.
         """
-        sent: list[bytes] = []
+        sent: list[bytes | None] = []
         conf = self.serviceIdentitySetup(
             "correct-host.example.com",
             "correct-host.example.com",
