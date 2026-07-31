@@ -3019,7 +3019,9 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         (b":authority", b"localhost"),
     ]
 
-    def connectRapidReset(self):
+    def connectRapidReset(
+        self,
+    ) -> "tuple[task.Clock, H2Connection, StringTransport, FrameFactory, list[int]]":
         """
         Build an L{H2Connection} driven by a L{task.Clock} and complete the
         client connection preface.
@@ -3030,14 +3032,22 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         """
         reactor = task.Clock()
         connection = H2Connection(reactor)
-        connection.requestFactory = DummyHTTPHandlerProxy
+        # requestFactory is assigned by the factory at runtime, so it is not
+        # visible to mypy on H2Connection here.
+        connection.requestFactory = DummyHTTPHandlerProxy  # type: ignore[attr-defined]
         transport = StringTransport()
         connection.makeConnection(transport)
         frameFactory = FrameFactory()
         connection.dataReceived(frameFactory.clientConnectionPreface())
         return reactor, connection, transport, frameFactory, [1]
 
-    def openThenReset(self, connection, frameFactory, nextStreamID, count):
+    def openThenReset(
+        self,
+        connection: "H2Connection",
+        frameFactory: FrameFactory,
+        nextStreamID: list[int],
+        count: int,
+    ) -> None:
         """
         Feed C{count} (HEADERS, RST_STREAM) pairs, each opening a request on a
         fresh stream id that the peer immediately cancels.
@@ -3054,7 +3064,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
             ).serialize()
         connection.dataReceived(data)
 
-    def test_resetFloodIsRejected(self):
+    def test_resetFloodIsRejected(self) -> None:
         """
         More than C{_resetTokenBurst} peer resets arriving faster than the
         token bucket refills causes the connection to be closed with a GOAWAY
@@ -3073,7 +3083,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         self.assertEqual(goaways[0].error_code, h2.errors.ErrorCodes.ENHANCE_YOUR_CALM)
         self.assertTrue(transport.disconnecting)
 
-    def test_exactBurstAllowed(self):
+    def test_exactBurstAllowed(self) -> None:
         """
         Exactly C{_resetTokenBurst} peer resets with no time to refill are
         allowed because the bucket starts full. Only the reset beyond the burst
@@ -3091,7 +3101,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         )
         self.assertFalse(transport.disconnecting)
 
-    def test_serverInitiatedResetsDoNotConsumeTokens(self):
+    def test_serverInitiatedResetsDoNotConsumeTokens(self) -> None:
         """
         Server-initiated aborts (L{H2Connection.abortRequest}, e.g. a request
         handler cancelling its own stream) must not consume peer-reset tokens:
@@ -3117,7 +3127,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         )
         self.assertFalse(transport.disconnecting)
 
-    def test_sustainedResetsWithinRateAreAllowed(self):
+    def test_sustainedResetsWithinRateAreAllowed(self) -> None:
         """
         Peer resets that arrive no faster than the bucket refills never trigger
         a GOAWAY, even when their number greatly exceeds a single burst: a
@@ -3140,7 +3150,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         )
         self.assertFalse(transport.disconnecting)
 
-    def test_resetTokensRefillOverTime(self):
+    def test_resetTokensRefillOverTime(self) -> None:
         """
         The bucket refills as time passes: a burst that drains it, followed by
         a pause and a second burst, is accepted because the pause restores
