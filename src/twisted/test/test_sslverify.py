@@ -266,12 +266,9 @@ def certificatesForAuthorityAndServer(
     CA.
 
     @param serviceIdentity: The identity (hostname) of the server.
-    @type serviceIdentity: L{unicode}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
-    @rtype: L{tuple} of (L{sslverify.Certificate},
-        L{sslverify.PrivateCertificate})
     """
     authority = TestingAuthority.create()
     return (
@@ -311,7 +308,6 @@ class NegotiatingFactory(protocol.Factory):
 
         @param acceptableProtocols: The protocols the client will accept
             speaking after the TLS handshake is complete.
-        @type acceptableProtocols: L{list} of L{bytes}
         """
         self._acceptableProtocols = acceptableProtocols
 
@@ -322,7 +318,6 @@ class NegotiatingFactory(protocol.Factory):
         for ALPN tokens.
 
         @return: a list of ALPN tokens in order of preference.
-        @rtype: L{list} of L{bytes}
         """
         return self._acceptableProtocols
 
@@ -352,7 +347,6 @@ def _loopbackTLSConnection(
 
     @return: 5-tuple of server-tls-protocol, server-inner-protocol,
         client-tls-protocol, client-inner-protocol and L{IOPump}
-    @rtype: L{tuple}
     """
 
     clientWrappedProto = ListeningClient()
@@ -401,16 +395,12 @@ def loopbackTLSConnection(
 
     @param trustRoot: the C{trustRoot} argument for the client connection's
         context.
-    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
 
     @param privateKeyFile: The name of the file containing the private key.
-    @type privateKeyFile: L{str} (native string; file name)
 
     @param chainedCertFile: The name of the chained certificate file.
-    @type chainedCertFile: L{str} (native string; file name)
 
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
-    @rtype: L{tuple}
     """
 
     @implementer(IOpenSSLContextFactory)
@@ -458,8 +448,6 @@ def loopbackTLSConnectionInMemory(
     @param privateKey: The private key.
 
     @param serverCertificate: The certificate used by the server.
-
-    @type chainedCertFile: L{str} (native string)
 
     @param clientProtocols: The protocols the client is willing to negotiate
         using ALPN.
