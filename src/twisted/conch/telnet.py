@@ -372,13 +372,29 @@ class Telnet(protocol.Protocol):
     should not be made to it.
 
     @ivar transport: This protocol's transport object.
+
+    @cvar _MAX_SUBNEGOTIATION_LENGTH: The maximum number of bytes buffered for a
+        single subnegotiation, that is the subnegotiation command byte and its
+        payload between C{IAC SB} and C{IAC SE}.  Legitimate subnegotiations
+        carry small option parameters, such as a terminal type (RFC 1091), a
+        window size (RFC 1073, four bytes), or a set of environment variables
+        (RFC 1572), so the default of 4096 is far larger than any real
+        subnegotiation while still bounding the amount of memory a single
+        connection can consume.  A peer that sends more than this many bytes
+        without an C{IAC SE} terminator is treated as a protocol violation: the
+        buffer is not grown further, a warning is logged, and the connection is
+        dropped, matching the way L{twisted.protocols.basic.LineReceiver}
+        handles a line that exceeds its C{MAX_LENGTH}.  This attribute is
+        private; a subclass that needs a different bound may override it.
     """
+
+    _log = Logger()
 
     # One of a lot of things
     state = "data"
 
-    # Cap the per-subnegotiation buffer against an unterminated IAC SB.
-    MAX_SUBNEGOTIATION_LENGTH = 4096
+    # See the class docstring for the rationale behind this bound.
+    _MAX_SUBNEGOTIATION_LENGTH = 4096
 
     def __init__(self):
         self.options = {}
@@ -520,10 +536,27 @@ class Telnet(protocol.Protocol):
         data = data.replace(IAC, IAC * 2)
         self._write(IAC + SB + about + data + IAC + SE)
 
-    def _bufferSubnegotiation(self, b: bytes) -> None:
-        # Append until the cap, then drop the rest.
-        if len(self.commands) < self.MAX_SUBNEGOTIATION_LENGTH:
-            self.commands.append(b)
+    def _subnegotiationLengthExceeded(self):
+        """
+        Handle a subnegotiation that reaches L{_MAX_SUBNEGOTIATION_LENGTH}
+        without an C{IAC SE} terminator.
+
+        A well-behaved peer terminates a subnegotiation with C{IAC SE} long
+        before the cap is reached.  A peer that does not is treated as a
+        protocol violation: a warning is logged and the connection is dropped,
+        mirroring L{twisted.protocols.basic.LineReceiver.lineLengthExceeded},
+        rather than buffering the subnegotiation without bound.  The
+        C{disconnecting} guard keeps this to a single log line if more
+        subnegotiation payload arrives while the connection is still closing.
+        """
+        if self.transport.disconnecting:
+            return
+        self._log.warn(
+            "Telnet subnegotiation exceeded {length} bytes without an "
+            "IAC SE terminator; dropping connection.",
+            length=self._MAX_SUBNEGOTIATION_LENGTH,
+        )
+        self.transport.loseConnection()
 
     def dataReceived(self, data):
         appDataBuffer = []
@@ -586,8 +619,15 @@ class Telnet(protocol.Protocol):
             elif self.state == "subnegotiation":
                 if b == IAC:
                     self.state = "subnegotiation-escaped"
+                # The cap is checked inline rather than in a helper to avoid a
+                # Python call per byte on subnegotiation-heavy streams.
+                elif len(self.commands) < self._MAX_SUBNEGOTIATION_LENGTH:
+                    self.commands.append(b)
                 else:
-                    self._bufferSubnegotiation(b)
+                    # Stop parsing; the loop's final flush still delivers any
+                    # application data received before the violation.
+                    self._subnegotiationLengthExceeded()
+                    break
             elif self.state == "subnegotiation-escaped":
                 if b == SE:
                     self.state = "data"
@@ -599,7 +639,11 @@ class Telnet(protocol.Protocol):
                     self.negotiate(commands)
                 else:
                     self.state = "subnegotiation"
-                    self._bufferSubnegotiation(b)
+                    if len(self.commands) < self._MAX_SUBNEGOTIATION_LENGTH:
+                        self.commands.append(b)
+                    else:
+                        self._subnegotiationLengthExceeded()
+                        break
             else:
                 raise ValueError("How'd you do this?")
 
