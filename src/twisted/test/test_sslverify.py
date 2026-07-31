@@ -2095,7 +2095,6 @@ class TrustRootTests(TestCase):
         certificate being the only trust root for a client.
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
-        otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
