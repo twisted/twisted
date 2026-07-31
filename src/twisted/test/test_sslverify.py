@@ -3518,13 +3518,11 @@ class KeyPairTests(TestCase):
     if skipSSL:
         skip = skipSSL
 
-    def __getattr__(self, name):
-        if name == "sKey":
-            self.sKey = PKey()
-            self.sKey.generate_key(TYPE_RSA, 2048)
-        else:
-            raise AttributeError(name)
-        return getattr(self, name)
+    def setUp(self):
+        """
+        Create test certificate.
+        """
+        self.sKey = makeCertificate(O=b"Server Test Certificate", CN=b"server")[0]
 
     def test_getstateDeprecation(self):
         """
