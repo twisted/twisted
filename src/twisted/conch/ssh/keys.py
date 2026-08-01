@@ -30,6 +30,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
+from typing_extensions import Self
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
@@ -827,34 +828,26 @@ class Key:
         return cls(keyObject)
 
     @classmethod
-    def _fromECComponents(cls, x, y, curve, privateValue=None):
+    def _fromECComponents(cls, x: int, y: int, curve: bytes, privateValue: int) -> Self:
         """
         Build a key from EC components.
 
         @param x: The affine x component of the public point used for verifying.
-        @type x: L{int}
 
         @param y: The affine y component of the public point used for verifying.
-        @type y: L{int}
 
         @param curve: NIST name of elliptic curve.
-        @type curve: L{bytes}
 
         @param privateValue: The private value.
-        @type privateValue: L{int}
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=x, y=y, curve=_curveTable[curve]
         )
-        if privateValue is None:
-            # We have public components.
-            keyObject = publicNumbers.public_key()
-        else:
-            privateNumbers = ec.EllipticCurvePrivateNumbers(
-                private_value=privateValue, public_numbers=publicNumbers
-            )
-            keyObject = privateNumbers.private_key()
+        privateNumbers = ec.EllipticCurvePrivateNumbers(
+            private_value=privateValue, public_numbers=publicNumbers
+        )
+        keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
