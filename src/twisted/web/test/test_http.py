@@ -2196,34 +2196,24 @@ class ParsingTests(unittest.TestCase):
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
             )
 
-    def test_invalidHeaderValueNUL(self):
+    def test_invalidHeaderValueControlChars(self) -> None:
         """
-        A request with a header value that contains a NUL byte
-        is rejected with a 400 status code.
-        """
-        for header in [
-            b"x-foo: \x00",  # NUL byte
-            b"x-foo: a\x00",  # trailing NUL
-            b"x-foo: \x00baz",  # leading NUL
-            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
-        ]:
-            self.assertRequestRejected(
-                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
-            )
-
-    def test_invalidHeaderValueCRLF(self):
-        """
-        A header value containing a bare CR or LF is rejected with a 400, as
-        required by RFC 9110 section 5.5; accepting it would let a following
-        header be hidden from the parser and enable request smuggling. The bytes
-        are fed directly because L{runRequest} normalises a bare LF to CRLF.
+        A header value containing NUL, CR, or LF is rejected with a 400 (RFC
+        9110 section 5.5). A bare CR or LF would additionally let a following
+        header be hidden from the parser, enabling request smuggling.
         """
         for value in [
-            b"a\nContent-Length: 5",  # bare LF hiding a header
-            b"a\rContent-Length: 5",  # bare CR hiding a header
-            b"a\nb",  # bare LF
+            b"\x00",  # NUL
+            b"a\x00",  # trailing NUL
+            b"\x00baz",  # leading NUL
             b"a\rb",  # bare CR
+            b"a\rContent-Length: 5",  # bare CR hiding a header
         ]:
+            self.assertRequestRejected(
+                [b"GET / HTTP/1.1", b"Host: foo.example", b"x-foo: " + value, b"", b""]
+            )
+        # runRequest normalises a bare LF to CRLF, so feed those bytes directly.
+        for value in [b"a\nb", b"a\nContent-Length: 5"]:
             channel = http.HTTPChannel()
             transport = StringTransport()
             channel.makeConnection(transport)

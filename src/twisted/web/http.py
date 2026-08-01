@@ -2500,7 +2500,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         data = data.strip(b" \t")
         # A header value must not contain NUL, CR, or LF (RFC 9110 section 5.5).
-        # A bare CR or LF here would let a lenient proxy smuggle a header.
         if len(data.translate(None, b"\x00\r\n")) != len(data):
             self._respondToBadRequestAndDisconnect()
             return False
