@@ -21,6 +21,10 @@ from cryptography import utils
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.utils import (
+    decode_dss_signature,
+    encode_dss_signature,
+)
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -32,18 +36,6 @@ from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments
-
-try:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
-        decode_dss_signature,
-        encode_dss_signature,
-    )
-except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]
-        decode_rfc6979_signature as decode_dss_signature,
-        encode_rfc6979_signature as encode_dss_signature,
-    )
-
 
 # Curve lookup table
 _curveTable = {
