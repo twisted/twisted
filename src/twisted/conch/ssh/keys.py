@@ -19,7 +19,6 @@ import bcrypt
 from constantly import NamedConstant, Names
 from cryptography import utils
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -270,14 +269,14 @@ class Key:
         keyType, rest = common.getNS(blob)
         if keyType == b"ssh-rsa":
             e, n, rest = common.getMP(rest, 2)
-            return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
+            return cls(rsa.RSAPublicNumbers(e, n).public_key())
 
         if keyType == b"ssh-dss":
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(
                 dsa.DSAPublicNumbers(
                     y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g)
-                ).public_key(default_backend())
+                ).public_key()
             )
 
         if keyType in _curveTable:
@@ -405,7 +404,7 @@ class Key:
         # ECDSA keys don't need base64 decoding which is required
         # for RSA or DSA key.
         if data.startswith(b"ecdsa-sha2"):
-            return cls(load_ssh_public_key(data, default_backend()))
+            return cls(load_ssh_public_key(data))
         blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
 
@@ -483,7 +482,6 @@ class Key:
             decryptor = Cipher(
                 algorithmClass(decKey[:keySize]),
                 modes.CTR(decKey[keySize : keySize + ivSize]),
-                backend=default_backend(),
             ).decryptor()
             privKeyList = decryptor.update(encPrivKeyList) + decryptor.finalize()
         else:
@@ -544,7 +542,7 @@ class Key:
             passphrase = None
         if kind in (b"EC", b"RSA", b"DSA"):
             try:
-                key = load_pem_private_key(data, passphrase, default_backend())
+                key = load_pem_private_key(data, passphrase)
             except TypeError:
                 raise EncryptedKeyError(
                     "Passphrase must be provided for an encrypted key"
@@ -786,7 +784,7 @@ class Key:
         publicNumbers = rsa.RSAPublicNumbers(e=e, n=n)
         if d is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = publicNumbers.public_key()
         else:
             privateNumbers = rsa.RSAPrivateNumbers(
                 p=p,
@@ -797,7 +795,7 @@ class Key:
                 iqmp=rsa.rsa_crt_iqmp(p, q),
                 public_numbers=publicNumbers,
             )
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
@@ -829,10 +827,10 @@ class Key:
         )
         if x is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = publicNumbers.public_key()
         else:
             privateNumbers = dsa.DSAPrivateNumbers(x=x, public_numbers=publicNumbers)
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
@@ -859,12 +857,12 @@ class Key:
         )
         if privateValue is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = publicNumbers.public_key()
         else:
             privateNumbers = ec.EllipticCurvePrivateNumbers(
                 private_value=privateValue, public_numbers=publicNumbers
             )
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
@@ -890,9 +888,7 @@ class Key:
                 _curveTable[curve], encodedPoint
             )
         else:
-            keyObject = ec.derive_private_key(
-                privateValue, _curveTable[curve], default_backend()
-            )
+            keyObject = ec.derive_private_key(privateValue, _curveTable[curve])
 
         return cls(keyObject)
 
@@ -1550,9 +1546,7 @@ class Key:
         if passphrase:
             encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
             encryptor = Cipher(
-                cipher(encKey[:keySize]),
-                modes.CTR(encKey[keySize : keySize + ivSize]),
-                backend=default_backend(),
+                cipher(encKey[:keySize]), modes.CTR(encKey[keySize : keySize + ivSize])
             ).encryptor()
             encPrivKeyList = encryptor.update(privKeyList) + encryptor.finalize()
         else:
@@ -1915,9 +1909,7 @@ def _getPersistentRSAKey(location, keySize=4096):
 
     # If it doesn't exist, we want to generate a new key and save it
     if not location.exists():
-        privateKey = rsa.generate_private_key(
-            public_exponent=65537, key_size=keySize, backend=default_backend()
-        )
+        privateKey = rsa.generate_private_key(public_exponent=65537, key_size=keySize)
 
         pem = privateKey.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -1932,7 +1924,5 @@ def _getPersistentRSAKey(location, keySize=4096):
     # (Future archaeological readers: I chose not to short circuit above,
     # because then there's two exit paths to this code!)
     with location.open("rb") as keyFile:
-        privateKey = serialization.load_pem_private_key(
-            keyFile.read(), password=None, backend=default_backend()
-        )
+        privateKey = serialization.load_pem_private_key(keyFile.read(), password=None)
         return Key(privateKey)
