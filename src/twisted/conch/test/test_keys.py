@@ -1050,7 +1050,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             common.NS(keydata.ECDatanistp256["curve"])
             + common.NS(keydata.ECDatanistp256["curve"][-8:])
             + common.NS(
-                publicNumbers.public_key(default_backend()).public_bytes(
+                publicNumbers.public_key().public_bytes(
                     serialization.Encoding.X962,
                     serialization.PublicFormat.UncompressedPoint,
                 )

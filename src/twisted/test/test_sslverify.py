@@ -50,7 +50,6 @@ if requireModule("OpenSSL"):
     from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
 
     from cryptography import x509
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.asymmetric.rsa import (
@@ -168,9 +167,7 @@ class TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=4096)
         publicKeyForCA = privateKeyForCA.public_key()
         caCertificate = (
             x509.CertificateBuilder()
@@ -184,11 +181,7 @@ class TestingAuthority:
                 x509.BasicConstraints(ca=True, path_length=9),
                 critical=True,
             )
-            .sign(
-                private_key=privateKeyForCA,
-                algorithm=hashes.SHA256(),
-                backend=default_backend(),
-            )
+            .sign(private_key=privateKeyForCA, algorithm=hashes.SHA256())
         )
 
         return TestingAuthority(commonNameForCA, caCertificate, privateKeyForCA)
@@ -196,9 +189,7 @@ class TestingAuthority:
     def serverCertificate(
         self, commonName: str, subjects: list[str]
     ) -> sslverify.PrivateCertificate:
-        privateKeyForServer = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=4096)
         publicKeyForServer = privateKeyForServer.public_key()
         commonNameForServer = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
@@ -252,9 +243,7 @@ class TestingAuthority:
 
     def authoritize(self, builder: x509.CertificateBuilder) -> x509.Certificate:
         return builder.issuer_name(self.name).sign(
-            private_key=self.key,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
+            private_key=self.key, algorithm=hashes.SHA256()
         )
 
 
@@ -3530,7 +3519,7 @@ class CertificateRequestTests(SynchronousTestCase):
         L{ValueError} when the subject contains a name attribute that does not
         correspond to a known L{sslverify.DistinguishedName} field.
         """
-        key = ec.generate_private_key(ec.SECP256R1(), backend=default_backend())
+        key = ec.generate_private_key(ec.SECP256R1())
         csr = (
             x509.CertificateSigningRequestBuilder()
             .subject_name(x509.Name([x509.NameAttribute(NameOID.GIVEN_NAME, "Alice")]))
