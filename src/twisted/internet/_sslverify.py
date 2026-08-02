@@ -24,6 +24,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509.oid import NameOID
 from incremental import Version
+from typing_extensions import Self
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
@@ -764,10 +765,10 @@ class KeyPair(PublicKey):
         return "%s-bit %s Key Pair with Hash: %s" % L
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
+    def generate(cls, kind: int = crypto.TYPE_RSA, size: int = 2048) -> Self:
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
-        return Class(pkey)
+        return cls(pkey)
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
