@@ -1323,6 +1323,14 @@ class IMAP4HelperTests(TestCase):
         for case, expected in cases:
             self.assertEqual(imap4.parseNestedParens(case), expected)
 
+    def test_literalNegativeSize(self):
+        """
+        A literal with a negative octet count is rejected with L{ValueError}
+        instead of driving the parser into a non-terminating loop.
+        """
+        self.assertRaises(ValueError, imap4.parseNestedParens, b"{-1}", 1)
+        self.assertRaises(ValueError, imap4.parseNestedParens, b"foo {-100}bar", 1)
+
     def test_queryBuilder(self):
         inputs = [
             imap4.Query(flagged=1),
