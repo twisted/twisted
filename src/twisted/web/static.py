@@ -690,6 +690,20 @@ class File(resource.Resource, filepath.FilePath[str]):
         )
 
     def createSimilarFile(self, path):
+        """
+        Create a new L{File} (or subclass) instance for the given path,
+        inheriting configuration parameters from this instance.
+
+        This method copies properties such as C{defaultType}, C{ignoredExts},
+        C{registry}, C{processors}, C{indexNames}, and C{childNotFound} to
+        the newly created instance.
+
+        @param path: The path for the new L{File} resource.
+        @type path: L{bytes} or L{str}
+
+        @return: A new L{File} (or subclass) instance.
+        @rtype: L{File}
+        """
         f = self.__class__(path, self.defaultType, self.ignoredExts, self.registry)
         # refactoring by steps, here - constructor should almost certainly take these
         f.processors = self.processors
