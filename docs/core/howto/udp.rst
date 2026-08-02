@@ -32,7 +32,7 @@ Here is a simple example:
 .. literalinclude:: listings/udp/basic_example.py
 
 As you can see, the protocol is registered with the reactor.
-This means it may be persisted if it's added to an application, and thus it has :py:meth:`startProtocol <twisted.internet.protocol.AbstractDatagramProtocol.startProtocol>` and :py:meth:`stopProtocol <twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol>` methods that will get called when the protocol is connected and disconnected from a UDP socket.
+It has :py:meth:`startProtocol <twisted.internet.protocol.AbstractDatagramProtocol.startProtocol>` and :py:meth:`stopProtocol <twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol>` methods that will get called when the protocol is connected and disconnected from a UDP socket.
 
 The protocol's ``transport`` attribute will implement the :py:class:`twisted.internet.interfaces.IUDPTransport` interface.
 Notice that ``addr`` argument to ``self.transport.write`` should be a tuple with IP address and port number. First element of tuple must be ip address and not a hostname. If you only have the hostname use ``reactor.resolve()`` to resolve the address (see :py:meth:`twisted.internet.interfaces.IReactorCore.resolve`).
