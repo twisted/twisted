@@ -172,13 +172,12 @@ class Tag:
 
           table(tr1, tr2, width="100%", height="50%", border="1")
 
-        Children may be other tag instances, strings, functions, or any other
-        object which has a registered flatten.
+        Children may be other L{Tag} instances, strings, bytes, or any other
+        object which is flattenable (i.e. for which a flattener function has
+        been registered via L{twisted.web.template.registerFlattener}).
 
-        Attributes may be 'transparent' tag instances (so that
-        C{a(href=transparent(data="foo", render=myhrefrenderer))} works),
-        strings, functions, or any other object which has a registered
-        flattener.
+        Attributes may be strings, bytes, or any other object for which a
+        flattener function has been registered.
 
         If the attribute is a python keyword, such as 'class', you can add an
         underscore to the name, like 'class_'.
