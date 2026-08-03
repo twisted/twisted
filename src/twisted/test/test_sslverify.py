@@ -2178,12 +2178,12 @@ class ServiceIdentityTests(SynchronousTestCase):
         untrustedAuthority = TestingAuthority.create()
         serverCA = serverAuthority.authorityCertificate()
         serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
-        other: dict[str, Any] = {}
+        serverOptionsKwargs: dict[str, Any] = {}
         passClientCert = None
         clientCA = clientAuthority.authorityCertificate()
         clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
         if serverVerifies:
-            other.update(trustRoot=clientCA)
+            serverOptionsKwargs.update(trustRoot=clientCA)
 
         if clientPresentsCertificate:
             if validClientCertificate:
@@ -2202,7 +2202,7 @@ class ServiceIdentityTests(SynchronousTestCase):
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
             contextForServerName=serverNameCallback,
-            **other,
+            **serverOptionsKwargs,
         )
 
         signature: dict[str, Any] = {"hostname": clientHostname}
