@@ -176,13 +176,14 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         # result callback
         def onResult(success, result):
+            # Wait for main thread to delete worker and unique
+            onResultWait.wait(self.getTimeout())
+
             # Spin the GC, which should now delete worker and unique if it's
             # not held on to by callInThreadWithCallback after it is complete
             gc.collect()
-            onResultWait.wait(self.getTimeout())
             refdict["workerRef"] = workerRef()
             refdict["uniqueRef"] = uniqueRef()
-            onResultDone.set()
             resultRef.append(weakref.ref(result))
 
         # Here's our function
@@ -203,6 +204,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         # Put some work in
         tp.callInThreadWithCallback(onResult, worker, unique, test=unique)
 
+        # Set event on callback's completion
+        tp.callInThread(onResultDone.set)
+
         del worker
         del unique
 
@@ -210,14 +214,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         onResultWait.set()
         # wait for onResult
         onResultDone.wait(self.getTimeout())
-        gc.collect()
 
         self.assertIsNone(uniqueRef())
         self.assertIsNone(workerRef())
-
-        # XXX There's a race right here - has onResult in the worker thread
-        # returned and the locals in _worker holding it and the result been
-        # deleted yet?
 
         del onResult
         gc.collect()
