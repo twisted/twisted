@@ -2205,17 +2205,17 @@ class ServiceIdentityTests(SynchronousTestCase):
             **serverOptionsKwargs,
         )
 
-        signature: dict[str, Any] = {"hostname": clientHostname}
+        clientOptionsKwargs: dict[str, Any] = {"hostname": clientHostname}
         if passClientCert:
-            signature.update(clientCertificate=passClientCert)
+            clientOptionsKwargs.update(clientCertificate=passClientCert)
         if not useDefaultTrust:
-            signature.update(trustRoot=serverCA)
+            clientOptionsKwargs.update(trustRoot=serverCA)
         if fakePlatformTrust:
             self.patch(sslverify, "platformTrust", lambda: serverCA)
         if clientSkipSNI:
-            signature.update(sendServerName=False)
+            clientOptionsKwargs.update(sendServerName=False)
 
-        clientOpts = sslverify.optionsForClientTLS(**signature)
+        clientOpts = sslverify.optionsForClientTLS(**clientOptionsKwargs)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
