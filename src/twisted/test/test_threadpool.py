@@ -185,6 +185,7 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
             refdict["workerRef"] = workerRef()
             refdict["uniqueRef"] = uniqueRef()
             resultRef.append(weakref.ref(result))
+            onResultDone.set()
 
         # Here's our function
         def worker(arg, test):
@@ -203,9 +204,6 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         # Put some work in
         tp.callInThreadWithCallback(onResult, worker, unique, test=unique)
-
-        # Set event on callback's completion
-        tp.callInThread(onResultDone.set)
 
         del worker
         del unique
