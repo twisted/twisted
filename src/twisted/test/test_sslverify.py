@@ -2173,27 +2173,36 @@ class ServiceIdentityTests(SynchronousTestCase):
             called, will move data between the created client and server
             protocol instances
         """
-        clientAuthority = TestingAuthority.create()
         serverAuthority = TestingAuthority.create()
-        untrustedAuthority = TestingAuthority.create()
         serverCA = serverAuthority.authorityCertificate()
-        serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
-        other: dict[str, Any] = {}
+        serverOptionsKwargs: dict[str, Any] = {}
         passClientCert = None
-        clientCA = clientAuthority.authorityCertificate()
-        clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
+
+        clientAuthority = serverAuthority
+        untrustedAuthority = serverAuthority
+
         if serverVerifies:
-            other.update(trustRoot=clientCA)
+            clientAuthority = TestingAuthority.create()
+            serverOptionsKwargs.update(trustRoot=clientAuthority.authorityCertificate())
+
+        if not validCertificate and (not useDefaultTrust or fakePlatformTrust):
+            untrustedAuthority = TestingAuthority.create()
 
         if clientPresentsCertificate:
             if validClientCertificate:
-                passClientCert = clientCert
+                passClientCert = clientAuthority.serverCertificate(
+                    "Client Cert", ["client"]
+                )
             else:
                 passClientCert = untrustedAuthority.serverCertificate(
                     "Client Cert", ["client"]
                 )
 
-        if not validCertificate:
+        if validCertificate:
+            serverCert = serverAuthority.serverCertificate(
+                "Valid Cert", [serverHostname]
+            )
+        else:
             serverCert = untrustedAuthority.serverCertificate(
                 "Invalid Cert", [serverHostname]
             )
@@ -2202,20 +2211,23 @@ class ServiceIdentityTests(SynchronousTestCase):
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
             contextForServerName=serverNameCallback,
-            **other,
+            **serverOptionsKwargs,
         )
 
-        signature: dict[str, Any] = {"hostname": clientHostname}
+        clientOptionsKwargs: dict[str, Any] = {"hostname": clientHostname}
         if passClientCert:
-            signature.update(clientCertificate=passClientCert)
+            clientOptionsKwargs.update(clientCertificate=passClientCert)
+
         if not useDefaultTrust:
-            signature.update(trustRoot=serverCA)
+            clientOptionsKwargs.update(trustRoot=serverCA)
+
         if fakePlatformTrust:
             self.patch(sslverify, "platformTrust", lambda: serverCA)
-        if clientSkipSNI:
-            signature.update(sendServerName=False)
 
-        clientOpts = sslverify.optionsForClientTLS(**signature)
+        if clientSkipSNI:
+            clientOptionsKwargs.update(sendServerName=False)
+
+        clientOpts = sslverify.optionsForClientTLS(**clientOptionsKwargs)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
