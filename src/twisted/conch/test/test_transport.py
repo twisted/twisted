@@ -350,7 +350,7 @@ def generatePredictableKey(transport):
     try:
         transport.dhSecretKey = dh.DHPrivateNumbers(
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
-        ).private_key(default_backend())
+        ).private_key()
     except ValueError:
         print(f"\np={p}\ng={g}\nx={x}\n")
         raise
@@ -2462,11 +2462,11 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(
@@ -2651,11 +2651,11 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(
