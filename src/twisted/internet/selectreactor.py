@@ -16,7 +16,12 @@ from typing import Callable, TypeVar
 from zope.interface import implementer
 
 from twisted.internet import posixbase
-from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
+from twisted.internet.interfaces import (
+    IFileDescriptor,
+    IReactorFDSet,
+    IReadDescriptor,
+    IWriteDescriptor,
+)
 from twisted.python import log
 from twisted.python.runtime import platformType
 
@@ -52,7 +57,7 @@ except ImportError:
 else:
     _extraBase = _ThreadedWin32EventsMixin
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", bound=IFileDescriptor)
 
 
 def _onePreen(
