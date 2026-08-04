@@ -361,7 +361,7 @@ class DomishStreamTestsMixin:
         self.assertEqual("testns", self.elements[1].defaultUri)
         self.assertEqual({}, self.elements[1].localPrefixes)
 
-    def test_elementCountLimit(self):
+    def test_elementCountLimit(self) -> None:
         """
         An unfinished stanza containing more than C{maxElementCount} elements is
         rejected with L{domish.ParserError}, bounding the number of elements a
@@ -375,7 +375,7 @@ class DomishStreamTestsMixin:
             domish.ParserError, "Maximum element count", self.stream.parse, burst
         )
 
-    def test_stanzaSizeLimit(self):
+    def test_stanzaSizeLimit(self) -> None:
         """
         A single stanza whose accumulated byte size exceeds C{maxStanzaSize}
         while it is still open is rejected before it completes.  The input is
@@ -395,7 +395,7 @@ class DomishStreamTestsMixin:
             domish.ParserError, "Maximum stanza size", self.stream.parse, chunk
         )
 
-    def test_stanzaSizeCountsAttributeValues(self):
+    def test_stanzaSizeCountsAttributeValues(self) -> None:
         """
         Bytes carried in an attribute value count toward C{maxStanzaSize}, so a
         stanza cannot evade the size limit by placing its payload in a single
@@ -412,7 +412,7 @@ class DomishStreamTestsMixin:
             domish.ParserError, "Maximum stanza size", self.stream.parse, oversized
         )
 
-    def test_stanzaSizeExactBoundary(self):
+    def test_stanzaSizeExactBoundary(self) -> None:
         """
         A stanza whose accumulated raw size is exactly C{maxStanzaSize} is
         accepted. One byte beyond is rejected. This pins the strict-greater-than
@@ -431,7 +431,7 @@ class DomishStreamTestsMixin:
             domish.ParserError, "Maximum stanza size", self.stream.parse, b"x"
         )
 
-    def test_elementCountExactBoundary(self):
+    def test_elementCountExactBoundary(self) -> None:
         """
         Exactly C{maxElementCount} elements are accepted. One more is rejected.
         This pins the element-count boundary against an off-by-one.
@@ -445,7 +445,7 @@ class DomishStreamTestsMixin:
             domish.ParserError, "Maximum element count", self.stream.parse, b"<a/>"
         )
 
-    def test_sizeLimitsResetPerStanza(self):
+    def test_sizeLimitsResetPerStanza(self) -> None:
         """
         The size and element counters reset when each top-level stanza is
         emitted, so an arbitrarily long sequence of small stanzas, whose
