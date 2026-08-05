@@ -132,7 +132,7 @@ def counter(counter=itertools.count()):
     return next(counter)
 
 
-def makeCertificate(**kw):
+def makeCertificate(**kw: str | bytes) -> tuple[PKey, X509]:
     keypair = sslverify.KeyPair.generate()
     distinguishedName = sslverify.DistinguishedName(**kw)
     request = keypair.requestObject(distinguishedName)

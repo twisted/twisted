@@ -5,6 +5,8 @@
 Tests for twisted SSL support.
 """
 
+from __future__ import annotations
+
 import os
 
 import hamcrest
@@ -156,7 +158,9 @@ class ImmediatelyDisconnectingProtocol(protocol.Protocol):
         self.factory.connectionDisconnected.callback(None)
 
 
-def generateCertificateObjects(organization, organizationalUnit):
+def generateCertificateObjects(
+    organization: str, organizationalUnit: str
+) -> tuple[ssl.KeyPair, ssl.CertificateRequest, ssl.Certificate]:
     """
     Create a certificate for given C{organization} and C{organizationalUnit}.
 
