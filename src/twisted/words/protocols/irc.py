@@ -255,6 +255,9 @@ class IRC(protocol.Protocol):
     """
 
     buffer = ""
+    # Longest line accepted, matching twisted.protocols.basic.LineReceiver.
+    # An unterminated line would otherwise grow self.buffer without bound.
+    MAX_LENGTH = 16384
     hostname = None
 
     encoding: Optional[str] = None
@@ -415,8 +418,15 @@ class IRC(protocol.Protocol):
         # Put the (possibly empty) element after the last LF back in the
         # buffer
         self.buffer = lines.pop()
+        if len(self.buffer) > self.MAX_LENGTH:
+            # An unterminated line too long to be a valid message.
+            line, self.buffer = self.buffer, ""
+            return self.lineLengthExceeded(line)
 
         for line in lines:
+            if len(line) > self.MAX_LENGTH:
+                self.buffer = ""
+                return self.lineLengthExceeded(line)
             if len(line) <= 2:
                 # This is a blank line, at best.
                 continue
@@ -428,6 +438,17 @@ class IRC(protocol.Protocol):
             # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
 
             self.handleCommand(command, prefix, params)
+
+    def lineLengthExceeded(self, line):
+        """
+        Called when a line longer than C{MAX_LENGTH} is received. The default
+        behaviour, matching L{twisted.protocols.basic.LineReceiver}, drops the
+        connection.
+
+        @param line: The line which exceeded the length limit.
+        @type line: L{str}
+        """
+        return self.transport.loseConnection()
 
     def handleCommand(self, command, prefix, params):
         """
