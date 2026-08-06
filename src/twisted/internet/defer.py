@@ -1928,7 +1928,9 @@ def _inlineCallbacks(
         # iscoroutine() is pretty expensive in this context, so avoid calling
         # it unnecessarily:
         if not isDeferred and (iscoroutine(result) or inspect.isgenerator(result)):
-            result = _cancellableInlineCallbacks(result)
+            # Avoid casting result. mypy 2.3.0+ expects the Generator's YieldType to be object
+            # but it is actually Deferred.
+            result = _cancellableInlineCallbacks(result)  # type: ignore[arg-type]
             isDeferred = True
 
         if isDeferred:

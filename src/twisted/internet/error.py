@@ -5,12 +5,7 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-
 import socket
-
-from incremental import Version
-
-from twisted.python import deprecate
 
 
 class BindError(Exception):
@@ -272,32 +267,6 @@ class AlreadyCancelled(ValueError):
         return s
 
 
-class PotentialZombieWarning(Warning):
-    """
-    Emitted when L{IReactorProcess.spawnProcess} is called in a way which may
-    result in termination of the created child process not being reported.
-
-    Deprecated in Twisted 10.0.
-    """
-
-    MESSAGE = (
-        "spawnProcess called, but the SIGCHLD handler is not "
-        "installed. This probably means you have not yet "
-        "called reactor.run, or called "
-        "reactor.run(installSignalHandler=0). You will probably "
-        "never see this process finish, and it may become a "
-        "zombie process."
-    )
-
-
-deprecate.deprecatedModuleAttribute(
-    Version("Twisted", 10, 0, 0),
-    "There is no longer any potential for zombie process.",
-    __name__,
-    "PotentialZombieWarning",
-)
-
-
 class ProcessDone(ConnectionDone):
     __doc__ = MESSAGE = "A process has ended without apparent errors"
 
@@ -494,7 +463,6 @@ __all__ = [
     "ConnectionFdescWentAway",
     "AlreadyCalled",
     "AlreadyCancelled",
-    "PotentialZombieWarning",
     "ProcessDone",
     "ProcessTerminated",
     "ProcessExitedAlready",
