@@ -50,10 +50,7 @@ class Sensitive:
         if t == types.FunctionType:
             return latestFunction(anObject)
         elif t == types.MethodType:
-            if anObject.__self__ is None:
-                return getattr(anObject.im_class, anObject.__name__)
-            else:
-                return getattr(anObject.__self__, anObject.__name__)
+            return getattr(anObject.__self__, anObject.__name__)
         else:
             log.msg("warning returning anObject!")
             return anObject
