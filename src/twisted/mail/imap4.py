@@ -4757,6 +4757,8 @@ def parseNestedParens(s, handleLiteral=1):
                     if end == -1:
                         raise ValueError("Malformed literal")
                     literalSize = int(s[i + 1 : end])
+                    if literalSize < 0:
+                        raise ValueError("Illegal literal size")
                     contentStack[-1].append((s[end + 3 : end + 3 + literalSize],))
                     i = end + 3 + literalSize
                 elif c == b"(" or c == b"[":
