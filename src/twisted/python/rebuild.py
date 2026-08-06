@@ -142,7 +142,6 @@ def rebuild(module, doLog=1):
     d = module.__dict__
     _modDictIDMap[id(d)] = module
     newclasses = {}
-    classes = {}
     functions = {}
     values = {}
     if doLog:
@@ -161,11 +160,9 @@ def rebuild(module, doLog=1):
                     log.logfile.write("o")
                     log.logfile.flush()
 
-    values.update(classes)
     values.update(functions)
     fromOldModule = values.__contains__
     newclasses = newclasses.keys()
-    classes = classes.keys()
     functions = functions.keys()
 
     if doLog:
@@ -180,19 +177,9 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg(f"  (cleaning {str(module.__name__)}): ")
 
-    for clazz in classes:
-        if getattr(module, clazz.__name__) is clazz:
-            log.msg(f"WARNING: class {reflect.qual(clazz)} not replaced by reload!")
-        else:
-            if doLog:
-                log.logfile.write("x")
-                log.logfile.flush()
-            clazz.__bases__ = ()
-            clazz.__dict__.clear()
-            clazz.__getattr__ = __injectedgetattr__
-            clazz.__module__ = module.__name__
     if newclasses:
         import gc
+
         classReferrers = gc.get_referrers(*newclasses)
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
