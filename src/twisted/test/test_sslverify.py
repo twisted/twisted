@@ -12,8 +12,9 @@ import datetime
 import gc
 import itertools
 import textwrap
-from collections.abc import Iterable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from typing import Any
 from weakref import ref
 
 from zope.interface import implementer
@@ -31,7 +32,6 @@ from twisted.internet.interfaces import (
     IProtocolNegotiationFactory,
 )
 from twisted.internet.task import Clock
-from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
@@ -46,10 +46,9 @@ if requireModule("OpenSSL"):
     import ipaddress
 
     from OpenSSL import SSL
-    from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
+    from OpenSSL.crypto import FILETYPE_PEM, X509, PKey, get_elliptic_curves
 
     from cryptography import x509
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives.asymmetric.rsa import (
@@ -133,22 +132,12 @@ def counter(counter=itertools.count()):
     return next(counter)
 
 
-def makeCertificate(**kw):
-    keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 2048)
-
-    certificate = X509()
-    certificate.gmtime_adj_notBefore(0)
-    certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
-    for xname in certificate.get_issuer(), certificate.get_subject():
-        for k, v in kw.items():
-            setattr(xname, k, nativeString(v))
-
-    certificate.set_serial_number(counter())
-    certificate.set_pubkey(keypair)
-    certificate.sign(keypair, "md5")
-
-    return keypair, certificate
+def makeCertificate(**kw: str | bytes) -> tuple[PKey, X509]:
+    keypair = sslverify.KeyPair.generate()
+    distinguishedName = sslverify.DistinguishedName(**kw)
+    request = keypair.requestObject(distinguishedName)
+    certificate = keypair.signRequestObject(distinguishedName, request, counter())
+    return keypair.original, certificate.original
 
 
 oneDay = datetime.timedelta(1, 0, 0)
@@ -167,9 +156,7 @@ class TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=4096)
         publicKeyForCA = privateKeyForCA.public_key()
         caCertificate = (
             x509.CertificateBuilder()
@@ -183,11 +170,7 @@ class TestingAuthority:
                 x509.BasicConstraints(ca=True, path_length=9),
                 critical=True,
             )
-            .sign(
-                private_key=privateKeyForCA,
-                algorithm=hashes.SHA256(),
-                backend=default_backend(),
-            )
+            .sign(private_key=privateKeyForCA, algorithm=hashes.SHA256())
         )
 
         return TestingAuthority(commonNameForCA, caCertificate, privateKeyForCA)
@@ -195,9 +178,7 @@ class TestingAuthority:
     def serverCertificate(
         self, commonName: str, subjects: list[str]
     ) -> sslverify.PrivateCertificate:
-        privateKeyForServer = generate_private_key(
-            public_exponent=65537, key_size=4096, backend=default_backend()
-        )
+        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=4096)
         publicKeyForServer = privateKeyForServer.public_key()
         commonNameForServer = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
@@ -251,9 +232,7 @@ class TestingAuthority:
 
     def authoritize(self, builder: x509.CertificateBuilder) -> x509.Certificate:
         return builder.issuer_name(self.name).sign(
-            private_key=self.key,
-            algorithm=hashes.SHA256(),
-            backend=default_backend(),
+            private_key=self.key, algorithm=hashes.SHA256()
         )
 
 
@@ -265,12 +244,9 @@ def certificatesForAuthorityAndServer(
     CA.
 
     @param serviceIdentity: The identity (hostname) of the server.
-    @type serviceIdentity: L{unicode}
 
     @return: a 2-tuple of C{(certificate_authority_certificate,
         server_certificate)}
-    @rtype: L{tuple} of (L{sslverify.Certificate},
-        L{sslverify.PrivateCertificate})
     """
     authority = TestingAuthority.create()
     return (
@@ -310,7 +286,6 @@ class NegotiatingFactory(protocol.Factory):
 
         @param acceptableProtocols: The protocols the client will accept
             speaking after the TLS handshake is complete.
-        @type acceptableProtocols: L{list} of L{bytes}
         """
         self._acceptableProtocols = acceptableProtocols
 
@@ -321,7 +296,6 @@ class NegotiatingFactory(protocol.Factory):
         for ALPN tokens.
 
         @return: a list of ALPN tokens in order of preference.
-        @rtype: L{list} of L{bytes}
         """
         return self._acceptableProtocols
 
@@ -351,7 +325,6 @@ def _loopbackTLSConnection(
 
     @return: 5-tuple of server-tls-protocol, server-inner-protocol,
         client-tls-protocol, client-inner-protocol and L{IOPump}
-    @rtype: L{tuple}
     """
 
     clientWrappedProto = ListeningClient()
@@ -400,16 +373,12 @@ def loopbackTLSConnection(
 
     @param trustRoot: the C{trustRoot} argument for the client connection's
         context.
-    @type trustRoot: L{sslverify.IOpenSSLTrustRoot}
 
     @param privateKeyFile: The name of the file containing the private key.
-    @type privateKeyFile: L{str} (native string; file name)
 
     @param chainedCertFile: The name of the chained certificate file.
-    @type chainedCertFile: L{str} (native string; file name)
 
     @return: 3-tuple of server-protocol, client-protocol, and L{IOPump}
-    @rtype: L{tuple}
     """
 
     @implementer(IOpenSSLContextFactory)
@@ -457,8 +426,6 @@ def loopbackTLSConnectionInMemory(
     @param privateKey: The private key.
 
     @param serverCertificate: The certificate used by the server.
-
-    @type chainedCertFile: L{str} (native string)
 
     @param clientProtocols: The protocols the client is willing to negotiate
         using ALPN.
@@ -2095,7 +2062,6 @@ class TrustRootTests(TestCase):
         certificate being the only trust root for a client.
         """
         caCert, serverCert = certificatesForAuthorityAndServer()
-        otherCa, otherServer = certificatesForAuthorityAndServer()
         sProto, cProto, sWrapped, cWrapped, pump = loopbackTLSConnection(
             trustRoot=caCert,
             privateKeyFile=pathContainingDumpOf(self, serverCert.privateKey),
@@ -2115,7 +2081,7 @@ class ServiceIdentitySetup:
     pump: IOPump
     authority: TestingAuthority
 
-    def __iter__(self) -> Iterable[object]:
+    def __iter__(self) -> Iterator[Any]:
         return iter(
             (
                 self.clientProtocol,
@@ -2138,85 +2104,94 @@ class ServiceIdentityTests(SynchronousTestCase):
 
     def serviceIdentitySetup(
         self,
-        clientHostname,
-        serverHostname,
+        clientHostname: str,
+        serverHostname: str,
         *,
-        serverNameCallback=None,
-        validCertificate=True,
-        clientPresentsCertificate=False,
-        validClientCertificate=True,
-        serverVerifies=False,
-        fakePlatformTrust=False,
-        useDefaultTrust=False,
-        clientSkipSNI=False,
-        immediately=True,
-    ):
+        serverNameCallback: Callable[[bytes | None], SSL.Context | None] | None = None,
+        validCertificate: bool = True,
+        clientPresentsCertificate: bool = False,
+        validClientCertificate: bool = True,
+        serverVerifies: bool = False,
+        fakePlatformTrust: bool = False,
+        useDefaultTrust: bool = False,
+        clientSkipSNI: bool = False,
+        immediately: bool = True,
+    ) -> ServiceIdentitySetup:
         """
         Connect a server and a client.
 
         @param clientHostname: The I{client's idea} of the server's hostname;
-            passed as the C{hostname} to the
-            L{sslverify.OpenSSLCertificateOptions} instance.
-        @type clientHostname: L{unicode}
+            passed as the C{hostname} to the L{sslverify.optionsForClientTLS} instance.
 
         @param serverHostname: The I{server's own idea} of the server's
             hostname; present in the certificate presented by the server.
-        @type serverHostname: L{unicode}
+
+        @param serverNameCallback: A callback invoked with the client's SNI hostname,
+            or L{None} when SNI is omitted. It may return a replacement L{SSL.Context}.
+            Returns L{None} otherwise. Defaults to L{None}.
 
         @param validCertificate: Is the server's certificate valid?  L{True} if
             so, L{False} otherwise.
-        @type validCertificate: L{bool}
 
         @param clientPresentsCertificate: Should the client present a
             certificate to the server?  Defaults to 'no'.
-        @type clientPresentsCertificate: L{bool}
 
         @param validClientCertificate: If the client presents a certificate,
             should it actually be a valid one, i.e. signed by the same CA that
             the server is checking?  Defaults to 'yes'.
-        @type validClientCertificate: L{bool}
 
         @param serverVerifies: Should the server verify the client's
             certificate?  Defaults to 'no'.
-        @type serverVerifies: L{bool}
 
         @param fakePlatformTrust: Should we fake the platformTrust to be the
             same as our fake server certificate authority, so that we can test
             it's being used?  Defaults to 'no' and we just pass platform trust.
-        @type fakePlatformTrust: L{bool}
 
         @param useDefaultTrust: Should we avoid passing the C{trustRoot} to
             L{ssl.optionsForClientTLS}?  Defaults to 'no'.
-        @type useDefaultTrust: L{bool}
+
+        @param clientSkipSNI: Whether to omit SNI while still verifying the server
+            hostname. Defaults to L{False}.
+
+        @param immediately: Whether to flush the connection, processing the TLS
+            handshake and initial greetings, before returning. Defaults to L{True}.
 
         @return: the client TLS protocol, the client wrapped protocol,
             the server TLS protocol, the server wrapped protocol and
             an L{IOPump} which, when its C{pump} and C{flush} methods are
             called, will move data between the created client and server
             protocol instances
-        @rtype: L{ServiceIdentitySetup}
         """
-        clientAuthority = TestingAuthority.create()
         serverAuthority = TestingAuthority.create()
-        untrustedAuthority = TestingAuthority.create()
         serverCA = serverAuthority.authorityCertificate()
-        serverCert = serverAuthority.serverCertificate("Valid Cert", [serverHostname])
-        other = {}
+        serverOptionsKwargs: dict[str, Any] = {}
         passClientCert = None
-        clientCA = clientAuthority.authorityCertificate()
-        clientCert = clientAuthority.serverCertificate("Client Cert", ["client"])
+
+        clientAuthority = serverAuthority
+        untrustedAuthority = serverAuthority
+
         if serverVerifies:
-            other.update(trustRoot=clientCA)
+            clientAuthority = TestingAuthority.create()
+            serverOptionsKwargs.update(trustRoot=clientAuthority.authorityCertificate())
+
+        if not validCertificate and (not useDefaultTrust or fakePlatformTrust):
+            untrustedAuthority = TestingAuthority.create()
 
         if clientPresentsCertificate:
             if validClientCertificate:
-                passClientCert = clientCert
+                passClientCert = clientAuthority.serverCertificate(
+                    "Client Cert", ["client"]
+                )
             else:
                 passClientCert = untrustedAuthority.serverCertificate(
                     "Client Cert", ["client"]
                 )
 
-        if not validCertificate:
+        if validCertificate:
+            serverCert = serverAuthority.serverCertificate(
+                "Valid Cert", [serverHostname]
+            )
+        else:
             serverCert = untrustedAuthority.serverCertificate(
                 "Invalid Cert", [serverHostname]
             )
@@ -2225,20 +2200,23 @@ class ServiceIdentityTests(SynchronousTestCase):
             privateKey=serverCert.privateKey.original,
             certificate=serverCert.original,
             contextForServerName=serverNameCallback,
-            **other,
+            **serverOptionsKwargs,
         )
 
-        signature = {"hostname": clientHostname}
+        clientOptionsKwargs: dict[str, Any] = {"hostname": clientHostname}
         if passClientCert:
-            signature.update(clientCertificate=passClientCert)
+            clientOptionsKwargs.update(clientCertificate=passClientCert)
+
         if not useDefaultTrust:
-            signature.update(trustRoot=serverCA)
+            clientOptionsKwargs.update(trustRoot=serverCA)
+
         if fakePlatformTrust:
             self.patch(sslverify, "platformTrust", lambda: serverCA)
-        if clientSkipSNI:
-            signature.update(sendServerName=False)
 
-        clientOpts = sslverify.optionsForClientTLS(**signature)
+        if clientSkipSNI:
+            clientOptionsKwargs.update(sendServerName=False)
+
+        clientOpts = sslverify.optionsForClientTLS(**clientOptionsKwargs)
 
         class GreetingServer(protocol.Protocol):
             greeting = b"greetings!"
@@ -2388,7 +2366,7 @@ class ServiceIdentityTests(SynchronousTestCase):
         When SNI is not sent by the client, the server name callback will be
         invoked with C{None}.
         """
-        sent: list[bytes] = []
+        sent: list[bytes | None] = []
         conf = self.serviceIdentitySetup(
             "correct-host.example.com",
             "correct-host.example.com",
@@ -3542,7 +3520,7 @@ class CertificateRequestTests(SynchronousTestCase):
         L{ValueError} when the subject contains a name attribute that does not
         correspond to a known L{sslverify.DistinguishedName} field.
         """
-        key = ec.generate_private_key(ec.SECP256R1(), backend=default_backend())
+        key = ec.generate_private_key(ec.SECP256R1())
         csr = (
             x509.CertificateSigningRequestBuilder()
             .subject_name(x509.Name([x509.NameAttribute(NameOID.GIVEN_NAME, "Alice")]))
