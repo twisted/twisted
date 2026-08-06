@@ -193,6 +193,7 @@ def rebuild(module, doLog=1):
             clazz.__module__ = module.__name__
     if newclasses:
         import gc
+        classReferrers = gc.get_referrers(*newclasses)
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
         if ga is nclass:
@@ -202,7 +203,7 @@ def rebuild(module, doLog=1):
                 )
             )
         else:
-            for r in gc.get_referrers(nclass):
+            for r in classReferrers:
                 if getattr(r, "__class__", None) is nclass:
                     r.__class__ = ga
     if doLog:
