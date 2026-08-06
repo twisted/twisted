@@ -18,7 +18,7 @@ def recvfd(socketfd: int) -> tuple[int, bytes]:
     @param socketfd: An C{AF_UNIX} socket, attached to another process waiting
         to send sockets via the ancillary data mechanism in L{send1msg}.
 
-    @param fd: C{int}
+    @type socketfd: C{int}
 
     @return: a 2-tuple of (new file descriptor, description).
     @rtype: 2-tuple of (C{int}, C{bytes})
