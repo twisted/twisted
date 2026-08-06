@@ -324,7 +324,6 @@ class ReactorTests(TestCase):
         self.assertEqual(reactor.getReaders(), [])
         self.assertEqual(reactor.getWriters(), [])
 
-
     def test_call_when_running(self) -> None:
         """
         L{MemoryReactor.callWhenRunning} calls the given callable when the
