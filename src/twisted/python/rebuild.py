@@ -168,6 +168,7 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg(f"  (cleaning {str(module.__name__)}): ")
 
+    classReferrers = []
     if newclasses:
         import gc
 
