@@ -1,1 +1,1 @@
-twisted.words.protocols.irc.IRC now limits the length of a single line, so a peer can no longer exhaust server memory by sending data without a line delimiter.
+twisted.words.protocols.irc.IRC.dataReceived now limits the length of a single line, so a peer can no longer exhaust server memory by sending data without a line delimiter.
