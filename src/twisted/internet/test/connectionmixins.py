@@ -462,6 +462,7 @@ class StreamClientTestsMixin:
         """
         reactor = self.buildReactor()
         connector = self.connect(reactor, ClientFactory())
+        self.addCleanup(connector.disconnect)
         self.assertTrue(verifyObject(IConnector, connector))
 
     def test_clientConnectionFailedStopsReactor(self):
