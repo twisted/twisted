@@ -8,15 +8,12 @@
 """
 
 import linecache
-
-# System Imports
 import sys
 import time
 import types
 from importlib import reload
 from types import ModuleType
 
-# Sibling Imports
 from twisted.python import log, reflect
 
 lastRebuild = time.time()
