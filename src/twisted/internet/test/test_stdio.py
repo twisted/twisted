@@ -6,12 +6,26 @@ Tests for L{twisted.internet.stdio}.
 """
 
 
-from twisted.internet.protocol import Protocol
+from twisted.internet.interfaces import IReactorCore
+from twisted.internet.protocol import Protocol, connectionDone
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 
 if not platform.isWindows():
     from twisted.internet.stdio import StandardIO
+
+
+class DisconnectProtocol(Protocol):
+    """
+    Stop a reactor when the protocol is disconnected.
+    """
+
+    def __init__(self, reactor: IReactorCore) -> None:
+        self._reactor = reactor
+
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
+        self._reactor.stop()
 
 
 class StdioFilesTests(ReactorBuilder):
@@ -68,16 +82,12 @@ class StdioFilesTests(ReactorBuilder):
         """
         reactor = self.buildReactor()
 
-        class DisconnectProtocol(Protocol):
-            def connectionLost(self, reason):
-                reactor.stop()
-
         path = self.mktemp()
 
         with open(path, "wb") as f:
             # Write bytes to a transport, hopefully have them written to a
             # file:
-            protocol = DisconnectProtocol()
+            protocol = DisconnectProtocol(reactor)
             StandardIO(
                 protocol,
                 stdout=f.fileno(),
@@ -124,7 +134,7 @@ class StdioFilesTests(ReactorBuilder):
 
         with open(self.mktemp(), "wb") as f:
             # Have the reader added:
-            protocol = Protocol()
+            protocol = DisconnectProtocol(reactor)
             stdio = StandardIO(
                 protocol,
                 stdout=f.fileno(),
@@ -135,6 +145,9 @@ class StdioFilesTests(ReactorBuilder):
             self.assertIn(stdio._writer, reactor.getWriters())
             stdio._writer.stopWriting()
             self.assertNotIn(stdio._writer, reactor.getWriters())
+
+            stdio.loseConnection()
+            self.runReactor(reactor)
 
     def test_removeAll(self):
         """
@@ -168,16 +181,18 @@ class StdioFilesTests(ReactorBuilder):
         path = self.mktemp()
         open(path, "wb").close()
 
-        # Cleanup might fail if file is GCed too soon:
         with open(path, "rb") as f:
             # Have the reader added:
             stdio = StandardIO(
-                Protocol(),
+                DisconnectProtocol(reactor),
                 stdin=f.fileno(),
                 stdout=self.extraFile.fileno(),
                 reactor=reactor,
             )
             self.assertIn(stdio._reader, reactor.getReaders())
+
+            stdio.loseConnection()
+            self.runReactor(reactor)
 
     def test_getWriters(self):
         """
@@ -188,7 +203,7 @@ class StdioFilesTests(ReactorBuilder):
         with open(self.mktemp(), "wb") as f:
             # Have the reader added:
             stdio = StandardIO(
-                Protocol(),
+                DisconnectProtocol(reactor),
                 stdout=f.fileno(),
                 stdin=self.extraFile.fileno(),
                 reactor=reactor,
@@ -196,7 +211,9 @@ class StdioFilesTests(ReactorBuilder):
             self.assertNotIn(stdio._writer, reactor.getWriters())
             stdio._writer.startWriting()
             self.assertIn(stdio._writer, reactor.getWriters())
-            stdio._writer.stopWriting()
+
+            stdio.loseConnection()
+            self.runReactor(reactor)
 
     if platform.isWindows():
         skip = (
