@@ -555,7 +555,7 @@ class RaceConditionTests(unittest.SynchronousTestCase):
             self.threadpool.callInThread(self.event.wait)
         self.threadpool.callInThread(self.event.set)
         self.event.wait(timeout)
-        if not self.event.isSet():
+        if not self.event.is_set():
             self.event.set()
             self.fail("'set' did not run in thread; timed out waiting on 'wait'.")
 

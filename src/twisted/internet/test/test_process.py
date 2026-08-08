@@ -266,7 +266,7 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # here, but that's okay because the signal handler was installed above,
         # before we could have gotten it).
         signaled.wait(120)
-        if not signaled.isSet():
+        if not signaled.is_set():
             self.fail("Timed out waiting for child process to exit.")
 
         # Capture the processEnded callback.

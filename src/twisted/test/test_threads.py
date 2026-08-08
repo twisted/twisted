@@ -64,7 +64,7 @@ class ReactorThreadsTests(TestCase):
 
             reactor.callInThread(threadedFunc)
             waiter.wait(120)
-            if not waiter.isSet():
+            if not waiter.is_set():
                 self.fail("Timed out waiting for event.")
             else:
                 self.assertEqual(result, [False])
@@ -115,7 +115,7 @@ class ReactorThreadsTests(TestCase):
 
             reactor.callInThread(threadedFunction)
             waiter.wait(120)
-            if not waiter.isSet():
+            if not waiter.is_set():
                 self.fail("Timed out waiting for event")
             if self.failure is not None:
                 return defer.fail(self.failure)
@@ -144,7 +144,7 @@ class ReactorThreadsTests(TestCase):
             return threads.deferToThread(waiter.wait, self.getTimeout())
 
         def cb2(ign):
-            if not waiter.isSet():
+            if not waiter.is_set():
                 self.fail("Timed out waiting for event")
             return results, errors
 
