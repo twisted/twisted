@@ -3072,7 +3072,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         """
         _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
         self.openThenReset(
-            connection, frameFactory, nextStreamID, connection._resetTokenBurst + 1
+            connection, frameFactory, nextStreamID, int(connection._resetTokenBurst) + 1
         )
 
         # Assert on GOAWAY presence, not list position, so a later control frame
@@ -3092,7 +3092,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         """
         _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
         self.openThenReset(
-            connection, frameFactory, nextStreamID, connection._resetTokenBurst
+            connection, frameFactory, nextStreamID, int(connection._resetTokenBurst)
         )
 
         frames = framesFromBytes(transport.value())
@@ -3111,7 +3111,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         depends on.
         """
         _, connection, transport, frameFactory, nextStreamID = self.connectRapidReset()
-        for _ in range(connection._resetTokenBurst + 1):
+        for _ in range(int(connection._resetTokenBurst) + 1):
             streamID = nextStreamID[0]
             nextStreamID[0] += 2
             connection.dataReceived(
@@ -3140,7 +3140,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
             frameFactory,
             nextStreamID,
         ) = self.connectRapidReset()
-        for _ in range(connection._resetTokenBurst * 2):
+        for _ in range(int(connection._resetTokenBurst) * 2):
             self.openThenReset(connection, frameFactory, nextStreamID, 1)
             reactor.advance(1.0 / connection._resetTokenRate)
 
@@ -3163,7 +3163,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
             frameFactory,
             nextStreamID,
         ) = self.connectRapidReset()
-        burst = connection._resetTokenBurst
+        burst = int(connection._resetTokenBurst)
         self.openThenReset(connection, frameFactory, nextStreamID, burst)
         reactor.advance(burst / connection._resetTokenRate + 1)
         self.openThenReset(connection, frameFactory, nextStreamID, burst)

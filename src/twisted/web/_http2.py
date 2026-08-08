@@ -113,7 +113,7 @@ class H2Connection(Protocol, TimeoutMixin):
 
     # Token bucket that rate-limits peer stream resets (RST_STREAM) to defend
     # against HTTP/2 Rapid Reset (CVE-2023-44487), the same shape nghttp2 uses.
-    _resetTokenBurst = 1000
+    _resetTokenBurst = 1000.0
     _resetTokenRate = 33
 
     def __init__(self, reactor=None):
@@ -139,7 +139,7 @@ class H2Connection(Protocol, TimeoutMixin):
         self._reactor = reactor
 
         # Reset-rate token bucket, starts full.
-        self._resetTokens = float(self._resetTokenBurst)
+        self._resetTokens = self._resetTokenBurst
         self._resetTokenTimestamp = self._reactor.seconds()
 
         # Start the data sending function.
