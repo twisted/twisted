@@ -140,7 +140,6 @@ def rebuild(module, doLog=1):
     _modDictIDMap[id(d)] = module
     newclasses = {}
     functions = {}
-    values = {}
     if doLog:
         log.msg(f"  (scanning {str(module.__name__)}): ")
     for k, v in d.items():
@@ -157,10 +156,8 @@ def rebuild(module, doLog=1):
                     log.logfile.write("o")
                     log.logfile.flush()
 
-    values.update(functions)
-    fromOldModule = values.__contains__
+    fromOldModule = functions.__contains__
     newclasses = newclasses.keys()
-    functions = functions.keys()
 
     if doLog:
         log.msg("")
