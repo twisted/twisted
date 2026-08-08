@@ -122,18 +122,19 @@ class StdioFilesTests(ReactorBuilder):
         """
         reactor = self.buildReactor()
 
-        # Cleanup might fail if file is GCed too soon:
-        self.f = f = open(self.mktemp(), "wb")
-
-        # Have the reader added:
-        protocol = Protocol()
-        stdio = StandardIO(
-            protocol, stdout=f.fileno(), stdin=self.extraFile.fileno(), reactor=reactor
-        )
-        protocol.transport.write(b"hello")
-        self.assertIn(stdio._writer, reactor.getWriters())
-        stdio._writer.stopWriting()
-        self.assertNotIn(stdio._writer, reactor.getWriters())
+        with open(self.mktemp(), "wb") as f:
+            # Have the reader added:
+            protocol = Protocol()
+            stdio = StandardIO(
+                protocol,
+                stdout=f.fileno(),
+                stdin=self.extraFile.fileno(),
+                reactor=reactor,
+            )
+            protocol.transport.write(b"hello")
+            self.assertIn(stdio._writer, reactor.getWriters())
+            stdio._writer.stopWriting()
+            self.assertNotIn(stdio._writer, reactor.getWriters())
 
     def test_removeAll(self):
         """
@@ -145,20 +146,18 @@ class StdioFilesTests(ReactorBuilder):
         path = self.mktemp()
         open(path, "wb").close()
 
-        # Cleanup might fail if file is GCed too soon:
-        self.f = f = open(path, "rb")
-
-        # Have the reader added:
-        stdio = StandardIO(
-            Protocol(),
-            stdin=f.fileno(),
-            stdout=self.extraFile.fileno(),
-            reactor=reactor,
-        )
-        # And then removed:
-        removed = reactor.removeAll()
-        self.assertIn(stdio._reader, removed)
-        self.assertNotIn(stdio._reader, reactor.getReaders())
+        with open(path, "rb") as f:
+            # Have the reader added:
+            stdio = StandardIO(
+                Protocol(),
+                stdin=f.fileno(),
+                stdout=self.extraFile.fileno(),
+                reactor=reactor,
+            )
+            # And then removed:
+            removed = reactor.removeAll()
+            self.assertIn(stdio._reader, removed)
+            self.assertNotIn(stdio._reader, reactor.getReaders())
 
     def test_getReaders(self):
         """
@@ -186,19 +185,18 @@ class StdioFilesTests(ReactorBuilder):
         """
         reactor = self.buildReactor()
 
-        # Cleanup might fail if file is GCed too soon:
-        self.f = f = open(self.mktemp(), "wb")
-
-        # Have the reader added:
-        stdio = StandardIO(
-            Protocol(),
-            stdout=f.fileno(),
-            stdin=self.extraFile.fileno(),
-            reactor=reactor,
-        )
-        self.assertNotIn(stdio._writer, reactor.getWriters())
-        stdio._writer.startWriting()
-        self.assertIn(stdio._writer, reactor.getWriters())
+        with open(self.mktemp(), "wb") as f:
+            # Have the reader added:
+            stdio = StandardIO(
+                Protocol(),
+                stdout=f.fileno(),
+                stdin=self.extraFile.fileno(),
+                reactor=reactor,
+            )
+            self.assertNotIn(stdio._writer, reactor.getWriters())
+            stdio._writer.startWriting()
+            self.assertIn(stdio._writer, reactor.getWriters())
+            stdio._writer.stopWriting()
 
     if platform.isWindows():
         skip = (
