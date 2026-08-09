@@ -156,7 +156,7 @@ class TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=4096)
+        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=2048)
         publicKeyForCA = privateKeyForCA.public_key()
         caCertificate = (
             x509.CertificateBuilder()
@@ -178,7 +178,7 @@ class TestingAuthority:
     def serverCertificate(
         self, commonName: str, subjects: list[str]
     ) -> sslverify.PrivateCertificate:
-        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=4096)
+        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=2048)
         publicKeyForServer = privateKeyForServer.public_key()
         commonNameForServer = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
