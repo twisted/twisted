@@ -3471,7 +3471,7 @@ class CertificateRequestTests(SynchronousTestCase):
         dn = sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
         return sslverify.KeyPair.generate().requestObject(dn)
 
-    def test_getSubject(self):
+    def test_getSubject(self) -> None:
         """
         L{sslverify.CertificateRequest.getSubject} returns the request subject.
         """
