@@ -3471,6 +3471,16 @@ class CertificateRequestTests(SynchronousTestCase):
         dn = sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
         return sslverify.KeyPair.generate().requestObject(dn)
 
+    def test_getSubject(self):
+        """
+        L{sslverify.CertificateRequest.getSubject} returns the request subject.
+        """
+        request = self._makeRequest()
+        self.assertEqual(
+            request.getSubject(),
+            sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
+        )
+
     def test_pemRoundTrip(self):
         """
         A L{sslverify.CertificateRequest} dumped to PEM format and loaded back
