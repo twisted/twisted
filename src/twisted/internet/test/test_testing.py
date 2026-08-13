@@ -1,4 +1,4 @@
-# Copyright (c) Twisted Matrix Laboratories.
+﻿# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -17,6 +17,7 @@ from twisted.internet.interfaces import (
     IConsumer,
     IListeningPort,
     IPushProducer,
+    IReactorFDSet,
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
@@ -313,7 +314,7 @@ class ReactorTests(TestCase):
         """
         reader = object()
         writer = object()
-        reactor = MemoryReactor()
+        reactor: IReactorFDSet = MemoryReactor()
 
         reactor.addReader(reader)
         reactor.addWriter(writer)
