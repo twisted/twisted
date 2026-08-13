@@ -1,4 +1,4 @@
-﻿# Copyright (c) Twisted Matrix Laboratories.
+﻿﻿# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -316,8 +316,8 @@ class ReactorTests(TestCase):
         writer = object()
         reactor: IReactorFDSet = MemoryReactor()
 
-        reactor.addReader(reader)
-        reactor.addWriter(writer)
+        reactor.addReader(reader)  # type: ignore[arg-type]
+        reactor.addWriter(writer)  # type: ignore[arg-type]
 
         removed = reactor.removeAll()
 
