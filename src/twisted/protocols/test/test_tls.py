@@ -245,7 +245,7 @@ def handshakingClientAndServer(
     Construct a client and server L{TLSMemoryBIOProtocol} connected by an IO
     pump.
 
-    @param greetingData: The data which should be written in L{connectionMade}.
+    @param clientGreetingData: The data which should be written in L{connectionMade}.
 
     @return: 3-tuple of client protocol, server protocol, and a L{pump
         <twisted.test.iosim.IOPump>} that can move the data between the two
