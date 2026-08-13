@@ -3471,6 +3471,16 @@ class CertificateRequestTests(SynchronousTestCase):
         dn = sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
         return sslverify.KeyPair.generate().requestObject(dn)
 
+    def test_getSubject(self) -> None:
+        """
+        L{sslverify.CertificateRequest.getSubject} returns the request subject.
+        """
+        request = self._makeRequest()
+        self.assertEqual(
+            request.getSubject(),
+            sslverify.DistinguishedName(commonName="example.twistedmatrix.com"),
+        )
+
     def test_pemRoundTrip(self):
         """
         A L{sslverify.CertificateRequest} dumped to PEM format and loaded back
@@ -3481,8 +3491,8 @@ class CertificateRequestTests(SynchronousTestCase):
         self.assertIn(b"BEGIN CERTIFICATE REQUEST", pem)
         loaded = sslverify.CertificateRequest.load(pem, FILETYPE_PEM)
         self.assertEqual(
-            loaded._subjectToDistinguishedName(),
-            request._subjectToDistinguishedName(),
+            loaded.getSubject(),
+            request.getSubject(),
         )
 
     def test_loadUnsupportedFormat(self):
@@ -3516,9 +3526,9 @@ class CertificateRequestTests(SynchronousTestCase):
 
     def test_subjectUnknownAttribute(self):
         """
-        L{sslverify.CertificateRequest._subjectToDistinguishedName} raises
-        L{ValueError} when the subject contains a name attribute that does not
-        correspond to a known L{sslverify.DistinguishedName} field.
+        L{sslverify.CertificateRequest.getSubject} raises L{ValueError} when
+        the subject contains a name attribute that does not correspond to a
+        known L{sslverify.DistinguishedName} field.
         """
         key = ec.generate_private_key(ec.SECP256R1())
         csr = (
@@ -3528,4 +3538,4 @@ class CertificateRequestTests(SynchronousTestCase):
         )
         request = sslverify.CertificateRequest(csr)
         with self.assertRaises(ValueError):
-            request._subjectToDistinguishedName()
+            request.getSubject()
