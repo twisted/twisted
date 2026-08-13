@@ -1,4 +1,4 @@
-﻿# Copyright (c) Twisted Matrix Laboratories.
+# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
@@ -316,6 +316,9 @@ class ReactorTests(TestCase):
         writer = object()
         reactor: IReactorFDSet = MemoryReactor()
 
+        # We are using object()s here as a simple identity placeholder, so we
+        # ask the type checker to not care about that.  If a more correct type
+        # is required this test should be fixed.
         # We are using object()s here as a simple identity placeholder, so we
         # ask the type checker to not care about that.  If a more correct type
         # is required this test should be fixed.
