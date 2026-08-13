@@ -3478,7 +3478,7 @@ class CertificateRequestTests(SynchronousTestCase):
         request = self._makeRequest()
         self.assertEqual(
             request.getSubject(),
-            sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
+            sslverify.DistinguishedName(commonName="example.twistedmatrix.com"),
         )
 
     def test_pemRoundTrip(self):
