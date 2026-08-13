@@ -540,7 +540,7 @@ class CertificateRequest(CertBase):
             )
         return cls(req)
 
-    def _subjectToDistinguishedName(self) -> DistinguishedName:
+    def getSubject(self) -> DistinguishedName:
         """
         Retrieve the subject of this certificate request.
 
@@ -821,7 +821,7 @@ class KeyPair(PublicKey):
         """
         hlreq = CertificateRequest.load(requestData, requestFormat)
 
-        dn = hlreq._subjectToDistinguishedName()
+        dn = hlreq.getSubject()
         vval = verifyDNCallback(dn)
 
         def verified(value):
@@ -858,7 +858,7 @@ class KeyPair(PublicKey):
         req = requestObject.original
         cert = crypto.X509()
         issuerDistinguishedName._copyInto(cert.get_issuer())
-        requestObject._subjectToDistinguishedName()._copyInto(cert.get_subject())
+        requestObject.getSubject()._copyInto(cert.get_subject())
         cert.set_pubkey(crypto.PKey.from_cryptography_key(req.public_key()))
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(secondsToExpiry)
