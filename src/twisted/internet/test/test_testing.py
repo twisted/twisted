@@ -319,9 +319,6 @@ class ReactorTests(TestCase):
         # We are using object()s here as a simple identity placeholder, so we
         # ask the type checker to not care about that.  If a more correct type
         # is required this test should be fixed.
-        # We are using object()s here as a simple identity placeholder, so we
-        # ask the type checker to not care about that.  If a more correct type
-        # is required this test should be fixed.
         reactor.addReader(reader)  # type: ignore[arg-type]
         reactor.addWriter(writer)  # type: ignore[arg-type]
 
