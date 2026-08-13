@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.internet.test.test_testing -*-
+﻿# -*- test-case-name: twisted.internet.test.test_testing -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -41,9 +41,11 @@ from twisted.internet.interfaces import (
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
+    IReadDescriptor,
     IResolutionReceiver,
     ITransport,
     IUDPTransport,
+    IWriteDescriptor,
 )
 from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
@@ -826,7 +828,7 @@ class MemoryReactor:
         """
         return list(self.writers)
 
-    def removeAll(self):
+    def removeAll(self) -> list[IReadDescriptor | IWriteDescriptor]:
         """
         Fake L{IReactorFDSet.removeAll} which removed all readers and writers
         from the local sets.
