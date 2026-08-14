@@ -422,7 +422,12 @@ class Port(_UNIXPort, tcp.Port):
                         # If it fails, there's not much else we can
                         # do.  The bind() below will fail with an
                         # exception that actually propagates.
-                        if stat.S_ISSOCK(os.stat(self._bindPath).st_mode):
+
+                        # The S_ISSOCK check is to avoid deleting
+                        # non-socket files, for example from a typo or
+                        # other mistake in the provided path. See also:
+                        # https://github.com/twisted/twisted/issues/12785
+                        if stat.S_ISSOCK(os.stat(self._bindPath).st_mode):  # pragma: no branch
                             os.remove(self._bindPath)
                     except BaseException:
                         pass
