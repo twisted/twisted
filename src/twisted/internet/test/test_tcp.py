@@ -1061,15 +1061,14 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
         """
 
         def check(client):
-            if platformType == "posix" and sys.platform != "cygwin":
-                reuseAddr = bool(
-                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
-                )
-                self.assertEqual(reuseAddr, False)
-                reusePort = bool(
-                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
-                )
-                self.assertEqual(reusePort, False)
+            reuseAddr = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+            )
+            self.assertEqual(reuseAddr, False)
+            reusePort = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+            )
+            self.assertEqual(reusePort, False)
 
         self._checkTestBindAddressConnect(makeBinding, check)
         self._checkTestBindAddressListen(makeBinding, check)
@@ -1080,15 +1079,14 @@ class TestBindAddressBuilder(TCPCreator, ReactorBuilder):
     )
     def test_bindAddressReusePort(self):
         def check(client):
-            if platformType == "posix" and sys.platform != "cygwin":
-                reuseAddr = bool(
-                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
-                )
-                self.assertEqual(reuseAddr, False)
-                reusePort = bool(
-                    client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
-                )
-                self.assertEqual(reusePort, True)
+            reuseAddr = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
+            )
+            self.assertEqual(reuseAddr, False)
+            reusePort = bool(
+                client.socket.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT)
+            )
+            self.assertEqual(reusePort, True)
 
         def bind(a, b):
             return makeBinding(a, b, reusePort=True, reuseAddress=False)
