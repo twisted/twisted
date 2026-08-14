@@ -927,15 +927,20 @@ class FDTests(unittest.TestCase):
         # See what happens when all the pipes close before the process
         # actually stops. This test *requires* SIGCHLD catching to work,
         # as there is no other way to find out the process is done.
+        class LingerAccumulator(Accumulator):
+            def outConnectionLost(self) -> None:
+                assert self.transport is not None
+                self.transport.closeStdin()
+
         scriptPath = b"twisted.test.process_linger"
-        p = Accumulator()
+        p = LingerAccumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(
             p,
             pyExe,
             [pyExe, b"-u", b"-m", scriptPath],
             env=properEnv,
-            childFDs={1: "r", 2: 2},
+            childFDs={0: "w", 1: "r", 2: 2},
         )
 
         def processEnded(ign):
