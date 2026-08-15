@@ -4593,7 +4593,7 @@ def Not(query):
     return f"(NOT {query})"
 
 
-def wildcardToRegexp(wildcard, delim=None):
+def wildcardToRegexp(wildcard: str, delim: str | None = None) -> re.Pattern[str]:
     wildcard = wildcard.replace("*", "(?:.*?)")
     if delim is None:
         wildcard = wildcard.replace("%", "(?:.*?)")
