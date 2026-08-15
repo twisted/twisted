@@ -824,6 +824,64 @@ class IMAP4HelperTests(TestCase):
             for x in succeed:
                 self.assertTrue(wildcard.match(x), x)
 
+    def test_wildcardMetacharactersAreLiteral(self):
+        """
+        Every character of a mailbox pattern other than the two IMAP
+        wildcards is a literal, so a mailbox whose name contains regular
+        expression syntax is selected by spelling that name and by nothing
+        else.
+        """
+        wildcard = imap4.wildcardToRegexp("INBOX.a+b", "/")
+        self.assertTrue(wildcard.match("INBOX.a+b"))
+        self.assertFalse(wildcard.match("INBOX.aaab"))
+        self.assertFalse(wildcard.match("INBOXxa+b"))
+
+    def test_wildcardRegexSyntaxIsNotCompiled(self):
+        """
+        A pattern containing regular expression syntax is not compiled as a
+        regular expression, so it neither matches by that syntax nor takes
+        time proportional to backtracking over it.
+
+        This is the vector reported as GHSA-8pqf-f4m5-798g: C{(a+)+z} used to
+        reach L{re.compile} verbatim.
+        """
+        wildcard = imap4.wildcardToRegexp("(a+)+z", "/")
+        self.assertTrue(wildcard.match("(a+)+z"))
+        self.assertFalse(wildcard.match("a" * 32))
+        self.assertFalse(wildcard.match("aaaaz"))
+
+    def test_wildcardMalformedSyntaxDoesNotRaise(self):
+        """
+        A pattern that would be malformed regular expression source is a
+        perfectly ordinary mailbox name, so translating it does not raise
+        L{re.error}.
+        """
+        for name in ("(((", "[", "*)", "a{2,", "\\"):
+            wildcard = imap4.wildcardToRegexp(name, "/")
+            self.assertTrue(wildcard.match(name), name)
+
+    def test_wildcardRunsCollapse(self):
+        """
+        A run of adjacent wildcards means what the widest single wildcard in
+        it means, and costs what one wildcard costs: C{*} subsumes C{%}, and
+        a repeated C{%} is still bounded by the delimiter.
+        """
+        stars = imap4.wildcardToRegexp("foo/" + "*" * 64, "/")
+        self.assertTrue(stars.match("foo/a/b/c"))
+
+        # `%` does not cross the delimiter however many times it is repeated.
+        percents = imap4.wildcardToRegexp("foo/%%%/bar", "/")
+        self.assertTrue(percents.match("foo/xyz/bar"))
+        self.assertFalse(percents.match("foo/x/y/bar"))
+
+        # A run holding a `*` does cross it.
+        mixed = imap4.wildcardToRegexp("foo/%*%/bar", "/")
+        self.assertTrue(mixed.match("foo/x/y/bar"))
+
+        # With no delimiter there is nothing for `%` to stop at.
+        nodelim = imap4.wildcardToRegexp("foo/%%/bar", None)
+        self.assertTrue(nodelim.match("foo/x/y/bar"))
+
     def test_headerFormatter(self):
         """
         L{imap4._formatHeaders} accepts a C{dict} of header name/value pairs and

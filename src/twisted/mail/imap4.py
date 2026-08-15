@@ -4594,12 +4594,51 @@ def Not(query):
 
 
 def wildcardToRegexp(wildcard, delim=None):
-    wildcard = wildcard.replace("*", "(?:.*?)")
+    """
+    Translate an IMAP L{LIST}/L{LSUB} mailbox pattern into a regular
+    expression.
+
+    Only the two IMAP wildcards are given any meaning: C{*} matches any
+    sequence of characters, and C{%} matches any sequence of characters not
+    containing C{delim}.  Every other character in C{wildcard} is a literal
+    and is escaped, because C{wildcard} arrives from the network and would
+    otherwise be compiled as regular expression source.
+
+    @param wildcard: The mailbox pattern sent by the client.
+
+    @param delim: The hierarchy delimiter that C{%} refuses to cross, or
+        L{None} to give C{%} the same meaning as C{*}.
+
+    @return: A compiled pattern matching the mailbox names C{wildcard}
+        selects.
+    """
     if delim is None:
-        wildcard = wildcard.replace("%", "(?:.*?)")
+        star = pct = "(?:.*?)"
     else:
-        wildcard = wildcard.replace("%", "(?:(?:[^%s])*?)" % re.escape(delim))
-    return re.compile(wildcard, re.I)
+        star = "(?:.*?)"
+        pct = "(?:(?:[^%s])*?)" % re.escape(delim)
+
+    out = []
+    index, end = 0, len(wildcard)
+    while index < end:
+        if wildcard[index] in "*%":
+            # Collapse a run of adjacent wildcards into the single widest one
+            # it is equivalent to.  Emitting one quantifier per character
+            # makes the number of ways the engine can split the subject grow
+            # with the length of the run, which is the reported denial of
+            # service.  `*` subsumes `%`, and a repeated `%` is still `%`.
+            crosses = False
+            while index < end and wildcard[index] in "*%":
+                crosses |= wildcard[index] == "*"
+                index += 1
+            out.append(star if crosses else pct)
+        else:
+            start = index
+            while index < end and wildcard[index] not in "*%":
+                index += 1
+            out.append(re.escape(wildcard[start:index]))
+
+    return re.compile("".join(out), re.I)
 
 
 def splitQuoted(s):
