@@ -2629,6 +2629,8 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         regexes.
         """
         SimpleServer.theAccount.subscribe("ROOT/SUBTHING")
+        SimpleServer.theAccount.subscribe("ROOT/.SUBMATCH")
+        SimpleServer.theAccount.subscribe("ROOT/.DEEP/MATCH")
 
         def lsub():
             return self.client.lsub("root", "root/.*")
