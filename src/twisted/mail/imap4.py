@@ -4594,12 +4594,20 @@ def Not(query):
 
 
 def wildcardToRegexp(wildcard: str, delim: str | None = None) -> re.Pattern[str]:
-    wildcard = wildcard.replace("*", "(?:.*?)")
-    if delim is None:
-        wildcard = wildcard.replace("%", "(?:.*?)")
-    else:
-        wildcard = wildcard.replace("%", "(?:(?:[^%s])*?)" % re.escape(delim))
-    return re.compile(wildcard, re.I)
+    # Split on the two IMAP wildcards, escape everything else
+    parts = re.split(r"([*%])", wildcard)
+    result = []
+    for p in parts:
+        if p == "*":
+            result.append("(?:.*?)")
+        elif p == "%":
+            if delim is None:
+                result.append("(?:.*?)")
+            else:
+                result.append(f"(?:(?:[^{re.escape(delim)}])*?)")
+        else:
+            result.append(re.escape(p))
+    return re.compile("".join(result), re.I)
 
 
 def splitQuoted(s):
