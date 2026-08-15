@@ -2628,16 +2628,32 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         LSUB commands should use IMAP wildcards, and not be treated as Python
         regexes.
         """
+        # Subscribe to existing mailbox.
         SimpleServer.theAccount.subscribe("ROOT/SUBTHING")
-        SimpleServer.theAccount.subscribe("ROOT/.SUBMATCH")
-        SimpleServer.theAccount.subscribe("ROOT/.DEEP/MATCH")
+
+        for newMailbox in [
+            # Verify that dot is treated literally.
+            "ROOT/.SUBMATCH",
+            # And can match nested things, since we're testing *.
+            "ROOT/.DEEP/MATCH",
+            # But only at the start of the match.
+            "ROOT/DEEP/.MATCH",
+        ]:
+            SimpleServer.theAccount.addMailbox(newMailbox)
+            SimpleServer.theAccount.subscribe(newMailbox)
 
         def lsub():
             return self.client.lsub("root", "root/.*")
 
         d = self._listSetup(lsub)
         d.addCallback(self.assertListDelimiterAndMailboxAreStrings)
-        d.addCallback(self.assertEqual, [])
+        d.addCallback(
+            self.assertEqual,
+            [
+                (SimpleMailbox.flags, "/", "ROOT/.SUBMATCH"),
+                (SimpleMailbox.flags, "/", "ROOT/.DEEP/MATCH"),
+            ],
+        )
         return d
 
     def testStatus(self):
