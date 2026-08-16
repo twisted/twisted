@@ -5,6 +5,8 @@
 Tests for twisted SSL support.
 """
 
+from __future__ import annotations
+
 import os
 
 import hamcrest
@@ -20,10 +22,6 @@ from twisted.trial.unittest import TestCase
 
 try:
     from OpenSSL import SSL, crypto
-
-    from cryptography import x509
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.x509.oid import NameOID
 
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
@@ -160,40 +158,21 @@ class ImmediatelyDisconnectingProtocol(protocol.Protocol):
         self.factory.connectionDisconnected.callback(None)
 
 
-def generateCertificateObjects(organization, organizationalUnit):
+def generateCertificateObjects(
+    organization: str, organizationalUnit: str
+) -> tuple[ssl.KeyPair, ssl.CertificateRequest, ssl.Certificate]:
     """
     Create a certificate for given C{organization} and C{organizationalUnit}.
 
     @return: a tuple of (key, request, certificate) objects.
     """
-    pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 2048)
-    req = (
-        x509.CertificateSigningRequestBuilder()
-        .subject_name(
-            x509.Name(
-                [
-                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, organization),
-                    x509.NameAttribute(
-                        NameOID.ORGANIZATIONAL_UNIT_NAME, organizationalUnit
-                    ),
-                ]
-            )
-        )
-        .sign(pkey.to_cryptography_key(), hashes.SHA256())
+    pkey = ssl.KeyPair.generate()
+    distinguishedName = ssl.DistinguishedName(
+        organizationName=organization,
+        organizationalUnitName=organizationalUnit,
     )
-
-    # Here comes the actual certificate
-    cert = crypto.X509()
-    cert.set_serial_number(1)
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(60)  # Testing certificates need not be long lived
-    subject = cert.get_subject()
-    subject.O = organization
-    subject.OU = organizationalUnit
-    cert.set_issuer(cert.get_subject())
-    cert.set_pubkey(pkey)
-    cert.sign(pkey, "md5")
+    req = pkey.requestObject(distinguishedName)
+    cert = pkey.signRequestObject(distinguishedName, req, 1, secondsToExpiry=60)
 
     return pkey, req, cert
 
@@ -206,9 +185,9 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
     pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
 
     for ext, data in [
-        ("key", crypto.dump_privatekey(crypto.FILETYPE_PEM, pkey)),
-        ("req", req.public_bytes(serialization.Encoding.PEM)),
-        ("cert", crypto.dump_certificate(crypto.FILETYPE_PEM, cert)),
+        ("key", pkey.dump(crypto.FILETYPE_PEM)),
+        ("req", req.dump(crypto.FILETYPE_PEM)),
+        ("cert", cert.dump(crypto.FILETYPE_PEM)),
     ]:
         fName = os.extsep.join((basename, ext)).encode("utf-8")
         FilePath(fName).setContent(data)

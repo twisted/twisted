@@ -32,7 +32,6 @@ from twisted.internet.interfaces import (
     IProtocolNegotiationFactory,
 )
 from twisted.internet.task import Clock
-from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.modules import getModule
@@ -47,7 +46,7 @@ if requireModule("OpenSSL"):
     import ipaddress
 
     from OpenSSL import SSL
-    from OpenSSL.crypto import FILETYPE_PEM, TYPE_RSA, X509, PKey, get_elliptic_curves
+    from OpenSSL.crypto import FILETYPE_PEM, X509, PKey, get_elliptic_curves
 
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes
@@ -133,22 +132,12 @@ def counter(counter=itertools.count()):
     return next(counter)
 
 
-def makeCertificate(**kw):
-    keypair = PKey()
-    keypair.generate_key(TYPE_RSA, 2048)
-
-    certificate = X509()
-    certificate.gmtime_adj_notBefore(0)
-    certificate.gmtime_adj_notAfter(60 * 60 * 24 * 365)  # One year
-    for xname in certificate.get_issuer(), certificate.get_subject():
-        for k, v in kw.items():
-            setattr(xname, k, nativeString(v))
-
-    certificate.set_serial_number(counter())
-    certificate.set_pubkey(keypair)
-    certificate.sign(keypair, "md5")
-
-    return keypair, certificate
+def makeCertificate(**kw: str | bytes) -> tuple[PKey, X509]:
+    keypair = sslverify.KeyPair.generate()
+    distinguishedName = sslverify.DistinguishedName(**kw)
+    request = keypair.requestObject(distinguishedName)
+    certificate = keypair.signRequestObject(distinguishedName, request, counter())
+    return keypair.original, certificate.original
 
 
 oneDay = datetime.timedelta(1, 0, 0)
@@ -167,7 +156,7 @@ class TestingAuthority:
         commonNameForCA = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, "Testing Example CA")]
         )
-        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=4096)
+        privateKeyForCA = generate_private_key(public_exponent=65537, key_size=2048)
         publicKeyForCA = privateKeyForCA.public_key()
         caCertificate = (
             x509.CertificateBuilder()
@@ -189,7 +178,7 @@ class TestingAuthority:
     def serverCertificate(
         self, commonName: str, subjects: list[str]
     ) -> sslverify.PrivateCertificate:
-        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=4096)
+        privateKeyForServer = generate_private_key(public_exponent=65537, key_size=2048)
         publicKeyForServer = privateKeyForServer.public_key()
         commonNameForServer = x509.Name(
             [x509.NameAttribute(NameOID.COMMON_NAME, commonName)]
@@ -3482,6 +3471,16 @@ class CertificateRequestTests(SynchronousTestCase):
         dn = sslverify.DistinguishedName(commonName="example.twistedmatrix.com")
         return sslverify.KeyPair.generate().requestObject(dn)
 
+    def test_getSubject(self) -> None:
+        """
+        L{sslverify.CertificateRequest.getSubject} returns the request subject.
+        """
+        request = self._makeRequest()
+        self.assertEqual(
+            request.getSubject(),
+            sslverify.DistinguishedName(commonName="example.twistedmatrix.com"),
+        )
+
     def test_pemRoundTrip(self):
         """
         A L{sslverify.CertificateRequest} dumped to PEM format and loaded back
@@ -3492,8 +3491,8 @@ class CertificateRequestTests(SynchronousTestCase):
         self.assertIn(b"BEGIN CERTIFICATE REQUEST", pem)
         loaded = sslverify.CertificateRequest.load(pem, FILETYPE_PEM)
         self.assertEqual(
-            loaded._subjectToDistinguishedName(),
-            request._subjectToDistinguishedName(),
+            loaded.getSubject(),
+            request.getSubject(),
         )
 
     def test_loadUnsupportedFormat(self):
@@ -3527,9 +3526,9 @@ class CertificateRequestTests(SynchronousTestCase):
 
     def test_subjectUnknownAttribute(self):
         """
-        L{sslverify.CertificateRequest._subjectToDistinguishedName} raises
-        L{ValueError} when the subject contains a name attribute that does not
-        correspond to a known L{sslverify.DistinguishedName} field.
+        L{sslverify.CertificateRequest.getSubject} raises L{ValueError} when
+        the subject contains a name attribute that does not correspond to a
+        known L{sslverify.DistinguishedName} field.
         """
         key = ec.generate_private_key(ec.SECP256R1())
         csr = (
@@ -3539,4 +3538,4 @@ class CertificateRequestTests(SynchronousTestCase):
         )
         request = sslverify.CertificateRequest(csr)
         with self.assertRaises(ValueError):
-            request._subjectToDistinguishedName()
+            request.getSubject()

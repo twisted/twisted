@@ -936,6 +936,7 @@ class UNIXAdoptStreamConnectionTestsBuilder(WriteSequenceTestsMixin, ReactorBuil
             reactor.removeReader(proto.transport)
             reactor.removeWriter(proto.transport)
             reactor.adoptStreamConnection(proto.transport.fileno(), AF_UNIX, server)
+            proto.transport.socket.close()
 
         firstServer.protocolConnectionMade.addCallback(firstServerConnected)
 
