@@ -32,6 +32,8 @@ from twisted.python.win32 import quoteArguments
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
 
+_ENV_FD_BASE_NAME = "_TWISTED_CHILD_FD_"
+
 
 def debug(msg):
     print(msg)
@@ -246,7 +248,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
             parentHandles.append(winHandle)
             childPipes[fd] = childPipe
-            env[f"_TWISTED_CHILD_FD_{fd}"] = f"{childMode},{winHandle}"
+            env[f"{_ENV_FD_BASE_NAME}{fd}"] = f"{childMode},{winHandle}"
 
         # Make sure all the arguments are Unicode.
         args = [os.fsdecode(x) for x in args]
@@ -498,7 +500,7 @@ def _getWindowsInheritedHandle(fd: int, _fdopen=os.fdopen):
     """
     import msvcrt
 
-    varName = f"_TWISTED_CHILD_FD_{fd}"
+    varName = f"{_ENV_FD_BASE_NAME}{fd}"
     envValue = os.environ.get(varName, "")
     if not envValue:
         raise ValueError(
