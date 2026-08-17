@@ -264,7 +264,7 @@ class TelnetTransportTests(unittest.TestCase):
             self.assertEqual(h.data, b"".join(L).replace(cmd, b""))
             self.assertEqual(h.subcmd, [telnet.SE] + list(iterbytes(b"hello")))
 
-    def test_boundedSubnegotiationIsDelivered(self):
+    def test_boundedSubnegotiationIsDelivered(self) -> None:
         """
         A subnegotiation whose payload is within
         L{telnet.Telnet._MAX_SUBNEGOTIATION_LENGTH} is delivered to the
@@ -277,7 +277,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(h.subcmd, list(iterbytes(payload)))
         self.assertFalse(self.t.disconnecting)
 
-    def test_applicationDataBeforeOversizedSubnegotiationIsDelivered(self):
+    def test_applicationDataBeforeOversizedSubnegotiationIsDelivered(self) -> None:
         """
         Application data received before an over-long subnegotiation in the
         same call is still delivered when the connection is dropped, so valid
@@ -291,7 +291,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(h.data, b"hello")
         self.assertTrue(self.t.disconnecting)
 
-    def test_oversizedSubnegotiationDropsConnection(self):
+    def test_oversizedSubnegotiationDropsConnection(self) -> None:
         """
         A subnegotiation whose payload reaches
         L{telnet.Telnet._MAX_SUBNEGOTIATION_LENGTH} without an C{IAC SE}
@@ -308,7 +308,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.p.dataReceived(b"A" * 16)
         self.assertEqual(len(self.p.commands), cap)
 
-    def test_oversizedSubnegotiationIsNotDelivered(self):
+    def test_oversizedSubnegotiationIsNotDelivered(self) -> None:
         """
         An over-long subnegotiation is dropped rather than delivered truncated:
         the negotiation handler is never invoked and the connection is dropped.
@@ -325,7 +325,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(h.subcmd, "UNSET")
         self.assertTrue(self.t.disconnecting)
 
-    def test_subnegotiationEscapedBytesCountTowardCap(self):
+    def test_subnegotiationEscapedBytesCountTowardCap(self) -> None:
         """
         Bytes delivered as an escaped C{IAC IAC} inside a subnegotiation count
         toward L{telnet.Telnet._MAX_SUBNEGOTIATION_LENGTH}, so a flood of them
@@ -337,7 +337,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertTrue(self.t.disconnecting)
         self.assertEqual(len(self.p.commands), cap)
 
-    def test_subnegotiationAtCapIsDelivered(self):
+    def test_subnegotiationAtCapIsDelivered(self) -> None:
         """
         A properly terminated subnegotiation that fills the buffer to exactly
         L{telnet.Telnet._MAX_SUBNEGOTIATION_LENGTH} is delivered, so the cap
@@ -352,7 +352,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(h.subcmd, list(iterbytes(payload)))
         self.assertFalse(self.t.disconnecting)
 
-    def test_capResetsPerSubnegotiation(self):
+    def test_capResetsPerSubnegotiation(self) -> None:
         """
         The cap is per subnegotiation: several separately terminated,
         under-cap subnegotiations in a row are each delivered and the
@@ -365,7 +365,7 @@ class TelnetTransportTests(unittest.TestCase):
         self.assertEqual(h.subcmd, list(iterbytes(b"E" * 32)))
         self.assertFalse(self.t.disconnecting)
 
-    def test_oversizedSubnegotiationLogsAndDropsOnce(self):
+    def test_oversizedSubnegotiationLogsAndDropsOnce(self) -> None:
         """
         Reaching the cap logs a single warning and drops the connection once,
         even when further subnegotiation payload keeps arriving afterwards.

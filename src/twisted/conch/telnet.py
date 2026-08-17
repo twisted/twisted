@@ -536,7 +536,7 @@ class Telnet(protocol.Protocol):
         data = data.replace(IAC, IAC * 2)
         self._write(IAC + SB + about + data + IAC + SE)
 
-    def _subnegotiationLengthExceeded(self):
+    def _subnegotiationLengthExceeded(self) -> None:
         """
         Handle a subnegotiation that reaches L{_MAX_SUBNEGOTIATION_LENGTH}
         without an C{IAC SE} terminator.
