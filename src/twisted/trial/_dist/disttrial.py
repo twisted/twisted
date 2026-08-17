@@ -22,6 +22,7 @@ from attrs import define, field, frozen
 from attrs.converters import default_if_none
 
 from twisted.internet.defer import Deferred, DeferredList, gatherResults
+from twisted.internet.error import ReactorNotRunning
 from twisted.internet.interfaces import IReactorCore, IReactorProcess
 from twisted.logger import Logger
 from twisted.python.failure import Failure
@@ -461,7 +462,12 @@ class DistTrialRunner:
 
         def maybeStopReactor(result: object) -> object:
             if not reactorStopping:
-                self._reactor.stop()
+                try:
+                    self._reactor.stop()
+                except ReactorNotRunning:
+                    # The reactor has already stopped, so we don't need to do
+                    # anything.
+                    pass
             return result
 
         self._reactor.addSystemEventTrigger("before", "shutdown", maybeStopTests)

@@ -14,8 +14,10 @@ import errno
 import os
 import sys
 
+from twisted.internet import reactor
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
+from twisted.python.runtime import platform
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from twisted.trial._dist.options import WorkerOptions
 
@@ -58,8 +60,18 @@ def main(_fdopen=os.fdopen):
 
     workerProtocol = WorkerProtocol(config["force-gc"])
 
-    protocolIn = _fdopen(_WORKER_AMP_STDIN, "rb")
-    protocolOut = _fdopen(_WORKER_AMP_STDOUT, "wb")
+    if platform.isWindows():
+        protocolIn = reactor.getWindowsInheritedHandle(
+            _WORKER_AMP_STDIN, _fdopen=_fdopen
+        )
+        protocolOut = reactor.getWindowsInheritedHandle(
+            _WORKER_AMP_STDOUT, _fdopen=_fdopen
+        )
+
+    else:
+        protocolIn = _fdopen(_WORKER_AMP_STDIN, "rb")
+        protocolOut = _fdopen(_WORKER_AMP_STDOUT, "wb")
+
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)
