@@ -169,7 +169,8 @@ jobs:
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
-            trial-args: '--reactor=iocp -j 4'
+            # Distributed trial is not yet suported on Windows with iocp.
+            trial-args: '--reactor=iocp'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
