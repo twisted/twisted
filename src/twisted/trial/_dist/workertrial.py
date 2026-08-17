@@ -60,7 +60,9 @@ def main(_fdopen=os.fdopen):
 
     workerProtocol = WorkerProtocol(config["force-gc"])
 
-    if platform.isWindows():
+    # We check for non-default _fdopen callback to detect when we are
+    # inside the test.
+    if platform.isWindows() and _fdopen == os.fdopen:
         protocolIn = reactor.getWindowsInheritedHandle(
             _WORKER_AMP_STDIN, _fdopen=_fdopen
         )
