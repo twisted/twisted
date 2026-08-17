@@ -503,7 +503,7 @@ pipes. It is implemented with the following dictionary:
 
 
 To launch a process which reads and writes to the same places that the
-parent python program does, use this:
+parent python program does, use this. This is not supported on Windows:
 
 
 
@@ -602,7 +602,7 @@ influence the child process:
   the child process. Closing an output pipe is neither very friendly nor
   very useful.
 
-
+On Windows, your protocol will need to retrieve the extra file descriptors using the ``reactor.getWindowsInheritedHandle(fd)`` helper.
 
 
 
