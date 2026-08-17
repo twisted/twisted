@@ -14,7 +14,6 @@ on:
     tags:
       - twisted-*
   pull_request:
-    branches: [ trunk ]
 
   workflow_dispatch:
     inputs:
