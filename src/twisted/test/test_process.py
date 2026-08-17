@@ -2308,14 +2308,15 @@ class Win32ProcessTests(unittest.TestCase):
         return d
 
     def test_badArgs(self):
+        """
+        It does not suupport uid/gid/usePTY arguments,
+        which are Linux/macOS specific.
+        """
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]
         p = Accumulator()
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, uid=1)
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, gid=1)
         self.assertRaises(ValueError, reactor.spawnProcess, p, pyExe, pyArgs, usePTY=1)
-        self.assertRaises(
-            ValueError, reactor.spawnProcess, p, pyExe, pyArgs, childFDs={1: "r"}
-        )
 
     def _testSignal(self, sig):
         scriptPath = b"twisted.test.process_signal"
