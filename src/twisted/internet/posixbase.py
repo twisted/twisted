@@ -115,6 +115,16 @@ class _DisconnectSelectableMixin:
             selectable.connectionLost(failure.Failure(why))
 
 
+if sys.platform == "win32":
+    from twisted.internet._dumbwin32proc import _getWindowsInheritedHandle
+else:
+
+    def _getWindowsInheritedHandle(fd: int) -> int:
+        raise NotImplementedError(
+            "getWindowsInheritedHandle is only available on Windows."
+        )
+
+
 @implementer(IReactorTCP, IReactorUDP, IReactorMulticast)
 class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
     """
@@ -224,16 +234,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
             )
 
     # Add helper for spawned process to retrieve inherited handlers.
-    if platform.isWindows():
-        from twisted.internet._dumbwin32proc import _getWindowsInheritedHandle
-
-        getWindowsInheritedHandle = staticmethod(_getWindowsInheritedHandle)
-    else:
-
-        def getWindowsInheritedHandle(self, fd: int) -> int:
-            raise NotImplementedError(
-                "getWindowsInheritedHandle is only availabe on Windows."
-            )
+    getWindowsInheritedHandle = staticmethod(_getWindowsInheritedHandle)
 
     # IReactorUDP
 

@@ -19,11 +19,16 @@ MAX_TIMEOUT = 0.1
 class _PollableResource:
     active = True
 
-    def activate(self):
+    def activate(self) -> None:
         self.active = True
 
-    def deactivate(self):
+    def deactivate(self) -> None:
         self.active = False
+
+    def close(self) -> None:
+        """
+        Called when no more data should be handled.
+        """
 
 
 class _PollingTimer:

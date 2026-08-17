@@ -5,10 +5,12 @@
 """
 Windows Process Management, used with reactor.spawnProcess
 """
-
+from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Callable
+from typing import IO
 
 from zope.interface import implementer
 
@@ -490,7 +492,9 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         return f"<{self.__class__.__name__} pid={self.pid}>"
 
 
-def _getWindowsInheritedHandle(fd: int, _fdopen=os.fdopen):
+def _getWindowsInheritedHandle(
+    fd: int, _fdopen: Callable[..., IO[bytes]] = os.fdopen
+) -> IO[bytes]:
     """
     Get a handle from an inherited file descriptor.
 
@@ -516,16 +520,16 @@ def _getWindowsInheritedHandle(fd: int, _fdopen=os.fdopen):
         raise ValueError(f"Env {varName} has invalid mode: {mode}")
 
     if mode == "r":
-        openedFD = msvcrt.open_osfhandle(int(winHandle), os.O_RDONLY | os.O_BINARY)
+        openedFD = msvcrt.open_osfhandle(int(winHandle), os.O_RDONLY | os.O_BINARY)  # type: ignore[attr-defined]
         if openedFD != fd:
             os.dup2(openedFD, fd)
             os.close(openedFD)
 
-        result = _fdopen(fd, "rb", buffering=0)
-        return result
-    elif mode == "w":
-        openedFD = msvcrt.open_osfhandle(int(winHandle), os.O_WRONLY | os.O_BINARY)
-        if openedFD != fd:
-            os.dup2(openedFD, fd)
-            os.close(openedFD)
-        return _fdopen(fd, "wb", buffering=0)
+        return _fdopen(fd, "rb", buffering=0)
+
+    # We are in write mode.
+    openedFD = msvcrt.open_osfhandle(int(winHandle), os.O_WRONLY | os.O_BINARY)  # type: ignore[attr-defined]
+    if openedFD != fd:
+        os.dup2(openedFD, fd)
+        os.close(openedFD)
+    return _fdopen(fd, "wb", buffering=0)
