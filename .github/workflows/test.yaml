@@ -401,7 +401,7 @@ jobs:
         # but rather have an explicit Python version.
         # The PRs that change the Python version can
         # be merged by ignoring the benchmark results.
-        python-version: '3.12'
+        python-version: '3.14'
         cache: pip
         cache-dependency-path: |
           pyproject.toml
