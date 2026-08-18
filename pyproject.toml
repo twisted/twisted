@@ -59,6 +59,9 @@ test = [
 
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
+# The normal automated tests should not depend on this.
+# This will allow to build the documentation using a newer Sphinx version
+# Newer Sphinx version don't support older Python versions.
 dev-release = [
     "pydoctor ~= 25.4.0",
     "sphinx-rtd-theme ~= 3.1",
