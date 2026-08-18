@@ -50,7 +50,10 @@ class SSHClientFactory(protocol.ClientFactory["transport.SSHClientTransport"]):
         trans = SSHClientTransport(self)
         if self.options["ciphers"]:
             trans.supportedCiphers = self.options["ciphers"]
-        if self.options["macs"]:
+        macs = self.options["macs"]
+        if macs:
+            assert isinstance(macs, list), repr(macs)
+            assert all(isinstance(each, bytes) for each in macs)
             trans.supportedMACs = self.options["macs"]
         if self.options["compress"]:
             trans.supportedCompressions[0:1] = [b"zlib"]

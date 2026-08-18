@@ -19,97 +19,30 @@ import tty
 from typing import Any
 
 from twisted.conch.client import connect, default
-from twisted.conch.client.options import ConchOptions
+from twisted.conch.client.options import CommonOptions
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import channel, common, connection, forwarding, session
 from twisted.internet import reactor, stdio, task
-from twisted.python import log, usage
+from twisted.logger import Logger, globalLogBeginner, textFileLogObserver
+from twisted.python import usage
 from twisted.python.compat import ioType, networkString
 
+_log = Logger()
 
-class ClientOptions(ConchOptions):
-    synopsis = """Usage:   conch [options] host [command]
+
+class ClientOptions(CommonOptions):
+    synopsis = """Usage:   conch
+ [options] host [command]
 """
     longdesc = (
         "conch is a SSHv2 client that allows logging into a remote "
         "machine and executing commands."
     )
 
-    optParameters = [
-        ["escape", "e", "~"],
-        [
-            "localforward",
-            "L",
-            None,
-            "listen-port:host:port   Forward local port to remote address",
-        ],
-        [
-            "remoteforward",
-            "R",
-            None,
-            "listen-port:host:port   Forward remote port to local address",
-        ],
-    ]
-
     optFlags = [
         ["null", "n", "Redirect input from /dev/null."],
         ["fork", "f", "Fork to background after authentication."],
-        ["tty", "t", "Tty; allocate a tty even if command is given."],
-        ["notty", "T", "Do not allocate a tty."],
-        ["noshell", "N", "Do not execute a shell or command."],
-        ["subsystem", "s", "Invoke command (mandatory) as SSH2 subsystem."],
     ]
-
-    compData = usage.Completions(
-        mutuallyExclusive=[("tty", "notty")],
-        optActions={
-            "localforward": usage.Completer(descr="listen-port:host:port"),
-            "remoteforward": usage.Completer(descr="listen-port:host:port"),
-        },
-        extraActions=[
-            usage.CompleteUserAtHost(),
-            usage.Completer(descr="command"),
-            usage.Completer(descr="argument", repeat=True),
-        ],
-    )
-
-    localForwards: list[tuple[int, tuple[int, int]]] = []
-    remoteForwards: list[tuple[int, tuple[int, int]]] = []
-
-    def opt_escape(self, esc):
-        """
-        Set escape character; ``none'' = disable
-        """
-        if esc == "none":
-            self["escape"] = None
-        elif esc[0] == "^" and len(esc) == 2:
-            self["escape"] = chr(ord(esc[1]) - 64)
-        elif len(esc) == 1:
-            self["escape"] = esc
-        else:
-            sys.exit(f"Bad escape character '{esc}'.")
-
-    def opt_localforward(self, f):
-        """
-        Forward local port to remote address (lport:host:port)
-        """
-        localPort, remoteHost, remotePort = f.split(":")  # Doesn't do v6 yet
-        localPort = int(localPort)
-        remotePort = int(remotePort)
-        self.localForwards.append((localPort, (remoteHost, remotePort)))
-
-    def opt_remoteforward(self, f):
-        """
-        Forward remote port to local address (rport:host:port)
-        """
-        remotePort, connHost, connPort = f.split(":")  # Doesn't do v6 yet
-        remotePort = int(remotePort)
-        connPort = int(connPort)
-        self.remoteForwards.append((remotePort, (connHost, connPort)))
-
-    def parseArgs(self, host, *command):
-        self["host"] = host
-        self["command"] = " ".join(command)
 
 
 # Rest of code in "run"
@@ -150,11 +83,11 @@ def run():
                 f = open(options["logfile"], "a+")
         else:
             f = sys.stderr
-        realout = sys.stdout
-        log.startLogging(f)
-        sys.stdout = realout
+        globalLogBeginner.beginLoggingTo(
+            [textFileLogObserver(f)], redirectStandardIO=False
+        )
     else:
-        log.discardLogs()
+        globalLogBeginner.beginLoggingTo([], redirectStandardIO=False)
     doConnect()
     fd = sys.stdin.fileno()
     try:
@@ -182,12 +115,10 @@ def run():
 
 
 def handleError():
-    from twisted.python import failure
-
     global exitStatus
     exitStatus = 2
     reactor.callLater(0.01, _stopReactor)
-    log.err(failure.Failure())
+    _log.failure("error in conch")
     raise
 
 
@@ -233,18 +164,23 @@ def onConnect():
     if hasattr(conn.transport, "sendIgnore"):
         _KeepAlive(conn)
     if options.localForwards:
-        for localPort, hostport in options.localForwards:
+        for localAddr, remoteAddr in options.localForwards:
             s = reactor.listenTCP(
-                localPort,
+                localAddr[1],
                 forwarding.SSHListenForwardingFactory(
-                    conn, hostport, SSHListenClientForwardingChannel
+                    conn, remoteAddr, SSHListenClientForwardingChannel
                 ),
+                interface=localAddr[0],
             )
             conn.localForwards.append(s)
     if options.remoteForwards:
-        for remotePort, hostport in options.remoteForwards:
-            log.msg(f"asking for remote forwarding for {remotePort}:{hostport}")
-            conn.requestRemoteForwarding(remotePort, hostport)
+        for remoteAddr, connAddr in options.remoteForwards:
+            _log.info(
+                "asking for remote forwarding for {remoteAddr}:{connAddr}",
+                remoteAddr=remoteAddr,
+                connAddr=connAddr,
+            )
+            conn.requestRemoteAddrForwarding(remoteAddr, connAddr)
         reactor.addSystemEventTrigger("before", "shutdown", beforeShutdown)
     if not options["noshell"] or options["agent"]:
         conn.openChannel(SSHSession())
@@ -269,9 +205,13 @@ def reConnect():
 
 def beforeShutdown():
     remoteForwards = options.remoteForwards
-    for remotePort, hostport in remoteForwards:
-        log.msg(f"cancelling {remotePort}:{hostport}")
-        conn.cancelRemoteForwarding(remotePort)
+    for remoteAddr, localAddr in remoteForwards:
+        _log.info(
+            "cancelling {remoteAddr}:{localAddr}",
+            remoteAddr=remoteAddr,
+            localAddr=localAddr,
+        )
+        conn.cancelRemoteAddrForwarding(remoteAddr)
 
 
 def stopConnection():
@@ -320,41 +260,62 @@ class SSHConnection(connection.SSHConnection):
         stopConnection()
 
     def requestRemoteForwarding(self, remotePort, hostport):
-        data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
+        self.requestRemoteAddrForwarding(("127.0.0.1", remotePort), hostport)
+
+    def requestRemoteAddrForwarding(self, remoteAddr, connAddr):
+        data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         d = self.sendGlobalRequest(b"tcpip-forward", data, wantReply=1)
-        log.msg(f"requesting remote forwarding {remotePort}:{hostport}")
-        d.addCallback(self._cbRemoteForwarding, remotePort, hostport)
-        d.addErrback(self._ebRemoteForwarding, remotePort, hostport)
+        _log.debug(
+            "requesting remote forwarding {remoteAddr}:{connAddr}",
+            remoteAddr=remoteAddr,
+            connAddr=connAddr,
+        )
+        d.addCallback(self._cbRemoteForwarding, remoteAddr, connAddr)
+        d.addErrback(self._ebRemoteForwarding, remoteAddr, connAddr)
 
-    def _cbRemoteForwarding(self, result, remotePort, hostport):
-        log.msg(f"accepted remote forwarding {remotePort}:{hostport}")
-        self.remoteForwards[remotePort] = hostport
-        log.msg(repr(self.remoteForwards))
+    def _cbRemoteForwarding(self, result, remoteAddr, connAddr):
+        _log.debug(
+            "accepted remote forwarding {remoteAddr}:{connAddr}",
+            remoteAddr=remoteAddr,
+            connAddr=connAddr,
+        )
+        self.remoteForwards[remoteAddr] = connAddr
+        _log.debug("{remoteForwards!r}", remoteForwards=self.remoteForwards)
 
-    def _ebRemoteForwarding(self, f, remotePort, hostport):
-        log.msg(f"remote forwarding {remotePort}:{hostport} failed")
-        log.msg(f)
+    def _ebRemoteForwarding(self, f, remoteAddr, connAddr):
+        _log.warn(
+            "remote forwarding {remoteAddr}:{connAddr} failed",
+            remoteAddr=remoteAddr,
+            connAddr=connAddr,
+        )
+        _log.debug("{f}", f=f)
 
     def cancelRemoteForwarding(self, remotePort):
-        data = forwarding.packGlobal_tcpip_forward(("0.0.0.0", remotePort))
+        self.cancelRemoteAddrForwarding(("127.0.0.1", remotePort))
+
+    def cancelRemoteAddrForwarding(self, remoteAddr):
+        data = forwarding.packGlobal_tcpip_forward(remoteAddr)
         self.sendGlobalRequest(b"cancel-tcpip-forward", data)
-        log.msg(f"cancelling remote forwarding {remotePort}")
+        _log.debug("cancelling remote forwarding {remoteAddr}", remoteAddr=remoteAddr)
         try:
-            del self.remoteForwards[remotePort]
+            del self.remoteForwards[remoteAddr]
         except Exception:
             pass
-        log.msg(repr(self.remoteForwards))
+        _log.debug("{remoteForwards!r}", remoteForwards=self.remoteForwards)
 
     def channel_forwarded_tcpip(self, windowSize, maxPacket, data):
-        log.msg(f"FTCP {data!r}")
-        remoteHP, origHP = forwarding.unpackOpen_forwarded_tcpip(data)
-        log.msg(self.remoteForwards)
-        log.msg(remoteHP)
-        if remoteHP[1] in self.remoteForwards:
-            connectHP = self.remoteForwards[remoteHP[1]]
-            log.msg(f"connect forwarding {connectHP}")
+        _log.debug("FTCP {data!r}", data=data)
+        remoteAddr, _ = forwarding.unpackOpen_forwarded_tcpip(data)
+        _log.debug("{remoteForwards!r}", remoteForwards=self.remoteForwards)
+        _log.debug("{remoteAddr!r}", remoteAddr=remoteAddr)
+        if remoteAddr in self.remoteForwards:
+            connectAddr = self.remoteForwards[remoteAddr]
+            _log.debug("connect forwarding {connectAddr}", connectAddr=connectAddr)
             return SSHConnectForwardingChannel(
-                connectHP, remoteWindow=windowSize, remoteMaxPacket=maxPacket, conn=self
+                connectAddr,
+                remoteWindow=windowSize,
+                remoteMaxPacket=maxPacket,
+                conn=self,
             )
         else:
             raise ConchError(
@@ -362,10 +323,10 @@ class SSHConnection(connection.SSHConnection):
             )
 
     def channelClosed(self, channel):
-        log.msg(f"connection closing {channel}")
-        log.msg(self.channels)
+        _log.debug("connection closing {channel}", channel=channel)
+        _log.debug("{channels!r}", channels=self.channels)
         if len(self.channels) == 1:  # Just us left
-            log.msg("stopping connection")
+            _log.debug("stopping connection")
             stopConnection()
         else:
             # Because of the unix thing
@@ -376,12 +337,12 @@ class SSHSession(channel.SSHChannel):
     name = b"session"
 
     def channelOpen(self, foo):
-        log.msg(f"session {self.id} open")
+        _log.debug("session {sessionId} open", sessionId=self.id)
         if options["agent"]:
             d = self.conn.sendRequest(
                 self, b"auth-agent-req@openssh.com", b"", wantReply=1
             )
-            d.addBoth(lambda x: log.msg(x))
+            d.addBoth(lambda x: _log.debug("{result!r}", result=x))
         if options["noshell"]:
             return
         if (options["command"] and options["tty"]) or not options["notty"]:
@@ -427,7 +388,7 @@ class SSHSession(channel.SSHChannel):
         elif self.escapeMode == 2:
             self.escapeMode = 1  # So we can chain escapes together
             if char == b".":  # Disconnect
-                log.msg("disconnecting from escape")
+                _log.info("disconnecting from escape")
                 stopConnection()
                 return
             elif char == b"\x1a":  # ^Z, suspend
@@ -442,7 +403,7 @@ class SSHSession(channel.SSHChannel):
                 reactor.callLater(0, _)
                 return
             elif char == b"R":  # Rekey connection
-                log.msg("rekeying connection")
+                _log.info("rekeying connection")
                 self.conn.transport.sendKexInit()
                 return
             elif char == b"#":  # Display connections
@@ -468,29 +429,29 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
-            log.msg(f"got {len(data)} stderr data")
+            _log.debug("got {n} stderr data", n=len(data))
             if ioType(sys.stderr) == str:
                 sys.stderr.buffer.write(data)
             else:
                 sys.stderr.write(data)
 
     def eofReceived(self):
-        log.msg("got eof")
+        _log.debug("got eof")
         self.stdio.loseWriteConnection()
 
     def closeReceived(self):
-        log.msg(f"remote side closed {self}")
+        _log.debug("remote side closed {session}", session=self)
         self.conn.sendClose(self)
 
     def closed(self):
         global old
-        log.msg(f"closed {self}")
-        log.msg(repr(self.conn.channels))
+        _log.debug("closed {session}", session=self)
+        _log.debug("{channels!r}", channels=self.conn.channels)
 
     def request_exit_status(self, data):
         global exitStatus
         exitStatus = int(struct.unpack(">L", data)[0])
-        log.msg(f"exit status: {exitStatus}")
+        _log.debug("exit status: {exitStatus}", exitStatus=exitStatus)
 
     def sendEOF(self):
         self.conn.sendEOF(self)
@@ -534,7 +495,7 @@ def _enterRawMode():
         old = tty.tcgetattr(fd)
         new = old[:]
     except BaseException:
-        log.msg("not a typewriter!")
+        _log.warn("not a typewriter!")
     else:
         # iflage
         new[0] = new[0] | tty.IGNPAR

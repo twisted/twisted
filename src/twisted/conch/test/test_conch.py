@@ -738,7 +738,7 @@ class CmdLineClientTests(ForwardingMixin, TestCase):
 
         def cb_check_log(result):
             logContent = logPath.getContent()
-            self.assertIn(b"Log opened.", logContent)
+            self.assertIn(b"twisted.conch", logContent)
 
         logPath = filepath.FilePath(self.mktemp())
 
