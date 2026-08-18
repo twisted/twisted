@@ -92,7 +92,6 @@ pygments_style = "sphinx"
 
 # Only the RTD theme is used. Both for local development and for the public site.
 html_theme = "sphinx_rtd_theme"
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
