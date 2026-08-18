@@ -1,14 +1,16 @@
 # -*- test-case-name: twisted.test.test_process -*-
-# Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 """
 Windows Process Management, used with reactor.spawnProcess
 """
+from __future__ import annotations
 
-
+import msvcrt
 import os
 import sys
+from collections.abc import Callable
+from typing import IO, Iterable
 
 from zope.interface import implementer
 
@@ -22,6 +24,7 @@ import win32file
 import win32pipe
 import win32process
 import win32security
+from winerror import ERROR_INVALID_HANDLE
 
 from twisted.internet import _pollingfile, error
 from twisted.internet._baseprocess import BaseProcess
@@ -31,6 +34,13 @@ from twisted.python.win32 import quoteArguments
 # Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
 PIPE_ATTRS_INHERITABLE.bInheritHandle = 1
+
+# The environment variable name used to pass the Windows file handle to the child process.
+# A semicolon-separated list of entries, each entry is in the format of "fd:childMode:winHandle".
+_TWISTED_INHERITED_WIN_FD = "_TWISTED_INHERITED_WIN_FD"
+_STDIN = 0
+_STDOUT = 1
+_STDERR = 2
 
 
 def debug(msg):
@@ -43,14 +53,25 @@ class _Reaper(_pollingfile._PollableResource):
         self.proc = proc
 
     def checkWork(self):
-        if (
-            win32event.WaitForSingleObject(self.proc.hProcess, 0)
-            != win32event.WAIT_OBJECT_0
-        ):
-            return 0
-        exitCode = win32process.GetExitCodeProcess(self.proc.hProcess)
-        self.deactivate()
+        try:
+            if (
+                win32event.WaitForSingleObject(self.proc.hProcess, 0)
+                != win32event.WAIT_OBJECT_0
+            ):
+                return 0
+
+            exitCode = win32process.GetExitCodeProcess(self.proc.hProcess)
+
+        except pywintypes.error as error:
+            if error.args[0] != ERROR_INVALID_HANDLE:
+                raise
+            # I don't know why the process is already closed,
+            # since in theory we wait for all the streams to be closed,
+            # before closing the process.
+            exitCode = 0
+
         self.proc.processEnded(exitCode)
+        self.deactivate()
         return 0
 
 
@@ -117,16 +138,27 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
         msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 
+    @ivar _childPipes: A mapping of file descriptor numbers to
+        L{_pollingfile._PollableResource} instances which are used to
+        communicate with the subprocess.
+        They include the standard-IO file descriptors.
     """
+
+    _childPipes: dict[int, _pollingfile._PollableResource]
 
     closedNotifies = 0
 
-    def __init__(self, reactor, protocol, command, args, environment, path):
+    def __init__(
+        self, reactor, protocol, command, args, environment, path, childFDs=None
+    ):
         """
         Create a new child process.
         """
         _pollingfile._PollingTimer.__init__(self, reactor)
         BaseProcess.__init__(self, protocol)
+
+        parentHandles = []
+        childPipes = {}
 
         # security attributes for pipes
         sAttrs = win32security.SECURITY_ATTRIBUTES()
@@ -135,7 +167,10 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         # create the pipes which will connect to the secondary process
         self.hStdoutR, hStdoutW = win32pipe.CreatePipe(sAttrs, 0)
         self.hStderrR, hStderrW = win32pipe.CreatePipe(sAttrs, 0)
+        parentHandles.append(hStdoutW)
+        parentHandles.append(hStderrW)
         hStdinR, self.hStdinW = win32pipe.CreatePipe(sAttrs, 0)
+        parentHandles.append(hStdinR)
 
         win32pipe.SetNamedPipeHandleState(
             self.hStdinW, win32pipe.PIPE_NOWAIT, None, None
@@ -176,6 +211,56 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         env = os.environ.copy()
         env.update(environment or {})
         env = {os.fsdecode(key): os.fsdecode(value) for key, value in env.items()}
+
+        # Set inherited handles for child process and pass them via the
+        # environment.
+        envChildPipes = []
+        if not childFDs:
+            childFDs = {}
+        for fd, parentMode in childFDs.items():
+            if fd in (0, 1, 2):
+                # Standard pipes are always setup via the STARTUPINFO.
+                continue
+
+            if parentMode not in ("r", "w"):
+                raise ValueError(f"Invalid mode {parentMode!r} for childFDs[{fd}]")
+
+            if parentMode == "r":
+                # Child writes, parent reads.
+                childMode = "w"
+                # Create a native Windows anonymous pipe
+                hParentR, hChildW = win32pipe.CreatePipe(sAttrs, 0)
+                # Prepare for passing via env.
+                winHandle = int(hChildW)
+                # Make sure the parent side is NOT inheritable.
+                win32api.SetHandleInformation(hParentR, win32con.HANDLE_FLAG_INHERIT, 0)
+
+                # _PollableReadPipe is calling the callbaks without arguments.
+                # We use lambda with default argument to work around.
+                childPipe = _pollingfile._PollableReadPipe(
+                    hParentR,
+                    lambda data, boundFD=fd: self.proto.childDataReceived(
+                        boundFD, data
+                    ),
+                    lambda boundFD=fd: self._pipeConnectionLost(boundFD),
+                )
+            elif parentMode == "w":
+                # Master writes, Child reads.
+                childMode = "r"
+                hChildR, hParentW = win32pipe.CreatePipe(sAttrs, 0)
+                win32api.SetHandleInformation(hParentW, win32con.HANDLE_FLAG_INHERIT, 0)
+                winHandle = int(hChildR)
+
+                childPipe = _pollingfile._PollableWritePipe(
+                    hParentW, lambda boundFD=fd: self._pipeConnectionLost(boundFD)
+                )
+
+            parentHandles.append(winHandle)
+            childPipes[fd] = childPipe
+            envChildPipes.append(f"{fd}:{childMode}:{winHandle}")
+
+        # Pass the inherited handles to the child process.
+        env[_TWISTED_INHERITED_WIN_FD] = ";".join(envChildPipes)
 
         # Make sure all the arguments are Unicode.
         args = [os.fsdecode(x) for x in args]
@@ -228,9 +313,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
                         raise OSError(pwte2)
 
         # close handles which only the child will use
-        win32file.CloseHandle(hStderrW)
-        win32file.CloseHandle(hStdoutW)
-        win32file.CloseHandle(hStdinR)
+        for h in parentHandles:
+            win32api.CloseHandle(h)
 
         # set up everything
         self.stdout = _pollingfile._PollableReadPipe(
@@ -238,18 +322,22 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
             lambda data: self.proto.childDataReceived(1, data),
             self.outConnectionLost,
         )
+        childPipes[_STDOUT] = self.stdout
 
         self.stderr = _pollingfile._PollableReadPipe(
             self.hStderrR,
             lambda data: self.proto.childDataReceived(2, data),
             self.errConnectionLost,
         )
+        childPipes[_STDERR] = self.stderr
 
         self.stdin = _pollingfile._PollableWritePipe(
             self.hStdinW, self.inConnectionLost
         )
+        childPipes[_STDIN] = self.stdin
 
-        for pipewatcher in self.stdout, self.stderr, self.stdin:
+        self._childPipes = childPipes
+        for pipewatcher in childPipes.values():
             self._addPollableResource(pipewatcher)
 
         # notify protocol
@@ -268,102 +356,114 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
             return error.ProcessDone(status)
         return error.ProcessTerminated(status)
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Write data to the process' stdin.
 
-        @type data: C{bytes}
+        @param data: The data to write.
         """
         self.stdin.write(data)
 
-    def writeSequence(self, seq):
+    def writeSequence(self, seq: Iterable[bytes]) -> None:
         """
         Write data to the process' stdin.
 
-        @type seq: C{list} of C{bytes}
+        @param seq: The list of data to write.
         """
-        self.stdin.writeSequence(seq)
+        pipe = self._childPipes[_STDIN]
+        assert isinstance(pipe, _pollingfile._PollableWritePipe)
+        pipe.writeSequence(seq)
 
-    def writeToChild(self, fd, data):
+    def writeToChild(self, fd: int, data: bytes) -> None:
         """
         Similar to L{ITransport.write} but also allows the file descriptor in
         the child process which will receive the bytes to be specified.
 
-        This implementation is limited to writing to the child's standard input.
-
-        @param fd: The file descriptor to which to write.  Only stdin (C{0}) is
-            supported.
-        @type fd: C{int}
-
+        @param fd: The file descriptor to which to write.
         @param data: The bytes to write.
-        @type data: C{bytes}
 
-        @return: L{None}
-
-        @raise KeyError: If C{fd} is anything other than the stdin file
-            descriptor (C{0}).
+        @raise KeyError: If C{fd} is not a valid file descriptor in the child process.
         """
-        if fd == 0:
-            self.stdin.write(data)
-        else:
-            raise KeyError(fd)
+        pipe = self._childPipes[fd]
+        assert isinstance(pipe, _pollingfile._PollableWritePipe)
+        pipe.write(data)
 
-    def closeChildFD(self, fd):
-        if fd == 0:
-            self.closeStdin()
-        elif fd == 1:
-            self.closeStdout()
-        elif fd == 2:
-            self.closeStderr()
-        else:
-            raise NotImplementedError(
-                "Only standard-IO file descriptors available on win32"
-            )
+    def closeChildFD(self, fd: int) -> None:
+        self._childPipes[fd].close()
 
-    def closeStdin(self):
-        """Close the process' stdin."""
+    def closeStdin(self) -> None:
+        """
+        Close the process's stdin.
+        """
         self.stdin.close()
 
-    def closeStderr(self):
+    def closeStderr(self) -> None:
+        """
+        Close the process's stderr.
+        """
         self.stderr.close()
 
-    def closeStdout(self):
+    def closeStdout(self) -> None:
+        """
+        Close the process's stdout.
+        """
         self.stdout.close()
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """
-        Close the process' stdout, in and err.
+        Close all the process pipes.
         """
-        self.closeStdin()
-        self.closeStdout()
-        self.closeStderr()
+        for pipe in self._childPipes.values():
+            pipe.close()
 
-    def outConnectionLost(self):
-        self.proto.childConnectionLost(1)
+    def outConnectionLost(self) -> None:
+        self.proto.childConnectionLost(_STDOUT)  # type: ignore[attr-defined]
         self.connectionLostNotify()
 
-    def errConnectionLost(self):
-        self.proto.childConnectionLost(2)
+    def errConnectionLost(self) -> None:
+        self.proto.childConnectionLost(_STDERR)  # type: ignore[attr-defined]
         self.connectionLostNotify()
 
-    def inConnectionLost(self):
-        self.proto.childConnectionLost(0)
+    def inConnectionLost(self) -> None:
+        self.proto.childConnectionLost(_STDIN)  # type: ignore[attr-defined]
         self.connectionLostNotify()
 
-    def connectionLostNotify(self):
+    def _pipeConnectionLost(self, fd: int) -> None:
+        self.proto.childConnectionLost(fd)  # type: ignore[attr-defined]
+        self.connectionLostNotify()
+
+    def connectionLostNotify(self) -> None:
         """
         Will be called 3 times, by stdout/err threads and process handle.
         """
         self.closedNotifies += 1
         self.maybeCallProcessEnded()
 
-    def maybeCallProcessEnded(self):
-        if self.closedNotifies == 3 and self.lostProcess:
+    def maybeCallProcessEnded(self) -> None:
+        """
+        Wait for all pipes to be closed and then close the process.
+        """
+        if self.closedNotifies != len(self._childPipes) or not self.lostProcess:
+            return
+
+        try:
             win32file.CloseHandle(self.hProcess)
+        except pywintypes.error as error:
+            # We get pywintypes.error:
+            #  (6, 'WaitForSingleObject', 'The handle is invalid.')
+            # With error 6 the handle is already closed.
+            if error.args[0] != ERROR_INVALID_HANDLE:
+                raise
+
+        try:
             win32file.CloseHandle(self.hThread)
-            self.hProcess = None
-            self.hThread = None
-            BaseProcess.maybeCallProcessEnded(self)
+        except pywintypes.error as error:
+            if error.args[0] != ERROR_INVALID_HANDLE:
+                raise
+
+        self.hProcess = None
+        self.hThread = None
+        super().maybeCallProcessEnded()
 
     # IConsumer
     def registerProducer(self, producer, streaming):
@@ -395,3 +495,56 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         Return a string representation of the process.
         """
         return f"<{self.__class__.__name__} pid={self.pid}>"
+
+
+def _getWindowsInheritedHandle(
+    fd: int, _fdopen: Callable[..., IO[bytes]] = os.fdopen
+) -> IO[bytes]:
+    """
+    Get a handle from an inherited file descriptor.
+
+    @param fd: The parent file descriptor.
+
+    @return: The file descriptor that can be used on the current child process.
+    """
+
+    varName = _TWISTED_INHERITED_WIN_FD
+    envValue = os.environ.get(varName, "")
+    if not envValue:
+        raise ValueError(
+            f"Env {varName} not found. Was this child process spawned by Twisted?"
+        )
+
+    for entry in envValue.split(";"):
+        parts = entry.split(":")
+
+        try:
+            parentFDEnv, mode, winHandleEnv = parts
+        except ValueError:
+            raise ValueError(f"Env {varName} is malformed.")
+
+        try:
+            parentFD = int(parentFDEnv)
+        except ValueError:
+            raise ValueError(f"Env {varName} has invalid parentFD.")
+
+        try:
+            winHandle = int(winHandleEnv)
+        except ValueError:
+            raise ValueError(f"Env {varName} has invalid winHandle.")
+
+        if mode != "r" and mode != "w":
+            raise ValueError(f"Env {varName} has invalid mode.")
+
+        if parentFD != fd:
+            continue
+
+        if mode == "r":
+            openedFD = msvcrt.open_osfhandle(winHandle, os.O_RDONLY | os.O_BINARY)  # type: ignore[attr-defined]
+            return _fdopen(openedFD, "rb", buffering=0)
+
+        # We are in write mode.
+        openedFD = msvcrt.open_osfhandle(winHandle, os.O_WRONLY | os.O_BINARY)  # type: ignore[attr-defined]
+        return _fdopen(openedFD, "wb", buffering=0)
+
+    raise ValueError(f"Env {varName} does not contain an entry for fd {fd}.")

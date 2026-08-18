@@ -265,12 +265,9 @@ class IOCPReactor(base.ReactorBase, _ThreadedWin32EventsMixin):
             raise ValueError("Setting GID is unsupported on this platform.")
         if usePTY:
             raise ValueError("PTYs are unsupported on this platform.")
-        if childFDs is not None:
-            raise ValueError(
-                "Custom child file descriptor mappings are unsupported on "
-                "this platform."
-            )
-        return Process(self, processProtocol, executable, args, env, path)
+        return Process(
+            self, processProtocol, executable, args, env, path, childFDs=childFDs
+        )
 
     def removeAll(self):
         res = list(self.handles)

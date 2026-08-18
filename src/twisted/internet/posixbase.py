@@ -209,17 +209,15 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
                 raise ValueError("Setting GID is unsupported on this platform.")
             if usePTY:
                 raise ValueError("The usePTY parameter is not supported on Windows.")
-            if childFDs:
-                raise ValueError("Customizing childFDs is not supported on Windows.")
-
-            if win32process:
-                from twisted.internet._dumbwin32proc import Process
-
-                return Process(self, processProtocol, executable, args, env, path)
-            else:
+            if not win32process:
                 raise NotImplementedError(
                     "spawnProcess not available since pywin32 is not installed."
                 )
+            from twisted.internet._dumbwin32proc import Process
+
+            return Process(
+                self, processProtocol, executable, args, env, path, childFDs=childFDs
+            )
         else:
             raise NotImplementedError(
                 "spawnProcess only available on Windows or POSIX."
