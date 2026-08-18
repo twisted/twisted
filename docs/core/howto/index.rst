@@ -14,7 +14,7 @@ Developer Guides
    servers
    clients
    trial
-   tutorial
+   tutorial/index
    quotes
    design
    internet-overview
