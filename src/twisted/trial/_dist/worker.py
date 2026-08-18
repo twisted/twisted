@@ -429,8 +429,16 @@ class LocalWorker(ProcessProtocol):
         On connection lost, close the log files that we're managing for stdin
         and stdout.
         """
-        self._outLog.close()
-        self._errLog.close()
+        try:
+            self._outLog.close()
+        except Exception:
+            # On Windows, sometimes this is somehow already closed.
+            pass
+        try:
+            self._errLog.close()
+        except Exception:
+            # On Windows, sometimes this is somehow already closed.
+            pass
         self.transport = None
 
     def processEnded(self, reason: Failure) -> None:

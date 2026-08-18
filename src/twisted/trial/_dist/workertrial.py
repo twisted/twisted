@@ -14,8 +14,13 @@ import errno
 import os
 import sys
 
+# !!!WARNING!!
+# Make sure the default reactor is not imported or installed at the top level
+# The main() function will install the reactor based on the
+# command line arguments.
 from twisted.internet.protocol import FileWrapper
 from twisted.python.log import startLoggingWithObserver, textFromEventDict
+from twisted.python.runtime import platform
 from twisted.trial._dist import _WORKER_AMP_STDIN, _WORKER_AMP_STDOUT
 from twisted.trial._dist.options import WorkerOptions
 
@@ -48,6 +53,9 @@ def main(_fdopen=os.fdopen):
     """
     Main function to be run if __name__ == "__main__".
 
+    This will parse the command line arguments, and install the required
+    reactor.
+
     @param _fdopen: If specified, the function to use in place of C{os.fdopen}.
     @type _fdopen: C{callable}
     """
@@ -58,8 +66,18 @@ def main(_fdopen=os.fdopen):
 
     workerProtocol = WorkerProtocol(config["force-gc"])
 
-    protocolIn = _fdopen(_WORKER_AMP_STDIN, "rb")
-    protocolOut = _fdopen(_WORKER_AMP_STDOUT, "wb")
+    # We check for non-default _fdopen callback to detect when we are
+    # inside the test.
+    if platform.isWindows() and _fdopen == os.fdopen:
+        from twisted.internet._dumbwin32proc import _getWindowsInheritedHandle
+
+        protocolIn = _getWindowsInheritedHandle(_WORKER_AMP_STDIN, _fdopen=_fdopen)
+        protocolOut = _getWindowsInheritedHandle(_WORKER_AMP_STDOUT, _fdopen=_fdopen)
+
+    else:
+        protocolIn = _fdopen(_WORKER_AMP_STDIN, "rb")
+        protocolOut = _fdopen(_WORKER_AMP_STDOUT, "wb")
+
     workerProtocol.makeConnection(FileWrapper(protocolOut))
 
     observer = WorkerLogObserver(workerProtocol)

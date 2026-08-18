@@ -14,7 +14,6 @@ on:
     tags:
       - twisted-*
   pull_request:
-    branches: [ trunk ]
 
   workflow_dispatch:
     inputs:
@@ -158,28 +157,19 @@ jobs:
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
-            # Distributed trial is not yet suported on Windows so we overwrite
-            # the default trial-args to remove concurrent runs and to
-            # select a reactor.
-            trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with select reactor.
           - python-version: '3.14'
             tox-env: 'nodeps-withcov-windows'
             job-name: 'nodeps-windows-select'
             runs-on: 'windows-2022'
-            # Should be removed once we can run distributed tests on Windows
-            # https://github.com/twisted/twisted/issues/12521
-            trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
           - python-version: '3.14'
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
-            # Distributed trial is not yet suported on Windows.
-            # https://github.com/twisted/twisted/issues/12521
-            trial-args: '--reactor=iocp'
+            trial-args: '--reactor=iocp -j 4'
 
           # On PYPY coverage is very slow (5min vs 30min) as there is no C
           # extension.
