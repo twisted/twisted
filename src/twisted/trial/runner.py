@@ -35,16 +35,15 @@ import sys
 import types
 import unittest as pyunit
 import warnings
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Callable, Protocol, TextIO, Union
+from typing import ParamSpec, Protocol, TextIO, TypeAlias, TypeGuard
 
 from zope.interface import implementer
 
 from attrs import define
 from incremental import Version
-from typing_extensions import ParamSpec, TypeAlias, TypeGuard
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
@@ -114,20 +113,9 @@ def filenameToModule(fn):
     @return: A module object.
     @raise ValueError: If C{fn} does not exist.
     """
-    oldFn = fn
-
-    if (3, 8) <= sys.version_info < (3, 10) and not os.path.isabs(fn):
-        # module.__spec__.__file__ is supposed to be absolute in py3.8+
-        # importlib.util.spec_from_file_location does this automatically from
-        # 3.10+
-        # This was backported to 3.8 and 3.9, but then reverted in 3.8.11 and
-        # 3.9.6
-        # See https://twistedmatrix.com/trac/ticket/10230
-        # and https://bugs.python.org/issue44070
-        fn = os.path.join(os.getcwd(), fn)
 
     if not os.path.exists(fn):
-        raise ValueError(f"{oldFn!r} doesn't exist")
+        raise ValueError(f"{fn!r} doesn't exist")
 
     moduleName = reflect.filenameToModuleName(fn)
     try:
@@ -173,21 +161,6 @@ def _resolveDirectory(fn):
         else:
             raise ValueError(f"{fn!r} is not a package directory")
     return fn
-
-
-def _getMethodNameInClass(method):
-    """
-    Find the attribute name on the method's class which refers to the method.
-
-    For some methods, notably decorators which have not had __name__ set correctly:
-
-    getattr(method.im_class, method.__name__) != method
-    """
-    if getattr(method.im_class, method.__name__, object()) != method:
-        for alias in dir(method.im_class):
-            if getattr(method.im_class, alias, object()) == method:
-                return alias
-    return method.__name__
 
 
 class DestructiveTestSuite(TestSuite):
@@ -272,12 +245,12 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-_Loadable: TypeAlias = Union[
-    modules.PythonAttribute,
-    modules.PythonModule,
-    pyunit.TestCase,
-    type[pyunit.TestCase],
-]
+_Loadable: TypeAlias = (
+    modules.PythonAttribute
+    | modules.PythonModule
+    | pyunit.TestCase
+    | type[pyunit.TestCase]
+)
 
 
 def name(thing: _Loadable) -> str:

@@ -402,9 +402,6 @@ class LoopbackTests(TestCase):
 
         return clientF.deferred.addCallback(check)
 
-    def _trapCnxDone(self, obj):
-        getattr(obj, "trap", lambda x: None)(error.ConnectionDone)
-
     def _connectedClientAndServerTest(self, callback):
         """
         Invoke the given callback with a client protocol and a server protocol

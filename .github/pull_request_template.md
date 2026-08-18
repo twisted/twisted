@@ -16,15 +16,18 @@ Add mentions of things that are not covered here and are planed to be done in se
 > - If you use LLM / "AI" tools for your contributions, please read and follow our [_Generative AI / LLM Policy_][ai-policy].
 
 This process applies to *all* pull requests - no matter how small.
-Have a look at [our developer documentation](https://docs.twisted.org/en/latest/core/development/dev-process.html) before submitting your Pull Request.
+Have a look at [our developer documentation](https://docs.twisted.org/en/latest/development/dev-process.html) before submitting your Pull Request.
 
 Below is a non-exhaustive list (as a reminder):
 
-* The title of the PR should describe the changes and starts with the associated issue number, like “#1234 Brief description”.
-* A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
-* The automated tests were updated.
-* Once all checks are green, request a review by leaving a comment that contains exactly the string `please review`.
+* [ ] A GitHub Issue associated with the changes from this PR already exists.
+  Please create one if missing.
+  Someone from the core team will probably do this for you, but your review might go a bit faster if you do it yourself.
+* [ ] The title of the PR should describe the changes and starts with the associated issue number, like `#1234 Brief description`.
+* [ ] A release notes news fragment file was create in src/twisted/newsfragments/ (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management))
+* [ ] The automated tests were updated.
+* [ ] Once all checks are green, request a review by leaving a comment that contains exactly the string `please review`.
   Our bot will trigger the review process, by applying the pending review label
   and requesting a review from the Twisted dev team.
-
+ 
 [ai-policy]: https://github.com/twisted/twisted/blob/trunk/.github/AI_POLICY.md

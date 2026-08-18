@@ -41,7 +41,7 @@ from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers, iweb
+from twisted.web import http, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
@@ -2196,20 +2196,32 @@ class ParsingTests(unittest.TestCase):
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
             )
 
-    def test_invalidHeaderValueNUL(self):
+    def test_invalidHeaderValueControlChars(self) -> None:
         """
-        A request with a header value that contains a NUL byte
-        is rejected with a 400 status code.
+        A header value containing NUL, CR, or LF is rejected with a 400 (RFC
+        9110 section 5.5). A bare CR or LF would additionally let a following
+        header be hidden from the parser, enabling request smuggling.
         """
-        for header in [
-            b"x-foo: \x00",  # NUL byte
-            b"x-foo: a\x00",  # trailing NUL
-            b"x-foo: \x00baz",  # leading NUL
-            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
+        for value in [
+            b"\x00",  # NUL
+            b"a\x00",  # trailing NUL
+            b"\x00baz",  # leading NUL
+            b"a\rb",  # bare CR
+            b"a\rContent-Length: 5",  # bare CR hiding a header
         ]:
             self.assertRequestRejected(
-                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+                [b"GET / HTTP/1.1", b"Host: foo.example", b"x-foo: " + value, b"", b""]
             )
+        # runRequest normalises a bare LF to CRLF, so feed those bytes directly.
+        for value in [b"a\nb", b"a\nContent-Length: 5"]:
+            channel = http.HTTPChannel()
+            transport = StringTransport()
+            channel.makeConnection(transport)
+            channel.dataReceived(
+                b"GET / HTTP/1.1\r\nHost: foo.example\r\nx-foo: " + value + b"\r\n\r\n"
+            )
+            self.assertTrue(transport.disconnecting)
+            self.assertEqual(transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
     def test_headerLimitPerRequest(self):
         """
@@ -3003,24 +3015,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
-
-    def _compatHeadersTest(self, oldName, newName):
-        """
-        Verify that each of two different attributes which are associated with
-        the same state properly reflect changes made through the other.
-
-        This is used to test that the C{headers}/C{responseHeaders} and
-        C{received_headers}/C{requestHeaders} pairs interact properly.
-        """
-        req = http.Request(DummyChannel(), False)
-        getattr(req, newName).setRawHeaders(b"test", [b"lemur"])
-        self.assertEqual(getattr(req, oldName)[b"test"], b"lemur")
-        setattr(req, oldName, {b"foo": b"bar"})
-        self.assertEqual(
-            list(getattr(req, newName).getAllRawHeaders()), [(b"Foo", [b"bar"])]
-        )
-        setattr(req, newName, http_headers.Headers())
-        self.assertEqual(getattr(req, oldName), {})
 
     def test_getHeader(self):
         """

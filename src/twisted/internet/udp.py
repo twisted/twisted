@@ -256,22 +256,21 @@ class Port(base.BasePort):
                 except BaseException:
                     log.err()
 
-    def write(self, datagram, addr=None):
+    def write(self, datagram: bytes, addr: tuple[str, int] | None = None) -> None:
         """
         Write a datagram.
 
-        @type datagram: L{bytes}
         @param datagram: The datagram to be sent.
 
-        @type addr: L{tuple} containing L{str} as first element and L{int} as
-            second element, or L{None}
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be L{None} in connected mode.
         """
         if self._connectedAddr:
             assert addr in (None, self._connectedAddr)
             try:
-                return self.socket.send(datagram)
+                # For legacy/compatibility reasons we sometimes return an
+                # C{int} here, but this should be disregarded.
+                return self.socket.send(datagram)  # type:ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
@@ -303,7 +302,7 @@ class Port(base.BasePort):
                     addr[0], "IPv4 port write() called with IPv6 address"
                 )
             try:
-                return self.socket.sendto(datagram, addr)
+                return self.socket.sendto(datagram, addr)  # type:ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
