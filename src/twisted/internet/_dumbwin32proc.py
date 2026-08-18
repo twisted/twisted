@@ -384,7 +384,7 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
 
         @raise KeyError: If C{fd} is not a valid file descriptor in the child process.
         """
-        pipe = self._childPipes.get(fd)
+        pipe = self._childPipes[fd]
         assert isinstance(pipe, _pollingfile._PollableWritePipe)
         pipe.write(data)
 
