@@ -2307,9 +2307,9 @@ class Win32ProcessTests(unittest.TestCase):
         d = self._test_stdinReader(pyExe, args, env, path)
         return d
 
-    def test_badArgs(self):
+    def test_spawnProcess_badArgs(self):
         """
-        It does not suupport uid/gid/usePTY arguments,
+        It does not support uid/gid/usePTY arguments,
         which are Linux/macOS specific.
         """
         pyArgs = [pyExe, b"-u", b"-c", b"print('hello')"]

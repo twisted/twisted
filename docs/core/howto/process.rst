@@ -503,7 +503,7 @@ pipes. It is implemented with the following dictionary:
 
 
 To launch a process which reads and writes to the same places that the
-parent python program does, use this. This is not supported on Windows:
+parent python program does, use this. This is not yet supported on Windows:
 
 
 
@@ -517,27 +517,22 @@ parent python program does, use this. This is not supported on Windows:
 
 
 
-To write into an additional fd (say it is fd number 4), use this:
-
-
-
-
+To write into an additional fd (say it is fd number 4), use this::
 
 .. code-block:: python
 
-    
     childFDs = { 0: "w", 1: "r", 2: "r" , 4: "w"}
 
+This will create an additional pipe which the parent can write to, and the child can read from.
+The parent can write to it with ``self.transport.writeToChild(4, data)``.
+On Linux and macOS the child can read from it as fileno 4.
 
-
-
-
+On Windows, the child process will need to obtain the Windows file handler from the environment variable.
+See more details in the next section.
 
 
 ProcessProtocols with extra file descriptors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
 When you provide a "childFDs" dictionary with more than the normal
 three fds, you need additional methods to access those pipes. These methods
@@ -547,12 +542,6 @@ In fact, those methods (``outReceived`` and
 compatibility with older code, written before this generalized fd mapping was
 implemented. The new list of things that can happen to your ProcessProtocol
 is as follows:
-
-
-
-
-
-
 
 - ``.connectionMade`` : This is called when the program is
   started.
@@ -602,9 +591,23 @@ influence the child process:
   the child process. Closing an output pipe is neither very friendly nor
   very useful.
 
-On Windows, your protocol will need to retrieve the extra file descriptors using the ``reactor.getWindowsInheritedHandle(fd)`` helper.
+On Windows, the child protocol will need to retrieve the extra file descriptors from the ``_TWISTED_INHERITED_WIN_FD`` environment variable.
+The environment contains a semicolon-separated list of file descriptors, each in the format of "fd:childMode:winHandle".
+The standard-IO file descriptors (0, 1, 2) are not included in this environment variable, since they are already available to the child process.
 
+For the following ``childFDs`` mapping that is used on the parent process::
 
+.. code-block:: python
+
+    childFDs = { 0: "w", 1: "r", 2: "r" , 4: "w", 5: "r"}
+
+The child process will receive the following environment variable:
+``_TWISTED_INHERITED_WIN_FD=4:w:3456;5:r:7890``
+
+Inside the child process, you can use `win32file.ReadFile(winHandle)` or `win32file.WriteFile(winHandle, data)` to read/write to the extra file descriptors on Windows.
+
+There is a private helper function :py:func:`twisted.internet._dumbwin32proc._getWindowsInheritedHandle` that can be used to retrieve the file handle from the environment variable.
+It takes the parent child file descriptor number and returns a file like object that can be used with the standard Python file API.
 
 
 Examples
