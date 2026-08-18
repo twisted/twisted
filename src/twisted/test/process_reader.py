@@ -4,6 +4,8 @@
 
 import sys
 
+print("ready", flush=True)
+
 while 1:
     d = sys.stdin.read()
     if len(d) == 0:

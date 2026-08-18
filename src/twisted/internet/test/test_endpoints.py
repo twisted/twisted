@@ -12,6 +12,7 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from errno import EPERM
+from functools import cache
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
 from typing import TYPE_CHECKING, Any
@@ -143,6 +144,16 @@ try:
 except ImportError as e:
     skipSSL = True
     skipSSLReason = str(e)
+
+
+@cache
+def _certificatesForEndpointTests(
+    serviceIdentity: str,
+) -> tuple[Certificate, PrivateCertificate]:
+    """
+    Generate and cache certificates for L{TLSEndpointsTests}.
+    """
+    return certificatesForAuthorityAndServer(serviceIdentity)
 
 
 class TestProtocol(Protocol):
@@ -3114,7 +3125,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             "clientServiceIdentity",
             self.serverServiceIdentity,
         )
-        ca, server = certificatesForAuthorityAndServer(self.serverServiceIdentity)
+        ca, server = _certificatesForEndpointTests(self.serverServiceIdentity)
 
         self.serverCert = server
         shouldSendServerName = getattr(

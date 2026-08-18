@@ -59,7 +59,7 @@ from twisted.internet.interfaces import (
     ITransport,
 )
 from twisted.internet.main import CONNECTION_LOST
-from twisted.internet.protocol import Protocol
+from twisted.internet.protocol import Protocol, connectionDone
 from twisted.protocols.policies import ProtocolWrapper, WrappingFactory
 from twisted.python.failure import Failure
 from ._tls_legacy import SomeConnectionCreator, _convertToAppropriateFactory
@@ -631,6 +631,7 @@ class _AggregateSmallWrites:
     def __init__(self, write: Callable[[bytes], object], clock: IReactorTime):
         self._write = write
         self._clock = clock
+        self._closed = False
         self._buffer: list[bytes] = []
         self._bufferLeft = self.MAX_BUFFER_SIZE
         self._scheduled: IDelayedCall | None = None
@@ -642,7 +643,7 @@ class _AggregateSmallWrites:
 
         Accumulating too much data can result in higher memory usage.
         """
-        self._buffer.append(data)
+        self._buffer.append(data + b"")
         self._bufferLeft -= len(data)
 
         if self._bufferLeft < 0:
@@ -672,6 +673,11 @@ class _AggregateSmallWrites:
             self._write(b"".join(self._buffer))
             del self._buffer[:]
 
+    def close(self) -> None:
+        if self._scheduled is not None:
+            self._scheduled.cancel()
+        self._scheduledFlush()
+
 
 def _get_default_clock() -> IReactorTime:
     """
@@ -683,6 +689,17 @@ def _get_default_clock() -> IReactorTime:
     from twisted.internet import reactor
 
     return cast(IReactorTime, reactor)
+
+
+class _NullAggregator:
+    def write(self, data: bytes) -> None:
+        ...
+
+    def close(self) -> None:
+        ...
+
+    def flush(self) -> None:
+        ...
 
 
 class BufferingTLSTransport(TLSMemoryBIOProtocol):
@@ -703,6 +720,8 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
     # L{TLSMemoryBIOFactory.protocols} having the correct instances, whereas
     # subclassing makes that work.
 
+    _aggregator: _AggregateSmallWrites | _NullAggregator
+
     def __init__(
         self,
         factory: TLSMemoryBIOFactory,
@@ -718,11 +737,19 @@ class BufferingTLSTransport(TLSMemoryBIOProtocol):
         self.write = self._aggregator.write  # type: ignore[method-assign]
 
     def writeSequence(self, sequence: Iterable[bytes]) -> None:
+        # We want to get any L{TypeError}s out of the way before passing
+        # through a potential non-C{bytes} object through to the aggregator.
         self._aggregator.write(b"".join(sequence))
 
     def loseConnection(self) -> None:
         self._aggregator.flush()
         super().loseConnection()
+
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
+        self._aggregator.close()
+        self._aggregator = _NullAggregator()
+        self.write = self._aggregator.write  # type: ignore[method-assign]
+        super().connectionLost(reason)
 
 
 class TLSMemoryBIOFactory(WrappingFactory[TLSMemoryBIOProtocol]):

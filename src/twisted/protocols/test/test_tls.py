@@ -15,9 +15,8 @@ from zope.interface.verify import verifyObject
 
 from hypothesis import given, strategies as st
 
-from twisted.internet import reactor
 from twisted.internet.interfaces import IOpenSSLContextFactory
-from twisted.internet.task import Clock, deferLater
+from twisted.internet.task import Clock
 from twisted.python.compat import iterbytes
 from twisted.test.iosim import IOPump
 
@@ -246,7 +245,7 @@ def handshakingClientAndServer(
     Construct a client and server L{TLSMemoryBIOProtocol} connected by an IO
     pump.
 
-    @param greetingData: The data which should be written in L{connectionMade}.
+    @param clientGreetingData: The data which should be written in L{connectionMade}.
 
     @return: 3-tuple of client protocol, server protocol, and a L{pump
         <twisted.test.iosim.IOPump>} that can move the data between the two
@@ -698,30 +697,23 @@ class TLSMemoryBIOTests(TestCase):
 
         return self.writeBeforeHandshakeTest(SimpleSendingProtocol, data)
 
-    def test_writeUnicodeRaisesTypeError(self):
+    async def test_writeUnicodeRaisesTypeError(self) -> None:
         """
         Writing C{unicode} to L{TLSMemoryBIOProtocol} throws a C{TypeError}.
         """
         notBytes = "hello"
         result = []
+        oself = self
 
         class SimpleSendingProtocol(Protocol):
             def connectionMade(self):
-                try:
+                with oself.assertRaises(TypeError):
                     self.transport.write(notBytes)
-                    self.transport.write(b"bytes")
-                    self.transport.loseConnection()
-                except TypeError:
-                    result.append(True)
-                    self.transport.abortConnection()
+                self.transport.write(b"bytes")
+                result.append(True)
 
-        def flush_logged_errors():
-            self.assertEqual(len(self.flushLoggedErrors(ConnectionLost, TypeError)), 2)
-
-        d = self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
-        d.addBoth(lambda ign: self.assertEqual(result, [True]))
-        d.addBoth(lambda ign: deferLater(reactor, 0, flush_logged_errors))
-        return d
+        await self.writeBeforeHandshakeTest(SimpleSendingProtocol, b"bytes")
+        self.assertEqual(result, [True])
 
     def test_multipleWrites(self):
         """
@@ -897,7 +889,7 @@ class TLSMemoryBIOTests(TestCase):
         # weren't notified of a handshake failure that would cause the test to
         # fail.
         def cbConnectionDone(result):
-            (clientProtocol, serverProtocol) = result
+            clientProtocol, serverProtocol = result
             clientProtocol.lostConnectionReason.trap(ConnectionDone)
             serverProtocol.lostConnectionReason.trap(ConnectionDone)
 
@@ -1571,7 +1563,7 @@ class TLSProducerTests(TestCase):
 
         def f() -> None:
             oldStyle: IOpenSSLContextFactory = (
-                ExtremelyOldStyle()  # type:ignore[assignment]
+                ExtremelyOldStyle()  # type: ignore[assignment]
             )
             TLSMemoryBIOFactory(oldStyle, True, Factory.forProtocol(Protocol))
 
@@ -1601,9 +1593,9 @@ class TLSProducerTests(TestCase):
                 return "just broken"
 
         broken1: IOpenSSLContextFactory = (
-            HasGetContextButBroken()  # type:ignore[assignment]
+            HasGetContextButBroken()  # type: ignore[assignment]
         )
-        broken2: IOpenSSLContextFactory = JustBroken()  # type:ignore[assignment]
+        broken2: IOpenSSLContextFactory = JustBroken()  # type: ignore[assignment]
 
         def test1() -> None:
             with self.assertRaises(TypeError) as te:
