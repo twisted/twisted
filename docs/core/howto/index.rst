@@ -14,18 +14,7 @@ Developer Guides
    servers
    clients
    trial
-   tutorial/index
-   tutorial/intro
-   tutorial/protocol
-   tutorial/style
-   tutorial/components
-   tutorial/backends
-   tutorial/web
-   tutorial/pb
-   tutorial/factory
-   tutorial/client
-   tutorial/library
-   tutorial/configuration
+   tutorial
    quotes
    design
    internet-overview
