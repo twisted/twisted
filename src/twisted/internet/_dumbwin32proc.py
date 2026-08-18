@@ -540,11 +540,11 @@ def _getWindowsInheritedHandle(
             continue
 
         if mode == "r":
-            openedFD = msvcrt.open_osfhandle(winHandle, os.O_RDONLY | os.O_BINARY)
+            openedFD = msvcrt.open_osfhandle(winHandle, os.O_RDONLY | os.O_BINARY)  # type: ignore[attr-defined]
             return _fdopen(openedFD, "rb", buffering=0)
 
         # We are in write mode.
-        openedFD = msvcrt.open_osfhandle(winHandle, os.O_WRONLY | os.O_BINARY)
+        openedFD = msvcrt.open_osfhandle(winHandle, os.O_WRONLY | os.O_BINARY)  # type: ignore[attr-defined]
         return _fdopen(openedFD, "wb", buffering=0)
 
     raise ValueError(f"Env {varName} does not contain an entry for fd {fd}.")

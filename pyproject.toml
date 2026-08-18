@@ -136,7 +136,6 @@ mypy = [
     "mypy-zope==1.0.16",
     "types-setuptools",
     "types-pyOpenSSL",
-    "types-pywin32",
 ]
 
 [project.scripts]
