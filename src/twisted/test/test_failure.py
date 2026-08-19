@@ -109,7 +109,7 @@ class FailureTests(SynchronousTestCase):
 
         self.assertIs(f2.value, exception)
 
-    def assertStartsWith(self, s: str, prefix: str) -> None:
+    def assertStartsWith(self, s: str, prefix: str) -> None:  # type: ignore[override]
         """
         Assert that C{s} starts with a particular C{prefix}.
 
@@ -120,7 +120,7 @@ class FailureTests(SynchronousTestCase):
         """
         self.assertTrue(s.startswith(prefix), f"{prefix!r} is not the start of {s!r}")
 
-    def assertEndsWith(self, s: str, suffix: str) -> None:
+    def assertEndsWith(self, s: str, suffix: str) -> None:  # type: ignore[override]
         """
         Assert that C{s} end with a particular C{suffix}.
 

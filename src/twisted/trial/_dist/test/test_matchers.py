@@ -106,7 +106,7 @@ class IsSequenceOfTests(SynchronousTestCase):
         :param numItems: The length of a sequence to try to match.
         """
         seq = [True] * numItems
-        matcher = IsSequenceOf(equal_to(True))
+        matcher = IsSequenceOf(equal_to(True))  # type: ignore[var-annotated]
 
         actualDescription = StringDescription()
         assert_that(matcher.matches(seq, actualDescription), equal_to(True))
@@ -126,7 +126,7 @@ class IsSequenceOfTests(SynchronousTestCase):
         """
         # Hide the non-matching value somewhere in the sequence.
         seq = [True] * numBefore + [False] + [True] * numAfter
-        matcher = IsSequenceOf(equal_to(True))
+        matcher = IsSequenceOf(equal_to(True))  # type: ignore[var-annotated]
 
         actualDescription = StringDescription()
         assert_that(matcher.matches(seq, actualDescription), equal_to(False))

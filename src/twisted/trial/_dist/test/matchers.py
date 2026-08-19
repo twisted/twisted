@@ -98,7 +98,7 @@ class HasSum(BaseMatcher[Sequence[S]]):
         Determine whether the sum of the sequence is matched.
         """
         s = self._sum(item)
-        return self.sumMatcher.matches(s)
+        return self.sumMatcher.matches(s)  # type: ignore[no-any-return]
 
     def describe_mismatch(self, item: Sequence[S], description: Description) -> None:
         """
