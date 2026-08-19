@@ -694,7 +694,7 @@ class TestURL(SynchronousTestCase):
         argument is converted into an N-tuple of 2-tuples.
         """
         # note the type here is invalid as only 2-tuples are accepted
-        url = URL(query=[["alpha", "beta"]])  # type: ignore[list-item]
+        url = URL(query=[["alpha", "beta"]])
         self.assertEqual(url.query, (("alpha", "beta"),))
 
     def test_pathIterable(self) -> None:
@@ -733,7 +733,7 @@ class TestURL(SynchronousTestCase):
 
         def check(param: str, expectation: str = defaultExpectation) -> None:
             with self.assertRaises(TypeError) as raised:
-                URL(**{param: Unexpected()})  # type: ignore[arg-type]
+                URL(**{param: Unexpected()})
             assertRaised(raised, expectation, param)
 
         check("scheme")
@@ -746,14 +746,14 @@ class TestURL(SynchronousTestCase):
         with self.assertRaises(TypeError) as raised:
             URL(
                 path=[
-                    Unexpected(),  # type: ignore[list-item]
+                    Unexpected(),
                 ]
             )
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
             URL(
                 query=[
-                    ("name", Unexpected()),  # type: ignore[list-item]
+                    ("name", Unexpected()),
                 ]
             )
         assertRaised(
@@ -762,28 +762,28 @@ class TestURL(SynchronousTestCase):
         with self.assertRaises(TypeError) as raised:
             URL(
                 query=[
-                    (Unexpected(), "value"),  # type: ignore[list-item]
+                    (Unexpected(), "value"),
                 ]
             )
         assertRaised(raised, defaultExpectation, "query parameter name")
         # No custom error message for this one, just want to make sure
         # non-2-tuples don't get through.
         with self.assertRaises(TypeError):
-            URL(query=[Unexpected()])  # type: ignore[list-item]
+            URL(query=[Unexpected()])
         with self.assertRaises(ValueError):
-            URL(query=[("k", "v", "vv")])  # type: ignore[list-item]
+            URL(query=[("k", "v", "vv")])
         with self.assertRaises(ValueError):
-            URL(query=[("k",)])  # type: ignore[list-item]
+            URL(query=[("k",)])
 
         url = URL.fromText("https://valid.example.com/")
         with self.assertRaises(TypeError) as raised:
-            url.child(Unexpected())  # type: ignore[arg-type]
+            url.child(Unexpected())
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
-            url.sibling(Unexpected())  # type: ignore[arg-type]
+            url.sibling(Unexpected())
         assertRaised(raised, defaultExpectation, "path segment")
         with self.assertRaises(TypeError) as raised:
-            url.click(Unexpected())  # type: ignore[arg-type]
+            url.click(Unexpected())
         assertRaised(raised, defaultExpectation, "relative URL")
 
     def test_technicallyTextIsIterableBut(self) -> None:

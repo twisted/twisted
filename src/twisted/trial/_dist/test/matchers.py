@@ -183,10 +183,10 @@ def similarFrame(
     # (functionName, fileName, someint, [], [])
     return contains_exactly(
         equal_to(functionName),
-        contains_string(fileName),  # type: ignore[arg-type]
-        instance_of(int),  # type: ignore[arg-type]
+        contains_string(fileName),
+        instance_of(int),
         # Unfortunately Failure makes them sometimes tuples, sometimes
         # dict_items.
-        has_length(0),  # type: ignore[arg-type]
-        has_length(0),  # type: ignore[arg-type]
+        has_length(0),
+        has_length(0),
     )
