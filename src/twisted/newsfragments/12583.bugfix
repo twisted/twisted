@@ -1,0 +1,1 @@
+twisted.spread.pb: MD5 hash calls in the Perspective Broker challenge-response authentication now pass ``usedforsecurity=False``, allowing PB connections on systems with FIPS-enabled OpenSSL.
