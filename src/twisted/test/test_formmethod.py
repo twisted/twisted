@@ -6,7 +6,8 @@ from __future__ import annotations
 Test cases for formmethod module.
 """
 
-from typing import Callable, Iterable
+from collections.abc import Iterable
+from typing import Callable
 
 from typing_extensions import Concatenate, ParamSpec
 

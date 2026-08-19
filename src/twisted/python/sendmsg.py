@@ -9,7 +9,6 @@ sendmsg(2) and recvmsg(2) support for Python.
 
 from collections import namedtuple
 from socket import CMSG_SPACE, SCM_RIGHTS, socket as Socket
-from typing import List, Tuple
 
 __all__ = ["sendmsg", "recvmsg", "getSocketFamily", "SCM_RIGHTS"]
 
@@ -20,7 +19,7 @@ ReceivedMessage = namedtuple("ReceivedMessage", ["data", "ancillary", "flags"])
 def sendmsg(
     socket: Socket,
     data: bytes,
-    ancillary: List[Tuple[int, int, bytes]] = [],
+    ancillary: list[tuple[int, int, bytes]] = [],
     flags: int = 0,
 ) -> int:
     """

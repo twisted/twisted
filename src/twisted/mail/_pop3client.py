@@ -13,7 +13,6 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 
 import re
 from hashlib import md5
-from typing import List
 
 from twisted.internet import defer, error, interfaces
 from twisted.mail._except import (
@@ -1232,4 +1231,4 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         return self.sendShort(b"QUIT", None)
 
 
-__all__: List[str] = []
+__all__: list[str] = []

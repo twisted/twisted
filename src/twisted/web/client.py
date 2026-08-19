@@ -12,15 +12,17 @@ import collections
 import os
 import warnings
 import zlib
+from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Hashable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
 
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.internet import defer, protocol, task
 from twisted.internet.abstract import isIPv6Address
@@ -28,6 +30,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
     IAddress,
+    IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
     IReactorTime,
@@ -59,8 +62,7 @@ from twisted.web.iweb import (
 # any of the real implementation.
 
 if TYPE_CHECKING:
-    from email.message import EmailMessage as _InfoType
-    from http.client import HTTPResponse as _ResponseBase
+    from http.client import HTTPMessage as _InfoType, HTTPResponse as _ResponseBase
     from urllib.request import Request as _RequestBase
 else:
     _RequestBase = object
@@ -220,37 +222,10 @@ def _urljoin(base, url):
     """
     base, baseFrag = urldefrag(base)
     url, urlFrag = urldefrag(urljoin(base, url))
-    return urljoin(url, b"#" + (urlFrag or baseFrag))
-
-
-def _makeGetterFactory(url, factoryFactory, contextFactory=None, *args, **kwargs):
-    """
-    Create and connect an HTTP page getting factory.
-
-    Any additional positional or keyword arguments are used when calling
-    C{factoryFactory}.
-
-    @param factoryFactory: Factory factory that is called with C{url}, C{args}
-        and C{kwargs} to produce the getter
-
-    @param contextFactory: Context factory to use when creating a secure
-        connection, defaulting to L{None}
-
-    @return: The factory created by C{factoryFactory}
-    """
-    uri = URI.fromBytes(_ensureValidURI(url.strip()))
-    factory = factoryFactory(url, *args, **kwargs)
-    from twisted.internet import reactor
-
-    if uri.scheme == b"https":
-        from twisted.internet import ssl
-
-        if contextFactory is None:
-            contextFactory = ssl.ClientContextFactory()
-        reactor.connectSSL(nativeString(uri.host), uri.port, factory, contextFactory)
-    else:
-        reactor.connectTCP(nativeString(uri.host), uri.port, factory)
-    return factory
+    # We strip the hash to get test pass on Python 3.14
+    # Looks like a regression in 3.14
+    # See https://github.com/twisted/twisted/issues/12427
+    return urljoin(url, b"#" + (urlFrag or baseFrag)).strip(b"#")
 
 
 # The code which follows is based on the new HTTP client implementation.  It
@@ -283,8 +258,11 @@ else:
         platformTrust,
     )
 
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
 
-def _requireSSL(decoratee):
+
+def _requireSSL(decoratee: Callable[_P, _T]) -> Callable[_P, _T]:
     """
     The decorated method requires pyOpenSSL to be present, or it raises
     L{NotImplementedError}.
@@ -298,8 +276,8 @@ def _requireSSL(decoratee):
     """
     if SSL is None:
 
-        @wraps(decoratee)
-        def raiseNotImplemented(*a, **kw):
+        @wraps(decoratee)  # type:ignore[unreachable]
+        def raiseNotImplemented(*a: _P.args, **kw: _P.kwargs) -> _T:
             """
             pyOpenSSL is not available.
 
@@ -363,7 +341,9 @@ class BrowserLikePolicyForHTTPS:
         self._trustRoot = trustRoot
 
     @_requireSSL
-    def creatorForNetloc(self, hostname, port):
+    def creatorForNetloc(
+        self, hostname: bytes, port: int
+    ) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
@@ -418,19 +398,21 @@ class HostnameCachingHTTPSPolicy:
     @since: Twisted 19.2.0
     """
 
-    def __init__(self, policyforHTTPS, cacheSize=20):
+    def __init__(self, policyforHTTPS: IPolicyForHTTPS, cacheSize: int = 20) -> None:
         """
         @param policyforHTTPS: The IPolicyForHTTPS to wrap.
-        @type policyforHTTPS: L{IPolicyForHTTPS}
 
         @param cacheSize: The maximum size of the hostname cache.
-        @type cacheSize: L{int}
         """
         self._policyForHTTPS = policyforHTTPS
-        self._cache = collections.OrderedDict()
+        self._cache: collections.OrderedDict[
+            str, IOpenSSLClientConnectionCreator
+        ] = collections.OrderedDict()
         self._cacheSize = cacheSize
 
-    def creatorForNetloc(self, hostname, port):
+    def creatorForNetloc(
+        self, hostname: bytes, port: int
+    ) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>} for a
@@ -664,7 +646,7 @@ class _HTTP11ClientFactory(protocol.Factory):
             self._quiescentCallback, self._metadata
         )
 
-    def buildProtocol(self, addr: IAddress) -> HTTP11ClientProtocol:
+    def buildProtocol(self, addr: IAddress | None) -> HTTP11ClientProtocol:
         return HTTP11ClientProtocol(self._quiescentCallback)
 
 
@@ -1171,8 +1153,8 @@ class Agent(_AgentBase):
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a request to the server indicated by the given C{uri}.
@@ -1244,7 +1226,7 @@ class ProxyAgent(_AgentBase):
 
 class _FakeStdlibRequest(_RequestBase):
     """
-    A fake L{urllib.request.Request} object for L{cookiejar} to work with.
+    A fake L{urllib.request.Request} object for L{http.cookiejar} to work with.
 
     @see: U{urllib.request.Request
         <https://docs.python.org/3/library/urllib.request.html#urllib.request.Request>}
@@ -1325,7 +1307,7 @@ class _FakeUrllibResponseInfo(_InfoType):
 
 class _FakeStdlibResponse(_ResponseBase):
     """
-    A fake L{urllib.response.Response} object for L{http.cookiejar} to work
+    A fake L{urllib.response.addinfourl} object for L{http.cookiejar} to work
     with.
 
     @ivar response: Underlying Twisted Web response.
@@ -1372,8 +1354,8 @@ class CookieAgent:
         self,
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Issue a new request to the wrapped L{Agent}.

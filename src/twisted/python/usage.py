@@ -21,7 +21,7 @@ import os
 import sys
 import textwrap
 from os import path
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -63,7 +63,7 @@ class CoerceParameter:
         self.options.opts[parameterName] = value
 
 
-class Options(Dict[str, Any]):
+class Options(dict[str, Any]):
     """
     An option list parser class
 
@@ -150,9 +150,9 @@ class Options(Dict[str, Any]):
     or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
-    subCommand: Optional[str] = None
-    defaultSubCommand: Optional[str] = None
-    parent: "Optional[Options]" = None
+    subCommand: str | None = None
+    defaultSubCommand: str | None = None
+    parent: Options | None = None
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
@@ -477,7 +477,7 @@ class Options(Dict[str, Any]):
             )
         return synopsis
 
-    def getUsage(self, width: Optional[int] = None) -> str:
+    def getUsage(self, width: int | None = None) -> str:
         # If subOptions exists by now, then there was probably an error while
         # parsing its options.
         if hasattr(self, "subOptions"):
@@ -569,7 +569,7 @@ class Completer:
     subclasses for specific completion functionality.
     """
 
-    _descr: Optional[str] = None
+    _descr: str | None = None
 
     def __init__(self, descr=None, repeat=False):
         """

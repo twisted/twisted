@@ -9,10 +9,11 @@ from __future__ import annotations
 import os
 import sys
 import unittest as pyunit
+from collections.abc import Generator
 from hashlib import md5
 from operator import attrgetter
 from types import ModuleType
-from typing import TYPE_CHECKING, Callable, Generator
+from typing import TYPE_CHECKING, Callable
 
 from hamcrest import assert_that, equal_to, has_properties
 from hamcrest.core.matcher import Matcher
@@ -565,7 +566,7 @@ class PackageOrderingTests(packages.SysPathManglingTest):
 
     def _trialSortAlgorithm(
         self, sorter: Callable[[PythonModule | PythonAttribute], SupportsRichComparison]
-    ) -> Generator[PythonModule | PythonAttribute, None, None]:
+    ) -> Generator[PythonModule | PythonAttribute]:
         """
         Right now, halfway by accident, trial sorts like this:
 

@@ -5,14 +5,14 @@
 Tests for L{twisted.conch.checkers}.
 """
 
+from __future__ import annotations
 
 import os
 from base64 import encodebytes
 from collections import namedtuple
 from io import BytesIO
-from typing import Optional
 
-cryptSkip: Optional[str]
+cryptSkip: str | None
 try:
     import crypt
 except ImportError:

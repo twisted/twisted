@@ -21,7 +21,8 @@ Serializing a formatting structure is done with L{flatten}.
 """
 
 
-from typing import ClassVar, List, Sequence
+from collections.abc import Sequence
+from typing import ClassVar
 
 from twisted.python.util import FancyEqMixin
 
@@ -85,7 +86,7 @@ class _NormalAttr(_Attribute):
     A text attribute for normal text.
     """
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs.__init__()
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
@@ -115,7 +116,7 @@ class _OtherAttr(_Attribute):
         result.children.extend(self.children)
         return result
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs = attrs._withAttribute(self.attrname, self.attrvalue)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
@@ -136,7 +137,7 @@ class _ColorAttr(_Attribute):
         self.color = color
         self.ground = ground
 
-    def serialize(self, write, attrs, attributeRenderer):
+    def serialize(self, write, attrs=None, attributeRenderer="toVT102"):
         attrs = attrs._withAttribute(self.ground, self.color)
         _Attribute.serialize(self, write, attrs, attributeRenderer)
 
@@ -296,7 +297,7 @@ def flatten(output, attrs, attributeRenderer="toVT102"):
     @return: A string expressing the text and display attributes specified by
         L{output}.
     """
-    flattened: List[str] = []
+    flattened: list[str] = []
     output.serialize(flattened.append, attrs, attributeRenderer)
     return "".join(flattened)
 

@@ -7,7 +7,8 @@ Tests for L{twisted.python.url}.
 """
 from __future__ import annotations
 
-from typing import Iterable, Protocol
+from collections.abc import Iterable
+from typing import Protocol
 
 from twisted.trial.unittest import SynchronousTestCase
 from ..url import URL

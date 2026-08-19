@@ -6,8 +6,9 @@
 Context manager for capturing logs.
 """
 
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import Iterator, List, Sequence, cast
+from typing import cast
 
 from twisted.logger import globalLogPublisher
 from ._interfaces import ILogObserver, LogEvent
@@ -15,7 +16,7 @@ from ._interfaces import ILogObserver, LogEvent
 
 @contextmanager
 def capturedLogs() -> Iterator[Sequence[LogEvent]]:
-    events: List[LogEvent] = []
+    events: list[LogEvent] = []
     observer = cast(ILogObserver, events.append)
 
     globalLogPublisher.addObserver(observer)

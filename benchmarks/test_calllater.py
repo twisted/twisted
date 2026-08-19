@@ -47,8 +47,7 @@ def test_spaced_out_events(benchmark, reversed_times):
         for _ in range(len(timestamps)):
             reactor.advance(reactor.timeout() or 0)
             reactor.runUntilCurrent()
-        return reactor
+        assert not reactor._pendingTimedCalls
+        assert not reactor._newTimedCalls
 
-    reactor = benchmark(go)
-    assert not reactor._pendingTimedCalls
-    assert not reactor._newTimedCalls
+    benchmark(go)

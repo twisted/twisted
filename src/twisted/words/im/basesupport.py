@@ -7,8 +7,6 @@
 
 You will find these useful if you're adding a new protocol to IM.
 """
-from typing import Type
-
 from twisted.internet import error
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.persisted import styles
@@ -95,7 +93,7 @@ class AbstractClientMixin:
     @ivar _logonDeferred: Fired when I am done logging in.
     """
 
-    _protoBase: Type[Protocol] = None  # type: ignore[assignment]
+    _protoBase: type[Protocol] = None  # type: ignore[assignment]
 
     def __init__(self, account, chatui, logonDeferred):
         for base in self.__class__.__bases__:

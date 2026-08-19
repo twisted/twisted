@@ -6,10 +6,11 @@
 System exit support.
 """
 
-import typing
+from __future__ import annotations
+
 from enum import IntEnum
 from sys import exit as sysexit, stderr, stdout
-from typing import Union
+from typing import NoReturn
 
 try:
     import posix as Status
@@ -80,7 +81,7 @@ class ExitStatus(IntEnum):
     EX_CONFIG = Status.EX_CONFIG
 
 
-def exit(status: Union[int, ExitStatus], message: str = "") -> "typing.NoReturn":
+def exit(status: int | ExitStatus, message: str = "") -> NoReturn:
     """
     Exit the python interpreter with the given status and an optional message.
 

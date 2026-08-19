@@ -19,32 +19,24 @@ import bcrypt
 from constantly import NamedConstant, Names
 from cryptography import utils
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, padding, rsa
+from cryptography.hazmat.primitives.asymmetric.utils import (
+    decode_dss_signature,
+    encode_dss_signature,
+)
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_ssh_public_key,
 )
+from typing_extensions import Self
 
 from twisted.conch.ssh import common, sexpy
 from twisted.conch.ssh.common import int_to_bytes
 from twisted.python import randbytes
 from twisted.python.compat import iterbytes, nativeString
 from twisted.python.deprecate import _mutuallyExclusiveArguments
-
-try:
-    from cryptography.hazmat.primitives.asymmetric.utils import (
-        decode_dss_signature,
-        encode_dss_signature,
-    )
-except ImportError:
-    from cryptography.hazmat.primitives.asymmetric.utils import (  # type: ignore[no-redef,attr-defined]
-        decode_rfc6979_signature as decode_dss_signature,
-        encode_rfc6979_signature as encode_dss_signature,
-    )
-
 
 # Curve lookup table
 _curveTable = {
@@ -234,15 +226,31 @@ class Key:
             integer y
 
         The format of ECDSA-SHA2-* public key blob is::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name.
+        Where 'identifier' is the standard NIST curve name.
 
         The format of an Ed25519 public key blob is::
             string 'ssh-ed25519'
             string a
+
+        The format of a sk-ecdsa-sha2-nistp256@openssh.com public key is::
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        The format of a sk-ssh-ed25519@openssh.com public key is::
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f.
 
         @type blob: L{bytes}
         @param blob: The key data.
@@ -254,14 +262,14 @@ class Key:
         keyType, rest = common.getNS(blob)
         if keyType == b"ssh-rsa":
             e, n, rest = common.getMP(rest, 2)
-            return cls(rsa.RSAPublicNumbers(e, n).public_key(default_backend()))
+            return cls(rsa.RSAPublicNumbers(e, n).public_key())
 
         if keyType == b"ssh-dss":
             p, q, g, y, rest = common.getMP(rest, 4)
             return cls(
                 dsa.DSAPublicNumbers(
                     y=y, parameter_numbers=dsa.DSAParameterNumbers(p=p, q=q, g=g)
-                ).public_key(default_backend())
+                ).public_key()
             )
 
         if keyType in _curveTable:
@@ -272,18 +280,27 @@ class Key:
             )
 
         if keyType == b"sk-ecdsa-sha2-nistp256@openssh.com":
+            _, encodedPoint, application, rest = common.getNS(rest, 3)
             keyObject = cls._fromECEncodedPoint(
-                encodedPoint=common.getNS(rest, 2)[1],
+                encodedPoint=encodedPoint,
                 curve=b"ecdsa-sha2-nistp256",
             )
             keyObject._sk = True
+            keyObject.application = application
             return keyObject
 
-        if keyType in [b"ssh-ed25519", b"sk-ssh-ed25519@openssh.com"]:
+        if keyType == b"sk-ssh-ed25519@openssh.com":
+            a, application, rest = common.getNS(rest, 2)
+            keyObject = cls._fromEd25519Components(a)
+            keyObject._sk = True
+            keyObject.application = application
+
+            return keyObject
+
+        if keyType in [b"ssh-ed25519"]:
             a, rest = common.getNS(rest)
             keyObject = cls._fromEd25519Components(a)
-            if keyType.startswith(b"sk-ssh-"):
-                keyObject._sk = True
+
             return keyObject
 
         raise BadKeyError(f"unknown blob type: {keyType}")
@@ -380,7 +397,7 @@ class Key:
         # ECDSA keys don't need base64 decoding which is required
         # for RSA or DSA key.
         if data.startswith(b"ecdsa-sha2"):
-            return cls(load_ssh_public_key(data, default_backend()))
+            return cls(load_ssh_public_key(data))
         blob = decodebytes(data.split()[1])
         return cls._fromString_BLOB(blob)
 
@@ -458,7 +475,6 @@ class Key:
             decryptor = Cipher(
                 algorithmClass(decKey[:keySize]),
                 modes.CTR(decKey[keySize : keySize + ivSize]),
-                backend=default_backend(),
             ).decryptor()
             privKeyList = decryptor.update(encPrivKeyList) + decryptor.finalize()
         else:
@@ -519,7 +535,7 @@ class Key:
             passphrase = None
         if kind in (b"EC", b"RSA", b"DSA"):
             try:
-                key = load_pem_private_key(data, passphrase, default_backend())
+                key = load_pem_private_key(data, passphrase)
             except TypeError:
                 raise EncryptedKeyError(
                     "Passphrase must be provided for an encrypted key"
@@ -761,7 +777,7 @@ class Key:
         publicNumbers = rsa.RSAPublicNumbers(e=e, n=n)
         if d is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = publicNumbers.public_key()
         else:
             privateNumbers = rsa.RSAPrivateNumbers(
                 p=p,
@@ -772,7 +788,7 @@ class Key:
                 iqmp=rsa.rsa_crt_iqmp(p, q),
                 public_numbers=publicNumbers,
             )
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
@@ -804,42 +820,34 @@ class Key:
         )
         if x is None:
             # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
+            keyObject = publicNumbers.public_key()
         else:
             privateNumbers = dsa.DSAPrivateNumbers(x=x, public_numbers=publicNumbers)
-            keyObject = privateNumbers.private_key(default_backend())
+            keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
     @classmethod
-    def _fromECComponents(cls, x, y, curve, privateValue=None):
+    def _fromECComponents(cls, x: int, y: int, curve: bytes, privateValue: int) -> Self:
         """
         Build a key from EC components.
 
         @param x: The affine x component of the public point used for verifying.
-        @type x: L{int}
 
         @param y: The affine y component of the public point used for verifying.
-        @type y: L{int}
 
         @param curve: NIST name of elliptic curve.
-        @type curve: L{bytes}
 
         @param privateValue: The private value.
-        @type privateValue: L{int}
         """
 
         publicNumbers = ec.EllipticCurvePublicNumbers(
             x=x, y=y, curve=_curveTable[curve]
         )
-        if privateValue is None:
-            # We have public components.
-            keyObject = publicNumbers.public_key(default_backend())
-        else:
-            privateNumbers = ec.EllipticCurvePrivateNumbers(
-                private_value=privateValue, public_numbers=publicNumbers
-            )
-            keyObject = privateNumbers.private_key(default_backend())
+        privateNumbers = ec.EllipticCurvePrivateNumbers(
+            private_value=privateValue, public_numbers=publicNumbers
+        )
+        keyObject = privateNumbers.private_key()
 
         return cls(keyObject)
 
@@ -865,9 +873,7 @@ class Key:
                 _curveTable[curve], encodedPoint
             )
         else:
-            keyObject = ec.derive_private_key(
-                privateValue, _curveTable[curve], default_backend()
-            )
+            keyObject = ec.derive_private_key(privateValue, _curveTable[curve])
 
         return cls(keyObject)
 
@@ -903,7 +909,9 @@ class Key:
         @type keyObject: C{cryptography.hazmat.primitives.asymmetric} key.
         """
         self._keyObject = keyObject
+        # Only used for OpenSSH sk ssh keys
         self._sk = False
+        self._application = None
 
     def __eq__(self, other: object) -> bool:
         """
@@ -1218,17 +1226,19 @@ class Key:
 
     def blob(self):
         """
-        Return the public key blob for this key. The blob is the
-        over-the-wire format for public keys.
+        Return the public key blob for this key.  The blob is the over-the-wire
+        format for public keys.
 
         SECSH-TRANS RFC 4253 Section 6.6.
 
         RSA keys::
+
             string 'ssh-rsa'
             integer e
             integer n
 
         DSA keys::
+
             string 'ssh-dss'
             integer p
             integer q
@@ -1236,15 +1246,33 @@ class Key:
             integer y
 
         EC keys::
+
             string 'ecdsa-sha2-[identifier]'
             integer x
             integer y
 
-            identifier is the standard NIST curve name
+        Where 'identifier' is the standard NIST curve name.
 
         Ed25519 keys::
+
             string 'ssh-ed25519'
             string a
+
+        sk-ecdsa-sha2-nistp256@openssh.com keys::
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com"
+            string		curve name
+            ec_point	Q
+            string		application (user-specified, but typically "ssh:")
+
+        sk-ssh-ed25519@openssh.com keys::
+
+            string		"sk-ssh-ed25519@openssh.com"
+            string		public key
+            string		application (user-specified, but typically "ssh:")
+
+        The security key formats are specified at
+        U{https://github.com/openssh/openssh-portable/blob/80993390bed15bbd1c348f3352e55d0db01ca0fd/PROTOCOL.u2f}.
 
         @rtype: L{bytes}
         """
@@ -1262,17 +1290,31 @@ class Key:
             )
         elif type == "EC":
             byteLength = (self._keyObject.curve.key_size + 7) // 8
-            return (
-                common.NS(data["curve"])
-                + common.NS(data["curve"][-8:])
+            curve = data["curve"][-8:]
+            if self._sk:
+                # We convert the curve name.
+                # The curve name is only `nistpNNN` part.
+                # Format example:
+                # "ecdsa-sha2-nistp256" -> "nistp256"
+                # "sk-ecdsa-sha2-nistp256@openssh.com" -> "nistp256"
+                curve = data["curve"][-20:-12]
+            blob = (
+                common.NS(self.sshType())
+                + common.NS(curve)
                 + common.NS(
                     b"\x04"
                     + utils.int_to_bytes(data["x"], byteLength)
                     + utils.int_to_bytes(data["y"], byteLength)
                 )
             )
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         elif type == "Ed25519":
-            return common.NS(b"ssh-ed25519") + common.NS(data["a"])
+            blob = common.NS(self.sshType()) + common.NS(data["a"])
+            if self._sk:
+                blob += common.NS(self.application)
+            return blob
         else:
             raise BadKeyError(f"unknown key type: {type}")
 
@@ -1361,8 +1403,8 @@ class Key:
 
     @_mutuallyExclusiveArguments(
         [
-            ["extra", "comment"],
-            ["extra", "passphrase"],
+            ("extra", "comment"),
+            ("extra", "passphrase"),
         ]
     )
     def toString(self, type, extra=None, subtype=None, comment=None, passphrase=None):
@@ -1489,9 +1531,7 @@ class Key:
         if passphrase:
             encKey = bcrypt.kdf(passphrase, salt, keySize + ivSize, 100)
             encryptor = Cipher(
-                cipher(encKey[:keySize]),
-                modes.CTR(encKey[keySize : keySize + ivSize]),
-                backend=default_backend(),
+                cipher(encKey[:keySize]), modes.CTR(encKey[keySize : keySize + ivSize])
             ).encryptor()
             encPrivKeyList = encryptor.update(privKeyList) + encryptor.finalize()
         else:
@@ -1809,6 +1849,30 @@ class Key:
         else:
             return True
 
+    def isSecurityKey(self):
+        """
+        Return True if key is an OpenSSH security key.
+        """
+        return self.sshType() in [
+            b"sk-ecdsa-sha2-nistp256@openssh.com",
+            b"sk-ssh-ed25519@openssh.com",
+        ]
+
+    @property
+    def application(self):
+        """
+        Returns the application value for OpenSSH sk SSH keys
+        and None for other key types.
+        """
+        return self._application
+
+    @application.setter
+    def application(self, value):
+        """
+        Modifies the application value for OpenSSH sk SSH key types.
+        """
+        self._application = value
+
 
 def _getPersistentRSAKey(location, keySize=4096):
     """
@@ -1830,9 +1894,7 @@ def _getPersistentRSAKey(location, keySize=4096):
 
     # If it doesn't exist, we want to generate a new key and save it
     if not location.exists():
-        privateKey = rsa.generate_private_key(
-            public_exponent=65537, key_size=keySize, backend=default_backend()
-        )
+        privateKey = rsa.generate_private_key(public_exponent=65537, key_size=keySize)
 
         pem = privateKey.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -1847,7 +1909,5 @@ def _getPersistentRSAKey(location, keySize=4096):
     # (Future archaeological readers: I chose not to short circuit above,
     # because then there's two exit paths to this code!)
     with location.open("rb") as keyFile:
-        privateKey = serialization.load_pem_private_key(
-            keyFile.read(), password=None, backend=default_backend()
-        )
+        privateKey = serialization.load_pem_private_key(keyFile.read(), password=None)
         return Key(privateKey)

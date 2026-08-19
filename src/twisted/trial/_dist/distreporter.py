@@ -10,21 +10,24 @@ test is over.
 
 @since: 12.3
 """
+from __future__ import annotations
 
 from types import TracebackType
-from typing import Optional, Tuple, Union
+from typing import Union
 
 from zope.interface import implementer
 
+from typing_extensions import TypeAlias
+
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
-from ..itrial import IReporter, ITestCase
+from ..itrial import IReporterWithDurations, ITestCase
 
-ReporterFailure = Union[Failure, Tuple[type, Exception, TracebackType]]
+ReporterFailure: TypeAlias = Union[Failure, tuple[type, Exception, TracebackType]]
 
 
-@implementer(IReporter)
-class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
+@implementer(IReporterWithDurations)
+class DistReporter(proxyForInterface(IReporterWithDurations)):  # type: ignore[misc]
     """
     See module docstring.
     """
@@ -65,7 +68,7 @@ class DistReporter(proxyForInterface(IReporter)):  # type: ignore[misc]
         self.running[test.id()].append((self.original.addUnexpectedSuccess, test, todo))
 
     def addExpectedFailure(
-        self, test: ITestCase, error: ReporterFailure, todo: Optional[str] = None
+        self, test: ITestCase, error: ReporterFailure, todo: str | None = None
     ) -> None:
         """
         Queue adding an expected failure.

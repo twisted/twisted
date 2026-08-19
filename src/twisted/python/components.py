@@ -31,7 +31,6 @@ interface.
 
 
 from io import StringIO
-from typing import Dict
 
 # zope3 imports
 from zope.interface import declarations, interface
@@ -332,7 +331,7 @@ def proxyForInterface(iface, originalAttribute="original"):
     def __init__(self, original):
         setattr(self, originalAttribute, original)
 
-    contents: Dict[str, object] = {"__init__": __init__}
+    contents: dict[str, object] = {"__init__": __init__}
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
     proxy = type(f"(Proxy for {reflect.qual(iface)})", (object,), contents)

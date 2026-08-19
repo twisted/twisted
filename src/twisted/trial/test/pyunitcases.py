@@ -6,6 +6,7 @@ Sample test cases defined using the standard library L{unittest.TestCase}
 class which are used as data by test cases which are actually part of the
 trial test suite to verify handling of handling of such cases.
 """
+from __future__ import annotations
 
 import unittest
 from sys import exc_info
@@ -55,13 +56,17 @@ class BrokenRunInfrastructure(unittest.TestCase):
     L{TestCase.run} and the results object.
     """
 
-    def run(self, result):
+    def run(
+        self, result: unittest.TestResult | None = None
+    ) -> unittest.TestResult | None:
         """
         Override the normal C{run} behavior to pass the result object
         along to the test method.  Each test method needs the result object so
         that it can implement its particular kind of brokenness.
         """
-        return getattr(self, self._testMethodName)(result)
+        method = getattr(self, self._testMethodName)
+        value: unittest.TestResult | None = method(result)
+        return value
 
     def test_addSuccess(self, result):
         """

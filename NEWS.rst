@@ -8,6 +8,117 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+Twisted 26.4.0 (2026-05-11)
+===========================
+
+This is the last release with support for Python 3.9.
+No changes since 26.4.0rc2.
+
+
+Security
+--------
+
+- twisted.names was fix for Denial of Service (DoS) attack via resource exhaustion during DNS name decompression.
+  Reported and fixed by Tomas Illuminati Balbin CVE-2026-42304 (#12626)
+
+
+Features
+--------
+
+- twisted.internet.ssl.CertificateOptions has a new constructor argument, contextForServerName, which takes a callback that will get invoked when a client sends a server name indication, with the sent servername, and returns a new OpenSSL.SSL.Context that the connection will switch to. (#4887)
+- twisted.internet.endpoints.serverFromString now supports the `tls` endpoint
+  type, which allows you to do `twist web
+  --listen=tls:.../certbot-dir/config/live` pointed at a certbot live
+  configuration directory and have your certbot certificates automatically
+  discovered and served appropriately. (#9885)
+- ``twisted.internet.reactor`` now has type annotations and will appear to be an object of an appropriate type, allowing for idiomatic common usages with correct type information. (#9909)
+- twisted.conch.ssh.SSHUserAuthServer now supports the security key ssh types "sk-ecdsa-sha2-nistp256@openssh.com" and "sk-ssh-ed25519@openssh.com" and extracting the `application` property from these new key types. (#12212)
+
+
+Bugfixes
+--------
+
+- twisted.mail.smtp will now return a meaningful Failure when TLS validation fails. (#10210)
+- TLS version range constraints passed to twisted.internet.ssl.CertificateOptions are now properly respected rather than excluding the version being passed as the desired constraint. (#10232)
+- A potential reference cycle that might cause intermittent memory spikes while
+  using twisted.internet.defer.inlineCallbacks was removed. (#12120)
+- Trial no longer emits the error `RuntimeWarning: TestResult has no addDuration method` when running PyUnit tests. (#12229)
+- twisted.python.rebuild.rebuild() now handles changes to ``sys.modules`` gracefully. Prior to the change, it could possibly raise a "dictionary changed size during iteration" error if the module list changed. (#12458)
+- twisted.internet.protocol.ReconnectingClientFactory: Don't multiply by ``factor`` for initial delay, but use ``initialDelay`` directly. (#12478)
+- twisted.internet.ssl and twisted.protocols.tls no longer mutate the pyOpenSSL context after creating pyOpenSSL connections, maintaining compatibility with an upcoming version of pyOpenSSL and increasing reliability (possibly even fixing a very rare segfault) (#12500)
+- `twisted.internet.testing.MemoryReactor.callWhenRunning` now invokes the callback immediately, if already started. (#12514)
+- Twisted now correctly detects EOF on OpenSSL 4. (#12632)
+
+
+Improved Documentation
+----------------------
+
+- The example code from the documentation describing how to create a custom DNS server was updated to Python3. (#12480)
+- Type annotations now use modern PEP 585 built-in generics and PEP 604 union syntax throughout the project. (#12556)
+
+
+Deprecations and Removals
+-------------------------
+
+- Support for the obsolete TLS "Next Protocol Negotiation" has been removed from
+  twisted.protocols.tls. (#9588)
+- Remove support for python3.8. (#12462)
+
+
+Misc
+----
+
+- #11590, #12426, #12450, #12454, #12459, #12476, #12487, #12489, #12491, #12493, #12505, #12510, #12517, #12523, #12525, #12531, #12533, #12535, #12536, #12539, #12547, #12549, #12560, #12562, #12564, #12572, #12576, #12586, #12588, #12592, #12594, #12598, #12600, #12605, #12612, #12614, #12616, #12618, #12622, #12629
+
+
+Conch
+-----
+
+Misc
+~~~~
+
+- #12544, #12554
+
+
+Web
+---
+
+Misc
+~~~~
+
+- #12542, #12580
+
+
+Mail
+----
+
+No significant changes.
+
+
+Words
+-----
+
+No significant changes.
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.names now does not throw an error when attempting to load bind zone file. (#11972)
+- twisted.names was fix for Denial of Service (DoS) attack via resource exhaustion during DNS name decompression. CVE-2026-42304 (#12626)
+
+
+Trial
+-----
+
+Misc
+~~~~
+
+- #12566
+
 
 Twisted 25.5.0 (2025-06-07)
 ===========================

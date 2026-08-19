@@ -7,7 +7,7 @@ A miscellany of code used to run Trial tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 __all__ = [
     "TestSuite",
@@ -35,17 +35,19 @@ import sys
 import types
 import unittest as pyunit
 import warnings
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib.machinery import SourceFileLoader
-from typing import Callable, Generator, List, Optional, Protocol, TextIO, Type, Union
+from typing import ParamSpec, Protocol, TextIO, TypeAlias, TypeGuard
 
 from zope.interface import implementer
 
 from attrs import define
-from typing_extensions import ParamSpec, TypeAlias, TypeGuard
+from incremental import Version
 
 from twisted.internet import defer
 from twisted.python import failure, filepath, log, modules, reflect
+from twisted.python.deprecate import deprecated
 from twisted.trial import unittest, util
 from twisted.trial._asyncrunner import _ForceGarbageCollectionDecorator, _iterateTests
 from twisted.trial._synctest import _logObserver
@@ -91,10 +93,10 @@ def isPackageDirectory(dirname):
     return False
 
 
-def samefile(filename1, filename2):
+@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.path.samefile")
+def samefile(filename1: str, filename2: str) -> bool:
     """
-    A hacky implementation of C{os.path.samefile}. Used by L{filenameToModule}
-    when the platform doesn't provide C{os.path.samefile}. Do not use this.
+    A hacky implementation of C{os.path.samefile}. Do not use this.
     """
     return os.path.abspath(filename1) == os.path.abspath(filename2)
 
@@ -111,20 +113,9 @@ def filenameToModule(fn):
     @return: A module object.
     @raise ValueError: If C{fn} does not exist.
     """
-    oldFn = fn
-
-    if (3, 8) <= sys.version_info < (3, 10) and not os.path.isabs(fn):
-        # module.__spec__.__file__ is supposed to be absolute in py3.8+
-        # importlib.util.spec_from_file_location does this automatically from
-        # 3.10+
-        # This was backported to 3.8 and 3.9, but then reverted in 3.8.11 and
-        # 3.9.6
-        # See https://twistedmatrix.com/trac/ticket/10230
-        # and https://bugs.python.org/issue44070
-        fn = os.path.join(os.getcwd(), fn)
 
     if not os.path.exists(fn):
-        raise ValueError(f"{oldFn!r} doesn't exist")
+        raise ValueError(f"{fn!r} doesn't exist")
 
     moduleName = reflect.filenameToModuleName(fn)
     try:
@@ -140,9 +131,7 @@ def filenameToModule(fn):
 
     # ensure that the loaded module matches the file
     retFile = os.path.splitext(ret.__file__)[0] + ".py"
-    # not all platforms (e.g. win32) have os.path.samefile
-    same = getattr(os.path, "samefile", samefile)
-    if os.path.isfile(fn) and not same(fn, retFile):
+    if os.path.isfile(fn) and not os.path.samefile(fn, retFile):
         del sys.modules[ret.__name__]
         ret = _importFromFile(fn, moduleName=moduleName)
     return ret
@@ -172,21 +161,6 @@ def _resolveDirectory(fn):
         else:
             raise ValueError(f"{fn!r} is not a package directory")
     return fn
-
-
-def _getMethodNameInClass(method):
-    """
-    Find the attribute name on the method's class which refers to the method.
-
-    For some methods, notably decorators which have not had __name__ set correctly:
-
-    getattr(method.im_class, method.__name__) != method
-    """
-    if getattr(method.im_class, method.__name__, object()) != method:
-        for alias in dir(method.im_class):
-            if getattr(method.im_class, alias, object()) == method:
-                return alias
-    return method.__name__
 
 
 class DestructiveTestSuite(TestSuite):
@@ -271,12 +245,12 @@ class TrialSuite(TestSuite):
             self._bail()
 
 
-_Loadable: TypeAlias = Union[
-    modules.PythonAttribute,
-    modules.PythonModule,
-    pyunit.TestCase,
-    Type[pyunit.TestCase],
-]
+_Loadable: TypeAlias = (
+    modules.PythonAttribute
+    | modules.PythonModule
+    | pyunit.TestCase
+    | type[pyunit.TestCase]
+)
 
 
 def name(thing: _Loadable) -> str:
@@ -301,7 +275,7 @@ def name(thing: _Loadable) -> str:
     raise TypeError(f"Cannot name {thing!r}")
 
 
-def isTestCase(obj: type) -> TypeGuard[Type[pyunit.TestCase]]:
+def isTestCase(obj: type) -> TypeGuard[type[pyunit.TestCase]]:
     """
     @return: C{True} if C{obj} is a class that contains test cases, C{False}
         otherwise. Used to find all the tests in a module.
@@ -413,7 +387,7 @@ class TestLoader:
     methodPrefix = "test"
     modulePrefix = "test_"
 
-    suiteFactory: Type[TestSuite] = TestSuite
+    suiteFactory: type[TestSuite] = TestSuite
     sorter: Callable[[_Loadable], object] = name
 
     def sort(self, xs):
@@ -714,7 +688,7 @@ class TestLoader:
 
     loadTestsFromName = loadByName
 
-    def loadByNames(self, names: List[str], recurse: bool = False) -> TestSuite:
+    def loadByNames(self, names: list[str], recurse: bool = False) -> TestSuite:
         """
         Load some tests by a list of names.
 
@@ -789,7 +763,7 @@ def _qualNameWalker(qualName):
 
 
 @contextmanager
-def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
+def _testDirectory(workingDirectory: str) -> Generator[None]:
     """
     A context manager which obtains a lock on a trial working directory
     and enters (L{os.chdir}) it and then reverses these things.
@@ -809,7 +783,7 @@ def _testDirectory(workingDirectory: str) -> Generator[None, None, None]:
 
 
 @contextmanager
-def _logFile(logfile: str) -> Generator[None, None, None]:
+def _logFile(logfile: str) -> Generator[None]:
     """
     A context manager which adds a log observer and then removes it.
 
@@ -834,11 +808,11 @@ def _logFile(logfile: str) -> Generator[None, None, None]:
 class _Runner(Protocol):
     stream: TextIO
 
-    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter:
         ...
 
     def runUntilFailure(
-        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+        self, test: pyunit.TestCase | pyunit.TestSuite
     ) -> itrial.IReporter:
         ...
 
@@ -889,7 +863,7 @@ class TrialRunner:
     DRY_RUN = "dry-run"
 
     reporterFactory: Callable[[TextIO, str, bool, log.LogPublisher], itrial.IReporter]
-    mode: Optional[str] = None
+    mode: str | None = None
     logfile: str = "test.log"
     stream: TextIO = sys.stdout
     profile: bool = False
@@ -898,7 +872,7 @@ class TrialRunner:
     uncleanWarnings: bool = False
     workingDirectory: str = "_trial_temp"
     _forceGarbageCollection: bool = False
-    debugger: Optional[_Debugger] = None
+    debugger: _Debugger | None = None
     _exitFirst: bool = False
 
     _log: log.LogPublisher = log  # type: ignore[assignment]
@@ -921,7 +895,7 @@ class TrialRunner:
     def rterrors(self) -> bool:
         return self._realTimeErrors
 
-    def run(self, test: Union[pyunit.TestCase, pyunit.TestSuite]) -> itrial.IReporter:
+    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter:
         """
         Run the test or suite and return a result object.
         """
@@ -934,7 +908,7 @@ class TrialRunner:
 
     def _runWithoutDecoration(
         self,
-        test: Union[pyunit.TestCase, pyunit.TestSuite],
+        test: pyunit.TestCase | pyunit.TestSuite,
         forceGarbageCollection: bool = False,
     ) -> itrial.IReporter:
         """
@@ -964,7 +938,7 @@ class TrialRunner:
         return result
 
     def runUntilFailure(
-        self, test: Union[pyunit.TestCase, pyunit.TestSuite]
+        self, test: pyunit.TestCase | pyunit.TestSuite
     ) -> itrial.IReporter:
         """
         Repeatedly run C{test} until it fails.

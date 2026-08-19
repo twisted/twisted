@@ -29,7 +29,7 @@ class Counter(Protocol):
         self.finished.callback(self.count)
 
 
-class Client(object):
+class Client:
     def __init__(self, reactor, server):
         self._reactor = reactor
         self._server = server

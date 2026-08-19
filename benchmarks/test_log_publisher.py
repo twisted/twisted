@@ -2,8 +2,6 @@
 Benchmarks for LogPublisher event dispatching.
 """
 
-from typing import List
-
 from twisted.logger import LogEvent, LogLevel, LogPublisher
 
 
@@ -25,7 +23,7 @@ def test_log_publisher_call_dispatch(benchmark):
     """
     num_observers = 2000
 
-    observers: List[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
+    observers: list[DummyObserver] = [DummyObserver() for _ in range(num_observers)]
     publisher = LogPublisher(*observers)
 
     event = {

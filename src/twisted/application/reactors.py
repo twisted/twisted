@@ -6,7 +6,8 @@
 Plugin-based system for enumerating available reactors and installing one of
 them.
 """
-from typing import Iterable, cast
+from collections.abc import Iterable
+from typing import cast
 
 from zope.interface import Attribute, Interface, implementer
 

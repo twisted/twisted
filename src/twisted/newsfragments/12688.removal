@@ -1,0 +1,1 @@
+twisted.internet.tcp.Connection no longer supports returning a non-None value from a protocol's dataReceived method, deprecated since Twisted 11.0.0.

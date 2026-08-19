@@ -4,13 +4,14 @@
 """
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
-
+from __future__ import annotations
 
 import inspect
 import sys
 import types
 import warnings
 from os.path import normcase
+from typing import Callable
 from warnings import catch_warnings, simplefilter
 
 try:
@@ -19,6 +20,7 @@ except ImportError:
     invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
+from typing_extensions import ParamSpec
 
 from twisted.python import deprecate
 from twisted.python.deprecate import (
@@ -28,7 +30,6 @@ from twisted.python.deprecate import (
     _getDeprecationDocstring,
     _getDeprecationWarningString,
     _mutuallyExclusiveArguments,
-    _passedArgSpec,
     _passedSignature,
     deprecated,
     deprecatedKeywordParameter,
@@ -41,9 +42,27 @@ from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
 from twisted.trial.unittest import SynchronousTestCase
 
+_P = ParamSpec("_P")
+
 # Note that various tests in this module require manual encoding of paths to
 # utf-8. This can be fixed once FilePath supports Unicode; see #2366, #4736,
 # #5203.
+
+
+def checkPassed(
+    func: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+) -> dict[str, object]:
+    """
+    Test an invocation of L{passed} with the given function, arguments, and
+    keyword arguments.
+
+    @param func: A function whose argspec to pass to L{_passed}.
+    @param args: The arguments which could be passed to L{func}.
+    @param kwargs: The keyword arguments which could be passed to L{func}.
+
+    @return: L{_passed}'s return value
+    """
+    return _passedSignature(inspect.signature(func), args, kwargs)
 
 
 class _MockDeprecatedAttribute:
@@ -1003,28 +1022,6 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
     Tests for L{mutuallyExclusiveArguments}.
     """
 
-    def checkPassed(self, func, *args, **kw):
-        """
-        Test an invocation of L{passed} with the given function, arguments, and
-        keyword arguments.
-
-        @param func: A function whose argspec will be inspected.
-        @type func: A callable.
-
-        @param args: The arguments which could be passed to C{func}.
-
-        @param kw: The keyword arguments which could be passed to C{func}.
-
-        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
-        @rtype: L{dict}
-        """
-        if getattr(inspect, "signature", None):
-            # Python 3
-            return _passedSignature(inspect.signature(func), args, kw)
-        else:
-            # Python 2
-            return _passedArgSpec(inspect.getargspec(func), args, kw)
-
     def test_passed_simplePositional(self):
         """
         L{passed} identifies the arguments passed by a simple
@@ -1034,7 +1031,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2), dict(a=1, b=2))
+        self.assertEqual(checkPassed(func, 1, 2), dict(a=1, b=2))
 
     def test_passed_tooManyArgs(self):
         """
@@ -1045,7 +1042,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, 2, 3)
+        self.assertRaises(TypeError, checkPassed, func, 1, 2, 3)
 
     def test_passed_doublePassKeyword(self):
         """
@@ -1056,7 +1053,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, a=2)
+        self.assertRaises(TypeError, checkPassed, func, 1, a=2)
 
     def test_passed_unspecifiedKeyword(self):
         """
@@ -1067,7 +1064,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, z=2)
+        self.assertRaises(TypeError, checkPassed, func, 1, z=2)
 
     def test_passed_star(self):
         """
@@ -1078,7 +1075,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, *b):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2, 3), dict(a=1, b=(2, 3)))
+        self.assertEqual(checkPassed(func, 1, 2, 3), dict(a=1, b=(2, 3)))
 
     def test_passed_starStar(self):
         """
@@ -1090,7 +1087,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             pass
 
         self.assertEqual(
-            self.checkPassed(func, 1, x=2, y=3, z=4), dict(a=1, b=dict(x=2, y=3, z=4))
+            checkPassed(func, 1, x=2, y=3, z=4), dict(a=1, b=dict(x=2, y=3, z=4))
         )
 
     def test_passed_noDefaultValues(self):
@@ -1102,7 +1099,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b, c=1, d=2, e=3):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2, e=7), dict(a=1, b=2, e=7))
+        self.assertEqual(checkPassed(func, 1, 2, e=7), dict(a=1, b=2, e=7))
 
     def test_mutualExclusionPrimeDirective(self):
         """
@@ -1163,23 +1160,6 @@ class KeywordOnlyTests(SynchronousTestCase):
     Keyword only arguments (PEP 3102).
     """
 
-    def checkPassed(self, func, *args, **kw):
-        """
-        Test an invocation of L{passed} with the given function, arguments, and
-        keyword arguments.
-
-        @param func: A function whose argspec to pass to L{_passed}.
-        @type func: A callable.
-
-        @param args: The arguments which could be passed to L{func}.
-
-        @param kw: The keyword arguments which could be passed to L{func}.
-
-        @return: L{_passed}'s return value
-        @rtype: L{dict}
-        """
-        return _passedSignature(inspect.signature(func), args, kw)
-
     def test_passedKeywordOnly(self):
         """
         Keyword only arguments follow varargs.
@@ -1197,12 +1177,12 @@ class KeywordOnlyTests(SynchronousTestCase):
             b has a default value.
             """
 
-        self.assertEqual(self.checkPassed(func1, 1, 2, 3), dict(a=(1, 2, 3), b=True))
+        self.assertEqual(checkPassed(func1, 1, 2, 3), dict(a=(1, 2, 3), b=True))
         self.assertEqual(
-            self.checkPassed(func1, 1, 2, 3, b=False), dict(a=(1, 2, 3), b=False)
+            checkPassed(func1, 1, 2, 3, b=False), dict(a=(1, 2, 3), b=False)
         )
         self.assertEqual(
-            self.checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
+            checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
             dict(a=(1, 2), b=False, c=1, d=2, e=3),
         )
-        self.assertRaises(TypeError, self.checkPassed, func2, 1, 2, b=False, c=1, d=2)
+        self.assertRaises(TypeError, checkPassed, func2, 1, 2, b=False, c=1, d=2)

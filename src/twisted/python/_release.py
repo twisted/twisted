@@ -14,7 +14,6 @@ which must run on multiple platforms (eg the setup.py script).
 
 import os
 from subprocess import STDOUT, CalledProcessError, check_output
-from typing import Dict
 
 from zope.interface import Interface, implementer
 
@@ -198,7 +197,7 @@ class Project:
         @return: A L{incremental.Version} specifying the version number of the
             project based on live python modules.
         """
-        namespace: Dict[str, object] = {}
+        namespace: dict[str, object] = {}
         directory = self.directory
         while not namespace:
             if directory.path == "/":

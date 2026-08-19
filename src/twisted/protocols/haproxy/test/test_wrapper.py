@@ -4,14 +4,24 @@
 """
 Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 """
-from typing import Optional
+from typing import Any, Optional
 from unittest import mock
 
 from twisted.internet import address
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.testing import StringTransportWithDisconnection
 from twisted.trial import unittest
-from .._wrapper import HAProxyWrappingFactory
+from .._wrapper import HAProxyWrappingFactory as HAProxyWrappingFactoryOriginal
+
+
+class HAProxyWrappingFactory(HAProxyWrappingFactoryOriginal):
+    """
+    The tests below make a bunch of type assumptions that gradually stricter
+    typing has revealed to be unsupported, so let's ignore them for now.
+    """
+
+    def buildProtocol(self, addr: Any) -> Any:
+        return super().buildProtocol(addr)
 
 
 class StaticProtocol(Protocol):

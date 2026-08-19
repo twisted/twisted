@@ -2,6 +2,8 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
+
 __all__ = [
     "seconds",
     "shortPythonVersion",
@@ -13,7 +15,6 @@ import os
 import sys
 import warnings
 from time import time as seconds
-from typing import Optional
 
 
 def shortPythonVersion() -> str:
@@ -37,13 +38,11 @@ class Platform:
     Gives us information about the platform we're running on.
     """
 
-    type: Optional[str] = knownPlatforms.get(os.name)
+    type: str | None = knownPlatforms.get(os.name)
     seconds = staticmethod(seconds)
     _platform = sys.platform
 
-    def __init__(
-        self, name: Optional[str] = None, platform: Optional[str] = None
-    ) -> None:
+    def __init__(self, name: str | None = None, platform: str | None = None) -> None:
         if name is not None:
             self.type = knownPlatforms.get(name)
         if platform is not None:
@@ -57,7 +56,7 @@ class Platform:
         """
         return self.type != None
 
-    def getType(self) -> Optional[str]:
+    def getType(self) -> str | None:
         """
         Get platform type.
 

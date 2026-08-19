@@ -6,7 +6,9 @@
 Basic log observers.
 """
 
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Callable
 
 from zope.interface import implementer
 
@@ -59,7 +61,7 @@ class LogPublisher:
         Forward events to contained observers.
         """
         if "log_trace" not in event:
-            trace: Optional[Callable[[ILogObserver], None]] = None
+            trace: Callable[[ILogObserver], None] | None = None
 
         else:
 

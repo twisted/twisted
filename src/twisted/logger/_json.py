@@ -6,8 +6,11 @@
 Tools for saving and loading log events in a structured format.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
 from json import dumps, loads
-from typing import IO, Any, AnyStr, Dict, Iterable, Optional, Union, cast
+from typing import IO, Any, AnyStr, cast
 from uuid import UUID
 
 from constantly import NamedConstant
@@ -22,7 +25,7 @@ from ._logger import Logger
 log = Logger()
 
 
-JSONDict = Dict[str, Any]
+JSONDict = dict[str, Any]
 
 
 def failureAsJSON(failure: Failure) -> JSONDict:
@@ -133,7 +136,7 @@ def eventAsJSON(event: LogEvent) -> str:
         file.
     """
 
-    def default(unencodable: object) -> Union[JSONDict, str]:
+    def default(unencodable: object) -> JSONDict | str:
         """
         Serialize an object not otherwise serializable by L{dumps}.
 
@@ -189,7 +192,7 @@ def jsonFileLogObserver(
 
 def eventsFromJSONLogFile(
     inFile: IO[Any],
-    recordSeparator: Optional[str] = None,
+    recordSeparator: str | None = None,
     bufferSize: int = 4096,
 ) -> Iterable[LogEvent]:
     """
@@ -213,7 +216,7 @@ def eventsFromJSONLogFile(
         else:
             return s.encode("utf-8")
 
-    def eventFromBytearray(record: bytearray) -> Optional[LogEvent]:
+    def eventFromBytearray(record: bytearray) -> LogEvent | None:
         try:
             text = bytes(record).decode("utf-8")
         except UnicodeDecodeError:
@@ -251,7 +254,7 @@ def eventsFromJSONLogFile(
 
     else:
 
-        def eventFromRecord(record: bytearray) -> Optional[LogEvent]:
+        def eventFromRecord(record: bytearray) -> LogEvent | None:
             if record[-1] == ord("\n"):
                 return eventFromBytearray(record)
             else:

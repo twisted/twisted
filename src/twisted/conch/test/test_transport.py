@@ -5,6 +5,7 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
+from __future__ import annotations
 
 import binascii
 import re
@@ -12,7 +13,6 @@ import string
 import struct
 import types
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import Dict, List, Optional, Tuple, Type
 
 from twisted import __version__ as twisted_version
 from twisted.conch.error import ConchError
@@ -28,7 +28,7 @@ from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
 
-dependencySkip: Optional[str]
+dependencySkip: str | None
 if cryptography:
     dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
@@ -289,7 +289,7 @@ class MockFactory(factory.SSHFactory):
             b"ssh-dsa": keys.Key.fromString(keydata.privateDSA_openssh),
         }
 
-    def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
+    def getPrimes(self) -> dict[int, list[tuple[int, int]]]:
         """
         Diffie-Hellman primes that can be used for key exchange algorithms
         that use group exchange to establish a prime / generator group.
@@ -350,7 +350,7 @@ def generatePredictableKey(transport):
     try:
         transport.dhSecretKey = dh.DHPrivateNumbers(
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
-        ).private_key(default_backend())
+        ).private_key()
     except ValueError:
         print(f"\np={p}\ng={g}\nx={x}\n")
         raise
@@ -364,7 +364,7 @@ class TransportTestCase(TestCase):
     Base class for transport test cases.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = None
+    klass: type[transport.SSHTransportBase] | None = None
 
     if dependencySkip:
         skip = dependencySkip
@@ -461,7 +461,7 @@ class BaseSSHTransportBaseCase:
     Base case for TransportBase tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = MockTransportBase
+    klass: type[transport.SSHTransportBase] | None = MockTransportBase
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -695,13 +695,15 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.buf = self.transport.value()
         self.assertEqual(proto.getPacket(), b"ABCDEFG")
 
-    def test_ciphersAreValid(self):
+    def test_ciphersAreValid(self) -> None:
         """
         Test that all the supportedCiphers are valid.
         """
         ciphers = transport.SSHCiphers(b"A", b"B", b"C", b"D")
-        iv = key = b"\x00" * 16
+
         for cipName in self.proto.supportedCiphers:
+            _, keySize, _ = ciphers.cipherMap[cipName]
+            iv = key = b"\x00" * keySize
             self.assertTrue(ciphers._getCipher(cipName, iv, key))
 
     def test_sendKexInit(self):
@@ -1445,7 +1447,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHServerTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHServerTransport
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -2172,7 +2174,7 @@ class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHClientTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHClientTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHClientTransport
 
     def verifyHostKey(self, pubKey, fingerprint):
         """
@@ -2460,11 +2462,11 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(
@@ -2649,11 +2651,11 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(

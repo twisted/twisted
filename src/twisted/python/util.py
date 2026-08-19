@@ -7,7 +7,8 @@ import errno
 import os
 import sys
 import warnings
-from typing import AnyStr
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
+from typing import Any, AnyStr, ClassVar, ParamSpec, TypeVar
 
 try:
     import grp as _grp
@@ -30,17 +31,6 @@ else:
 
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
 
 from incremental import Version
 
@@ -54,6 +44,7 @@ deprecatedModuleAttribute(
 )
 
 _T = TypeVar("_T")
+_P = ParamSpec("_P")
 
 
 class InsensitiveDict(MutableMapping[str, _T]):
@@ -615,7 +606,7 @@ class FancyStrMixin:
 
     # Override in subclasses:
     showAttributes: Sequence[
-        Union[str, Tuple[str, str, str], Tuple[str, Callable[[Any], str]]]
+        str | tuple[str, str, str] | tuple[str, Callable[[Any], str]]
     ] = ()
 
     def __str__(self) -> str:
@@ -659,7 +650,7 @@ class FancyEqMixin:
     def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         if result is NotImplemented:
-            return result
+            return NotImplemented
         return not result
 
 
@@ -749,7 +740,7 @@ def switchUID(uid, gid, euid=False):
             setuid(uid)
 
 
-def untilConcludes(f, *a, **kw):
+def untilConcludes(f: Callable[_P, _T], *a: _P.args, **kw: _P.kwargs) -> _T:
     """
     Call C{f} with the given arguments, handling C{EINTR} by retrying.
 

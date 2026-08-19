@@ -5,6 +5,8 @@
 Tests for twisted SSL support.
 """
 
+from __future__ import annotations
+
 import os
 
 import hamcrest
@@ -156,30 +158,21 @@ class ImmediatelyDisconnectingProtocol(protocol.Protocol):
         self.factory.connectionDisconnected.callback(None)
 
 
-def generateCertificateObjects(organization, organizationalUnit):
+def generateCertificateObjects(
+    organization: str, organizationalUnit: str
+) -> tuple[ssl.KeyPair, ssl.CertificateRequest, ssl.Certificate]:
     """
     Create a certificate for given C{organization} and C{organizationalUnit}.
 
     @return: a tuple of (key, request, certificate) objects.
     """
-    pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 2048)
-    req = crypto.X509Req()
-    subject = req.get_subject()
-    subject.O = organization
-    subject.OU = organizationalUnit
-    req.set_pubkey(pkey)
-    req.sign(pkey, "md5")
-
-    # Here comes the actual certificate
-    cert = crypto.X509()
-    cert.set_serial_number(1)
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(60)  # Testing certificates need not be long lived
-    cert.set_issuer(req.get_subject())
-    cert.set_subject(req.get_subject())
-    cert.set_pubkey(req.get_pubkey())
-    cert.sign(pkey, "md5")
+    pkey = ssl.KeyPair.generate()
+    distinguishedName = ssl.DistinguishedName(
+        organizationName=organization,
+        organizationalUnitName=organizationalUnit,
+    )
+    req = pkey.requestObject(distinguishedName)
+    cert = pkey.signRequestObject(distinguishedName, req, 1, secondsToExpiry=60)
 
     return pkey, req, cert
 
@@ -191,13 +184,13 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
     """
     pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
 
-    for ext, obj, dumpFunc in [
-        ("key", pkey, crypto.dump_privatekey),
-        ("req", req, crypto.dump_certificate_request),
-        ("cert", cert, crypto.dump_certificate),
+    for ext, data in [
+        ("key", pkey.dump(crypto.FILETYPE_PEM)),
+        ("req", req.dump(crypto.FILETYPE_PEM)),
+        ("cert", cert.dump(crypto.FILETYPE_PEM)),
     ]:
         fName = os.extsep.join((basename, ext)).encode("utf-8")
-        FilePath(fName).setContent(dumpFunc(crypto.FILETYPE_PEM, obj))
+        FilePath(fName).setContent(data)
 
 
 class ContextGeneratingMixin:

@@ -8,10 +8,9 @@ Tools for formatting logging events.
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
 from datetime import datetime as DateTime
-from typing import Any, Callable, Iterator, Mapping, Optional, Union, cast
-
-from constantly import NamedConstant
+from typing import Any, Callable, Optional, Union, cast
 
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
@@ -79,8 +78,8 @@ def formatUnformattableEvent(event: LogEvent, error: BaseException) -> str:
 
 
 def formatTime(
-    when: Optional[float],
-    timeFormat: Optional[str] = timeFormatRFC3339,
+    when: float | None,
+    timeFormat: str | None = timeFormatRFC3339,
     default: str = "-",
 ) -> str:
     """
@@ -113,8 +112,8 @@ def formatTime(
 
 
 def formatEventAsClassicLogText(
-    event: LogEvent, formatTime: Callable[[Optional[float]], str] = formatTime
-) -> Optional[str]:
+    event: LogEvent, formatTime: Callable[[float | None], str] = formatTime
+) -> str | None:
     """
     Format an event as a line of human-readable text for, e.g. traditional log
     file output.
@@ -173,7 +172,7 @@ def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     of C{get} first, before wrapping it up.
 
     @param key: The last dotted segment of a formatting key, as parsed by
-        L{Formatter.vformat}, which may end in C{()}.
+        L{string.Formatter.vformat}, which may end in C{()}.
 
     @param getter: A function which takes a string and returns some other
         object, to be formatted and stringified for a log.
@@ -189,7 +188,7 @@ def keycall(key: str, getter: Callable[[str], Any]) -> PotentialCallWrapper:
     return PotentialCallWrapper(value)
 
 
-class PotentialCallWrapper(object):
+class PotentialCallWrapper:
     """
     Object wrapper that wraps C{getattr()} so as to process call-parentheses
     C{"()"} after a dotted attribute access.
@@ -337,7 +336,7 @@ def _formatSystem(event: LogEvent) -> str:
     """
     system = cast(Optional[str], event.get("log_system", None))
     if system is None:
-        level = cast(Optional[NamedConstant], event.get("log_level", None))
+        level = event.get("log_level", None)
         if level is None:
             levelName = "-"
         else:

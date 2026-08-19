@@ -29,4 +29,4 @@ if __name__ == "__main__":
     from twisted.internet import reactor
 
     stdio.StandardIO(WriteSequenceChild())
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()

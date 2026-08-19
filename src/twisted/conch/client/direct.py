@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from twisted.conch.ssh.userauth import SSHUserAuthClient
 
 
-class SSHClientFactory(protocol.ClientFactory):
+class SSHClientFactory(protocol.ClientFactory["transport.SSHClientTransport"]):
     def __init__(
         self,
         d: Deferred[None],
@@ -46,7 +46,7 @@ class SSHClientFactory(protocol.ClientFactory):
         d, self.d = self.d, None
         d.errback(reason)
 
-    def buildProtocol(self, addr: IAddress) -> SSHClientTransport:
+    def buildProtocol(self, addr: IAddress | None) -> SSHClientTransport:
         trans = SSHClientTransport(self)
         if self.options["ciphers"]:
             trans.supportedCiphers = self.options["ciphers"]
@@ -61,7 +61,7 @@ class SSHClientFactory(protocol.ClientFactory):
 
 class SSHClientTransport(transport.SSHClientTransport):
     # pre-mypy LSP violation
-    factory: SSHClientFactory  # type:ignore[assignment]
+    factory: SSHClientFactory
 
     def __init__(self, factory: SSHClientFactory) -> None:
         self.factory = factory
@@ -140,6 +140,12 @@ def connect(
     userAuthObject: SSHUserAuthClient,
 ) -> Deferred[None]:
     d: Deferred[None] = defer.Deferred()
-    factory = SSHClientFactory(d, options, verifyHostKey, userAuthObject)
+    factory: protocol.ClientFactory[transport.SSHClientTransport] = SSHClientFactory(
+        d, options, verifyHostKey, userAuthObject
+    )
+    # this is just broken, right? very straightforwardly this is inference
+    # giving up because there's a cycle in the type graph
+    # (_ProtoWithFactory.factory -> Factory[Self] -> Factory.protocol:
+    # "Optional[Callable[..., P]]" -> P < _ProtoWithFactory)
     IReactorTCP(reactor).connectTCP(host, port, factory)
     return d

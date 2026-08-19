@@ -13,7 +13,6 @@ import re
 import sys
 from inspect import getmro
 from io import BytesIO, StringIO
-from typing import Type
 from unittest import (
     TestCase as StdlibTestCase,
     TestSuite as PyUnitTestSuite,
@@ -977,7 +976,7 @@ class ReporterInterfaceTests(unittest.SynchronousTestCase):
         callable must take the same parameters as L{reporter.Reporter}.
     """
 
-    resultFactory: Type[itrial.IReporter] = reporter.Reporter
+    resultFactory: type[itrial.IReporter] = reporter.Reporter
 
     def setUp(self):
         self.test = sample.FooTest("test_foo")
@@ -1163,7 +1162,7 @@ class SubunitReporterTests(ReporterInterfaceTests):
     This just tests that the subunit reporter implements the basic interface.
     """
 
-    resultFactory: Type[itrial.IReporter] = reporter.SubunitReporter
+    resultFactory: type[itrial.IReporter] = reporter.SubunitReporter
 
     def setUp(self):
         if reporter.TestProtocolClient is None:
@@ -1376,7 +1375,7 @@ class SubunitReporterNotInstalledTests(unittest.SynchronousTestCase):
 
 
 class TimingReporterTests(ReporterTests):
-    resultFactory: Type[itrial.IReporter] = reporter.TimingTextReporter
+    resultFactory: type[itrial.IReporter] = reporter.TimingTextReporter
 
 
 class LoggingReporter(reporter.Reporter):

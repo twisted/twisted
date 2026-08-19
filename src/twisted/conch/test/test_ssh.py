@@ -8,7 +8,6 @@ Tests for L{twisted.conch.ssh}.
 
 import struct
 from itertools import chain
-from typing import Dict, List, Tuple
 
 from twisted.conch.test.keydata import (
     privateDSA_openssh,
@@ -375,7 +374,7 @@ if cryptography is not None:
                 b"ssh-dss": keys.Key.fromString(privateDSA_openssh),
             }
 
-        def getPrimes(self) -> Dict[int, List[Tuple[int, int]]]:
+        def getPrimes(self) -> dict[int, list[tuple[int, int]]]:
             """
             Diffie-Hellman primes that can be used for the
             diffie-hellman-group-exchange-sha1 key exchange.

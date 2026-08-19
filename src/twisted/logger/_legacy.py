@@ -6,7 +6,9 @@
 Integration with L{twisted.python.log}.
 """
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable
 
 from zope.interface import implementer
 
@@ -29,7 +31,7 @@ class LegacyLogObserverWrapper:
     expect legacy events.
     """
 
-    def __init__(self, legacyObserver: "ILegacyLogObserver") -> None:
+    def __init__(self, legacyObserver: ILegacyLogObserver) -> None:
         """
         @param legacyObserver: a legacy observer to which this observer will
             forward events.
@@ -92,8 +94,8 @@ class LegacyLogObserverWrapper:
 
 def publishToNewObserver(
     observer: ILogObserver,
-    eventDict: Dict[str, Any],
-    textFromEventDict: Callable[[Dict[str, Any]], Optional[str]],
+    eventDict: dict[str, Any],
+    textFromEventDict: Callable[[dict[str, Any]], str | None],
 ) -> None:
     """
     Publish an old-style (L{twisted.python.log}) event to a new-style

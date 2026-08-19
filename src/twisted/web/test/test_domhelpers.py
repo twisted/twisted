@@ -109,14 +109,14 @@ class DOMHelpersTestsMixin:
         doc1 = self.dom.parseString("<a><b><c><d/></c></b></a>")
         a_node = doc1.documentElement
         domhelpers.clearNode(a_node)
-        self.assertEqual(a_node.toxml(), self.dom.Element("a").toxml())
+        self.assertEqual(a_node.toxml(), doc1.createElement("a").toxml())
 
         doc2 = self.dom.parseString("<a><b><c><d/></c></b></a>")
         b_node = doc2.documentElement.childNodes[0]
         domhelpers.clearNode(b_node)
         actual = doc2.documentElement.toxml()
-        expected = self.dom.Element("a")
-        expected.appendChild(self.dom.Element("b"))
+        expected = doc2.createElement("a")
+        expected.appendChild(doc2.createElement("b"))
         self.assertEqual(actual, expected.toxml())
 
     def test_get(self):

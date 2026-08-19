@@ -14,9 +14,7 @@ the __path__ variable.
 @author: Glyph Lefkowitz
 """
 
-from typing import List
-
 from twisted.plugin import pluginPackagePaths
 
 __path__.extend(pluginPackagePaths(__name__))
-__all__: List[str] = []  # nothing to see here, move along, move along
+__all__: list[str] = []  # nothing to see here, move along, move along

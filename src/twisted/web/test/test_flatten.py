@@ -6,13 +6,15 @@ Tests for the flattening portion of L{twisted.web.template}, implemented in
 L{twisted.web._flatten}.
 """
 
+from __future__ import annotations
+
 import re
 import sys
 import traceback
 from collections import OrderedDict
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, Dict, List, NoReturn, Optional, Tuple, cast
+from typing import Callable, NoReturn, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer
@@ -160,12 +162,12 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
 
         class WithRenderer(Element):
-            def __init__(self, value: str, loader: Optional[ITemplateLoader]) -> None:
+            def __init__(self, value: str, loader: ITemplateLoader | None) -> None:
                 self.value = value
                 super().__init__(loader)
 
             @renderer
-            def stuff(self, request: Optional[IRequest], tag: Tag) -> Flattenable:
+            def stuff(self, request: IRequest | None, tag: Tag) -> Flattenable:
                 return self.value
 
         toss = []
@@ -191,12 +193,12 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
             def __init__(self, value: Flattenable) -> None:
                 self.value = value
 
-            def render(self, request: Optional[IRequest]) -> Flattenable:
+            def render(self, request: IRequest | None) -> Flattenable:
                 return self.value
 
             def lookupRenderMethod(
                 self, name: str
-            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
+            ) -> Callable[[IRequest | None, Tag], Flattenable]:
                 raise NotImplementedError("Unexpected call")
 
         self.checkAttributeSanitization(Arbitrary, passthru)
@@ -266,7 +268,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         self.assertFlattensImmediately(Comment("foo bar"), b"<!--foo bar-->")
 
-    def test_commentEscaping(self) -> Deferred[List[bytes]]:
+    def test_commentEscaping(self) -> Deferred[list[bytes]]:
         """
         The data in a L{Comment} is escaped and mangled in the flattened output
         so that the result can be safely included in an HTML document.
@@ -361,7 +363,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
         """
         from textwrap import dedent
 
-        namespace: Dict[str, FunctionType] = {}
+        namespace: dict[str, FunctionType] = {}
         exec(
             dedent(
                 """
@@ -413,7 +415,7 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
             def lookupRenderMethod(
                 ign, name: str
-            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
+            ) -> Callable[[IRequest | None, Tag], Flattenable]:
                 self.assertEqual(name, "test")
                 return lambda ign, node: node("world")
 
@@ -465,7 +467,7 @@ class FlattenChunkingTests(SynchronousTestCase):
         into the buffer it is all passed to a single call to the write
         function.
         """
-        output: List[bytes] = []
+        output: list[bytes] = []
         self.successResultOf(flatten(None, ["1", "2", "3"], output.append))
         assert_that(output, equal_to([b"123"]))
 
@@ -479,7 +481,7 @@ class FlattenChunkingTests(SynchronousTestCase):
         someMore = ["y"] * BUFFER_SIZE
         evenMore = ["z"] * BUFFER_SIZE
 
-        output: List[bytes] = []
+        output: list[bytes] = []
         self.successResultOf(flatten(None, [some, someMore, evenMore], output.append))
         assert_that(
             output,
@@ -489,7 +491,7 @@ class FlattenChunkingTests(SynchronousTestCase):
     def _chunksSeparatedByAsyncTest(
         self,
         start: Callable[
-            [Flattenable], Tuple[Deferred[Flattenable], Callable[[], object]]
+            [Flattenable], tuple[Deferred[Flattenable], Callable[[], object]]
         ],
     ) -> None:
         """
@@ -517,7 +519,7 @@ class FlattenChunkingTests(SynchronousTestCase):
             "more-chunks-",
             "already-available",
         ]
-        output: List[bytes] = []
+        output: list[bytes] = []
         d = flatten(None, value, output.append)
         first_finish()
         second_finish()
@@ -546,7 +548,7 @@ class FlattenChunkingTests(SynchronousTestCase):
 
         def sync_start(
             v: Flattenable,
-        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
+        ) -> tuple[Deferred[Flattenable], Callable[[], None]]:
             return (succeed(v), lambda: None)
 
         self._chunksSeparatedByAsyncTest(sync_start)
@@ -561,7 +563,7 @@ class FlattenChunkingTests(SynchronousTestCase):
 
         def async_start(
             v: Flattenable,
-        ) -> Tuple[Deferred[Flattenable], Callable[[], None]]:
+        ) -> tuple[Deferred[Flattenable], Callable[[], None]]:
             d: Deferred[Flattenable] = Deferred()
             return (d, lambda: d.callback(v))
 
@@ -691,10 +693,10 @@ class FlattenerErrorTests(SynchronousTestCase):
 
             def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
-            ) -> Callable[[Optional[IRequest], Tag], Flattenable]:
+            ) -> Callable[[IRequest | None, Tag], Flattenable]:
                 ...
 
-            def render(self, request: Optional[IRequest]) -> Flattenable:
+            def render(self, request: IRequest | None) -> Flattenable:
                 return failing
 
         flattening = flattenString(None, [NotActuallyRenderable()])

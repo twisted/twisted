@@ -11,8 +11,7 @@ parse string representations into them with proper checking for illegal
 characters, case folding and canonicalisation through
 L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
-
-from typing import Dict, Tuple, Union
+from __future__ import annotations
 
 from twisted.words.protocols.jabber.xmpp_stringprep import (
     nameprep,
@@ -27,7 +26,7 @@ class InvalidFormat(Exception):
     """
 
 
-def parse(jidstring: str) -> Tuple[Union[str, None], str, Union[str, None]]:
+def parse(jidstring: str) -> tuple[str | None, str, str | None]:
     """
     Parse given JID string into its respective parts and apply stringprep.
 
@@ -75,8 +74,8 @@ def parse(jidstring: str) -> Tuple[Union[str, None], str, Union[str, None]]:
 
 
 def prep(
-    user: Union[str, None], host: str, resource: Union[str, None]
-) -> Tuple[Union[str, None], str, Union[str, None]]:
+    user: str | None, host: str, resource: str | None
+) -> tuple[str | None, str, str | None]:
     """
     Perform stringprep on all JID fragments.
 
@@ -117,7 +116,7 @@ def prep(
     return (user, host, resource)
 
 
-__internJIDs: Dict[str, "JID"] = {}
+__internJIDs: dict[str, JID] = {}
 
 
 def internJID(jidstring):
@@ -145,8 +144,8 @@ class JID:
 
     def __init__(
         self,
-        str: Union[str, None] = None,
-        tuple: Union[Tuple[Union[str, None], str, Union[str, None]], None] = None,
+        str: str | None = None,
+        tuple: tuple[str | None, str, str | None] | None = None,
     ):
         if str:
             user, host, res = parse(str)

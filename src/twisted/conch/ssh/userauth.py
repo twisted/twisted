@@ -11,7 +11,8 @@ Maintainer: Paul Swartz
 from __future__ import annotations
 
 import struct
-from typing import Callable, Tuple, Type
+from hashlib import sha256
+from typing import Callable
 
 from twisted.conch import error, interfaces
 from twisted.conch.ssh import keys, service, transport
@@ -26,8 +27,8 @@ from twisted.logger import Logger
 from twisted.python import failure
 from twisted.python.compat import nativeString
 
-_ConchPortalTuple = Tuple[
-    Type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
+_ConchPortalTuple = tuple[
+    type[interfaces.IConchUser], interfaces.IConchUser, Callable[[], None]
 ]
 
 
@@ -277,7 +278,7 @@ class SSHUserAuthServer(service.SSHService):
 
         result: Deferred[_ConchPortalTuple]
         try:
-            keys.Key.fromString(blob)
+            pubKey = keys.Key.fromString(blob)
         except keys.BadKeyError:
             error = "Unsupported key type {} or bad key".format(algName.decode("ascii"))
             self._log.error(error)
@@ -287,7 +288,7 @@ class SSHUserAuthServer(service.SSHService):
         if hasSig:
             assert self.transport is not None, "must have transport for auth"
             assert self.transport.sessionID is not None, "must have session for auth"
-            b = (
+            messageToBeValidated = (
                 NS(self.transport.sessionID)
                 + bytes((MSG_USERAUTH_REQUEST,))
                 + NS(self.user)
@@ -297,7 +298,18 @@ class SSHUserAuthServer(service.SSHService):
                 + NS(algName)
                 + NS(blob)
             )
-            c = credentials.SSHPrivateKey(self.user, algName, blob, b, signature)
+            if pubKey.isSecurityKey():
+                try:
+                    application = pubKey.application
+                    messageToBeValidated = self._wrapMessageWithSKMetadata(
+                        signature, messageToBeValidated, application
+                    )
+                except ValueError:
+                    return defer.fail(UnauthorizedLogin("Invalid security key format"))
+
+            c = credentials.SSHPrivateKey(
+                self.user, algName, blob, messageToBeValidated, signature
+            )
             result = self.portal.login(c, None, interfaces.IConchUser)
         else:
             c = credentials.SSHPrivateKey(self.user, algName, blob, None, None)
@@ -305,6 +317,43 @@ class SSHUserAuthServer(service.SSHService):
                 self._ebCheckKey, packet[1:]
             )
         return result
+
+    @staticmethod
+    def _wrapMessageWithSKMetadata(signature, messageToBeValidated, application):
+        """
+        Wraps the SSH user auth message request with security key information.
+        This blob will be verified against the signature.  See
+        U{https://github.com/openssh/openssh-portable/blob/a4aa090a3d40dddb07d5ebebc501f6457541a501/PROTOCOL.u2f#L176}
+
+        In addition to the message to be signed, the U2F signature operation
+        requires the key handle and a few additional parameters.  The signature
+        is signed over a blob that consists of::
+
+            byte[32]	SHA256(application)
+            byte		flags (including "user present", extensions present)
+            uint32		counter
+            byte[]		extensions
+            byte[32]	SHA256(message)
+
+        The signature format used on the wire in SSH2_USERAUTH_REQUEST::
+
+            string		"sk-ecdsa-sha2-nistp256@openssh.com" or "sk-ssh-ed25519@openssh.com"
+            string		signature
+            byte		flags
+            uint32		counter
+        """
+        _, _, trailing = getNS(signature, 2)
+        if len(trailing) < 5:
+            raise ValueError("SK signature missing flags+counter")
+        flags = trailing[0:1]
+        counter = trailing[1:5]
+
+        return (
+            sha256(application).digest()
+            + flags
+            + counter
+            + sha256(messageToBeValidated).digest()
+        )
 
     def _ebCheckKey(self, reason: failure.Failure, packet: bytes) -> failure.Failure:
         """

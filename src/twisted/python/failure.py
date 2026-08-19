@@ -13,7 +13,6 @@ See L{Failure}.
 
 from __future__ import annotations
 
-# System Imports
 import builtins
 import copy
 import inspect
@@ -22,6 +21,7 @@ import sys
 from functools import partial
 from inspect import getmro
 from io import StringIO
+from types import CodeType
 from typing import Callable, NoReturn, TypeVar
 
 from incremental import Version
@@ -203,7 +203,7 @@ class _Code:
         return ((None, None, None, None),)
 
 
-_inlineCallbacksExtraneous = []
+_inlineCallbacksExtraneous: list[CodeType] = []
 
 
 def _extraneous(f: _T_Callable) -> _T_Callable:

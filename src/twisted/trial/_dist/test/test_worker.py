@@ -7,7 +7,6 @@ Test for distributed trial worker side.
 
 import os
 from io import BytesIO, StringIO
-from typing import Type
 from unittest import TestCase as PyUnitTestCase
 
 from zope.interface.verify import verifyObject
@@ -81,7 +80,7 @@ class WorkerProtocolErrorTests(TestCase):
     """
 
     def _runErrorTest(
-        self, brokenTestName: str, loggedExceptionType: Type[BaseException]
+        self, brokenTestName: str, loggedExceptionType: type[BaseException]
     ) -> None:
         worker, server, pump = connectedServerAndClient(
             LocalWorkerAMP, WorkerProtocol, greet=False
@@ -181,7 +180,7 @@ class LocalWorkerAMPTests(TestCase):
         self.flush = pump.flush
 
     def workerRunTest(
-        self, testCase: PyUnitTestCase, makeResult: Type[TestResult] = TestResult
+        self, testCase: PyUnitTestCase, makeResult: type[TestResult] = TestResult
     ) -> TestResult:
         result = makeResult()
         d = Deferred.fromCoroutine(self.managerAMP.run(testCase, result))
@@ -397,7 +396,7 @@ class LocalWorkerTests(TestCase):
         tempDir.makedirs()
         logPath = tempDir.child("test.log")
 
-        with open(logPath.path, "wt", encoding="utf-8") as logFile:
+        with open(logPath.path, "w", encoding="utf-8") as logFile:
             worker = LocalWorker(amp, tempDir, logFile)
             worker.makeConnection(FakeTransport())
             self.addCleanup(worker._outLog.close)

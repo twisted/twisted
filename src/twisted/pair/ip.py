@@ -57,7 +57,15 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
             self.ipProtos[num] = []
         self.ipProtos[num].append(proto)
 
-    def datagramReceived(self, data, partial, dest, source, protocol):
+    # this never should have subclassed AbstractDatagramProtocol
+    def datagramReceived(  # type:ignore[override]
+        self,
+        data,
+        partial,
+        dest,
+        source,
+        protocol,
+    ):
         header = IPHeader(data)
         for proto in self.ipProtos.get(header.protocol, ()):
             proto.datagramReceived(

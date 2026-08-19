@@ -155,8 +155,7 @@ class IMailboxPOP3(Interface):
         Retrieve the size of a message, or, if none is specified, the size of
         each message in the mailbox.
 
-        @type index: L{int} or L{None}
-        @param index: The 0-based index of the message.
+        @param i: The 0-based index of the message.
 
         @rtype: L{int}, sequence of L{int}, or L{Deferred <defer.Deferred>}
         @return: The number of octets in the specified message, or, if an

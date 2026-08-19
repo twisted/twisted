@@ -5,9 +5,11 @@
 Test cases for L{twisted.logger._format}.
 """
 
+from __future__ import annotations
+
 import json
 from itertools import count
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 try:
     from time import tzset
@@ -180,7 +182,7 @@ class FlatFormattingTests(unittest.TestCase):
         )
 
     def _test_formatFlatEvent_fieldNamesSame(
-        self, event: Optional[LogEvent] = None
+        self, event: LogEvent | None = None
     ) -> LogEvent:
         """
         The same format field used twice in one event is rendered twice.

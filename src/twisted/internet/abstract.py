@@ -8,8 +8,9 @@ Support for generic select()able objects.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from socket import AF_INET, AF_INET6, inet_pton
-from typing import Iterable, List, Optional, Union
+from typing import Protocol, cast
 
 from zope.interface import implementer
 
@@ -29,6 +30,30 @@ def _dataMustBeBytes(obj):
 # memoryview prevents the slice from copying
 def _concatenate(bObj, offset, bArray):
     return b"".join([memoryview(bObj)[offset:]] + bArray)
+
+
+class _ConsumerMixinType(Protocol):
+    """
+    The attributes required by L{_ConsumerMixin} from its host class.
+    """
+
+    producer: interfaces.IProducer | None
+    streamingProducer: bool
+
+    @property
+    def connected(self) -> int:
+        ...
+
+    @property
+    def disconnecting(self) -> int:
+        ...
+
+    @property
+    def disconnected(self) -> int:
+        ...
+
+    def startWriting(self) -> None:
+        ...
 
 
 class _ConsumerMixin:
@@ -59,22 +84,20 @@ class _ConsumerMixin:
 
     @ivar producerPaused: A flag indicating whether the producer is currently
         paused.
-    @type producerPaused: L{bool}
 
     @ivar streamingProducer: A flag indicating whether the producer was
         registered as a streaming (ie push) producer or not (ie a pull
         producer).  This will determine whether the consumer may ever need to
         pause and resume it, or if it can merely call C{resumeProducing} on it
         when buffer space is available.
-    @ivar streamingProducer: C{bool} or C{int}
 
     """
 
-    producer = None
-    producerPaused = False
-    streamingProducer = False
+    producer: interfaces.IProducer | None = None
+    producerPaused: bool = False
+    streamingProducer: bool = False
 
-    def startWriting(self):
+    def startWriting(self) -> None:
         """
         Override in a subclass to cause the reactor to monitor this selectable
         for write events.  This will be called once in C{unregisterProducer} if
@@ -83,7 +106,11 @@ class _ConsumerMixin:
         """
         raise NotImplementedError("%r did not implement startWriting")
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(
+        self: _ConsumerMixinType,
+        producer: interfaces.IProducer,
+        streaming: bool,
+    ) -> None:
         """
         Register to receive data from a producer.
 
@@ -110,9 +137,10 @@ class _ConsumerMixin:
             self.producer = producer
             self.streamingProducer = streaming
             if not streaming:
-                producer.resumeProducing()
+                pullProducer = cast(interfaces.IPullProducer, producer)
+                pullProducer.resumeProducing()
 
-    def unregisterProducer(self):
+    def unregisterProducer(self: _ConsumerMixinType) -> None:
         """
         Stop consuming data from a producer, without disconnecting.
         """
@@ -182,7 +210,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: Optional[interfaces.IReactorFDSet] = None):
+    def __init__(self, reactor: interfaces.IReactorFDSet | None = None):
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -191,10 +219,10 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         if not reactor:
             from twisted.internet import reactor as _reactor
 
-            reactor = _reactor  # type: ignore[assignment]
+            reactor = _reactor
         self.reactor = reactor
         # will be added to dataBuffer in doWrite
-        self._tempDataBuffer: List[bytes] = []
+        self._tempDataBuffer: list[bytes] = []
         self._tempDataLen = 0
 
     def connectionLost(self, reason):
@@ -215,7 +243,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> Union[int, BaseException]:
+    def writeSomeData(self, data: bytes) -> int | BaseException:
         """
         Write as much as possible of the given data, immediately.
 
@@ -468,7 +496,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     # first, the consumer stuff.  This requires no additional work, as
     # any object you can write to can be a consumer, really.
 
-    producer = None
+    producer: interfaces.IProducer | None = None
     bufferSize = 2**2**2**2
 
     def stopConsuming(self):

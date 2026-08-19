@@ -5,8 +5,10 @@
 Test cases for L{twisted.logger._global}.
 """
 
+from __future__ import annotations
+
 import io
-from typing import IO, Any, List, Optional, TextIO, Tuple, Type, cast
+from typing import IO, Any, TextIO, cast
 
 from twisted.python.failure import Failure
 from twisted.trial import unittest
@@ -21,8 +23,8 @@ from ..test.test_stdlib import nextLine
 
 def compareEvents(
     test: unittest.TestCase,
-    actualEvents: List[LogEvent],
-    expectedEvents: List[LogEvent],
+    actualEvents: list[LogEvent],
+    expectedEvents: list[LogEvent],
 ) -> None:
     """
     Compare two sequences of log events, examining only the the keys which are
@@ -65,20 +67,18 @@ class LogBeginnerTests(unittest.TestCase):
 
         class NotWarnings:
             def __init__(self) -> None:
-                self.warnings: List[
-                    Tuple[
-                        str, Type[Warning], str, int, Optional[IO[Any]], Optional[int]
-                    ]
+                self.warnings: list[
+                    tuple[str, type[Warning], str, int, IO[Any] | None, int | None]
                 ] = []
 
             def showwarning(
                 self,
                 message: str,
-                category: Type[Warning],
+                category: type[Warning],
                 filename: str,
                 lineno: int,
-                file: Optional[IO[Any]] = None,
-                line: Optional[int] = None,
+                file: IO[Any] | None = None,
+                line: int | None = None,
             ) -> None:
                 """
                 Emulate warnings.showwarning.
@@ -110,8 +110,8 @@ class LogBeginnerTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1: List[LogEvent] = []
-        events2: List[LogEvent] = []
+        events1: list[LogEvent] = []
+        events2: list[LogEvent] = []
 
         o1 = cast(ILogObserver, lambda e: events1.append(e))
         o2 = cast(ILogObserver, lambda e: events2.append(e))
@@ -129,8 +129,8 @@ class LogBeginnerTests(unittest.TestCase):
         """
         event = dict(foo=1, bar=2)
 
-        events1: List[LogEvent] = []
-        events2: List[LogEvent] = []
+        events1: list[LogEvent] = []
+        events2: list[LogEvent] = []
 
         o1 = cast(ILogObserver, lambda e: events1.append(e))
         o2 = cast(ILogObserver, lambda e: events2.append(e))
@@ -155,7 +155,7 @@ class LogBeginnerTests(unittest.TestCase):
         """
         for count in range(limit + 1):
             self.publisher(dict(count=count))
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
         beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         self.assertEqual(
             list(range(1, limit + 1)),
@@ -191,8 +191,8 @@ class LogBeginnerTests(unittest.TestCase):
         message warning the user that they previously began logging, and add
         the new log observers.
         """
-        events1: List[LogEvent] = []
-        events2: List[LogEvent] = []
+        events1: list[LogEvent] = []
+        events2: list[LogEvent] = []
         fileHandle = io.StringIO()
         textObserver = textFileLogObserver(fileHandle)
         self.publisher(dict(event="prebuffer"))
@@ -253,7 +253,7 @@ class LogBeginnerTests(unittest.TestCase):
         error streams by setting the C{stdio} and C{stderr} attributes on its
         sys module object.
         """
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         print("Hello, world.", file=cast(TextIO, self.sysModule.stdout))
         compareEvents(
@@ -289,15 +289,15 @@ class LogBeginnerTests(unittest.TestCase):
         self.sysModule.stdout = weird
         self.sysModule.stderr = weirderr
 
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         stdout = cast(TextIO, self.sysModule.stdout)
         stderr = cast(TextIO, self.sysModule.stderr)
         self.assertEqual(stdout.encoding, "shift-JIS")
         self.assertEqual(stderr.encoding, "big5")
 
-        stdout.write(b"\x97\x9B\n")  # type: ignore[call-overload]
-        stderr.write(b"\xBC\xFC\n")  # type: ignore[call-overload]
+        stdout.write(b"\x97\x9B\n")  # type: ignore[arg-type]
+        stderr.write(b"\xBC\xFC\n")  # type: ignore[arg-type]
         compareEvents(self, events, [dict(log_io="\u674e"), dict(log_io="\u7469")])
 
     def test_warningsModule(self) -> None:
@@ -306,7 +306,7 @@ class LogBeginnerTests(unittest.TestCase):
         warnings module into the logging system.
         """
         self.warningsModule.showwarning("a message", DeprecationWarning, __file__, 1)
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
         self.beginner.beginLoggingTo([cast(ILogObserver, events.append)])
         self.warningsModule.showwarning(
             "another message", DeprecationWarning, __file__, 2

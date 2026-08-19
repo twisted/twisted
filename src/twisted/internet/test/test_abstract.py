@@ -7,8 +7,6 @@ reactors.
 """
 from __future__ import annotations
 
-from typing import Union
-
 from hypothesis import example, given, strategies as st
 
 from twisted.internet.abstract import FileDescriptor, isIPv6Address
@@ -81,7 +79,7 @@ class TrackingFileDescriptor(FileDescriptor):
     _writeDisconnected = False
 
     def __init__(
-        self, operations: list[Union[int, bytes]], written: list[bytes], send_limit: int
+        self, operations: list[int | bytes], written: list[bytes], send_limit: int
     ):
         self.operations = operations
         self.written = written
@@ -113,7 +111,7 @@ class WriteBufferingTests(SynchronousTestCase):
     )
     # This catches a bug that was introduced by a performance refactoring:
     @example(operations=[b"abcdef", 0, b"g"])
-    def test_writeBuffering(self, operations: list[Union[bytes, int]]) -> None:
+    def test_writeBuffering(self, operations: list[bytes | int]) -> None:
         """
         A sequence of C{write()} and C{doWrite()} will eventually write all the
         data correctly and in order.

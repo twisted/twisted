@@ -8,7 +8,6 @@ Tests for implementations of L{IReactorProcess}.
     platforms and native L{str} keys/values on Windows.
 """
 
-
 import io
 import json
 import os
@@ -267,7 +266,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # here, but that's okay because the signal handler was installed above,
         # before we could have gotten it).
         signaled.wait(120)
-        if not signaled.isSet():
+        if not signaled.is_set():  # pragma: no cover
+            # This is not expected in normal test runs.
             self.fail("Timed out waiting for child process to exit.")
 
         # Capture the processEnded callback.
@@ -380,16 +380,15 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             try:
                 exe = pyExe.decode(sys.getfilesystemencoding())
 
-                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
-                f2 = subprocess.Popen(
-                    [exe, "-c", ("import time; time.sleep(0.5);" "print('Foo')")],
-                    stdout=subprocess.PIPE,
-                )
-                # The read call below will blow up with an EINTR from the
-                # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                with f2.stdout:
-                    result.append(f2.stdout.read())
+                with subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"]):
+                    with subprocess.Popen(
+                        [exe, "-c", ("import time; time.sleep(0.5);" "print('Foo')")],
+                        stdout=subprocess.PIPE,
+                    ) as process:
+                        # The read call below will blow up with an EINTR from the
+                        # SIGCHLD from the first process exiting if we install a
+                        # SIGCHLD handler without SA_RESTART.  (which we used to do)
+                        result.append(process.stdout.read())
             finally:
                 reactor.stop()
 
@@ -616,9 +615,15 @@ sys.stdout.flush()"""
                 raise TestException("processedExited raised")
 
         protocol = Protocol()
-        transport = reactor.spawnProcess(
-            protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
-        )
+        transport = None
+
+        def whenRun() -> None:
+            nonlocal transport
+            transport = reactor.spawnProcess(
+                protocol, pyExe, [pyExe, b"-c", b""], usePTY=self.usePTY
+            )
+
+        reactor.callWhenRunning(whenRun)
         self.runReactor(reactor)
 
         # Manually clean-up broken process handler.
@@ -825,7 +830,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         path to it.
         """
         script = _asFilesystemBytes(self.mktemp())
-        with open(script, "wt") as scriptFile:
+        with open(script, "w") as scriptFile:
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 
@@ -842,7 +847,7 @@ class ProcessTestsBuilder(ProcessTestsBuilderBase):
         executable = getattr(sys, "_base_executable", pyExe.decode("ascii"))
         scriptFile = self.makeSourceFile(
             [
-                "#!{}".format(executable),
+                f"#!{executable}",
                 "import sys",
                 "sys.stdout.write('{}')".format(shebangOutput.decode("ascii")),
                 "sys.stdout.flush()",
@@ -1159,32 +1164,6 @@ class PTYProcessTestsBuilder(ProcessTestsBuilderBase):
 
 
 globals().update(PTYProcessTestsBuilder.makeTestCaseClasses())
-
-
-class PotentialZombieWarningTests(TestCase):
-    """
-    Tests for L{twisted.internet.error.PotentialZombieWarning}.
-    """
-
-    def test_deprecated(self):
-        """
-        Accessing L{PotentialZombieWarning} via the
-        I{PotentialZombieWarning} attribute of L{twisted.internet.error}
-        results in a deprecation warning being emitted.
-        """
-        from twisted.internet import error
-
-        error.PotentialZombieWarning
-
-        warnings = self.flushWarnings([self.test_deprecated])
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            "twisted.internet.error.PotentialZombieWarning was deprecated in "
-            "Twisted 10.0.0: There is no longer any potential for zombie "
-            "process.",
-        )
-        self.assertEqual(len(warnings), 1)
 
 
 class ProcessIsUnimportableOnUnsupportedPlatormsTests(TestCase):

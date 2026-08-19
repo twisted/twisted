@@ -17,7 +17,7 @@ import struct
 import types
 import zlib
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, Union
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -67,7 +67,7 @@ _Hash = Any
 _DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
 
 
-class _MACParams(Tuple[_DigestMod, bytes, bytes, int]):
+class _MACParams(tuple[_DigestMod, bytes, bytes, int]):
     """
     L{_MACParams} represents the parameters necessary to compute SSH MAC
     (Message Authenticate Codes).
@@ -181,7 +181,6 @@ class SSHCiphers:
         return Cipher(
             algorithmClass(key[:keySize]),
             modeClass(iv[: algorithmClass.block_size // 8]),
-            backend=default_backend(),
         )
 
     def _getMAC(
@@ -310,7 +309,6 @@ def _getSupportedCiphers():
             Cipher(
                 algorithmClass(b" " * keySize),
                 modeClass(b" " * (algorithmClass.block_size // 8)),
-                backend=default_backend(),
             ).encryptor()
         except UnsupportedAlgorithm:
             pass
@@ -514,9 +512,7 @@ class SSHTransportBase(protocol.Protocol):
     _EXT_INFO_S = b"ext-info-s"
 
     _peerSupportsExtensions = False
-    peerExtensions: Dict[bytes, bytes] = {}
-
-    factory: SSHFactory
+    peerExtensions: dict[bytes, bytes] = {}
 
     # Set by twisted.conch.ssh.userauth.SSHUserAuthServer._cbFinishedAuth
     avatar: object
@@ -1151,7 +1147,7 @@ class SSHTransportBase(protocol.Protocol):
         """
 
         numbers = dh.DHParameterNumbers(self.p, self.g)
-        parameters = numbers.parameters(default_backend())
+        parameters = numbers.parameters()
         self.dhSecretKey = parameters.generate_private_key()
         y = self.dhSecretKey.public_key().public_numbers().y
         self.dhSecretKeyPublicMP = MP(y)
@@ -1169,7 +1165,7 @@ class SSHTransportBase(protocol.Protocol):
 
         remoteKey = dh.DHPublicNumbers(
             remoteDHpublicKey, dh.DHParameterNumbers(self.p, self.g)
-        ).public_key(default_backend())
+        ).public_key()
         secret = self.dhSecretKey.exchange(remoteKey)
         del self.dhSecretKey
 
@@ -1356,7 +1352,7 @@ class SSHTransportBase(protocol.Protocol):
             except KeyError:
                 raise UnsupportedAlgorithm("unused-key")
 
-            return ec.generate_private_key(curve, default_backend())
+            return ec.generate_private_key(curve)
         elif self.kexAlg in (b"curve25519-sha256", b"curve25519-sha256@libssh.org"):
             return x25519.X25519PrivateKey.generate()
         else:
@@ -1448,6 +1444,7 @@ class SSHServerTransport(SSHTransportBase):
     @ivar p: the Diffie-Hellman group prime.
     """
 
+    factory: SSHFactory
     isClient = False
     ignoreNextPacket = 0
 
@@ -1912,7 +1909,7 @@ class SSHClientTransport(SSHTransportBase):
         d.addErrback(
             lambda unused: self.sendDisconnect(
                 DISCONNECT_HOST_KEY_NOT_VERIFIABLE,
-                f"bad host key [ecdh] {unused}".encode("utf-8"),
+                f"bad host key [ecdh] {unused}".encode(),
             )
         )
         return d

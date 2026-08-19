@@ -15,7 +15,7 @@ import sys
 from collections.abc import Callable
 from functools import wraps
 from importlib import reload
-from typing import Any, Dict, Optional
+from typing import Any
 
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
@@ -29,13 +29,13 @@ if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
         sys.modules["termios"] = None  # type: ignore[assignment]
         reload(getpass)
 
-supportedKeyTypes = dict()
+supportedKeyTypes: dict[str, Callable[[], None]] = {}
 
 
-def _keyGenerator(keyType):
-    def assignkeygenerator(keygenerator):
+def _keyGenerator(keyType: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def assignkeygenerator(keygenerator: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(keygenerator)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             return keygenerator(*args, **kwargs)
 
         supportedKeyTypes[keyType] = wrapper
@@ -134,15 +134,12 @@ def handleError():
 
 @_keyGenerator("rsa")
 def generateRSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
 
     if not options["bits"]:
         options["bits"] = 2048
     keyPrimitive = rsa.generate_private_key(
-        key_size=int(options["bits"]),
-        public_exponent=65537,
-        backend=default_backend(),
+        key_size=int(options["bits"]), public_exponent=65537
     )
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
@@ -150,22 +147,17 @@ def generateRSAkey(options):
 
 @_keyGenerator("dsa")
 def generateDSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
 
     if not options["bits"]:
         options["bits"] = 1024
-    keyPrimitive = dsa.generate_private_key(
-        key_size=int(options["bits"]),
-        backend=default_backend(),
-    )
+    keyPrimitive = dsa.generate_private_key(key_size=int(options["bits"]))
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
 
 @_keyGenerator("ecdsa")
 def generateECDSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
 
     if not options["bits"]:
@@ -173,9 +165,7 @@ def generateECDSAkey(options):
     # OpenSSH supports only mandatory sections of RFC5656.
     # See https://www.openssh.com/txt/release-5.7
     curve = b"ecdsa-sha2-nistp" + str(options["bits"]).encode("ascii")
-    keyPrimitive = ec.generate_private_key(
-        curve=keys._curveTable[curve], backend=default_backend()
-    )
+    keyPrimitive = ec.generate_private_key(curve=keys._curveTable[curve])
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
@@ -206,8 +196,8 @@ def _defaultPrivateKeySubtype(keyType):
 
 
 def _getKeyOrDefault(
-    options: Dict[Any, Any],
-    inputCollector: Optional[Callable[[str], str]] = None,
+    options: dict[Any, Any],
+    inputCollector: Callable[[str], str] | None = None,
     keyTypeName: str = "rsa",
 ) -> str:
     """
@@ -231,7 +221,7 @@ def _getKeyOrDefault(
     return str(filename)
 
 
-def printFingerprint(options: Dict[Any, Any]) -> None:
+def printFingerprint(options: dict[Any, Any]) -> None:
     filename = _getKeyOrDefault(options)
     if os.path.exists(filename + ".pub"):
         filename += ".pub"
@@ -328,8 +318,8 @@ def _inputSaveFile(prompt: str) -> str:
 
 def _saveKey(
     key: keys.Key,
-    options: Dict[Any, Any],
-    inputCollector: Optional[Callable[[str], str]] = None,
+    options: dict[Any, Any],
+    inputCollector: Callable[[str], str] | None = None,
 ) -> None:
     """
     Persist a SSH key on local filesystem.

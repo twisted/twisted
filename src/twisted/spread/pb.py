@@ -1277,7 +1277,7 @@ def challenge():
     return crap
 
 
-class PBClientFactory(protocol.ClientFactory):
+class PBClientFactory(protocol.ClientFactory[Broker]):
     """
     Client factory for PB brokers.
 
@@ -1420,7 +1420,7 @@ class PBClientFactory(protocol.ClientFactory):
         return d
 
 
-class PBServerFactory(protocol.ServerFactory):
+class PBServerFactory(protocol.ServerFactory[Broker]):
     """
     Server factory for perspective broker.
 

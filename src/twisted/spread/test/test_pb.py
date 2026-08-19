@@ -19,7 +19,6 @@ import time
 import weakref
 from collections import deque
 from io import BytesIO as StringIO
-from typing import Dict
 
 from zope.interface import Interface, implementer
 
@@ -279,7 +278,7 @@ class SimpleFactoryCopy(pb.Copyable):
     @type allIDs: C{dict}
     """
 
-    allIDs: Dict[int, "SimpleFactoryCopy"] = {}
+    allIDs: dict[int, "SimpleFactoryCopy"] = {}
 
     def __init__(self, id):
         self.id = id

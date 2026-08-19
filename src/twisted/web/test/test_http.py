@@ -5,13 +5,15 @@
 Test HTTP support.
 """
 
+from __future__ import annotations
+
 import base64
 import calendar
 import random
+from collections.abc import Sequence
 from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
-from typing import Sequence, Union
 from unittest import skipIf
 from urllib.parse import clear_cache  # type: ignore[attr-defined]
 from urllib.parse import urlparse, urlunsplit
@@ -39,7 +41,7 @@ from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.trial.unittest import TestCase
-from twisted.web import http, http_headers, iweb
+from twisted.web import http, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
     DummyChannel,
@@ -256,7 +258,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         b"\r\n"
     )
 
-    expected_response: Union[Sequence[Sequence[bytes]], bytes] = [
+    expected_response: Sequence[Sequence[bytes]] | bytes = [
         (
             b"HTTP/1.0 200 OK",
             b"Request: /",
@@ -2194,20 +2196,32 @@ class ParsingTests(unittest.TestCase):
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
             )
 
-    def test_invalidHeaderValueNUL(self):
+    def test_invalidHeaderValueControlChars(self) -> None:
         """
-        A request with a header value that contains a NUL byte
-        is rejected with a 400 status code.
+        A header value containing NUL, CR, or LF is rejected with a 400 (RFC
+        9110 section 5.5). A bare CR or LF would additionally let a following
+        header be hidden from the parser, enabling request smuggling.
         """
-        for header in [
-            b"x-foo: \x00",  # NUL byte
-            b"x-foo: a\x00",  # trailing NUL
-            b"x-foo: \x00baz",  # leading NUL
-            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
+        for value in [
+            b"\x00",  # NUL
+            b"a\x00",  # trailing NUL
+            b"\x00baz",  # leading NUL
+            b"a\rb",  # bare CR
+            b"a\rContent-Length: 5",  # bare CR hiding a header
         ]:
             self.assertRequestRejected(
-                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+                [b"GET / HTTP/1.1", b"Host: foo.example", b"x-foo: " + value, b"", b""]
             )
+        # runRequest normalises a bare LF to CRLF, so feed those bytes directly.
+        for value in [b"a\nb", b"a\nContent-Length: 5"]:
+            channel = http.HTTPChannel()
+            transport = StringTransport()
+            channel.makeConnection(transport)
+            channel.dataReceived(
+                b"GET / HTTP/1.1\r\nHost: foo.example\r\nx-foo: " + value + b"\r\n\r\n"
+            )
+            self.assertTrue(transport.disconnecting)
+            self.assertEqual(transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
     def test_headerLimitPerRequest(self):
         """
@@ -3001,24 +3015,6 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
-
-    def _compatHeadersTest(self, oldName, newName):
-        """
-        Verify that each of two different attributes which are associated with
-        the same state properly reflect changes made through the other.
-
-        This is used to test that the C{headers}/C{responseHeaders} and
-        C{received_headers}/C{requestHeaders} pairs interact properly.
-        """
-        req = http.Request(DummyChannel(), False)
-        getattr(req, newName).setRawHeaders(b"test", [b"lemur"])
-        self.assertEqual(getattr(req, oldName)[b"test"], b"lemur")
-        setattr(req, oldName, {b"foo": b"bar"})
-        self.assertEqual(
-            list(getattr(req, newName).getAllRawHeaders()), [(b"Foo", [b"bar"])]
-        )
-        setattr(req, newName, http_headers.Headers())
-        self.assertEqual(getattr(req, oldName), {})
 
     def test_getHeader(self):
         """
@@ -3935,7 +3931,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a byte stream (BytesIO, BufferedWriter) then we will
         # get back a TextIOWrapper, wrapping our BytesIO.
         logFile = factory.logFile = BytesIO()
-        getBackLogFile: TextIOWrapper = factory.logFile  # type:ignore[assignment]
+        getBackLogFile: TextIOWrapper = factory.logFile
 
         # mypy somewhat reasonably thinks that factory.logFile is a BytesIO
         # now, even though the property's signature is such that it isn't.
@@ -3945,7 +3941,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         # If we set it to a text-based I/O (i.e.: anything other than an
         # io.BufferedBase) it stays exactly the same, no modification.
         self.assertIs(getBackLogFile, factory.logFile)
-        proto = factory.buildProtocol(None)  # type:ignore
+        proto = factory.buildProtocol(None)
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
@@ -3956,7 +3952,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()  # type:ignore
+        proto._channel.requests[0].finish()
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())

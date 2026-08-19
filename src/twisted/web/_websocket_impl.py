@@ -169,7 +169,7 @@ class WebSocketProtocol(typing.Protocol):
         A text message was received from the peer.
         """
 
-    def bytesMessageReceived(self, data: bytes) -> None:
+    def bytesMessageReceived(self, data: bytes | bytearray) -> None:
         """
         A bytes message was received from the peer.
         """
@@ -317,6 +317,8 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     _bootstrap: _Bootstrap
     _wsp: _WSP
 
+    factory: ProtocolFactory[_WebSocketWireProtocol[_WSP]] = field(init=False)
+
     # Public attribute.
     transport: ITransport = field(init=False)
 
@@ -354,7 +356,8 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     def sendBytesMessage(self, data: bytes) -> None:
         t = self.transport
         assert t is not None
-        t.write(self._wsconn.send(BytesMessage(data)))
+        message = BytesMessage(data)
+        t.write(self._wsconn.send(message))
 
     def ping(self, payload: bytes = b"") -> None:
         t = self.transport

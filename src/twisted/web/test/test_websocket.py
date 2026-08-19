@@ -93,7 +93,7 @@ else:
         def connectionLost(self, reason: Failure) -> None:
             self.wasLost = reason
 
-        def bytesMessageReceived(self, data: bytes) -> None:
+        def bytesMessageReceived(self, data: bytes | bytearray) -> None:
             if data == b"request":
                 self.transport.sendBytesMessage(b"\x00resp\x01onse\xff")
             else:
@@ -116,11 +116,11 @@ else:
             self.transport.sendTextMessage("request")
             return self.deferred
 
-        def bytesRequest(self) -> Deferred[bytes]:
+        def bytesRequest(self) -> Deferred[bytes | bytearray]:
             """
             Send a bytes message to the server and expect a response.
             """
-            self.bDeferred: Deferred[bytes] = Deferred()
+            self.bDeferred: Deferred[bytes | bytearray] = Deferred()
             self.transport.sendBytesMessage(b"request")
             return self.bDeferred
 

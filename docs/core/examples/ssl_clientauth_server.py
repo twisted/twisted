@@ -7,18 +7,21 @@ import sys
 import echoserv
 
 from twisted.internet import defer, protocol, ssl, task
+from twisted.internet.endpoints import TCP6ServerEndpoint, wrapServerTLS
 from twisted.python import log
 from twisted.python.modules import getModule
 
 
 def main(reactor):
     log.startLogging(sys.stdout)
-    certData = getModule(__name__).filePath.sibling("public.pem").getContent()
+    certData = getModule(__name__).filePath.sibling("server.pem").getContent()
     authData = getModule(__name__).filePath.sibling("server.pem").getContent()
+    certificate = ssl.PrivateCertificate.loadPEM(certData)
     authority = ssl.Certificate.loadPEM(certData)
-    certificate = ssl.PrivateCertificate.loadPEM(authData)
     factory = protocol.Factory.forProtocol(echoserv.Echo)
-    reactor.listenSSL(8000, factory, certificate.options(authority))
+    tcpEndpoint = TCP6ServerEndpoint(reactor, 8000)
+    endpoint = wrapServerTLS(certificate.options(authority), tcpEndpoint, reactor)
+    endpoint.listen(factory)
     return defer.Deferred()
 
 

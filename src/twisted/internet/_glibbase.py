@@ -13,7 +13,7 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from typing import Any, Callable, Dict, Set
+from typing import Any, Callable
 
 from zope.interface import implementer
 
@@ -100,23 +100,23 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     Base class for GObject event loop reactors.
 
     Notification for I/O events (reads and writes on file descriptors) is done
-    by the gobject-based event loop. File descriptors are registered with
+    by the gobject-based event loop.  File descriptors are registered with
     gobject with the appropriate flags for read/write/disconnect notification.
 
     Time-based events, the results of C{callLater} and C{callFromThread}, are
-    handled differently. Rather than registering each event with gobject, a
+    handled differently.  Rather than registering each event with gobject, a
     single gobject timeout is registered for the earliest scheduled event, the
-    output of C{reactor.timeout()}. For example, if there are timeouts in 1, 2
-    and 3.4 seconds, a single timeout is registered for 1 second in the
-    future. When this timeout is hit, C{_simulate} is called, which calls the
+    output of C{reactor.timeout()}.  For example, if there are timeouts in 1, 2
+    and 3.4 seconds, a single timeout is registered for 1 second in the future.
+    When this timeout is hit, C{_simulate} is called, which calls the
     appropriate Twisted-level handlers, and a new timeout is added to gobject
     by the C{_reschedule} method.
 
     To handle C{callFromThread} events, we use a custom waker that calls
     C{_simulate} whenever it wakes up.
 
-    @ivar _sources: A dictionary mapping L{FileDescriptor} instances to
-        GSource handles.
+    @ivar _sources: A dictionary mapping L{FileDescriptor} instances to GSource
+        handles.
 
     @ivar _reads: A set of L{FileDescriptor} instances currently monitored for
         reading.
@@ -124,7 +124,8 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
     @ivar _writes: A set of L{FileDescriptor} instances currently monitored for
         writing.
 
-    @ivar _simtag: A GSource handle for the next L{simulate} call.
+    @ivar _simtag: A GSource handle for the next L{GlibReactorBase._simulate}
+        call.
     """
 
     # Install a waker that knows it needs to call C{_simulate} in order to run
@@ -134,9 +135,9 @@ class GlibReactorBase(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
 
     def __init__(self, glib_module: Any, gtk_module: Any, useGtk: bool = False) -> None:
         self._simtag = None
-        self._reads: Set[IReadDescriptor] = set()
-        self._writes: Set[IWriteDescriptor] = set()
-        self._sources: Dict[FileDescriptor, int] = {}
+        self._reads: set[IReadDescriptor] = set()
+        self._writes: set[IWriteDescriptor] = set()
+        self._sources: dict[FileDescriptor, int] = {}
         self._glib = glib_module
 
         self._POLL_DISCONNECTED = (

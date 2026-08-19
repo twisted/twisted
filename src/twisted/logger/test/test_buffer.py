@@ -5,7 +5,7 @@
 Test cases for L{twisted.logger._buffer}.
 """
 
-from typing import List, cast
+from typing import cast
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
@@ -41,7 +41,7 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents: List[LogEvent] = []
+        outEvents: list[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events, outEvents)
 
@@ -57,6 +57,6 @@ class LimitedHistoryLogObserverTests(unittest.TestCase):
         for event in events:
             observer(event)
 
-        outEvents: List[LogEvent] = []
+        outEvents: list[LogEvent] = []
         observer.replayTo(cast(ILogObserver, outEvents.append))
         self.assertEqual(events[-size:], outEvents)

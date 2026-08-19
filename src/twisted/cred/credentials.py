@@ -16,6 +16,7 @@ import re
 import time
 from binascii import hexlify
 from hashlib import md5
+from typing import TYPE_CHECKING
 
 from zope.interface import Attribute, Interface, implementer
 
@@ -63,6 +64,18 @@ class IUsernameHashedPassword(ICredentials):
     password-equivalent hashes) form so that they can be hashed in a manner
     appropriate for the particular credentials class.
     """
+
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IUsernameHashedPassword does not have any particular requirement
+            upon its constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
 
     username: bytes = Attribute(
         """

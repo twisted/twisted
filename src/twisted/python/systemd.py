@@ -9,11 +9,12 @@ Currently only the minimum APIs necessary for using systemd's socket activation
 feature are supported.
 """
 
+from __future__ import annotations
 
 __all__ = ["ListenFDs"]
 
+from collections.abc import Mapping, Sequence
 from os import getpid
-from typing import Dict, List, Mapping, Optional, Sequence
 
 from attrs import Factory, define
 
@@ -46,9 +47,9 @@ class ListenFDs:
     @classmethod
     def fromEnvironment(
         cls,
-        environ: Optional[Mapping[str, str]] = None,
-        start: Optional[int] = None,
-    ) -> "ListenFDs":
+        environ: Mapping[str, str] | None = None,
+        start: int | None = None,
+    ) -> ListenFDs:
         """
         @param environ: A dictionary-like object to inspect to discover
             inherited descriptors.  By default, L{None}, indicating that the
@@ -71,7 +72,7 @@ class ListenFDs:
             start = cls._START
 
         if str(getpid()) == environ.get("LISTEN_PID"):
-            descriptors: List[int] = _parseDescriptors(start, environ)
+            descriptors: list[int] = _parseDescriptors(start, environ)
             names: Sequence[str] = _parseNames(environ)
         else:
             descriptors = []
@@ -89,13 +90,13 @@ class ListenFDs:
 
         return cls(descriptors, names)
 
-    def inheritedDescriptors(self) -> List[int]:
+    def inheritedDescriptors(self) -> list[int]:
         """
         @return: The configured descriptors.
         """
         return list(self._descriptors)
 
-    def inheritedNamedDescriptors(self) -> Dict[str, int]:
+    def inheritedNamedDescriptors(self) -> dict[str, int]:
         """
         @return: A mapping from the names of configured descriptors to
             their integer values.
@@ -103,7 +104,7 @@ class ListenFDs:
         return dict(zip(self._names, self._descriptors))
 
 
-def _parseDescriptors(start: int, environ: Mapping[str, str]) -> List[int]:
+def _parseDescriptors(start: int, environ: Mapping[str, str]) -> list[int]:
     """
     Parse the I{LISTEN_FDS} environment variable supplied by systemd.
 

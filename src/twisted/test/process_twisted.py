@@ -46,4 +46,4 @@ class Echo(protocol.Protocol):
 
 
 stdio.StandardIO(Echo())
-reactor.run()  # type: ignore[attr-defined]
+reactor.run()

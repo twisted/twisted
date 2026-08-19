@@ -1,1 +1,0 @@
-twisted.names now does not throw an error when attempting to load bind zone file.

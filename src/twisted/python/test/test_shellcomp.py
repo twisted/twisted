@@ -5,10 +5,10 @@
 Test cases for twisted.python._shellcomp
 """
 
+from __future__ import annotations
 
 import sys
 from io import BytesIO
-from typing import List, Optional
 
 from twisted.python import _shellcomp, reflect, usage
 from twisted.python.usage import CompleteFiles, CompleteList, Completer, Completions
@@ -458,7 +458,7 @@ class FighterAceOptions(usage.Options):
     Command-line options for an imaginary `Fighter Ace` game
     """
 
-    optFlags: List[List[Optional[str]]] = [
+    optFlags: list[list[str | None]] = [
         ["fokker", "f", "Select the Fokker Dr.I as your dogfighter aircraft"],
         ["albatros", "a", "Select the Albatros D-III as your dogfighter aircraft"],
         ["spad", "s", "Select the SPAD S.VII as your dogfighter aircraft"],
@@ -468,7 +468,7 @@ class FighterAceOptions(usage.Options):
         ["verbose", "v", "Verbose logging (may be specified more than once)"],
     ]
 
-    optParameters: List[List[Optional[str]]] = [
+    optParameters: list[list[str | None]] = [
         ["pilot-name", None, "What's your name, Ace?", "Manfred von Richthofen"],
         ["detail", "d", "Select the level of rendering detail (1-5)", "3"],
     ]

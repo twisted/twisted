@@ -7,7 +7,7 @@ Support for starting, monitoring, and restarting child process.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import attr
 import incremental
@@ -32,27 +32,22 @@ class _Process:
     The parameters of a process to be restarted.
 
     @ivar args: command-line arguments (including name of command as first one)
-    @type args: C{list}
 
     @ivar uid: user-id to run process as, or None (which means inherit uid)
-    @type uid: C{int}
 
     @ivar gid: group-id to run process as, or None (which means inherit gid)
-    @type gid: C{int}
 
     @ivar env: environment for process
-    @type env: C{dict}
 
     @ivar cwd: initial working directory for process or None
                (which means inherit cwd)
-    @type cwd: C{str}
     """
 
-    args: List[str]
-    uid: Optional[int] = None
-    gid: Optional[int] = None
-    env: Dict[str, str] = attr.ib(default=attr.Factory(dict))
-    cwd: Optional[str] = None
+    args: list[str]
+    uid: int | None = None
+    gid: int | None = None
+    env: dict[str, str] = attr.ib(default=attr.Factory(dict))
+    cwd: str | None = None
 
     @deprecate.deprecated(incremental.Version("Twisted", 18, 7, 0))
     def toTuple(self) -> tuple[list[str], int | None, int | None, dict[str, str]]:
@@ -89,10 +84,10 @@ class LineLogger(basic.LineReceiver):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    tag = None
-    stream = None
+    tag = None  # type:ignore[assignment]
+    stream = None  # type:ignore[assignment]
     delimiter = b"\n"
-    service = None
+    service = None  # type:ignore[assignment]
 
     def lineReceived(self, line: bytes) -> None:
         try:
@@ -111,8 +106,8 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    service = None
-    name = None
+    service = None  # type:ignore[assignment]
+    name = None  # type:ignore[assignment]
 
     def connectionMade(self) -> None:
         self._output = LineLogger()
@@ -206,7 +201,7 @@ class ProcessMonitor(service.Service):
 
     def __init__(
         self,
-        reactor: IReactorProcess = _reactor,  # type:ignore
+        reactor: IReactorProcess = _reactor,
     ) -> None:
         self._reactor = reactor
         self._clock = IReactorTime(reactor)
@@ -318,7 +313,7 @@ class ProcessMonitor(service.Service):
         for name in list(self._processes):
             self.stopProcess(name)
 
-    @deprecate.deprecatedProperty(incremental.Version("Twisted", 25, 5, 0))
+    @deprecate.deprecated(incremental.Version("Twisted", 25, 5, 0))
     def connectionLost(self, name: str) -> None:
         """
         Called when a monitored processes exits.  If

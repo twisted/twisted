@@ -2,6 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
 
 import gc
 import inspect
@@ -12,7 +13,7 @@ import sys
 import time
 import trace
 import warnings
-from typing import Callable, NoReturn, Optional, Type
+from typing import Callable, NoReturn
 
 from twisted import plugin
 from twisted.application import app
@@ -57,7 +58,7 @@ def _autoJobs() -> int:
 
     @returns: A strictly positive integer.
     """
-    number: Optional[int]
+    number: int | None
     process_cpu_count: Callable[[], int | None] | None
     sched_getaffinity: Callable[[int], set[int]] | None
     if process_cpu_count := getattr(os, "process_cpu_count", None):
@@ -270,7 +271,7 @@ class _BasicOptions:
         ],
     )
 
-    tracer: Optional[trace.Trace] = None
+    tracer: trace.Trace | None = None
 
     def __init__(self):
         self["tests"] = []
@@ -627,7 +628,7 @@ def _makeRunner(config: Options) -> runner._Runner:
 
     @return: A trial runner instance.
     """
-    cls: Type[runner._Runner] = runner.TrialRunner
+    cls: type[runner._Runner] = runner.TrialRunner
     args = {
         "reporterFactory": config["reporter"],
         "tracebackFormat": config["tbformat"],

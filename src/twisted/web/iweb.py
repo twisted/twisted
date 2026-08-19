@@ -10,13 +10,15 @@ Interface definitions for L{twisted.web}.
     body is not known in advance.
 """
 
-from typing import TYPE_CHECKING, Callable, List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable
 
 from zope.interface import Attribute, Interface
 
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IPushProducer
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator, IPushProducer
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
@@ -514,7 +516,7 @@ class IRenderable(Interface):
 
     def lookupRenderMethod(
         name: str,
-    ) -> Callable[[Optional[IRequest], "Tag"], "Flattenable"]:
+    ) -> Callable[[IRequest | None, Tag], Flattenable]:
         """
         Look up and return the render method associated with the given name.
 
@@ -526,7 +528,7 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request: Optional[IRequest]) -> "Flattenable":
+    def render(request: IRequest | None) -> Flattenable:
         """
         Get the document for this L{IRenderable}.
 
@@ -543,7 +545,7 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load() -> List["Flattenable"]:
+    def load() -> list[Flattenable]:
         """
         Load a template suitable for rendering.
 
@@ -724,11 +726,23 @@ class IAgent(Interface):
         doSomeRequests(cache)
     """
 
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IAgent does not have any particular requirement upon its
+            constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
+
     def request(
         method: bytes,
         uri: bytes,
-        headers: Optional[Headers] = None,
-        bodyProducer: Optional[IBodyProducer] = None,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
     ) -> Deferred[IResponse]:
         """
         Request the resource at the given location.
@@ -769,7 +783,7 @@ class IPolicyForHTTPS(Interface):
     @since: 14.0
     """
 
-    def creatorForNetloc(hostname, port):
+    def creatorForNetloc(hostname: bytes, port: int) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
@@ -777,15 +791,11 @@ class IPolicyForHTTPS(Interface):
         pair.
 
         @param hostname: The name of the requested remote host.
-        @type hostname: L{bytes}
 
         @param port: The number of the requested remote port.
-        @type port: L{int}
 
         @return: A client connection creator expressing the security
             requirements for the given remote host.
-        @rtype: L{client connection creator
-            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
         """
 
 
