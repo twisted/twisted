@@ -45,7 +45,7 @@ class _MatchAfter(BaseMatcher[_A]):
             self._e = e
             return False
         else:
-            return self.m.matches(transformed)  # type: ignore[no-any-return]
+            return self.m.matches(transformed)
 
     def describe_mismatch(self, item: _A, mismatch_description: Description) -> None:
         """

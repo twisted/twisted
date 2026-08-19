@@ -94,7 +94,7 @@ def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
             "name": equal_to(expected.name),
             "origin": after(
                 filepath.FilePath,
-                equal_to(filepath.FilePath(expected.origin)),  # type: ignore[type-var]
+                equal_to(filepath.FilePath(expected.origin)),
             ),
         }
     )

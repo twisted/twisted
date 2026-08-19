@@ -98,7 +98,7 @@ class HasSum(BaseMatcher[Sequence[S]]):
         Determine whether the sum of the sequence is matched.
         """
         s = self._sum(item)
-        return self.sumMatcher.matches(s)  # type: ignore[no-any-return]
+        return self.sumMatcher.matches(s)
 
     def describe_mismatch(self, item: Sequence[S], description: Description) -> None:
         """
@@ -156,7 +156,7 @@ class IsSequenceOf(BaseMatcher[Sequence[T]]):
         description.append_text(", ")
 
 
-def isFailure(**properties: Matcher[object]) -> Matcher[object]:
+def isFailure(**properties: Matcher[Sequence[object]]) -> Matcher[object]:
     """
     Match an instance of L{Failure} with matching attributes.
     """
@@ -183,10 +183,10 @@ def similarFrame(
     # (functionName, fileName, someint, [], [])
     return contains_exactly(
         equal_to(functionName),
-        contains_string(fileName),
-        instance_of(int),
+        contains_string(fileName),  # type: ignore[arg-type]
+        instance_of(int),  # type: ignore[arg-type]
         # Unfortunately Failure makes them sometimes tuples, sometimes
         # dict_items.
-        has_length(0),
-        has_length(0),
+        has_length(0),  # type: ignore[arg-type]
+        has_length(0),  # type: ignore[arg-type]
     )
