@@ -339,18 +339,6 @@ module = [
   "CFNetwork",
   "CoreFoundation",
 
-  # neither is pywin32
-  "pywintypes",
-  "win32api",
-  "win32con",
-  "win32com.*",
-  "win32event",
-  "win32file",
-  "win32pipe",
-  "win32process",
-  "win32security",
-  "win32console",
-
   # pyserial is very optional
   "serial",
   "serial.*",
