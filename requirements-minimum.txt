@@ -1,0 +1,49 @@
+#
+# These are the minimum versions of dependencies that we support.
+# They include extra dependencies so that we test functionality for TLS, HTTP2,
+# or SSH.
+#
+# Hard dependencies.
+#
+zope.interface == 5.0.0
+constantly == 15.1
+incremental == 24.7.1
+Automat == 24.8.1
+hyperlink == 17.1.1
+attrs == 22.2.0
+typing_extensions == 4.9.0
+
+#
+# For [test]
+#
+cython-test-exception-raiser == 26.4.1
+PyHamcrest == 2.0
+hypothesis == 6.56
+httpx[http2] == 0.27.0
+
+#
+# For [tls].
+#
+pyopenssl == 25.2.0
+# Required by pyopenssl 25.2 but not defined as a dependency.
+six==1.16.0
+service_identity == 18.1.0
+idna == 2.4
+
+#
+# For [conch]
+#
+cryptography == 45.0.7
+appdirs == 1.4.0
+bcrypt == 3.2.1
+
+#
+# For [http2]
+#
+h2 == 3.2
+priority == 1.1.0
+
+#
+# For [websocket]
+#
+wsproto == 1.2.0
