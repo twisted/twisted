@@ -60,6 +60,18 @@ This is not an exhaustive read and beside this list you should continue reading 
 * A ``.removal`` news fragment must be added to announce the deprecation.
 
 
+Dependencies versions
+---------------------
+
+The Python package definition defines the minimum versions for hard dependencies, as well as for the extra dependencies.
+This is done via the ``pyproject.toml`` file.
+
+Most end users will not install the minimum version, but the latest versions,
+since this is the default rule for pip.
+
+To ensure compatibility with the minimum versions, the CI runs tests with the minimum versions of dependencies installed via the ``requirements-minimum.txt`` file.
+
+
 Procedure for Incompatible Changes
 ----------------------------------
 

@@ -3,6 +3,10 @@
 # They include extra dependencies so that we test functionality for TLS, HTTP2,
 # or SSH.
 #
+# NOTE: This file needs to be manually kept in sync with the versions defined in
+#       pyproject.toml.
+
+#
 # Hard dependencies.
 #
 zope.interface == 5.0.0
@@ -22,7 +26,7 @@ hypothesis == 6.56
 httpx[http2] == 0.27.0
 
 #
-# For [tls].
+# For [tls]
 #
 pyopenssl == 25.2.0
 # Required by pyopenssl 25.2 but not defined as a dependency.
