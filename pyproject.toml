@@ -72,11 +72,13 @@ dev-release = [
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[test]",
-    "pyflakes ~= 2.2",
+    # We don't use pyflakes directly. It is used via flake8.
+    # When updating pyflakes, also update .pre-commit-config.yaml
+    "pyflakes ~= 3.4",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
     "coverage ~= 7.15",
-    "towncrier ~= 23.6",
+    "towncrier ~= 25.8",
 ]
 
 tls = [
