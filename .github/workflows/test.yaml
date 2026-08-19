@@ -132,9 +132,10 @@ jobs:
             noipv6: '-noipv6'
             job-name: 'minimum-deps-noipv6'
             run-without-tox: |
-              python -m pip install -r requirements-minimum.txt -e .
-              python -m pip list --format freeze
-              python -m trial ${TRIAL_ARGS} twisted
+              set -e
+              pip install -r requirements-minimum.txt -e .
+              pip list --format freeze
+              trial ${TRIAL_ARGS} twisted
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
