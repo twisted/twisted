@@ -59,6 +59,7 @@ jobs:
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
     runs-on: "${{ matrix.runs-on || 'ubuntu-24.04' }}"
+    timeout-minutes: 10
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -329,6 +330,7 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Always run the coverage report, even when the tests fail.
     # As long as the job is not cancelled.
     if: ${{ !cancelled() }}
@@ -397,6 +399,7 @@ jobs:
 
   benchmarks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read  # required for actions/checkout
       id-token: write # required for OIDC authentication with CodSpeed
@@ -459,6 +462,7 @@ jobs:
 
   static-checks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -494,6 +498,7 @@ jobs:
   apidocs:
     name: API docs build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
@@ -516,6 +521,7 @@ jobs:
   narrativedocs:
     name: Narrative docs build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
