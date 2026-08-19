@@ -333,6 +333,12 @@ follow_imports = "silent"
 follow_imports_for_stubs = true
 module = [
 
+  "hyperlink",
+  "hyperlink._url",
+  "hyperframe",
+  "service_identity.*",
+
+  "bcrypt",
   # pyobjc is not installed on linux
   "CFNetwork",
   "CoreFoundation",
@@ -378,8 +384,8 @@ module = [
   # subunit is untyped
   "subunit",
 
-  # oh this is fun, not even totally sure what library this is, since it's not
-  # documented as an extra.
+  "hamcrest.*",
+
   "utmp",
 
   # I think only used by `twisted.web.script.ResourceTemplate`
