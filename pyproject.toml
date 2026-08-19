@@ -95,6 +95,7 @@ conch = [
 
 serial = [
     "pyserial >= 3.0",
+    # When updating this consider updating the types-pywin32 version.
     "pywin32 != 226; platform_system == 'Windows'",
 ]
 
@@ -139,6 +140,7 @@ mypy = [
     "mypy-zope==1.0.16",
     "types-setuptools",
     "types-pyOpenSSL",
+    "types-pywin32~=312.0",
 ]
 
 [project.scripts]
