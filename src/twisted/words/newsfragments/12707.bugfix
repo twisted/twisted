@@ -1,0 +1,1 @@
+The domish XML element streams in twisted.words.xish (used to parse XMPP) now limit the byte size and element count of a single stanza, so a peer can no longer exhaust server memory by sending an unbounded stanza.

@@ -117,7 +117,6 @@ class TestResult(pyunit.TestResult):
         self.expectedFailures = []
         self.unexpectedSuccesses = []
         self.successes = 0
-        self._timings = []
         self._testStarted = None
         self._lastTime = None
 

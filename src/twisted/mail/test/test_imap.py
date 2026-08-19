@@ -6,6 +6,7 @@
 """
 Test case for twisted.mail.imap4
 """
+
 from __future__ import annotations
 
 import base64
@@ -17,6 +18,7 @@ import uuid
 from collections import OrderedDict
 from io import BytesIO
 from itertools import chain
+from typing import Any
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -1323,6 +1325,14 @@ class IMAP4HelperTests(TestCase):
         for case, expected in cases:
             self.assertEqual(imap4.parseNestedParens(case), expected)
 
+    def test_literalNegativeSize(self) -> None:
+        """
+        A literal with a negative octet count is rejected with L{ValueError}
+        instead of driving the parser into a non-terminating loop.
+        """
+        self.assertRaises(ValueError, imap4.parseNestedParens, b"{-1}", 1)
+        self.assertRaises(ValueError, imap4.parseNestedParens, b"foo {-100}bar", 1)
+
     def test_queryBuilder(self):
         inputs = [
             imap4.Query(flagged=1),
@@ -2546,7 +2556,7 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         )
         return d
 
-    def _listSetup(self, f):
+    def _listSetup(self, f: object) -> Deferred[Any]:
         SimpleServer.theAccount.addMailbox("root/subthing")
         SimpleServer.theAccount.addMailbox("root/another-thing")
         SimpleServer.theAccount.addMailbox("non-root/subthing")
@@ -2611,6 +2621,39 @@ class IMAP4ServerTests(IMAP4HelperMixin, TestCase):
         d = self._listSetup(lsub)
         d.addCallback(self.assertListDelimiterAndMailboxAreStrings)
         d.addCallback(self.assertEqual, [(SimpleMailbox.flags, "/", "ROOT/SUBTHING")])
+        return d
+
+    def test_LSubNoRegex(self) -> Deferred[None]:
+        """
+        LSUB commands should use IMAP wildcards, and not be treated as Python
+        regexes.
+        """
+        # Subscribe to existing mailbox.
+        SimpleServer.theAccount.subscribe("ROOT/SUBTHING")
+
+        for newMailbox in [
+            # Verify that dot is treated literally.
+            "ROOT/.SUBMATCH",
+            # And can match nested things, since we're testing *.
+            "ROOT/.DEEP/MATCH",
+            # But only at the start of the match.
+            "ROOT/DEEP/.MATCH",
+        ]:
+            SimpleServer.theAccount.addMailbox(newMailbox)
+            SimpleServer.theAccount.subscribe(newMailbox)
+
+        def lsub():
+            return self.client.lsub("root", "root/.*")
+
+        d = self._listSetup(lsub)
+        d.addCallback(self.assertListDelimiterAndMailboxAreStrings)
+        d.addCallback(
+            self.assertEqual,
+            [
+                (SimpleMailbox.flags, "/", "ROOT/.SUBMATCH"),
+                (SimpleMailbox.flags, "/", "ROOT/.DEEP/MATCH"),
+            ],
+        )
         return d
 
     def testStatus(self):
@@ -7117,7 +7160,7 @@ class CopyWorkerTests(TestCase):
         return d.addCallback(cbCopy)
 
 
-@skipIf(not ClientTLSContext, "OpenSSL not present")  # type:ignore[truthy-function]
+@skipIf(not ClientTLSContext, "OpenSSL not present")  # type: ignore[truthy-function]
 @skipIf(not interfaces.IReactorSSL(reactor, None), "Reactor doesn't support SSL")
 class TLSTests(IMAP4HelperMixin, TestCase):
     serverCTX = None

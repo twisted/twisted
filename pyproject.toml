@@ -59,10 +59,13 @@ test = [
 
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
+# The normal automated tests should not depend on this.
+# This will allow to build the documentation using a newer Sphinx version
+# Newer Sphinx version don't support older Python versions.
 dev-release = [
     "pydoctor ~= 25.4.0",
-    "sphinx-rtd-theme ~= 1.3",
-    "sphinx >= 6, <7",
+    "sphinx-rtd-theme ~= 3.1",
+    "sphinx >= 9, <10",
     "twisted[dev]",
 ]
 
@@ -72,7 +75,7 @@ dev = [
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
     "twistedchecker ~= 0.7",
-    "coverage ~= 7.5",
+    "coverage ~= 7.15",
     "towncrier ~= 23.6",
 ]
 
@@ -92,6 +95,7 @@ conch = [
 
 serial = [
     "pyserial >= 3.0",
+    # When updating this consider updating the types-pywin32 version.
     "pywin32 != 226; platform_system == 'Windows'",
 ]
 
@@ -132,10 +136,11 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy==2.1.0",
-    "mypy-zope==1.0.15",
+    "mypy==2.3.0",
+    "mypy-zope==1.0.16",
     "types-setuptools",
     "types-pyOpenSSL",
+    "types-pywin32~=312.0",
 ]
 
 [project.scripts]
@@ -333,18 +338,6 @@ module = [
   # pyobjc is not installed on linux
   "CFNetwork",
   "CoreFoundation",
-
-  # neither is pywin32
-  "pywintypes",
-  "win32api",
-  "win32con",
-  "win32com.*",
-  "win32event",
-  "win32file",
-  "win32pipe",
-  "win32process",
-  "win32security",
-  "win32console",
 
   # pyserial is very optional
   "serial",
