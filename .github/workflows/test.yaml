@@ -120,16 +120,24 @@ jobs:
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
 
-          # `noipv6` is created to make sure all is OK on an OS which doesn't
-          # have IPv6 available.
-          # Any supported Python version is OK for this job.
-          # We go with latest micro release for the smallest minor release
-          # that is supported by GitHub Actions for the target OS.
-          # This is also used to run tests with minimum dependency versions.
+          # The `minimum-deps-noipv6` job tests the minimum dependency
+          # footprint for Twisted; all the oldest versions, nothing but the
+          # bare minimum.  *Some* job needs to have '-noipv6' to verify that we
+          # have tested that Twisted works on a system with no IPv6 stack; the
+          # selection of this job to have this flag is not particularly
+          # meaningful; the reasoning is just "older systems are probably the
+          # ones more likely to not have IPv6 configured".
           - python-version: '3.10'
             noipv6: '-noipv6'
-            tox-env: 'mindeps-withcov-posix'
+            tox-env: 'mindeps-nodeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
+
+          # The `oldest-deps` job tests the *oldest* dependency versions for a
+          # full-featured version of Twisted; all the oldest versions, but
+          # every extra installed.
+          - python-version: '3.10'
+            tox-env: 'mindeps-alldeps-withcov-posix'
+            job-name: 'oldest-deps'
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
