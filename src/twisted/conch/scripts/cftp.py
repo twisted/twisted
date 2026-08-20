@@ -716,7 +716,7 @@ version                         Print the SFTP version.
 
     def cmd_PROGRESS(self, ignored):
         self.useProgressBar = not self.useProgressBar
-        return "%ssing progess bar." % (self.useProgressBar and "U" or "Not u")
+        return "%ssing progress bar." % (self.useProgressBar and "U" or "Not u")
 
     def cmd_EXEC(self, rest):
         """
