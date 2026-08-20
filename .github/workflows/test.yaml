@@ -108,10 +108,11 @@ jobs:
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
 
-          # Distributed test run is disabled here so that we also have
-          # end to end functional test usage for non-distributed trial runs.
-          # When updating the minimum Python version here, also update the
-          # `python_requires` from `setup.cfg`.
+          # Distributed test run is disabled here so that we also have end to
+          # end functional test usage for non-distributed trial runs.  When
+          # updating the lowest supported Python major version here, also
+          # update the `python_requires` from `setup.cfg`.
+
           # Here we should have the lowest Python major version supported
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use.
@@ -120,13 +121,16 @@ jobs:
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
 
-          # The `lowdeps-nodeps-noipv6` job tests the minimum dependency
+          # The `lowdeps-nodeps-noipv6` job tests the lowest-version dependency
           # footprint for Twisted; all the lowest versions, nothing but the
-          # bare minimum.  *Some* job needs to have '-noipv6' to verify that we
+          # core dependencies, no extras.
+
+          # Separately, *some* job needs to have '-noipv6' to verify that we
           # have tested that Twisted works on a system with no IPv6 stack; the
           # selection of this job to have this flag is not particularly
           # meaningful; the reasoning is just "older systems are probably the
           # ones more likely to not have IPv6 configured".
+
           - python-version: '3.10'
             noipv6: '-noipv6'
             tox-env: 'lowdeps-nodeps-withcov-posix'
