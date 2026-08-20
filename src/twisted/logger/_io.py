@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Iterable
+from io import UnsupportedOperation
 from typing import AnyStr
 
 from constantly import NamedConstant
@@ -133,7 +134,7 @@ class LoggingFile:
 
         @return: C{-1}
         """
-        return -1
+        raise UnsupportedOperation("LoggingFile has no file descriptor.")
 
     def isatty(self) -> bool:
         """
