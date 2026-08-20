@@ -62,6 +62,7 @@ Authors: Things your branch or patch must contain
  * Code which follows the :doc:`coding standards </development/coding-standard>`.
  * 100% unit test coverage for all modified and new code (even if it didn't have tests before)
  * 100% API docstring coverage for all modified and new code (even if it didn't have docs before)
+ * Type annotation for all new code. It's nice to also update type annotations for existing code, but it's not required.
  * No :doc:`backwards-incompatible </development/compatibility-policy>` changes.
    Also be sparing when adding 'public' names to the API, as they must be supported in the future.
    If it can start with an underscore and not be exposed publicly, it probably should.
@@ -77,6 +78,9 @@ Authors: How to get your change reviewed
 * **Note**: For security issues, see :doc:`Security </security>`.
 * Create a GitHub Pull request
 * Write a comment or PR description with any relevant information for the reviewer.
+* Make sure the existing automated tests and checks pass.
+* If there are regressions for the benchmark tests, evaluate why they occurred. If there are regressions, add a comment to justify why the regression should be accepted. The current benchmark tests are not perfect, and sometimes you might get false positives.
+  This is ok and they should be ignored.
 * Once the PR is ready for review,
   leave a separate comment on that PR containing the text `please review`.
   This will trigger the review process and will notify the review team.
@@ -90,10 +94,11 @@ Reviewers: How to review a change
    It makes no sense to review your code, and we assume that before pushing the code to a public PR,
    you already did the first round of self-review.
  * Make sure that all checks are **green**!
- * Note any unreliable / flaky tests should have a separate issue created.
+ * Any unreliable / flaky tests should have a separate issue created, and should not block the merge of the PR.
+ * If there are regressions for the benchmark tests, evaluate why they occurred. You might require changes, accept the regressions if it's a justified trade-off, or ignore if they are flaky.
  * Review the change, and write a detailed comment about all potential improvements to the branch (See [#Howtobeagoodreviewer below]).
- * Use GitHub review UI to approve or request changes to the PR.
- * If the author does not have commit access, merge the change for them or add the "needs-merge" label.
+ * Use GitHub review UI to approve or request changes to the PR. This should automatically add the `needs-merge` or `needs-changes` label and remove the `needs-review` label.
+ * If the author does not have commit access, merge the change for them.
 
 
 Authors: How to merge the change to trunk
