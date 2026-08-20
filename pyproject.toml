@@ -80,8 +80,6 @@ dev = [
 
 tls = [
     "pyopenssl >= 25.3.0",
-    # service_identity 18.1.0 added support for validating IP addresses in
-    # certificate subjectAltNames
     "service_identity >= 21.1.0",
     "idna >= 2.5",
 ]
