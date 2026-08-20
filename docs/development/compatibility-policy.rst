@@ -324,21 +324,21 @@ We do not express version maximums, i.e. ``<`` constraints, because we can't kno
 Downstream applications which use Twisted are expected to pin their own dependencies and do their own testing, even if ``pip install twisted`` may sometimes break with the latest versions of some dependencies.
 
 To ensure that we work with those declared older versions of our dependencies, we test them in CI.
-Our CI uses ``requirements-minimum.txt`` that contains ``==`` version constraints for the oldest versions of everything we depend on.
+Our CI uses ``oldest-constraints.txt`` that contains ``==`` version constraints for the oldest versions of everything we depend on.
 
-For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``requirements-minimum.txt``.
+For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``oldest-constraints.txt``.
 
 .. important::
 
-    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``requirements-minimum.txt`` for that dependency to the same version.
+    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``oldest-constraints.txt`` for that dependency to the same version.
     These are currently kept in sync manually.
 
 As long as you are updating to a version of the package released more than 1 year ago from the current date, we consider that a “compatible” change.
-To require a minimum version more recent than 1 year ago, you can follow the `Procedure for Incompatible Changes`_.
+To require a version more recent than 1 year ago, you can follow the `Procedure for Incompatible Changes`_.
 (This only applies to updating the versions of old dependencies. Adding recent a version when you add a new dependency is fine.)
 
-To test these locally yourself, the way CI does, you can use the ``mindeps`` tox factor.
-For example, ``tox -e mindeps-alldeps-py314-withcov-posix`` will test the oldest supported version of every one of Twisted's dependencies, on Python 3.14, with all dependencies for all of Twisted's extras (such as ``[conch]``, ``[http2]``, and so on), with test coverage enabled, for POSIX systems.
+To test these locally yourself, the way CI does, you can use the ``lowdeps`` tox factor.
+For example, ``tox -e lowdeps-alldeps-py314-withcov-posix`` will test the lowest supported version of every one of Twisted's dependencies, on Python 3.14, with all dependencies for all of Twisted's extras (such as ``[conch]``, ``[http2]``, and so on), with test coverage enabled, for POSIX systems.
 
 Finally, while we should try to provide users a generous window of versions to upgrade within, do not expend undue amounts of effort to support extremely old versions of dependencies.
 Users can upgrade to intermediate versions of Twisted as they upgrade their other dependencies, rather than upgrading all at once; we do not need to support 10-year-old dependency packages.
