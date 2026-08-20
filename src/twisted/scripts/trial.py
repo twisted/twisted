@@ -671,7 +671,7 @@ def run() -> NoReturn:
     config = Options()
     try:
         config.parseOptions()
-    except usage.error as usageError:
+    except usage.error as usageError:  # pragma: no cover
         raise SystemExit(f"{sys.argv[0]}: {usageError}")
     _initialDebugSetup(config)
 

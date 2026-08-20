@@ -1094,6 +1094,18 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d.addCallback(self.assertEqual, helpText)
         return d
 
+    def testProgress(self):
+        """
+        Toggles the process configuration.
+        """
+        sut = cftp.StdioClient(None)
+        sut.useProgressBar = True
+
+        result = sut.cmd_PROGRESS("ignored")
+
+        self.assertEqual("Not using progress bar.", result)
+        self.assertFalse(sut.useProgressBar)
+
     def assertFilesEqual(self, name1, name2, msg=None):
         """
         Assert that the files at C{name1} and C{name2} contain exactly the
