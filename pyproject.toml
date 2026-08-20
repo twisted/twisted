@@ -74,7 +74,6 @@ dev = [
     "twisted[test]",
     "pyflakes ~= 2.2",
     "python-subunit ~= 1.4",
-    "twistedchecker ~= 0.7",
     "coverage ~= 7.15",
     "towncrier ~= 23.6",
 ]
