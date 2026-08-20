@@ -324,13 +324,13 @@ We do not express version maximums, i.e. ``<`` constraints, because we can't kno
 Downstream applications which use Twisted are expected to pin their own dependencies and do their own testing, even if ``pip install twisted`` may sometimes break with the latest versions of some dependencies.
 
 To ensure that we work with those declared older versions of our dependencies, we test them in CI.
-Our CI uses ``oldest-constraints.txt`` that contains ``==`` version constraints for the oldest versions of everything we depend on.
+Our CI uses ``lowest-constraints.txt`` that contains ``==`` version constraints for the lowest versions of everything we depend on.
 
-For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``oldest-constraints.txt``.
+For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``lowest-constraints.txt``.
 
 .. important::
 
-    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``oldest-constraints.txt`` for that dependency to the same version.
+    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``lowest-constraints.txt`` for that dependency to the same version.
     These are currently kept in sync manually.
 
 As long as you are updating to a version of the package released more than 1 year ago from the current date, we consider that a “compatible” change.

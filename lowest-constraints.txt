@@ -1,5 +1,5 @@
 #
-# These are the minimum versions of dependencies that we support.
+# These are the lowest versions of our dependencies that we support.
 # They include extra dependencies so that we test functionality for TLS, HTTP2,
 # or SSH.
 #
