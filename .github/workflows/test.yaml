@@ -262,7 +262,7 @@ jobs:
     # Make sure the matrix is defined in such a way that this is triggered
     # only on Linux.
     - name: Install GTK system deps
-      if: ${{ !cancelled() && matrix.platform-deps == 'gtk-platform' }}
+      if: matrix.platform-deps == 'gtk-platform'
       run: |
         # *-dev dependencies are for pygobject
         # https://gitlab.gnome.org/GNOME/pygobject/-/blob/3.56.3/meson.build#L35-44
@@ -275,15 +275,9 @@ jobs:
           gir1.2-gtk-3.0 \
           xvfb
 
-    - name: Test with tox
-      if: ${{ !cancelled() && matrix.run-without-tox == '' }}
+    - name: Test
       run: |
         ${{ matrix.tox-wrapper }} tox ${{ matrix.trial-target }}
-
-    - name: Test without tox
-      if: ${{ !cancelled() && matrix.run-without-tox != '' }}
-      run: |
-        ${{ matrix.run-without-tox }}
 
     # If one of the above steps fails, fire up tmate for remote debugging.
     # This is fired for manual trigger or via the environment variable.
