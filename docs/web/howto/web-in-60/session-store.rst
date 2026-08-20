@@ -110,7 +110,7 @@ single ``Session`` instance.
 
 With those conceptual dependencies out of the way, it's a very short step to
 actually getting persistent state into a Twisted Web application. Here's an
-example which implements a simple counter, re-using the definitions from the
+example which implements a simple counter, reusing the definitions from the
 example above:
 
 

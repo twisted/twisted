@@ -107,7 +107,7 @@ class Portal:
         self, credentials: ICredentials, mind: object, *interfaces: type[Interface]
     ) -> Deferred[_requestResult]:
         """
-        @param credentials: an implementor of
+        @param credentials: an implementer of
             L{twisted.cred.credentials.ICredentials}
 
         @param mind: an object which implements a client-side interface for
@@ -120,7 +120,7 @@ class Portal:
             may be a list like (IMailAccount, IUserChooser, IServiceInfo).  To
             expand: if we are speaking to the system over IMAP, any information
             that will be relayed to the user MUST be returned as an
-            IMailAccount implementor; IMAP clients would not be able to
+            IMailAccount implementer; IMAP clients would not be able to
             understand anything else. Any information about unusual status
             would have to be relayed as a single mail message in an
             otherwise-empty mailbox. However, in a web-based mail system, or a

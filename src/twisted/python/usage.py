@@ -854,7 +854,7 @@ class Completions:
 
         Also note the C{repeat=True} flag which may be passed to any of the
         C{Completer} classes. This is set to allow the C{Completer} instance
-        to be re-used for subsequent command-line words. See the C{Completer}
+        to be reused for subsequent command-line words. See the C{Completer}
         docstring for details.
     """
 

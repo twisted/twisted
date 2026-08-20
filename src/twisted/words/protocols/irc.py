@@ -1907,7 +1907,7 @@ class IRCClient(basic.LineReceiver):
         @param channel: The name of the channel to have an action on. If it
             has no prefix, it is sent to the user of that name.
         @type action: C{str}
-        @param action: The action to preform.
+        @param action: The action to perform.
         @since: 9.0
         """
         self.ctcpMakeQuery(channel, [("ACTION", action)])
@@ -1997,7 +1997,7 @@ class IRCClient(basic.LineReceiver):
         disallowed characters.  The bot will stall, waiting for RPL_WELCOME, if
         we don't handle this during sign-on.
 
-        @note: The method uses the spelling I{erroneus}, as it appears in
+        @note: The method uses the spelling I{erroneous}, as it appears in
             the RFC, section 6.1.
         """
         if not self._registered:
@@ -2939,7 +2939,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
     DCC CHAT is really just your run o' the mill basic.LineReceiver
     protocol.  This class only varies from that slightly, accepting
-    either LF or CR LF for a line delimeter for incoming messages
+    either LF or CR LF for a line delimiter for incoming messages
     while always using CR LF for outgoing.
 
     The lineReceived method implemented here uses the DCC connection's

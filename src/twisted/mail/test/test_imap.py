@@ -617,7 +617,7 @@ class MessageSetTests(SynchronousTestCase):
 
     def test_extend(self):
         """
-        L{MessageSet.extend} accepts as its arugment an L{int} or
+        L{MessageSet.extend} accepts as its argument an L{int} or
         L{None}, or a sequence L{int}s or L{None}s of length two, or
         another L{MessageSet}, combining its argument with its
         instance's existing ranges.
@@ -1183,7 +1183,7 @@ class IMAP4HelperTests(TestCase):
     def test_fetchParserQuotedHeader(self):
         """
         Parsing a C{BODY} whose C{HEADER} values require quoting
-        results in a object that perserves that quoting when
+        results in a object that preserves that quoting when
         serialized.
         """
         p = imap4._FetchParser()
@@ -3100,7 +3100,7 @@ class IMAP4ServerParsingTests(SynchronousTestCase):
 
     def test_commandRaisesUnhandledException(self):
         """
-        Wehn a command raises an unhandled exception, the server sends
+        When a command raises an unhandled exception, the server sends
         a C{BAD} response and logs the exception.
         """
 
@@ -4312,7 +4312,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
                 "1:*", headerType="HEADER.FIELDS", headerArgs=["SUBJECT"]
             )
             c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
-            c.dataReceived(b"Subject: Suprise for your woman...\r\n")
+            c.dataReceived(b"Subject: Surprise for your woman...\r\n")
             c.dataReceived(b"\r\n")
             c.dataReceived(b")\r\n")
             c.dataReceived(b"* 1 FETCH (FLAGS (\\Seen))\r\n")
@@ -4338,7 +4338,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
                         [
                             "BODY",
                             ["HEADER.FIELDS", ["SUBJECT"]],
-                            "Subject: Suprise for your woman...\r\n\r\n",
+                            "Subject: Surprise for your woman...\r\n\r\n",
                         ]
                     ],
                     2: [
@@ -7788,7 +7788,7 @@ class IMAP4ServerFetchTests(TestCase):
         # We need to clear out the welcome message.
         self.transport.clear()
         # Let's send out the faulty command.
-        self.server.dataReceived(b"0001 FETCH 1 FULLL\r\n")
+        self.server.dataReceived(b"0001 FETCH 1 FULL\r\n")
         expected = b"0001 BAD Illegal syntax: Invalid Argument\r\n"
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()

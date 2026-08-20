@@ -266,7 +266,7 @@ class SSHConnection(service.SSHService):
 
     def ssh_CHANNEL_EXTENDED_DATA(self, packet):
         """
-        The other side is sending us exteneded data.  Payload::
+        The other side is sending us extended data.  Payload::
             uint32  local channel number
             uint32  type code
             string  data
@@ -308,7 +308,7 @@ class SSHConnection(service.SSHService):
         more data.  Payload::
             uint32  local channel number
 
-        Notify the channnel by calling its closeReceived() method.  If
+        Notify the channel by calling its closeReceived() method.  If
         the channel has also sent a close message, call self.channelClosed().
         """
         localChannel = struct.unpack(">L", packet[:4])[0]

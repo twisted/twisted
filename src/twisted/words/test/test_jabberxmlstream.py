@@ -818,14 +818,14 @@ class BaseFeatureInitiatingInitializerTests(unittest.TestCase):
 
     def testAdvertized(self):
         """
-        Test that an advertized feature results in successful initialization.
+        Test that an advertised feature results in successful initialization.
         """
         self.xmlstream.features = {self.init.feature: domish.Element(self.init.feature)}
         return self.init.initialize()
 
     def testNotAdvertizedRequired(self):
         """
-        Test that when the feature is not advertized, but required by the
+        Test that when the feature is not advertised, but required by the
         initializer, an exception is raised.
         """
         self.init.required = True
@@ -833,7 +833,7 @@ class BaseFeatureInitiatingInitializerTests(unittest.TestCase):
 
     def testNotAdvertizedNotRequired(self):
         """
-        Test that when the feature is not advertized, and not required by the
+        Test that when the feature is not advertised, and not required by the
         initializer, the initializer silently succeeds.
         """
         self.init.required = False

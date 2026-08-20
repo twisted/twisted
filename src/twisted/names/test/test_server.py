@@ -188,7 +188,7 @@ def assertLogMessage(testCase, expectedMessages, callable, *args, **kwargs):
     """
     Assert that the callable logs the expected messages when called.
 
-    XXX: Put this somewhere where it can be re-used elsewhere. See #6677.
+    XXX: Put this somewhere where it can be reused elsewhere. See #6677.
 
     @param testCase: The test case controlling the test which triggers the
         logged messages and on which assertions will be called.

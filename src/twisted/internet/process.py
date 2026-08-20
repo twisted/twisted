@@ -560,7 +560,7 @@ class _FDDetector:
 
         This involves a lot of very platform-specific checks, some of which may
         be relatively expensive.  Therefore the returned method should be saved
-        and re-used, rather than always calling this method to determine what it
+        and reused, rather than always calling this method to determine what it
         is.
 
         See the implementation for the details of how a method is selected.

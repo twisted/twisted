@@ -2494,7 +2494,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
     def test_disconnectSERVICE_ACCEPT(self):
         """
         Test that SERVICE_ACCEPT disconnects if the accepted protocol is
-        differet from the asked-for protocol.
+        different from the asked-for protocol.
         """
         self.proto.instance = MockService()
         self.proto.ssh_SERVICE_ACCEPT(b"\x00\x00\x00\x03bad")
@@ -2819,7 +2819,7 @@ class GetMACTests(TestCase):
 
     def assertGetMAC(self, hmacName, hashProcessor, digestSize, blockPadSize):
         """
-        Check that when L{SSHCiphers._getMAC} is called with a supportd HMAC
+        Check that when L{SSHCiphers._getMAC} is called with a supported HMAC
         algorithm name it returns a tuple of
         (digest object, inner pad, outer pad, digest size) with a C{key}
         attribute set to the value of the key supplied.

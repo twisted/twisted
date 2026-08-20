@@ -504,7 +504,7 @@ class UNIXPasswordDatabaseTests(TestCase):
     def assertUnauthorizedLogin(self, d):
         """
         Asserts that the L{Deferred} passed in is erred back with an
-        L{UnauthorizedLogin} L{Failure}.  This reprsents an invalid login for
+        L{UnauthorizedLogin} L{Failure}.  This represents an invalid login for
         this TestCase.
 
         NOTE: To work, this method's return value must be returned from the

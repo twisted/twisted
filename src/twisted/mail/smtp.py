@@ -250,7 +250,7 @@ atom = rb"[-A-Za-z0-9!\#$%&'*+/=?^_`{|}~]"
 class Address:
     """Parse and hold an RFC 2821 address.
 
-    Source routes are stipped and ignored, UUCP-style bang-paths
+    Source routes are stripped and ignored, UUCP-style bang-paths
     and %-style routing are not parsed.
 
     @type domain: C{bytes}
@@ -263,7 +263,7 @@ class Address:
     tstring = re.compile(
         rb"""( # A string of
                            (?:"[^"]*" # quoted string
-                           |\\. # backslash-escaped characted
+                           |\\. # backslash-escaped character
                            |"""
         + atom
         + rb""" # atom character
@@ -1393,7 +1393,7 @@ class ESMTPClient(SMTPClient):
         registered first.
 
         @param auth: The Authentication mechanism to register
-        @type auth: L{IClientAuthentication} implementor
+        @type auth: L{IClientAuthentication} implementer
 
         @return: L{None}
         """

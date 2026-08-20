@@ -656,7 +656,7 @@ class UnicodeHeadersTests(TestCase):
         # Add a header to the copy
         i.addRawHeader("Test", b"baz")
 
-        # Verify that the orignal does not have it
+        # Verify that the original does not have it
         self.assertEqual(h.getRawHeaders("test"), ["foo\u2603", "bar"])
         self.assertEqual(h.getRawHeaders(b"test"), [b"foo\xe2\x98\x83", b"bar"])
 

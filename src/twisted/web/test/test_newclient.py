@@ -77,7 +77,7 @@ class AnotherArbitraryException(Exception):
     """
 
 
-# A re-usable Headers instance for tests which don't really care what headers
+# A reusable Headers instance for tests which don't really care what headers
 # they're sending.
 _boringHeaders = Headers({b"host": [b"example.com"]})
 
@@ -1508,14 +1508,12 @@ class HTTP11ClientProtocolTests(TestCase):
         requestDeferred = self.protocol.request(
             Request(b"GET", b"/", _boringHeaders, None)
         )
-        self.protocol.dataReceived(b"unparseable garbage goes here\r\n")
+        self.protocol.dataReceived(b"unparsable garbage goes here\r\n")
         d = assertResponseFailed(self, requestDeferred, [ParseError])
 
         def cbFailed(exc):
             self.assertTrue(self.transport.disconnecting)
-            self.assertEqual(
-                exc.reasons[0].value.data, b"unparseable garbage goes here"
-            )
+            self.assertEqual(exc.reasons[0].value.data, b"unparsable garbage goes here")
 
             # Now do what StringTransport doesn't do but a real transport would
             # have, call connectionLost on the HTTP11ClientProtocol.  Nothing
@@ -1661,7 +1659,7 @@ class HTTP11ClientProtocolTests(TestCase):
 
         The C{quiescentCallback} is called *before* the response-receiving
         protocol's C{connectionLost}, so that new requests triggered by end of
-        first request can re-use a persistent connection.
+        first request can reuse a persistent connection.
         """
         quiescentResult = []
 

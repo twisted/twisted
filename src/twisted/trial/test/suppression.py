@@ -34,7 +34,7 @@ class ModuleWarning(Warning):
 
 class EmitMixin:
     """
-    Mixin for emiting a variety of warnings.
+    Mixin for emitting a variety of warnings.
     """
 
     def _emit(self):

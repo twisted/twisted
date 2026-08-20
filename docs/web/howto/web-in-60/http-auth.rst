@@ -247,7 +247,7 @@ the rpy script:
 
 ``cache`` is part of the globals of any rpy script, so you don't
 need to import it (it's okay to be cringing at this
-point). Calling ``cache`` makes Twisted re-use the result of the first
+point). Calling ``cache`` makes Twisted reuse the result of the first
 evaluation of the rpy script for subsequent requests too - just what we want in
 this case.
 

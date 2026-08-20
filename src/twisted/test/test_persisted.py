@@ -24,7 +24,7 @@ class _MyVersioned(styles.Versioned):
 
     def __init__(self) -> None:
         self.somedata = "xxx"
-        self.garbagedata = lambda q: "cant persist"
+        self.garbagedata = lambda q: "can't persist"
 
     def upgradeToVersion3(self) -> None:
         self.v3 += 1
@@ -374,7 +374,7 @@ class AOTTests(TestCase):
     def test_methodNotSelfIdentity(self) -> None:
         """
         If a class change after an instance has been created,
-        L{aot.unjellyFromSource} shoud raise a C{TypeError} when trying to
+        L{aot.unjellyFromSource} should raise a C{TypeError} when trying to
         unjelly the instance.
         """
         a = A()

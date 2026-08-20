@@ -173,7 +173,7 @@ class LogBeginnerTests(unittest.TestCase):
     def test_overrideBufferLimit(self) -> None:
         """
         The size of the L{LogBeginner} event buffer can be overridden with the
-        C{initialBufferSize} initilizer argument.
+        C{initialBufferSize} initializer argument.
         """
         limit = 3
         beginner = LogBeginner(

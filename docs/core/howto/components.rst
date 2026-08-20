@@ -129,7 +129,7 @@ Given these classes, the following operations can be performed:
 
 
 We are going to attempt to solve this problem by writing an Adapter for the ``UKSocket`` which converts the voltage for use with an American hair dryer.
-An Adapter is a class which is constructed with one and only one argument, the "adaptee" or "original" object.
+An Adapter is a class which is constructed with one and only one argument, the "adapted" or "original" object.
 In this example, we will show all code involved for clarity:
 
 .. code-block:: python

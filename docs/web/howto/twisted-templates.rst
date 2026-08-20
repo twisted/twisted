@@ -286,7 +286,7 @@ new ``Element`` subclass.
 
 
 ``TagLoader`` lets the portion of the overall template related to
-widgets be re-used for ``WidgetElement`` , which is otherwise a
+widgets be reused for ``WidgetElement`` , which is otherwise a
 normal ``Element`` subclass not much different
 from ``WidgetsElement`` .  Notice that the *name* renderer on
 the ``span`` tag in this template is satisfied

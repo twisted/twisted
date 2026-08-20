@@ -111,7 +111,7 @@ class TelnetTransportTests(unittest.TestCase):
             b"lots of bytes to play with",
             b"la la la",
             b"ta de da",
-            b"dum",
+            b"dumb",
         ]
         for b in L:
             self.p.dataReceived(b)
@@ -348,7 +348,7 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b"\x29")
         s.us.state = "yes"
 
-        data = b"fiddle dum " + cmd
+        data = b"fiddle dumb " + cmd
         self.p.dataReceived(data)
 
         self.assertEqual(self.p.protocol.data, data.replace(cmd, b""))
@@ -361,7 +361,7 @@ class TelnetTransportTests(unittest.TestCase):
         # server should send nothing in response to this.
         cmd = telnet.IAC + telnet.WONT + b"\x47"
 
-        data = b"dum de dum" + cmd + b"tra la la"
+        data = b"dumb de dumb" + cmd + b"tra la la"
         self.p.dataReceived(data)
 
         self.assertEqual(self.p.protocol.data, data.replace(cmd, b""))
@@ -374,7 +374,7 @@ class TelnetTransportTests(unittest.TestCase):
         # lead to a negotiation loop.
         cmd = telnet.IAC + telnet.DONT + b"\x47"
 
-        data = b"dum de dum" + cmd + b"tra la la"
+        data = b"dumb de dumb" + cmd + b"tra la la"
         self.p.dataReceived(data)
 
         self.assertEqual(self.p.protocol.data, data.replace(cmd, b""))
@@ -393,7 +393,7 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b"\x56")
         s.him.state = "yes"
 
-        data = b"tra la la" + cmd + b"dum de dum"
+        data = b"tra la la" + cmd + b"dumb de dumb"
         self.p.dataReceived(data)
 
         self.assertEqual(self.p.protocol.data, data.replace(cmd, b""))
@@ -412,7 +412,7 @@ class TelnetTransportTests(unittest.TestCase):
         s = self.p.getOptionState(b"\x56")
         s.us.state = "yes"
 
-        data = b"tra la la" + cmd + b"dum de dum"
+        data = b"tra la la" + cmd + b"dumb de dumb"
         self.p.dataReceived(data)
 
         self.assertEqual(self.p.protocol.data, data.replace(cmd, b""))

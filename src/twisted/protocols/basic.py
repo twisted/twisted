@@ -866,7 +866,7 @@ class FileSender:
         @type file: Any file-like object
         @param file: The file object to read data from
 
-        @type consumer: Any implementor of IConsumer
+        @type consumer: Any implementer of IConsumer
         @param consumer: The object to write data to
 
         @param transform: A callable taking one string argument and returning

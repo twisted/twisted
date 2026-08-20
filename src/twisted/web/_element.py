@@ -141,7 +141,7 @@ class Element:
 
     An Element might be used to encapsulate the rendering of a complex piece of
     data which is to be displayed in multiple different contexts.  The Element
-    allows the rendering logic to be easily re-used in different ways.
+    allows the rendering logic to be easily reused in different ways.
 
     Element returns render methods which are registered using
     L{twisted.web._element.renderer}.  For example::

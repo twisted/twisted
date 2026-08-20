@@ -68,18 +68,18 @@ class EventDispatcherTests(unittest.TestCase):
         msg = Element(("ns", "message"))
         msg.addElement("body")
 
-        pres = Element(("ns", "presence"))
-        pres.addElement("presence")
+        press = Element(("ns", "presence"))
+        press.addElement("presence")
 
         d.dispatch(msg)
         self.assertEqual(cb1.called, 2)
         self.assertEqual(cb1.obj, msg)
         self.assertEqual(cb2.called, 0)
 
-        d.dispatch(pres)
+        d.dispatch(press)
         self.assertEqual(cb1.called, 2)
         self.assertEqual(cb2.called, 1)
-        self.assertEqual(cb2.obj, pres)
+        self.assertEqual(cb2.obj, press)
         self.assertEqual(cb3.called, 0)
 
         d.dispatch(d, "//event/testevent")
@@ -87,7 +87,7 @@ class EventDispatcherTests(unittest.TestCase):
         self.assertEqual(cb3.obj, d)
 
         d.removeObserver("/presence", cb2.call)
-        d.dispatch(pres)
+        d.dispatch(press)
         self.assertEqual(cb2.called, 1)
 
     def test_addObserverTwice(self):
@@ -167,14 +167,14 @@ class EventDispatcherTests(unittest.TestCase):
     def testDispatcherResult(self):
         d = EventDispatcher()
         msg = Element(("ns", "message"))
-        pres = Element(("ns", "presence"))
+        press = Element(("ns", "presence"))
         cb = CallbackTracker()
 
         d.addObserver("/presence", cb.call)
         result = d.dispatch(msg)
         self.assertEqual(False, result)
 
-        result = d.dispatch(pres)
+        result = d.dispatch(press)
         self.assertEqual(True, result)
 
     def testOrderedXPathDispatch(self):

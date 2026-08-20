@@ -422,7 +422,7 @@ class Coordinate(Angle):
             else:
                 return Directions.EAST
         else:
-            raise ValueError("unknown coordinate type (cant find hemisphere)")
+            raise ValueError("unknown coordinate type (can't find hemisphere)")
 
 
 class Altitude(FancyEqMixin):

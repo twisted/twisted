@@ -381,7 +381,7 @@ class PythonModule(_ModuleIteratorHelper):
         @return: a genuine python module.
 
         @raise Exception: Importing modules is a risky business;
-        the erorrs of any code run at module scope may be raised from here, as
+        the errors of any code run at module scope may be raised from here, as
         well as ImportError if something bizarre happened to the system path
         between the discovery of this PythonModule object and the attempt to
         import it.  If you specify a default, the error will be swallowed

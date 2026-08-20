@@ -527,7 +527,7 @@ class ProcessTests(unittest.TestCase):
 
     def test_patchSysStdoutWithNone(self):
         """
-        In some scenarious, such as Python running as part of a Windows
+        In some scenarios, such as Python running as part of a Windows
         Windows GUI Application with no console, L{sys.stdout} is L{None}.
         """
         import sys
@@ -2185,7 +2185,7 @@ class PosixProcessPTYTests(unittest.TestCase, PosixProcessBase):
     # test_abnormalTermination
     # testSignal
     # testProcess, but not without p.transport.closeStdin
-    #  might be solveable: TODO: add test if so
+    #  might be solvable: TODO: add test if so
 
     def test_openingTTY(self):
         scriptPath = b"twisted.test.process_tty"

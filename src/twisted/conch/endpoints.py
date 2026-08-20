@@ -534,7 +534,7 @@ class SSHCommandClientEndpoint:
     launch a command over that connection and then associate its input and
     output with a protocol.
 
-    It can also re-use an existing, already-authenticated SSH connection
+    It can also reuse an existing, already-authenticated SSH connection
     (perhaps one which already has some SSH channels being used for other
     purposes).  In this case it creates a new SSH channel to use to execute the
     command.  Notably this means it supports multiplexing several different

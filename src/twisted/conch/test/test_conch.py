@@ -122,7 +122,7 @@ class ConchTestOpenSSHProcess(protocol.ProcessProtocol):
     fired twice. Fires when the process is terminated.
 
     @ivar expectedExitCode: If the process exit code is not C{expectedExitCode}
-    the set C{deferred} will by triggerd with a failure.
+    the set C{deferred} will by triggered with a failure.
     """
 
     deferred: Deferred[None] | None = None

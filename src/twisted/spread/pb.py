@@ -212,7 +212,7 @@ class IPerspective(Interface):
 @implementer(IPerspective)
 class Avatar:
     """
-    A default IPerspective implementor.
+    A default IPerspective implementer.
 
     This class is intended to be subclassed, and a realm should return
     an instance of such a subclass when IPerspective is requested of
@@ -1044,7 +1044,7 @@ class Broker(banana.Banana):
         invoke it with args, and send an 'answer' or 'error' response.
 
         @param findObjMethod: A callable which takes C{objectID} as argument.
-        @param requestID: The requiest ID.
+        @param requestID: The request ID.
         @param objectID: The object ID.
         @param message: The message.
         @param answerRequired:

@@ -209,7 +209,7 @@ class IFilePath(Interface):
         Retrieve the final component of the file path's path (everything after
         the final path separator).
 
-        @note: In implementors, the return type should be generic, i.e.
+        @note: In implementers, the return type should be generic, i.e.
             C{AbstractFilePath[str].basename()} is a C{str}.  However,
             L{Interface} objects cannot be generic as of this writing.
 
@@ -526,8 +526,8 @@ class AbstractFilePath(Generic[AnyStr]):
         @return: a list of strs
         """
         # this might be an unnecessarily inefficient implementation but it will
-        # work on win32 and for zipfiles; later I will deterimine if the
-        # obvious fast implemenation does the right thing too
+        # work on win32 and for zipfiles; later I will determine if the
+        # obvious fast implementation does the right thing too
         f = self
         p: _Self = f.parent()  # type:ignore[assignment]
         segments: list[AnyStr] = []

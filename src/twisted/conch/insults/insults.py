@@ -58,7 +58,7 @@ class ITerminalProtocol(Interface):
 @implementer(ITerminalProtocol)
 class TerminalProtocol:
     def makeConnection(self, terminal):
-        # assert ITerminalTransport.providedBy(transport), "TerminalProtocol.makeConnection must be passed an ITerminalTransport implementor"
+        # assert ITerminalTransport.providedBy(transport), "TerminalProtocol.makeConnection must be passed an ITerminalTransport implementer"
         self.terminal = terminal
         self.connectionMade()
 
@@ -457,14 +457,14 @@ class ServerProtocol(protocol.Protocol):
     def __init__(self, protocolFactory=None, *a, **kw):
         """
         @param protocolFactory: A callable which will be invoked with
-        *a, **kw and should return an ITerminalProtocol implementor.
+        *a, **kw and should return an ITerminalProtocol implementer.
         This will be invoked when a connection to this ServerProtocol
         is established.
 
         @param a: Any positional arguments to pass to protocolFactory.
         @param kw: Any keyword arguments to pass to protocolFactory.
         """
-        # assert protocolFactory is None or ITerminalProtocol.implementedBy(protocolFactory), "ServerProtocol.__init__ must be passed an ITerminalProtocol implementor"
+        # assert protocolFactory is None or ITerminalProtocol.implementedBy(protocolFactory), "ServerProtocol.__init__ must be passed an ITerminalProtocol implementer"
         if protocolFactory is not None:
             self.protocolFactory = protocolFactory
         self.protocolArgs = a
@@ -926,7 +926,7 @@ class ClientProtocol(protocol.Protocol):
         @param a: Any positional arguments to pass to terminalFactory.
         @param kw: Any keyword arguments to pass to terminalFactory.
         """
-        # assert terminalFactory is None or ITerminalTransport.implementedBy(terminalFactory), "ClientProtocol.__init__ must be passed an ITerminalTransport implementor"
+        # assert terminalFactory is None or ITerminalTransport.implementedBy(terminalFactory), "ClientProtocol.__init__ must be passed an ITerminalTransport implementer"
         if terminalFactory is not None:
             self.terminalFactory = terminalFactory
         self.terminalArgs = a

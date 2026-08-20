@@ -377,10 +377,10 @@ class IMessageDeliveryFactory(Interface):
     An alternate interface to implement for handling message delivery.
 
     It is useful to implement this interface instead of L{IMessageDelivery}
-    directly because it allows the implementor to distinguish between different
+    directly because it allows the implementer to distinguish between different
     messages delivery over the same connection. This can be used to optimize
     delivery of a single message to multiple recipients, something which cannot
-    be done by L{IMessageDelivery} implementors due to their lack of
+    be done by L{IMessageDelivery} implementers due to their lack of
     information.
     """
 
@@ -776,7 +776,7 @@ class IMailboxIMAP(IMailboxIMAPInfo):
             they are message sequence IDs.
 
         @rtype: Any iterable of two-tuples of message sequence numbers and
-            implementors of C{IMessageIMAP}.
+            implementers of C{IMessageIMAP}.
         """
 
     def store(messages, flags, mode, uid):
@@ -831,7 +831,7 @@ class IAccountIMAP(Interface):
     """
     Interface for Account classes
 
-    Implementors of this interface should consider implementing
+    Implementers of this interface should consider implementing
     C{INamespacePresenter}.
     """
 

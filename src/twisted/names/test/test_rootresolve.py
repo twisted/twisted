@@ -476,15 +476,17 @@ class RootResolverTests(TestCase):
         # Make two resolvers.  One which is allowed to make 3 queries
         # maximum, and so will fail, and on which may make 4, and so should
         # succeed.
-        failer = self._getResolver(servers, 3)
-        failD = self.assertFailure(failer.lookupAddress(b"example.com"), ResolverError)
+        failure = self._getResolver(servers, 3)
+        failed = self.assertFailure(
+            failure.lookupAddress(b"example.com"), ResolverError
+        )
 
         succeeder = self._getResolver(servers, 4)
         succeedD = succeeder.lookupAddress(b"example.com")
         succeedD.addCallback(getOnePayload)
         succeedD.addCallback(self.assertEqual, Record_A("10.0.0.4"))
 
-        return gatherResults([failD, succeedD])
+        return gatherResults([failed, succeedD])
 
 
 class ResolverFactoryArguments(Exception):

@@ -193,7 +193,7 @@ class IHostnameResolver(Interface):
             non-ASCII code points, they will be converted to IDNA first.
         @param portNumber: The port number that the returned addresses should
             include.
-        @param addressTypes: An iterable of implementors of L{IAddress} that
+        @param addressTypes: An iterable of implementers of L{IAddress} that
             are acceptable values for C{resolutionReceiver} to receive to its
             L{addressResolved <IResolutionReceiver.addressResolved>}.  In
             practice, this means an iterable containing
@@ -764,7 +764,7 @@ class IReactorSSL(Interface):
 
         @param port: a port number on which to listen
         @param factory: a L{twisted.internet.protocol.ServerFactory} instance
-        @param contextFactory: an implementor of L{IOpenSSLContextFactory}
+        @param contextFactory: an implementer of L{IOpenSSLContextFactory}
         @param backlog: size of the listen queue
         @param interface: the hostname to bind to, defaults to '' (all)
         """
@@ -1425,7 +1425,7 @@ class IReactorCore(Interface):
         order, of course).  These events will be fired internally by the
         Reactor.
 
-        An implementor of this interface must only implement those events
+        An implementer of this interface must only implement those events
         described here.
 
         Callbacks registered for the "before" phase may return either None or a
@@ -2345,7 +2345,7 @@ class ITLSTransport(ITCPTransport):
             L{IOpenSSLServerConnectionCreator}, depending on whether this
             L{ITLSTransport} is a server or not.  If the appropriate interface
             is not provided by the value given for C{contextFactory}, it must
-            be an implementor of L{IOpenSSLContextFactory}.
+            be an implementer of L{IOpenSSLContextFactory}.
         """
 
 
@@ -2773,7 +2773,7 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
 
 class _ISupportsExitSignalCapturing(Interface):
     """
-    An implementor of L{_ISupportsExitSignalCapturing} will capture the
+    An implementer of L{_ISupportsExitSignalCapturing} will capture the
     value of any delivered exit signal (SIGINT, SIGTERM, SIGBREAK) for which
     it has installed a handler.  The caught signal number is made available in
     the _exitSignal attribute.

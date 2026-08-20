@@ -883,7 +883,7 @@ class MulticastTestsIPv6(MulticastTests):
     Tests for sending and receiving IPv6 multicast datagrams.
     """
 
-    # Specifiy relevant IPv6 literals and values to override the IPv4 values in
+    # Specify relevant IPv6 literals and values to override the IPv4 values in
     # the superclass; all of these attributes are defined above.
     interface: str = "::"
     clientAddress: str = "::1"

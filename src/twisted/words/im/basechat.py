@@ -366,7 +366,7 @@ class ChatUI:
         @type person: L{IPerson<interfaces.IPerson>} provider
         @param person: The person whose conversation window we want to get.
 
-        @type Class: L{IConversation<interfaces.IConversation>} implementor
+        @type Class: L{IConversation<interfaces.IConversation>} implementer
         @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 
@@ -395,7 +395,7 @@ class ChatUI:
         @type group: L{IGroup<interfaces.IGroup>} provider
         @param group: The group whose conversation window we want to get.
 
-        @type Class: L{IConversation<interfaces.IConversation>} implementor
+        @type Class: L{IConversation<interfaces.IConversation>} implementer
         @param Class: The kind of conversation window we want. If the conversation
             window for this person didn't already exist, create one of this type.
 

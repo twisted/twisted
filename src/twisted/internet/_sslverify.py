@@ -1794,7 +1794,7 @@ def _expandCipherString(cipherString, method, options):
 @lru_cache(maxsize=128)
 def _selectCiphers(wantedCiphers, availableCiphers):
     """
-    Caclulate the acceptable list of ciphers from the ciphers we want and the
+    Calculate the acceptable list of ciphers from the ciphers we want and the
     ciphers we have support for.
 
     @param wantedCiphers: The ciphers we want to use.

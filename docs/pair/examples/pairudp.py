@@ -21,7 +21,7 @@ trigger a response from this example.
 Use the UID of the user you want to be able to run the example for ${USER_ID}
 and use something like 10.0.0.0/24 for ${IP_NETWORK}.
 
-Invent any valid value for ${MAC_ADDRESS} (though avoid re-using an address
+Invent any valid value for ${MAC_ADDRESS} (though avoid reusing an address
 already in use on your network).
 
 See the Twisted Pair configuration howto for more information about this

@@ -388,7 +388,7 @@ class RecvLine(insults.TerminalProtocol):
         self.terminal.write(self.ps[self.pn])
         # XXX Note: I would prefer to default to starting in insert
         # mode, however this does not seem to actually work!  I do not
-        # know why.  This is probably of interest to implementors
+        # know why.  This is probably of interest to implementers
         # subclassing RecvLine.
 
         # XXX XXX Note: But the unit tests all expect the initial mode

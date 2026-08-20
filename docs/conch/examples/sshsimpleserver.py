@@ -24,14 +24,14 @@ Example of running a custom protocol as a shell session over an SSH channel.
 Warning! This implementation is here to help you understand how Conch SSH
 server works. You should not use this code in production.
 
-Re-using a private key is dangerous, generate one.
+Reusing a private key is dangerous, generate one.
 
 For this example you can use:
 
 $ ckeygen -t rsa -f ssh-keys/ssh_host_rsa_key
 $ ckeygen -t rsa -f ssh-keys/client_rsa
 
-Re-using DH primes and having such a short primes list is dangerous, generate
+Reusing DH primes and having such a short primes list is dangerous, generate
 your own primes.
 
 In this example the implemented SSH server identifies itself using an RSA host

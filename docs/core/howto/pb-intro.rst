@@ -125,7 +125,7 @@ about authorization and security:
   : ``cred/portal.py`` 
 - :py:class:`IPerspective <twisted.spread.pb.IPerspective>` 
   : ``spread/pb.py`` , which you will usually be interacting
-  with via :py:class:`pb.Avatar <twisted.spread.pb.Avatar>` (a basic implementor of the interface).
+  with via :py:class:`pb.Avatar <twisted.spread.pb.Avatar>` (a basic implementer of the interface).
 
 
 
@@ -157,7 +157,7 @@ get started:
   the remotely-accessible methods that you want to export.
 - :py:class:`pb.Avatar <twisted.spread.pb.Avatar>` : You'll
   be subclassing this when you get into PB programming with
-  authorization. This is an implementor of IPerspective.
+  authorization. This is an implementer of IPerspective.
 - :py:class:`ICredentialsChecker <twisted.cred.checkers.ICredentialsChecker>` : Implement this if
   you want to authenticate your users against some sort of data store:
   i.e., an LDAP database, an RDBMS, etc. There are already a few
@@ -187,7 +187,7 @@ published methods with the appropriate prefix.
 
 
 
-- :py:class:`twisted.spread.pb.IPerspective` implementors
+- :py:class:`twisted.spread.pb.IPerspective` implementers
   
   
   This is the first interface we deal with. It is a "perspective" 

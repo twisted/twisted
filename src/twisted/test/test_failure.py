@@ -504,7 +504,7 @@ class FailureTests(SynchronousTestCase):
 
     def test_stackDeprecation(self) -> None:
         """
-        C{Failure.stack} is gettable and settable, but depreacted.
+        C{Failure.stack} is gettable and settable, but deprecated.
         """
         f = getDivisionFailure()
         f.stack = f.stack  # type: ignore[method-assign]

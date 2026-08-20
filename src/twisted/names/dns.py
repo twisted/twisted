@@ -1760,7 +1760,7 @@ class Record_SRV(tputil.FancyEqMixin, tputil.FancyStrMixin):
     @type target: L{Name}
     @ivar target: The domain name of the target host.  There MUST be one or
         more address records for this name, the name MUST NOT be an alias (in
-        the sense of RFC 1034 or RFC 2181).  Implementors are urged, but not
+        the sense of RFC 1034 or RFC 2181).  Implementers are urged, but not
         required, to return the address record(s) in the Additional Data
         section.  Unless and until permitted by future standards action, name
         compression is not to be used for this field.
