@@ -62,7 +62,7 @@ Authors: Things your branch or patch must contain
  * Code which follows the :doc:`coding standards </development/coding-standard>`.
  * 100% unit test coverage for all modified and new code (even if it didn't have tests before)
  * 100% API docstring coverage for all modified and new code (even if it didn't have docs before)
- * Type annotation for all new code. It's nice to also update type annotations for existing code, but it's not required.
+ * Type annotation for all new code. It's nice to also update type annotations for any changed code, but it's not required if that would create too much work to address type-checking failures unrelated to your changes.
  * No :doc:`backwards-incompatible </development/compatibility-policy>` changes.
    Also be sparing when adding 'public' names to the API, as they must be supported in the future.
    If it can start with an underscore and not be exposed publicly, it probably should.
