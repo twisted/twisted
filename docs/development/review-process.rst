@@ -84,6 +84,8 @@ Authors: How to get your change reviewed
 * Once the PR is ready for review,
   leave a separate comment on that PR containing the text `please review`.
   This will trigger the review process and will notify the review team.
+  You can also open the PR as draft, do a final self review of the changes, and once ready press the *Ready for review* button.
+* Draft PRs are ignored by the review team. Feel free to use them for work in process, or experiments.
 
 
 Reviewers: How to review a change
