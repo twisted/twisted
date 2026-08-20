@@ -919,7 +919,7 @@ class DestructiveTestSuiteTests(unittest.SynchronousTestCase):
 
     def test_basic(self):
         """
-        Thes destructive test suite should run the tests normally.
+        These destructive test suite should run the tests normally.
         """
         called = []
 

@@ -1022,7 +1022,7 @@ class GzipEncoderTests(unittest.TestCase):
     def test_whitespaceInAcceptEncoding(self):
         """
         If the client request passes a I{Accept-Encoding} header which mentions
-        gzip, with whitespace inbetween the encoding name and the commas,
+        gzip, with whitespace in between the encoding name and the commas,
         L{server._GzipEncoder} automatically compresses the data.
         """
         request = server.Request(self.channel, False)

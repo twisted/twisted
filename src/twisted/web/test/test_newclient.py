@@ -313,7 +313,7 @@ class _HTTPParserTests:
             b"content-length",
             b"connection",
             b"keep-alive",
-            b"te",
+            b"te",  # codespell:ignore
             b"trailers",
             b"transfer-encoding",
             b"upgrade",

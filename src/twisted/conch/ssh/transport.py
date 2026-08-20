@@ -204,7 +204,7 @@ class SSHCiphers:
         if not mod:
             return (None, b"", b"", 0)
 
-        # With stdlib we can only get attributes fron an instantiated object.
+        # With stdlib we can only get attributes from an instantiated object.
         hashObject = mod()
         digestSize = hashObject.digest_size
         blockSize = hashObject.block_size

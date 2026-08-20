@@ -671,8 +671,8 @@ def run() -> NoReturn:
     config = Options()
     try:
         config.parseOptions()
-    except usage.error as ue:
-        raise SystemExit(f"{sys.argv[0]}: {ue}")
+    except usage.error as usageError:
+        raise SystemExit(f"{sys.argv[0]}: {usageError}")
     _initialDebugSetup(config)
 
     try:

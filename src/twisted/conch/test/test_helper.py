@@ -490,7 +490,7 @@ class ExpectTests(unittest.TestCase):
         self.assertFalse(result)
         self.term.write(b"hello ")
         self.assertFalse(result)
-        self.term.write(b"worl")
+        self.term.write(b"worl")  # codespell:ignore
         self.assertFalse(result)
         self.term.write(b"d")
         self.assertTrue(result)

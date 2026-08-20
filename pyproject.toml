@@ -170,13 +170,12 @@ Funding-GitHub = "https://github.com/sponsors/twisted"
 # Add any other sub-folders that you might have in your dev environment.
 # codespell does not have an include config option, only exclude.
 # See https://github.com/codespell-project/codespell/issues/3997
-skip = 'apidocs*, ./docs/_build/*, venv*, .venv*, .nox*, .git*, dist*, .tox*, .*_cache/*, ./_trial_temp*, ./src/*.egg-info/*, SECURITY.MD, doc/security.rst'
+skip = 'apidocs*, ./docs/_build/*, venv*, .venv*, .nox*, .git*, dist*, .tox*, .*_cache/*, ./_trial_temp*, ./src/*.egg-info/*, ./docs/core/howto/glossary.rst'
 count = false
 quiet-level = 3
 check-hidden = true
-ignore-words-list = "ans, ser, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant, Referencable, adaptee, Homogenous, SUPRESS, funktion"
-ignore-regex = "# noqa:codespell"
-ignore-multiline-regex = "# codespell:ignore-begin *\n.*# codespell:ignore-end"
+ignore-words-list = "ans, aEr, Nd, ser, rin, bale, shiftIn, ques, someMore, scrip, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant, Referencable, adaptee, Homogenous, SUPRESS, funktion"
+ignore-regex = ".*ignore-next-line.*"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
@@ -303,8 +302,8 @@ target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
-sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
-default_section = "THIRDPARTY"
+sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"  # codespell:ignore
+default_section = "THIRDPARTY"  # codespell:ignore
 no_lines_before = "LOCALFOLDER"
 known_first_party = "twisted"
 known_zope = "zope"

@@ -49,7 +49,7 @@ TOSTOP = 58
 IEXTEN = 59
 ECHOCTL = 60
 ECHOKE = 61
-PENDIN = 62
+PENDIN = 62  # codespell:ignore
 OPOST = 70
 OLCUC = 71
 ONLCR = 72
@@ -106,7 +106,7 @@ TTYMODES = {
     59: (tty.LFLAG, "IEXTEN"),
     60: (tty.LFLAG, "ECHOCTL"),
     61: (tty.LFLAG, "ECHOKE"),
-    62: (tty.LFLAG, "PENDIN"),
+    62: (tty.LFLAG, "PENDIN"),  # codespell:ignore
     70: (tty.OFLAG, "OPOST"),
     71: (tty.OFLAG, "OLCUC"),
     72: (tty.OFLAG, "ONLCR"),

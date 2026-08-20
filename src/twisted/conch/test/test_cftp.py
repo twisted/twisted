@@ -623,7 +623,7 @@ class StdioClientTests(TestCase):
                 # For testing we only care about the
                 # PROGRESS_PERCENTAGE and PROGRESS values.
 
-                # Ignore SPPED and ETA.
+                # Ignore SPEED and ETA.
                 line = line.strip().rsplit(" ", 2)[0]
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
