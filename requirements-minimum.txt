@@ -31,7 +31,7 @@ idna == 2.5
 #
 # For [conch]
 #
-cryptography == 45.0.7
+cryptography == 46
 appdirs == 1.4.0
 bcrypt == 3.2.1
 
