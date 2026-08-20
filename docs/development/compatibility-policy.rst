@@ -329,7 +329,7 @@ If you need to upgrade to a new version of a dependency, you must update **both*
 
 As long as you are updating to a version of the package released more than 1 year ago from the current date, we consider that a “compatible” change.
 To require a minimum version more recent than 1 year ago, you can follow the `Procedure for Incompatible Changes`_.
-(This only applies to upgrading old dependencies. Adding recent versions when you add a new dependencies are fine.)
+(This only applies to updating the versions of old dependencies. Adding recent a version when you add a new dependency is fine.)
 
 To test these locally yourself, the way CI does, you can use the ``mindeps`` tox factor.
 For example, ``tox -e mindeps-alldeps-py314-withcov-posix`` will test the oldest supported version of every one of Twisted's dependencies, on Python 3.14, with all dependencies for all of Twisted's extras (such as ``[conch]``, ``[http2]``, and so on), with test coverage enabled, for POSIX systems.
