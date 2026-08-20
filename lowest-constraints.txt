@@ -22,7 +22,7 @@ typing_extensions == 4.13.2
 # For [tls]
 #
 pyopenssl == 25.3.0
-six==1.16.0
+six==1.16.0 # transitive dependency from this super old service_identity
 service_identity == 21.1.0
 idna == 2.5
 
