@@ -318,14 +318,20 @@ Supporting and De-supporting Versions of Packages We Depend On
 Our goal with this policy is that if a downstream package that depends on Twisted and can run its tests without warnings, they should be able to upgrade Twisted in an independent change, ideally without changing anything else.
 This means that in addition to a stable API with predictable changes, we need support for a range of versions of packages of our dependencies, wide enough that users do not need to upgrade all their dependencies at the same time to catch up with current Twisted.
 
-Thus, every dependency should have a minimum version bound expressed with a ``>=`` version specifier in ``pyproject.toml``.
-For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``.
-(We do not express version maximums, i.e. ``<`` constraints, because we can't know when those packages will have incompatible changes; downstream applications which use Twisted are expected to pin their own dependencies and do their own testing, even if ``pip install twisted`` may sometimes break with the latest versions of some dependencies.)
+To ensure that dependencies are all properly installed, we declare them in ``pyproject.toml``.
+So that users will know what our lowest version constraint is, we use a ``>=`` version specifier to declare that lower bound.
+We do not express version maximums, i.e. ``<`` constraints, because we can't know in advance when those packages will have incompatible changes.
+Downstream applications which use Twisted are expected to pin their own dependencies and do their own testing, even if ``pip install twisted`` may sometimes break with the latest versions of some dependencies.
 
 To ensure that we work with those declared older versions of our dependencies, we test them in CI.
-Our CI uses ``requirements-minimum.txt`` as the ``==`` version constraints for the oldest versions of everything we depend on.
-Therefore, every dependency **must** copy its minimum version into ``requirements-minimum.txt`` as well.
-If you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``requirements-minimum.txt`` to the same version.
+Our CI uses ``requirements-minimum.txt`` that contains ``==`` version constraints for the oldest versions of everything we depend on.
+
+For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``requirements-minimum.txt``.
+
+.. important::
+
+    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``requirements-minimum.txt`` for that dependency to the same version.
+    These are currently kept in sync manually.
 
 As long as you are updating to a version of the package released more than 1 year ago from the current date, we consider that a “compatible” change.
 To require a minimum version more recent than 1 year ago, you can follow the `Procedure for Incompatible Changes`_.
