@@ -9,11 +9,11 @@
 #
 # Hard dependencies.
 #
-zope.interface == 5.0.0
+zope.interface == 8.0.0
 constantly == 15.1
 incremental == 24.7.1
 Automat == 24.8.1
-hyperlink == 17.1.1
+hyperlink == 18.0.0
 attrs == 22.2.0
 typing_extensions == 4.9.0
 
