@@ -21,10 +21,9 @@ typing_extensions == 4.13.2
 #
 # For [tls]
 #
-pyopenssl == 25.2.0
-# Required by pyopenssl 25.2 but not defined as a dependency.
+pyopenssl == 25.3.0
 six==1.16.0
-service_identity == 18.1.0
+service_identity == 21.1.0
 idna == 2.5
 
 #
