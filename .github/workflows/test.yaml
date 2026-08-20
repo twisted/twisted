@@ -492,7 +492,7 @@ jobs:
     - name: Check spelling
       if: ${{ !cancelled() }}
       run: |
-        codespell -d
+        codespell
 
     - name: Pre-commit checks
       if: ${{ !cancelled() }}

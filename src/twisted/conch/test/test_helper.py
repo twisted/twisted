@@ -484,7 +484,7 @@ class ExpectTests(unittest.TestCase):
 
     def testBrokenUpString(self) -> None:
         result: list[re.Match[bytes]] = []
-        d = self.term.expect(b"hello world")
+        d = self.term.expect(b"hello world!")
         d.addCallback(result.append)
 
         self.assertFalse(result)
