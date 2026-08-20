@@ -89,8 +89,6 @@ jobs:
         trial-args: ['']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
-        # By default all jobs are executed with via tox.
-        run-without-tox: ['']
         # By default, tests are executed without extra platform dependencies.
         platform-deps: ['']
         # By default, tests are executed directly via tox.
@@ -130,13 +128,8 @@ jobs:
           # This is also used to run tests with minimum dependency versions.
           - python-version: '3.10'
             noipv6: '-noipv6'
+            tox-env: 'mindeps-withcov-posix'
             job-name: 'minimum-deps-noipv6'
-            skip-coverage: yes
-            run-without-tox: |
-              set -e
-              pip install -r requirements-minimum.txt -e .
-              pip list --format freeze
-              trial ${TRIAL_ARGS} twisted
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
