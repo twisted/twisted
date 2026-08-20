@@ -32,7 +32,7 @@ pyopenssl == 25.2.0
 # Required by pyopenssl 25.2 but not defined as a dependency.
 six==1.16.0
 service_identity == 18.1.0
-idna == 2.4
+idna == 2.5
 
 #
 # For [conch]
