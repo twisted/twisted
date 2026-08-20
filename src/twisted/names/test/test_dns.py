@@ -255,7 +255,7 @@ class NameTests(unittest.TestCase):
             b"\x00\x01"  # number of queries
             b"\x00\x01"  # number of answers
             b"\x00\x00"  # number of authorities
-            b"\x00\x01"  # number of additional
+            b"\x00\x01"  # number of additionals
             # query
             b"\x03foo\x03bar\x00"  # foo.bar
             b"\xde\xad"  # type=0xdead
@@ -997,7 +997,7 @@ class MessageTests(unittest.SynchronousTestCase):
             b"\x00\x00"  # number of queries
             b"\x00\x00"  # number of answers
             b"\x00\x00"  # number of authorities
-            b"\x00\x00"  # number of additional
+            b"\x00\x00"  # number of additionals
         )
         self.assertEqual(msg.id, 256)
         self.assertFalse(msg.answer, "Message was not supposed to be an answer.")
@@ -1058,7 +1058,7 @@ class MessageTests(unittest.SynchronousTestCase):
             b"\x00\x00"  # number of queries
             b"\x00\x01"  # number of answers
             b"\x00\x00"  # number of authorities
-            b"\x00\x00" + buf.getvalue()  # number of additional
+            b"\x00\x00" + buf.getvalue()  # number of additionals
         )
         self.assertEqual(message.answers, [answer])
         self.assertFalse(message.answers[0].auth)
@@ -1082,7 +1082,7 @@ class MessageTests(unittest.SynchronousTestCase):
             b"\x00\x00"  # number of queries
             b"\x00\x01"  # number of answers
             b"\x00\x00"  # number of authorities
-            b"\x00\x00" + buf.getvalue()  # number of additional
+            b"\x00\x00" + buf.getvalue()  # number of additionals
         )
         answer.auth = True
         self.assertEqual(message.answers, [answer])
@@ -3296,7 +3296,7 @@ class MessageEmpty:
             b"\x00\x00"  # number of queries
             b"\x00\x00"  # number of answers
             b"\x00\x00"  # number of authorities
-            b"\x00\x00"  # number of additional
+            b"\x00\x00"  # number of additionals
         )
 
     @classmethod
@@ -3341,7 +3341,7 @@ class MessageTruncated:
             b"\x00\x00"  # Number of queries
             b"\x00\x00"  # Number of answers
             b"\x00\x00"  # Number of authorities
-            b"\x00\x00"  # Number of additional
+            b"\x00\x00"  # Number of additionals
         )
 
     @classmethod
@@ -3386,7 +3386,7 @@ class MessageNonAuthoritative:
             b"\x00\x00"  # Query count
             b"\x00\x01"  # Answer count
             b"\x00\x00"  # Authorities count
-            b"\x00\x00"  # Additional count
+            b"\x00\x00"  # Additionals count
             # Answer
             b"\x00"  # RR NAME (root)
             b"\x00\x01"  # RR TYPE 1 (A)
@@ -3435,7 +3435,7 @@ class MessageAuthoritative:
             b"\x00\x00"  # Query count
             b"\x00\x01"  # Answer count
             b"\x00\x00"  # Authorities count
-            b"\x00\x00"  # Additional count
+            b"\x00\x00"  # Additionals count
             # Answer
             b"\x00"  # RR NAME (root)
             b"\x00\x01"  # RR TYPE 1 (A)
@@ -3486,7 +3486,7 @@ class MessageComplete:
             b"\x00\x01"  # Query count
             b"\x00\x01"  # Answer count
             b"\x00\x01"  # Authorities count
-            b"\x00\x01"  # Additional count
+            b"\x00\x01"  # Additionals count
             # Query begins at Byte 12
             b"\x07example\x03com\x00"  # QNAME
             b"\x00\x06"  # QTYPE 6 (SOA)
@@ -3596,9 +3596,9 @@ class MessageEDNSQuery:
             b"\x00"  # QR: 0, OPCODE: 0, AA: 0, TC: 0, RD: 0
             b"\x00"  # RA: 0, Z, RCODE: 0
             b"\x00\x01"  # Queries count
-            b"\x00\x00"  # Answers count
+            b"\x00\x00"  # Anwers count
             b"\x00\x00"  # Authority count
-            b"\x00\x01"  # Additional count
+            b"\x00\x01"  # Additionals count
             # Queries
             b"\x03www\x07example\x03com\x00"  # QNAME
             b"\x00\x01"  # QTYPE (A)
@@ -3659,7 +3659,7 @@ class MessageEDNSComplete:
             b"\x00\x01"  # Query count
             b"\x00\x01"  # Answer count
             b"\x00\x01"  # Authorities count
-            b"\x00\x02"  # Additional count
+            b"\x00\x02"  # Additionals count
             # Query begins at Byte 12
             b"\x07example\x03com\x00"  # QNAME
             b"\x00\x06"  # QTYPE 6 (SOA)
@@ -3784,7 +3784,7 @@ class MessageEDNSExtendedRCODE:
             b"\x00\x00"
             b"\x00\x00"
             b"\x00\x00"
-            b"\x00\x01"  # 1 additional
+            b"\x00\x01"  # 1 additionals
             # Additional OPT record
             b"\x00"
             b"\x00\x29"
@@ -3944,7 +3944,7 @@ class CommonConstructorTestsMixin:
     common to both L{twisted.names.dns._EDNSMessage} and L{dns.Message}.
 
     TestCase classes that use this mixin must provide a C{messageFactory} method
-    which accepts any argument supported by L{dns.Message.__init__}.
+    which accepts any argment supported by L{dns.Message.__init__}.
 
     TestCases must also mixin ConstructorTestsMixin which provides some custom
     assertions for testing constructor arguments.
@@ -4549,7 +4549,7 @@ class StandardEncodingTestsMixin:
     These tests should work with both L{dns._EDNSMessage} and L{dns.Message}.
 
     TestCase classes that use this mixin must provide a C{messageFactory} method
-    which accepts any argument supported by L{dns._EDNSMessage.__init__}.
+    which accepts any argment supported by L{dns._EDNSMessage.__init__}.
 
     EDNS specific arguments may be discarded if not supported by the message
     class under construction.

@@ -346,7 +346,7 @@ class HostnameResolutionTests(UnitTest):
 
     def test_transportSemanticsToSocketType(self):
         """
-        When passed a C{transportSemantics} parameter, C{'TCP'} (the value
+        When passed a C{transportSemantics} paramter, C{'TCP'} (the value
         present in L{IPv4Address.type} to indicate a stream transport) maps to
         C{SOCK_STREAM} and C{'UDP'} maps to C{SOCK_DGRAM}.
         """

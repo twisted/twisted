@@ -144,7 +144,7 @@ class Team:
 
     def _quitIdlers(self, n: int | None = None) -> None:
         """
-        The implementation of C{shrink}, performed by the coordinator worker.
+        The implmentation of C{shrink}, performed by the coordinator worker.
 
         @param n: see L{Team.shrink}
         """

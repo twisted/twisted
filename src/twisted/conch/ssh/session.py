@@ -421,7 +421,7 @@ def packRequest_pty_req(term, geometry, modes):
 
 
 def parseRequest_window_change(data):
-    """Parse the data from a window-change request into usable data.
+    """Parse the data from a window-change request into usuable data.
 
     @returns: a tuple of (rows, cols, xpixel, ypixel)
     """

@@ -16,7 +16,7 @@ Example of using a simple SSH client.
 
 It will try to authenticate with a SSH key or ask for a password.
 
-Reusing a private key is dangerous, generate one.
+Re-using a private key is dangerous, generate one.
 For this example you can use:
 
 $ ckeygen -t rsa -f ssh-keys/client_rsa

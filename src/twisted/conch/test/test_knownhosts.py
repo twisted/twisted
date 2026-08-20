@@ -424,8 +424,8 @@ class KnownHostsDatabaseTests(TestCase):
             sampleHashedLine
             + otherSamplePlaintextLine
             + b"\n# That was a blank line.\n"
-            b"This is just unparsable.\n"
-            b"|1|This also unparsable.\n"
+            b"This is just unparseable.\n"
+            b"|1|This also unparseable.\n"
         ),
     ) -> KnownHostsFile:
         """
@@ -553,25 +553,25 @@ class KnownHostsDatabaseTests(TestCase):
 
     def test_verifyUnparsableLine(self):
         """
-        Loading a L{KnownHostsFile} from a path that contains an unparsable
+        Loading a L{KnownHostsFile} from a path that contains an unparseable
         line will be represented as an L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile(b"This is just unparsable.\n")
+        hostsFile = self.loadSampleHostsFile(b"This is just unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
-        self.assertEqual(entries[0].toString(), b"This is just unparsable.")
+        self.assertEqual(entries[0].toString(), b"This is just unparseable.")
         self.assertEqual(1, len(entries))
 
     def test_verifyUnparsableEncryptionMarker(self):
         """
-        Loading a L{KnownHostsFile} from a path containing an unparsable line
+        Loading a L{KnownHostsFile} from a path containing an unparseable line
         that starts with an encryption marker will be represented as an
         L{UnparsedEntry} instance.
         """
-        hostsFile = self.loadSampleHostsFile(b"|1|This is unparsable.\n")
+        hostsFile = self.loadSampleHostsFile(b"|1|This is unparseable.\n")
         entries = list(hostsFile.iterentries())
         self.assertIsInstance(entries[0], UnparsedEntry)
-        self.assertEqual(entries[0].toString(), b"|1|This is unparsable.")
+        self.assertEqual(entries[0].toString(), b"|1|This is unparseable.")
         self.assertEqual(1, len(entries))
 
     def test_loadNonExistent(self):

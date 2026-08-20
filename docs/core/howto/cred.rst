@@ -321,7 +321,7 @@ Server protocol implementation
 
 
 
-The protocol implementer should define the interface the avatar should implement,
+The protocol implementor should define the interface the avatar should implement,
 and design the protocol to have a portal attached. When a user logs in using the
 protocol, a credential object is created, passed to the portal, and an avatar
 with the appropriate interface is requested. When the user logs out or the protocol

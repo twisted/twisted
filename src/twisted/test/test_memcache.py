@@ -412,7 +412,7 @@ class MemCacheTests(CommandMixin, TestCase):
 
     def test_timeoutNotReset(self):
         """
-        Check that timeout is not reset for every command, but keep the
+        Check that timeout is not resetted for every command, but keep the
         timeout from the first command without response.
         """
         d1 = self.proto.get(b"foo")

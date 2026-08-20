@@ -381,7 +381,7 @@ if cryptography is not None:
 
             @return: The primes and generators.
             @rtype: L{dict} mapping the key size to a C{list} of
-                C{(generator, prime)} tuple.
+                C{(generator, prime)} tupple.
             """
             # In these tests, we hardwire the prime values to those defined by
             # the diffie-hellman-group14-sha1 key exchange algorithm, to avoid
@@ -951,7 +951,7 @@ class SSHFactoryTests(unittest.TestCase):
 
         p2 = f2.buildProtocol(None)
 
-        # The list might contain other algorithm.
+        # The list might contain other algorightm.
         # For this test just check the order for ECDSA KEX.
         self.assertIn(
             b"ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521",

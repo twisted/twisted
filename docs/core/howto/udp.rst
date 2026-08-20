@@ -33,7 +33,7 @@ Here is a simple example:
 
 As you can see, the protocol is registered with the reactor.
 When a datagram protocol is connected to its first UDP port via ``listenUDP``, and before it begins receiving traffic, its :py:meth:`startProtocol <twisted.internet.protocol.AbstractDatagramProtocol.startProtocol>` method will be called; when it is disconnected from its last UDP port and will no longer receive traffic, its :py:meth:`stopProtocol <twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol>` will be called.
-These are analogous to the :py:meth:`startFactory <twisted.internet.protocol.Factory.startFactory>` and :py:meth:`stopFactory <twisted.internet.protocol.Factory.stopFactory>` for stream-based transports, since a datagram transport such as UDP does not have a native notion of a “listening port” separate from a “connection”, there is no factory, only the protocol.
+These are analagous to the :py:meth:`startFactory <twisted.internet.protocol.Factory.startFactory>` and :py:meth:`stopFactory <twisted.internet.protocol.Factory.stopFactory>` for stream-based transports, since a datagram transport such as UDP does not have a native notion of a “listening port” separate from a “connection”, there is no factory, only the protocol.
 You may override these methods to do any protocol-specific setup and teardown.
 
 The protocol's ``transport`` attribute will implement the :py:class:`twisted.internet.interfaces.IUDPTransport` interface.

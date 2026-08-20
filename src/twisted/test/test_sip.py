@@ -749,9 +749,9 @@ class LiveTests(unittest.TestCase):
     def test_amoralRPort(self):
         """
         rport is allowed without a value, apparently because server
-        implementers might be too stupid to check the received port
+        implementors might be too stupid to check the received port
         against 5060 and see if they're equal, and because client
-        implementers might be too stupid to bind to port 5060, or set a
+        implementors might be too stupid to bind to port 5060, or set a
         value on the rport parameter they send if they bind to another
         port.
         """

@@ -47,7 +47,7 @@ class BaseSerialPort:
     Base class for Windows and POSIX serial ports.
 
     @ivar _serialFactory: a pyserial C{serial.Serial} factory, used to create
-        the instance stored in C{self._serial}. Overridable to enable easier
+        the instance stored in C{self._serial}. Overrideable to enable easier
         testing.
 
     @ivar _serial: a pyserial C{serial.Serial} instance used to manage the

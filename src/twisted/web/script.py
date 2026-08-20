@@ -56,7 +56,7 @@ def ResourceScript(path, registry):
     """
     I am a normal py file which must define a 'resource' global, which should
     be an instance of (a subclass of) web.resource.Resource; it will be
-    rendered.
+    renderred.
     """
     cs = CacheScanner(path, registry)
     glob = {

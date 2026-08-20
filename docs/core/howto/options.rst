@@ -609,7 +609,7 @@ I DON'T KNOW WHAT TO DO WITH THIS LINK!
 
 
 In addition, ``compData`` may be defined on parent classes in
-your inheritance hierarchy. The information from each
+your inheritance hiearchy. The information from each
 I DON'T KNOW WHAT TO DO WITH THIS LINK!
   
 

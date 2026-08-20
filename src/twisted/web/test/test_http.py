@@ -2167,7 +2167,7 @@ class ParsingTests(unittest.TestCase):
     def test_invalidHeaderWhitespaceBeforeColon(self):
         """
         C{HTTPChannel} rejects a request containing a header with whitespace
-        between the header name and colon as required by RFC 7230 section
+        between the header name and colon as requried by RFC 7230 section
         3.2.4. A 400 (Bad Request) response is generated and the connection
         closed.
         """

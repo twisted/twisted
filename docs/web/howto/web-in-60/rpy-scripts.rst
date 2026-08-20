@@ -29,7 +29,7 @@ accomplish.
 
 There are some disadvantages, though. An rpy script must have the
 extension ``.rpy`` . This means you can't import it using the
-usual Python import statement. This means it's hard to reuse code in
+usual Python import statement. This means it's hard to re-use code in
 an rpy script. This also means you can't easily unit test it. The code
 in an rpy script is evaluated in an unusual context. So, while rpy
 scripts may be useful for testing out ideas, they're not recommend for

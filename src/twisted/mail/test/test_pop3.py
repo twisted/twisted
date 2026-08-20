@@ -1586,10 +1586,10 @@ class POP3ClientDeprecationTests(unittest.SynchronousTestCase):
     def test_deprecation(self):
         """
         A deprecation warning is emitted when directly importing the now
-        deprecated pop3client module.
+        deprected pop3client module.
 
         This test might fail is some other code has already imported it.
-        No code should use the deprecated module.
+        No code should use the deprected module.
         """
         from twisted.mail import pop3client
 

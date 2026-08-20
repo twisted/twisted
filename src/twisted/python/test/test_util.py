@@ -834,7 +834,7 @@ class InitGroupsTests(TestCase):
     def test_initgroupsInStdlib(self):
         """
         Calling L{util.initgroups} will call the underlying stdlib
-        implementation.
+        implmentation.
         """
         calls = []
 

@@ -53,7 +53,7 @@ class FlattenTestCase(SynchronousTestCase):
     def assertFlattensImmediately(self, root: Flattenable, target: bytes) -> bytes:
         """
         Assert that a root element, when flattened, is equal to a string, and
-        performs no asynchronous Deferred anything.
+        performs no asynchronus Deferred anything.
 
         This version is more convenient in tests which wish to make multiple
         assertions about flattening, since it can be called multiple times

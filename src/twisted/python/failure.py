@@ -487,7 +487,7 @@ class Failure(BaseException):
         """
         Avoid pickling objects in the traceback.
 
-        This is not called directly by pickle, since C{BaseException}
+        This is not called direclty by pickle, since C{BaseException}
         implements reduce; instead, pickle calls C{Failure.__reduce__} which
         then calls this API.
         """

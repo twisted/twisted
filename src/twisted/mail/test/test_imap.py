@@ -617,7 +617,7 @@ class MessageSetTests(SynchronousTestCase):
 
     def test_extend(self):
         """
-        L{MessageSet.extend} accepts as its argument an L{int} or
+        L{MessageSet.extend} accepts as its arugment an L{int} or
         L{None}, or a sequence L{int}s or L{None}s of length two, or
         another L{MessageSet}, combining its argument with its
         instance's existing ranges.
@@ -1183,7 +1183,7 @@ class IMAP4HelperTests(TestCase):
     def test_fetchParserQuotedHeader(self):
         """
         Parsing a C{BODY} whose C{HEADER} values require quoting
-        results in a object that preserves that quoting when
+        results in a object that perserves that quoting when
         serialized.
         """
         p = imap4._FetchParser()
@@ -3100,7 +3100,7 @@ class IMAP4ServerParsingTests(SynchronousTestCase):
 
     def test_commandRaisesUnhandledException(self):
         """
-        When a command raises an unhandled exception, the server sends
+        Wehn a command raises an unhandled exception, the server sends
         a C{BAD} response and logs the exception.
         """
 
@@ -4338,7 +4338,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
                         [
                             "BODY",
                             ["HEADER.FIELDS", ["SUBJECT"]],
-                            "Subject: Surprise for your woman...\r\n\r\n",
+                            "Subject: Suprise for your woman...\r\n\r\n",
                         ]
                     ],
                     2: [

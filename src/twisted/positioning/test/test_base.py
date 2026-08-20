@@ -283,7 +283,7 @@ class CoordinateTests(TestCase):
 
     def test_bogusCoordinateType(self) -> None:
         """
-        Creating coordinates with bogus types raises C{ValueError}.
+        Creating coordinates with bogus types rasies C{ValueError}.
         """
         self.assertRaises(ValueError, base.Coordinate, 150.0, "BOGUS")
 
@@ -428,7 +428,7 @@ class CoordinateTests(TestCase):
 
     def test_unknownAngleInDegreesMinutesSeconds(self) -> None:
         """
-        If the value of a coordinate is L{None}, its values in degrees,
+        If the vaue of a coordinate is L{None}, its values in degrees,
         minutes, seconds is also L{None}.
         """
         c = base.Coordinate(None, None)

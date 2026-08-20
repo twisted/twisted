@@ -435,7 +435,7 @@ def loopbackTLSConnectionInMemory(
 
     @param viaFactory: If True, pass the protocols along via the
         L{IProtocolNegotiationFactory} hook rather than the
-        C{acceptableProtocols} argument to
+        C{acceptableProtocols} arguemnt to
         L{sslverify.OpenSSLCertificateOptions}.
 
     @return: 5-tuple of server-tls-protocol, client-tls-protocol,
@@ -2603,7 +2603,7 @@ class ALPNTests(TestCase):
     def test_nextProtocolMechanismsALPNIsSupported(self) -> None:
         """
         When ALPN is available on a platform, protocolNegotiationMechanisms
-        includes ALPN in the supported protocols.
+        includes ALPN in the suported protocols.
         """
         supportedProtocols = sslverify.protocolNegotiationMechanisms()
         self.assertTrue(sslverify.ProtocolNegotiationSupport.ALPN in supportedProtocols)

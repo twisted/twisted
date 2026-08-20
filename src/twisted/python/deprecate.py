@@ -338,7 +338,7 @@ def deprecatedProperty(
 
     class _DeprecatedProperty(property):
         """
-        Extension of the built-in property to allow deprecated setters.
+        Extension of the build-in property to allow deprecated setters.
         """
 
         def _deprecatedWrapper(self, function):

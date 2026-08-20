@@ -26,7 +26,7 @@ from ._tokenize import generate_tokens as tokenize
 # Abstract Object Classes #
 ###########################
 
-# "\0" in a getSource means "insert variable-width indentation here".
+# "\0" in a getSource means "insert variable-width indention here".
 # see `indentify'.
 
 

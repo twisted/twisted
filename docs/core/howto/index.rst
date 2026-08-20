@@ -153,7 +153,7 @@ Developer Guides
     When inheritance isn't enough.
   - :doc:`Cred: Pluggable Authentication <cred>`
 
-    Implementing authentication and authorization that is configurable, pluggable and reusable.
+    Implementing authentication and authorization that is configurable, pluggable and re-usable.
   - :doc:`Twisted's plugin architecture <plugin>`
 
     A generic plugin system for extendable programs.

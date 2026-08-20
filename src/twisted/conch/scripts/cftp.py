@@ -716,7 +716,7 @@ version                         Print the SFTP version.
 
     def cmd_PROGRESS(self, ignored):
         self.useProgressBar = not self.useProgressBar
-        return "%ssing progress bar." % (self.useProgressBar and "U" or "Not u")
+        return "%ssing progess bar." % (self.useProgressBar and "U" or "Not u")
 
     def cmd_EXEC(self, rest):
         """
@@ -856,8 +856,8 @@ version                         Print the SFTP version.
         @param line: Arguments received from command line input.
         @type line: L{str}
 
-        @return: Tuple with filename and rest. Return empty values when no path was not found.
-        @rtype: C{tuple}
+        @return: Tupple with filename and rest. Return empty values when no path was not found.
+        @rtype: C{tupple}
         """
         line = line.strip()
         if not line:

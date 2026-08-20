@@ -195,7 +195,7 @@ class ArrowsTests(TestCase):
     def test_delete(self):
         """
         When L{HistoricRecvLine} receives a DELETE keystroke, it
-        deletes the character immediately after the cursor.
+        delets the character immediately after the cursor.
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 

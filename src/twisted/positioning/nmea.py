@@ -357,7 +357,7 @@ class NMEASentence(_sentence._BaseSentence):
     @ivar verticalDilutionOfPrecision: As C{horizontalDilutionOfPrecision},
         but for a position on a plane perpendicular to the geoid. (VDOP)
     @ivar positionDilutionOfPrecision: Euclidean norm of HDOP and VDOP.
-    @ivar satellitePRN: The unique identification number of a particular
+    @ivar satellitePRN: The unique identifcation number of a particular
         satellite. Optionally suffixed with C{_N} if multiple satellites are
         referenced in a sentence, where C{N in range(4)}.
     @ivar elevation: The elevation of a satellite in decimal degrees.
@@ -407,7 +407,7 @@ class NMEAAdapter:
         acceptable (not metric) to converters that take a quantity in that
         unit and produce a metric quantity.
     @type _UNIT_CONVERTERS: C{dict} of bytestrings to unary callables
-    @cvar  _SPECIFIC_SENTENCE_FIXES: A mapping of sentence types to specific
+    @cvar  _SPECIFIC_SENTENCE_FIXES: A mapping of sentece types to specific
         fixes that are required to extract useful information from data from
         those sentences.
     @type  _SPECIFIC_SENTENCE_FIXES: C{dict} of sentence types to callables

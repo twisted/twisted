@@ -274,7 +274,7 @@ class ThreadedResolver:
     """
     L{ThreadedResolver} uses a reactor, a threadpool, and
     L{socket.gethostbyname} to perform name lookups without blocking the
-    reactor thread.  It also supports timeouts independently from whatever
+    reactor thread.  It also supports timeouts indepedently from whatever
     timeout logic L{socket.gethostbyname} might have.
 
     @ivar reactor: The reactor the threadpool of which will be used to call

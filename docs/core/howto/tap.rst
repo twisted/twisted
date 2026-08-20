@@ -228,7 +228,7 @@ of the package. You would have to extend the layout of your files like this:
     setup(
         name='MyApplication',
         version='0.1dev',
-        # it is necessary to extend the found package list with the twisted.plugin
+        # it is necesary to extend the found package list with the twisted.plugin
         # directory. It cannot be automatically detected, because it should not
         # contain a __init__.py file.
         packages=find_packages() + ['twisted.plugins'],

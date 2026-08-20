@@ -33,7 +33,7 @@ class DBCredentialsChecker:
         """
         @param runQuery: This will be called to get the info from the db.
             Generally you'd want to create a
-            L{twisted.enterprise.adbapi.ConnectionPool} and pass it's runQuery
+            L{twisted.enterprice.adbapi.ConnectionPool} and pass it's runQuery
             method here. Otherwise pass a function with the same prototype.
         @type runQuery: C{callable}
 

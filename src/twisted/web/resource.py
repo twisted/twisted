@@ -41,7 +41,7 @@ class IResource(Interface):
 
     isLeaf = Attribute(
         """
-        Signal if this IResource implementer is a "leaf node" or not. If True,
+        Signal if this IResource implementor is a "leaf node" or not. If True,
         getChildWithDefault will not be called on this Resource.
         """
     )
@@ -67,7 +67,7 @@ class IResource(Interface):
 
     def putChild(path: bytes, child: IResource) -> None:
         """
-        Put a child L{IResource} implementer at the given path.
+        Put a child L{IResource} implementor at the given path.
 
         @param path: A single path component, to be interpreted relative to the
             path this resource is found at, at which to put the given child.

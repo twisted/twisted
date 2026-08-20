@@ -187,7 +187,7 @@ class StandardInputOutputTests(TestCase):
 
     def test_buggyReadConnectionLost(self) -> defer.Deferred[None]:
         """
-        When stdin is closed and the protocol connected to it implements
+        When stdin is closed and the protocol connnected to it implements
         L{IHalfCloseableProtocol} but its C{readConnectionLost} method raises
         an exception its regular C{connectionLost} method will be called.
         """
@@ -195,7 +195,7 @@ class StandardInputOutputTests(TestCase):
 
     def test_buggyWriteConnectionLost(self) -> defer.Deferred[None]:
         """
-        When stdin is closed and the protocol connected to it implements
+        When stdin is closed and the protocol connnected to it implements
         L{IHalfCloseableProtocol} but its C{readConnectionLost} method raises
         an exception its regular C{connectionLost} method will be called.
         """

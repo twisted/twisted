@@ -405,7 +405,7 @@ class FlattenIntegrationTests(FlattenTestCase):
 
     def test_attrRendering(self) -> None:
         """
-        An Element with an attr tag renders the value of its attr tag as an
+        An Element with an attr tag renders the vaule of its attr tag as an
         attribute of its containing tag.
         """
         element = Element(

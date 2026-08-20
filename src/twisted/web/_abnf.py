@@ -45,7 +45,7 @@ def _decint(data: bytes) -> int:
 
 def _ishexdigits(b: bytes | bytearray) -> bool:
     """
-    Is the string case-insensitively hexadecimal?
+    Is the string case-insensitively hexidecimal?
 
     It must be composed of one or more characters in the ranges a-f, A-F
     and 0-9.

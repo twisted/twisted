@@ -24,7 +24,7 @@ default = static.Data(b"", "text/html")
 default.putChild(b"vhost", vhost.VHostMonsterResource())
 resource = vhost.NameVirtualHost()
 resource.default = default
-# Here we use /var/www/html/ as our root directory for the web server, you can
+# Here we use /var/www/html/ as our root diretory for the web server, you can
 # change it to whatever directory you want.
 root = static.File("/var/www/html/")
 root.processors = {".rpy": script.ResourceScript}

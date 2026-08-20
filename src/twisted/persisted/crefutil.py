@@ -152,7 +152,7 @@ class _Defer(Deferred[object], NotKnown):
         self.callback(obj)
 
     def addDependant(self, dep, key):
-        # by the time I'm adding a dependent, I'm *not* adding any more
+        # by the time I'm adding a dependant, I'm *not* adding any more
         # callbacks
         NotKnown.addDependant(self, dep, key)
         self.unpause()

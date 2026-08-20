@@ -571,7 +571,7 @@ class BasicFTPServerTests(FTPServerTestCase):
 
         def cb(responseLines):
             """
-            Extract the host and port from the response, and
+            Extract the host and port from the resonse, and
             verify the server is listening of the port it claims to be.
             """
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
@@ -1884,7 +1884,7 @@ class FTPFileListingTests(TestCase):
 
         def check(fileOther):
             ((file,), other) = fileOther
-            self.assertFalse(other, f"unexpected unparsable lines: {repr(other)}")
+            self.assertFalse(other, f"unexpect unparsable lines: {repr(other)}")
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
             self.assertTrue(file["owner"] == "root", "misparsed fileitem")

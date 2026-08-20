@@ -768,7 +768,7 @@ Bugfixes
 - BadZipfile (with a small f) has been deprecated since Python 3.2,
   use BadZipFile (big F) instead, added in 3.2. (#11821)
 - `twisted.web.template` now avoids unnecessary copying and is faster, particularly for templates with deep nesting. (#11834)
-- `twisted.web.template` now avoids some unnecessary evaluation of type annotations and is faster. (#11835)
+- `twisted.web.template` now avoids some unecessary evaluation of type annotations and is faster. (#11835)
 - utcfromtimestamp has been deprecated since Python 3.12,
   use fromtimestamp(x, timezone.utc).replace(tzinfo=None) instead. (#11908)
 
@@ -1471,7 +1471,7 @@ Features
 - twisted.internet.defer.inlineCallbacks and ensureDeferred will now associate a contextvars.Context with the coroutines they run, meaning that ContextVar objects will maintain their value within the same coroutine, similarly to asyncio Tasks. This functionality requires Python 3.7+, or the contextvars PyPI backport to be installed for Python 3.5-3.6. (#9719, #9826)
 - twisted.internet.defer.Deferred.fromCoroutine has been added. This is similar to the existing ensureDeferred function, but is named more consistently inside Twisted and does not pass through Deferreds. (#9825)
 - trial now allows the @unittest.skipIf decorator to specify that an entire test class should be skipped. (#9829)
-- The twisted.python.deprecate.deprecatedKeywordParameter decorator can be used to mark a keyword parameter of a function or method as deprecated. (#9844)
+- The twisted.python.deprecate.deprecatedKeywordParameter decorator can be used to mark a keyword paramater of a function or method as deprecated. (#9844)
 - Projects using Twisted can now perform type checking against a Twisted
   installation, for example using mypy. (#9908)
 - twisted.python.util.InsensitiveDict now fully implements MutableMapping. (#9919)
@@ -1818,7 +1818,7 @@ Features
 - Twisted's minimum Cryptography requirement is now 2.5. (#9592)
 - twisted.internet.utils.getProcessOutputAndValue now accepts `stdinBytes` to write to the child process's standard input. (#9607)
 - Add new twisted.logger.capturedLogs context manager for capturing observed log events in tests. (#9617)
-- twisted.internet.base.PluggableResolverMixin, which implements the pluggable resolver interfaces for easier reuse in other reactors, has been factored out of ReactorBase. (#9632)
+- twisted.internet.base.PluggableResolverMixin, which implements the pluggable resolver interfaces for easier re-use in other reactors, has been factored out of ReactorBase. (#9632)
 - The PyPI page for Twisted has been enhanced to include more information and useful links. (#9648)
 
 
@@ -2017,7 +2017,7 @@ Features
 Bugfixes
 ~~~~~~~~
 
-- twisted.web.http.Request.cookies, twisted.web.http.HTTPChannel.writeHeaders, and twisted.web.http_headers.Headers were all vulnerable to header injection attacks.  They now replace linear whitespace ('\r', '\n', and '\r\n') with a single space.  twisted.web.http.Request.cookies also replaces semicolons (';') with a single space. (#9420)
+- twisted.web.http.Request.cookies, twisted.web.http.HTTPChannel.writeHeaders, and twisted.web.http_headers.Headers were all vulnerable to header injection attacks.  They now replace linear whitespace ('\r', '\n', and '\r\n') with a single space.  twisted.web.http.Reqeuest.cookies also replaces semicolons (';') with a single space. (#9420)
 - twisted.web.client.Request and twisted.web.client.HTTPClient were both vulnerable to header injection attacks.  They now replace linear whitespace ('\r', '\n', and '\r\n') with a single space. (#9421)
 
 
@@ -2216,7 +2216,7 @@ Bugfixes
 
 - twisted.web.server.GzipEncoderFactory would sometimes fail to gzip requests if the Accept-Encoding header contained whitespace between the comma-separated acceptable encodings. It now trims whitespace before checking if gzip is an acceptable encoding. (#9086)
 - twisted.web.static.File renders directory listings on Python 2, including those with text paths. (#9438)
-- twisted.python.http.Request now correctly parses multipart bodies on Python 3.7. (#9448)
+- twisted.python.http.Request now correcly parses multipart bodies on Python 3.7. (#9448)
 - twisted.web.http.combinedLogFormatter (used by t.w.http.Server and t.w.server.Site) no longer produces DeprecationWarning about Request.getClientIP. (#9470)
 
 
@@ -4291,7 +4291,7 @@ Deprecations and Removals
    in Twisted are replaced with collections.OrderedDict. (#8051)
  - twisted.persisted.sob.load, twisted.persisted.sob.loadValueFromFile
    and twisted.persisted.sob.Persistent.save() are now deprecated when
-   used with a passphrase. The encryption used by these methods are
+   used with a passphrase. The encyption used by these methods are
    weak. (#8081)
  - twisted.internet.interfaces.IStreamClientEndpointStringParser has
    been removed and Twisted will no longer use parsers implementing

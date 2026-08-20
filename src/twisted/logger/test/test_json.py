@@ -230,7 +230,7 @@ class FileLogObserverTests(TestCase):
     def test_observeWritesDefaultRecordSeparator(self) -> None:
         """
         A L{FileLogObserver} created by L{jsonFileLogObserver} writes events
-        serialized as JSON text to a file when it observes events.
+        serialzed as JSON text to a file when it observes events.
         By default, the record separator is C{"\\x1e"}.
         """
         self.assertObserverWritesJSON()
@@ -238,7 +238,7 @@ class FileLogObserverTests(TestCase):
     def test_observeWritesEmptyRecordSeparator(self) -> None:
         """
         A L{FileLogObserver} created by L{jsonFileLogObserver} writes events
-        serialized as JSON text to a file when it observes events.
+        serialzed as JSON text to a file when it observes events.
         This test sets the record separator to C{""}.
         """
         self.assertObserverWritesJSON(recordSeparator="")

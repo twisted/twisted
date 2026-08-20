@@ -494,7 +494,7 @@ class FighterAceExtendedOptions(FighterAceOptions):
     """
     Extend the options and zsh metadata provided by FighterAceOptions.
     _shellcomp must accumulate options and metadata from all classes in the
-    hierarchy so this is important to test.
+    hiearchy so this is important to test.
     """
 
     optFlags = [["no-stalls", None, "Turn off the ability to stall your aircraft"]]

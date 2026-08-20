@@ -648,7 +648,7 @@ class Key:
     @classmethod
     def _fromString_AGENTV3(cls, data):
         """
-        Return a private key object corresponding to the Secure Shell Key
+        Return a private key object corresponsing to the Secure Shell Key
         Agent v3 format.
 
         The SSH Key Agent v3 format for a RSA key is::

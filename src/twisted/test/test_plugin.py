@@ -97,7 +97,7 @@ class PluginTests(unittest.TestCase):
 
     def _clearCache(self) -> None:
         """
-        Remove the plugins B{dropping.cache} file.
+        Remove the plugins B{droping.cache} file.
         """
         self.package.child("dropin.cache").remove()
 

@@ -18,7 +18,7 @@ algorithms = {
     b"md5": md5,
     # md5-sess is more complicated than just another algorithm.  It requires
     # H(A1) state to be remembered from the first WWW-Authenticate challenge
-    # issued and reused to process any Authorization header in response to
+    # issued and re-used to process any Authorization header in response to
     # that WWW-Authenticate challenge.  It is *not* correct to simply
     # recalculate H(A1) each time an Authorization header is received.  Read
     # RFC 2617, section 3.2.2.2 and do not try to make DigestCredentialFactory

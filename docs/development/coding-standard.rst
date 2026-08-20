@@ -9,7 +9,7 @@ Some silliness is OK at the module naming level (see :py:mod:`twisted.spread` ..
 
 Try to avoid terms that may have existing definitions or uses.
 This rule is often broken, since it is incredibly difficult, as most normal words have already been taken by some other software.
-As an example, using the term "reactor" elsewhere in Twisted for something that is not an implementer of ``IReactor`` adds additional meaning to the word and will cause confusion.
+As an example, using the term "reactor" elsewhere in Twisted for something that is not an implementor of ``IReactor`` adds additional meaning to the word and will cause confusion.
 
 More importantly, try to avoid meaningless words.
 In particular, words like "handler", "processor", "engine", "manager", and "component" don't really indicate what something does, only that it does *something*.

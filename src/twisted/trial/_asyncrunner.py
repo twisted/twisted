@@ -21,7 +21,7 @@ from twisted.trial._synctest import _logObserver
 
 class TestSuite(pyunit.TestSuite):
     """
-    Extend the standard library's C{TestSuite} with a consistently overridable
+    Extend the standard library's C{TestSuite} with a consistently overrideable
     C{run} method.
     """
 

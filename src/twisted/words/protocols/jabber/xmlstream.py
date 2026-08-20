@@ -296,7 +296,7 @@ class ListenAuthenticator(Authenticator):
 
 class FeatureNotAdvertized(Exception):
     """
-    Exception indicating a stream feature was not advertised, while required by
+    Exception indicating a stream feature was not advertized, while required by
     the initiating entity.
     """
 
@@ -312,7 +312,7 @@ class BaseFeatureInitiatingInitializer:
     @cvar feature: tuple of (uri, name) of the stream feature root element.
     @type feature: tuple of (C{str}, C{str})
 
-    @ivar required: whether the stream feature is required to be advertised
+    @ivar required: whether the stream feature is required to be advertized
                     by the receiving entity.
     @type required: C{bool}
     """
@@ -327,8 +327,8 @@ class BaseFeatureInitiatingInitializer:
         """
         Initiate the initialization.
 
-        Checks if the receiving entity advertises the stream feature. If it
-        does, the initialization is started. If it is not advertised, and the
+        Checks if the receiving entity advertizes the stream feature. If it
+        does, the initialization is started. If it is not advertized, and the
         C{required} instance variable is C{True}, it raises
         L{FeatureNotAdvertized}. Otherwise, the initialization silently
         succeeds.

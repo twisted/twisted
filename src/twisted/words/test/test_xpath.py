@@ -304,7 +304,7 @@ class XPathTests(unittest.TestCase):
         """
         A missing closing bracket raises a SyntaxError.
 
-        This test exercises the most common failure mode.
+        This test excercises the most common failure mode.
         """
         exc = self.assertRaises(SyntaxError, XPathQuery, """//bar[@attrib1""")
         self.assertTrue(

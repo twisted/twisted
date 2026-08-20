@@ -12,7 +12,7 @@ Introduction
 Audience
 ~~~~~~~~
 
-The target audience of this document is a Twisted user who wants to deploy a significant amount of Twisted code in a reusable, standard and easily configurable fashion.
+The target audience of this document is a Twisted user who wants to deploy a significant amount of Twisted code in a re-usable, standard and easily configurable fashion.
 A Twisted user who wishes to use the Application framework needs to be familiar with developing Twisted :doc:`servers <servers>` and/or :doc:`clients <clients>`.
 
 

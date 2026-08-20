@@ -447,7 +447,7 @@ of :py:class:`HTTPConnectionPool <twisted.web.client.HTTPConnectionPool>` , whic
 to manage the connections.  If the pool is created with the
 parameter ``persistent`` set to ``True`` (the
 default), it will not close connections when the request is done, and
-instead hold them in its cache to be reused.
+instead hold them in its cache to be re-used.
 
 
     
@@ -528,7 +528,7 @@ have an attribute
 called ``maxPersistentPerHost`` which limits the
 number of cached persistent connections to the same server. The default
 value is 2.  This is effective only when the :py:attr:`persistent <twisted.web.client.HTTPConnectionPool.persistent>` option is
-True. You can change the value like below:
+True. You can change the value like bellow:
 
 
     

@@ -50,7 +50,7 @@ class IAccount(Interface):
         """
         Go on-line.
 
-        @type chatui: Implementer of C{IChatUI}
+        @type chatui: Implementor of C{IChatUI}
 
         @rtype: L{Deferred} with an eventual L{IClient} result.
         """

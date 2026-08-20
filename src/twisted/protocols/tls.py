@@ -70,7 +70,7 @@ class _ProducerMembrane:
     """
     Stand-in for producer registered with a L{TLSMemoryBIOProtocol} transport.
 
-    Ensures that producer pause/resume events from the underlying transport are
+    Ensures that producer pause/resume events from the undelying transport are
     coordinated with pause/resume events from the TLS layer.
 
     @ivar _producer: The application-layer producer.

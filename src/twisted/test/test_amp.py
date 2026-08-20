@@ -895,7 +895,7 @@ class BinaryProtocolTests(TestCase):
     def setUp(self):
         """
         Keep track of all boxes received by this test in its capacity as an
-        L{IBoxReceiver} implementer.
+        L{IBoxReceiver} implementor.
         """
         self.boxes = []
         self.data = []
@@ -3120,7 +3120,7 @@ class ListOfOptionalTests(TestCase):
         self.assertRaises(
             KeyError,
             stringList.toBox,
-            b"omitted",
+            b"ommited",
             amp.AmpBox(),
             {"someOtherKey": 0},
             None,
@@ -3132,7 +3132,7 @@ class ListOfOptionalTests(TestCase):
         as optional whose key is not present in the objects dictionary.
         """
         stringList = amp.ListOf(amp.Integer(), optional=True)
-        stringList.toBox(b"omitted", amp.AmpBox(), {b"someOtherKey": 0}, None)
+        stringList.toBox(b"ommited", amp.AmpBox(), {b"someOtherKey": 0}, None)
 
     def test_omittedOptionalArgumentDeserializesAsNone(self):
         """

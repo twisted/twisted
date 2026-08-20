@@ -7,7 +7,7 @@ Acceptance tests for wxreactor.
 Please test on Linux, Win32 and macOS:
 1. Startup event is called at startup.
 2. Scheduled event is called after 2 seconds.
-3. Shutdown takes 3 seconds, both when quitting from menu and when closing
+3. Shutdown takes 3 seconds, both when quiting from menu and when closing
    window (e.g. Alt-F4 in metacity). This tests reactor.stop() and
    wxApp.ExitEventLoop().
 4. 'hello, world' continues to be printed even when modal dialog is open

@@ -460,7 +460,7 @@ class TCPClientTestsBase(ReactorBuilder, ConnectionTestsMixin, StreamClientTests
         family of the transport type under test.
     @type family: C{int}
 
-    @ivar addressClass: the L{twisted.internet.interfaces.IAddress} implementer
+    @ivar addressClass: the L{twisted.internet.interfaces.IAddress} implementor
         associated with the transport type under test.  Must also be a
         3-argument callable which produces an instance of same.
     @type addressClass: C{type}
@@ -2239,12 +2239,12 @@ class WriteSequenceTestsMixin:
 
             def dataReceived(data):
                 log.msg("data received: %r" % data)
-                self.assertEqual(data, b"Some sequence split")
+                self.assertEqual(data, b"Some sequence splitted")
                 client.transport.loseConnection()
 
             server.dataReceived = dataReceived
 
-            client.transport.writeSequence([b"Some ", b"sequence ", b"split"])
+            client.transport.writeSequence([b"Some ", b"sequence ", b"splitted"])
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)

@@ -389,7 +389,7 @@ def asyncioSelectorReactor(self: object) -> asyncioreactor.AsyncioSelectorReacto
 
     The test suite prefers this constructor because having a new event loop
     for each reactor provides better test isolation.  The real constructor
-    prefers to reuse (or create) a global loop because of how this interacts
+    prefers to re-use (or create) a global loop because of how this interacts
     with other asyncio-based libraries and applications (though maybe it
     shouldn't).
 

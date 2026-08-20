@@ -666,7 +666,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         # We close the first one:
         origCached[0].state = "DISCONNECTED"
 
-        # Now, when we retrieve connections we should get the *second* one:
+        # Now, when we retrive connections we should get the *second* one:
         result = []
         self.pool.getConnection(key, BadEndpoint()).addCallback(result.append)
         self.assertIdentical(result[0], origCached[1])
@@ -731,7 +731,7 @@ class HTTPConnectionPoolTests(TestCase, FakeReactorAndConnectMixin):
         protocol._state = "QUIESCENT"
         protocol._quiescentCallback(protocol)
 
-        # If we try to retrieve a connection to same destination again, we
+        # If we try to retrive a connection to same destination again, we
         # should get the same protocol, because it should've been added back
         # to the pool:
         result2 = []

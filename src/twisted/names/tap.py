@@ -119,7 +119,7 @@ def _buildResolvers(config):
     @type config: L{Options} instance
     @param config: Parsed command-line configuration
 
-    @return: Two-item tuple of a list of cache resolvers and a list of client
+    @return: Two-item tuple of a list of cache resovers and a list of client
         resolvers
     """
     from twisted.names import cache, client, hosts

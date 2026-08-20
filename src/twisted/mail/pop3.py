@@ -391,7 +391,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     @ivar timeOut: The number of seconds to wait for a command from the client
         before disconnecting.
 
-    @type schedule: callable that takes iterator and returns
+    @type schedule: callable that takes interator and returns
         L{Deferred <defer.Deferred>}
     @ivar schedule: A callable that arranges for an iterator to be
         cooperatively iterated over along with all other iterators which have

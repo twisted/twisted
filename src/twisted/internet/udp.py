@@ -203,7 +203,7 @@ class Port(base.BasePort):
             except OSError as le:
                 raise error.CannotListenError(self.interface, self.port, le)
         else:
-            # Reuse the externally specified socket
+            # Re-use the externally specified socket
             skt = self._preexistingSocket
             self._preexistingSocket = None
 

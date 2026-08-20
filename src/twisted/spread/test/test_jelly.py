@@ -155,7 +155,7 @@ class JellyTests(TestCase):
     def test_methodsNotSelfIdentity(self):
         """
         If a class change after an instance has been created, L{jelly.unjelly}
-        should raise a C{TypeError} when trying to unjelly the instance.
+        shoud raise a C{TypeError} when trying to unjelly the instance.
         """
         a = A()
         b = B()
@@ -268,7 +268,7 @@ class JellyTests(TestCase):
         represented by the s-expressions.
 
         This test also verifies that L{decimalData} contains valid jellied
-        data.  This is important since L{test_decimalMissing} reuses
+        data.  This is important since L{test_decimalMissing} re-uses
         L{decimalData} and is expected to be unable to produce
         L{decimal.Decimal} instances even though the s-expression correctly
         represents a list of them.

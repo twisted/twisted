@@ -651,7 +651,7 @@ class _IRequestEncoder(Interface):
 
 class _IRequestEncoderFactory(Interface):
     """
-    A factory for returning L{_IRequestEncoder} instances.
+    A factory for returing L{_IRequestEncoder} instances.
 
     @since: 12.3
     """
@@ -702,7 +702,7 @@ class IAgent(Interface):
     implement many other unforeseen behaviors as well.
 
     It is also intended that L{IAgent} implementations be composable.  An
-    implementation which provides cookie handling features should reuse an
+    implementation which provides cookie handling features should re-use an
     implementation that provides connection pooling and this combination could
     be used by an implementation which adds content negotiation functionality.
     Some implementations will be completely self-contained, such as those which

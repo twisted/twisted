@@ -4,7 +4,7 @@
 # You can run this .tac file directly with:
 #    twistd -ny window.tac
 #
-# Reusing a private key is dangerous, generate one.
+# Re-using a private key is dangerous, generate one.
 #
 # For this example you can use:
 #

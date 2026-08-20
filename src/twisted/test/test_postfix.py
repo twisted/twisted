@@ -51,7 +51,7 @@ class PostfixTCPMapServerTestCase:
         """
         Test that I{get} and I{put} commands are responded to correctly by
         L{postfix.PostfixTCPMapServer} when its factory is an instance of
-        L{postfix.PostfixTCPMapDictServerFactory}.
+        L{postifx.PostfixTCPMapDictServerFactory}.
         """
         factory = postfix.PostfixTCPMapDictServerFactory(self.data)
         transport = StringTransport()
@@ -76,7 +76,7 @@ class PostfixTCPMapServerTestCase:
         """
         Test that I{get} and I{put} commands are responded to correctly by
         L{postfix.PostfixTCPMapServer} when its factory is an instance of
-        L{postfix.PostfixTCPMapDeferringDictServerFactory}.
+        L{postifx.PostfixTCPMapDeferringDictServerFactory}.
         """
         factory = postfix.PostfixTCPMapDeferringDictServerFactory(self.data)
         transport = StringTransport()

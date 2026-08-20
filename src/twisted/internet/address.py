@@ -57,7 +57,7 @@ class IPv6Address:
     @ivar flowInfo: the IPv6 flow label.  This can be used by QoS routers to
         identify flows of traffic; you may generally safely ignore it.
 
-    @ivar scopeID: the IPv6 scope identifier - roughly analogous to what
+    @ivar scopeID: the IPv6 scope identifier - roughly analagous to what
         interface traffic destined for this address must be transmitted over.
     """
 

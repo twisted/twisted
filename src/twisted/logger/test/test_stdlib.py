@@ -25,7 +25,7 @@ from .._stdlib import STDLibLogObserver
 
 def nextLine() -> tuple[str | None, int]:
     """
-    Retrieve the file name and line number immediately after where this function
+    Retrive the file name and line number immediately after where this function
     is called.
 
     @return: the file name and line number
@@ -39,7 +39,7 @@ def nextLine() -> tuple[str | None, int]:
 
 class StdlibLoggingContainer:
     """
-    Container for a test configuration of stdlib logging objects.
+    Continer for a test configuration of stdlib logging objects.
     """
 
     def __init__(self) -> None:

@@ -317,7 +317,7 @@ We just do a normal release using the calendar base versioning scheme.
 We welcome additional volunteers to help drive the release effort.
 
 
-Security notes
+Secirity notes
 --------------
 
 The release process uses a GitHub Actions environment, configured `here

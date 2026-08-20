@@ -99,7 +99,7 @@ class FileAuthority(common.ResolverBase):
         overridden in a subclass. It is called once from the initializer.
 
         @param filename: The I{filename} parameter that was passed to the
-        initializer.
+        initilizer.
 
         @returns: L{None} -- the return value is ignored
         """
@@ -226,7 +226,7 @@ class FileAuthority(common.ResolverBase):
     def lookupZone(self, name, timeout=10):
         name = dns.domainString(name)
         if self.soa[0].lower() == name.lower():
-            # We hee hee hooo yea
+            # Wee hee hee hooo yea
             default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
             if self.soa[1].ttl is not None:
                 soa_ttl = self.soa[1].ttl

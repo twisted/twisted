@@ -69,7 +69,7 @@ class TokenPrinter:
 
 class HTMLWriter:
     """
-    Write the stream of tokens and whitespace from L{TokenPrinter}, formatting
+    Write the stream of tokens and whitespace from L{TokenPrinter}, formating
     tokens as HTML spans.
     """
 

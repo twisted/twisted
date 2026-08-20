@@ -212,7 +212,7 @@ class UnixApplicationRunner(app.ApplicationRunner):
         Format the C{exception} in preparation for writing to the
         status pipe.  This does the right thing on Python 2 if the
         exception's message is Unicode, and in all cases limits the
-        length of the message after* encoding to 100 bytes.
+        length of the message afte* encoding to 100 bytes.
 
         This means the returned message may be truncated in the middle
         of a unicode escape.

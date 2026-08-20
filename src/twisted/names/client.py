@@ -390,7 +390,7 @@ class Resolver(common.ResolverBase):
 
         If this query is already outstanding, it will not be re-issued.
         Instead, when the outstanding query receives a response, that response
-        will be reused for this query as well.
+        will be re-used for this query as well.
 
         @type name: C{str}
         @type type: C{int}

@@ -6,7 +6,7 @@ from typing import NoReturn
 
 from hamcrest import assert_that, equal_to, has_length
 
-# Trial should expose matches_result publicly.
+# Trial should expose matches_result publically.
 # https://github.com/twisted/twisted/issues/11709
 from twisted.trial._dist.test.matchers import matches_result
 from twisted.trial.reporter import TestResult

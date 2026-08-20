@@ -2110,7 +2110,7 @@ class FTPAnonymousShell:
     def list(self, path, keys=()):
         """
         Return the list of files at given C{path}, adding C{keys} stat
-        information if specified.
+        informations if specified.
 
         @param path: the directory or file to check.
         @type path: C{str}

@@ -11,7 +11,7 @@ a good example in division of responsibilities:
   and writing out the result.
 - The factory decides on policy, and has relatively little knowledge
   of the details of the protocol. Other protocols can use the same
-  factory class by instantiating and setting .protocol
+  factory class by intantiating and setting .protocol
 - The factory does little job itself: it is mostly a policy maker.
   The 'smarts' are in free-standing functions which are written
   for flexibility.
