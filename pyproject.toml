@@ -176,7 +176,7 @@ quiet-level = 3
 check-hidden = true
 # Once we use a newer version of codespell that has improved ignore features
 # we can remove some words from this list.
-ignore-words-list = "ans, aEr, Nd, ser, rin, bale, shiftIn, ques, someMore, scrip, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant, Referencable, adaptee, Homogenous, SUPRESS, funktion, Re-using, re-use, implementor, adaptee, sponsoree"
+ignore-words-list = "ans, aEr, Nd, ser, rin, bale, shiftIn, ques, someMore, scrip, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant, Referencable, adaptee, Homogenous, SUPRESS, funktion, Re-using, re-use, re-using, re-used, implementor, implementors, adaptee, sponsoree"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
