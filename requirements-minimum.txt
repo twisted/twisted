@@ -3,8 +3,9 @@
 # They include extra dependencies so that we test functionality for TLS, HTTP2,
 # or SSH.
 #
-# NOTE: This file needs to be manually kept in sync with the versions defined in
-#       pyproject.toml.
+# NOTE: This file needs to be manually kept in sync with the versions defined
+#       in pyproject.toml - for an eventual automated solution, see
+#       https://github.com/jazzband/pip-tools/issues/2464
 
 #
 # Hard dependencies.
