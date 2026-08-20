@@ -72,12 +72,12 @@ dev-release = [
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[test]",
-    "twisted[mypy]",
     # We don't use pyflakes directly. It is used via flake8.
     # When updating pyflakes, also update .pre-commit-config.yaml
     "pyflakes ~= 3.4",
     "python-subunit ~= 1.4",
     "coverage ~= 7.15",
+    "codespell >= 2.4",
     "towncrier ~= 25.8",
     "pre-commit ~= 4.5",
 ]
@@ -165,6 +165,18 @@ Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
 Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
 Funding-GitHub = "https://github.com/sponsors/twisted"
+
+[tool.codespell]
+# Add any other sub-folders that you might have in your dev environment.
+# codespell does not have an include config option, only exclude.
+# See https://github.com/codespell-project/codespell/issues/3997
+skip = 'apidocs*, ./docs/_build/*, venv*, .venv*, .nox*, .git*, dist*, .tox*, .*_cache/*, ./_trial_temp*, ./src/*.egg-info/*'
+count = false
+quiet-level = 3
+check-hidden = true
+ignore-words-list = "ans, ser, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant"
+ignore-regex = "# noqa:codespell"
+ignore-multiline-regex = "# codespell:ignore-begin *\n.*# codespell:ignore-end"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
