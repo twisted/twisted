@@ -4311,7 +4311,7 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
             d = c.fetchSpecific(
                 "1:*", headerType="HEADER.FIELDS", headerArgs=["SUBJECT"]
             )
-            c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
+            c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {39}\r\n')
             c.dataReceived(b"Subject: Surprise for your woman...\r\n")
             c.dataReceived(b"\r\n")
             c.dataReceived(b")\r\n")
@@ -7788,7 +7788,7 @@ class IMAP4ServerFetchTests(TestCase):
         # We need to clear out the welcome message.
         self.transport.clear()
         # Let's send out the faulty command.
-        self.server.dataReceived(b"0001 FETCH 1 FULL\r\n")
+        self.server.dataReceived(b"0001 FETCH 1 FULLL\r\n")  # codespell:ignore
         expected = b"0001 BAD Illegal syntax: Invalid Argument\r\n"
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()
