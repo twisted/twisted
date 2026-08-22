@@ -102,6 +102,15 @@ class H2Connection(Protocol, TimeoutMixin):
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
     @type _abortingCall: L{twisted.internet.base.DelayedCall}
+
+    @cvar _resetTokenBurst: The maximum number of peer-initiated stream resets
+        (RST_STREAM) allowed in a burst. With C{_resetTokenRate} this token
+        bucket rate-limits resets to defend against HTTP/2 Rapid Reset
+        (CVE-2023-44487).
+    @type _resetTokenBurst: L{int}
+
+    @cvar _resetTokenRate: The number of reset tokens replenished each second.
+    @type _resetTokenRate: L{int}
     """
 
     factory = None
@@ -111,9 +120,7 @@ class H2Connection(Protocol, TimeoutMixin):
     _log = Logger()
     _abortingCall = None
 
-    # Token bucket that rate-limits peer stream resets (RST_STREAM) to defend
-    # against HTTP/2 Rapid Reset (CVE-2023-44487), the same shape nghttp2 uses.
-    _resetTokenBurst = 1000.0
+    _resetTokenBurst = 1000
     _resetTokenRate = 33
 
     def __init__(self, reactor=None):
@@ -809,6 +816,11 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         Flush any pending control data and tear the connection down, leaving
         timers armed so that a peer who never reads our data is timed out.
+
+        Callers own the GOAWAY: queue one with
+        L{h2.connection.H2Connection.close_connection} first if a specific
+        error code is wanted. The L{dataReceived} protocol-error path passes
+        none and relies on the GOAWAY that hyper-h2 queues itself.
 
         @param reason: The failure to report to the connection's streams.
         """
