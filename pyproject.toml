@@ -889,7 +889,6 @@ module = [
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',
-    'twisted.web.http_headers',
     'twisted.web.iweb',
     'twisted.web.rewrite',
     'twisted.web.script',
