@@ -386,6 +386,11 @@ class Telnet(protocol.Protocol):
         dropped, matching the way L{twisted.protocols.basic.LineReceiver}
         handles a line that exceeds its C{MAX_LENGTH}.  This attribute is
         private; a subclass that needs a different bound may override it.
+
+    @ivar _subnegotiationOverflowReported: A flag which is only true once an
+        oversized subnegotiation has been logged and the connection dropped, so
+        that further payload arriving on the closing connection does not repeat
+        the warning or the disconnect.
     """
 
     _log = Logger()
@@ -395,6 +400,8 @@ class Telnet(protocol.Protocol):
 
     # See the class docstring for the rationale behind this bound.
     _MAX_SUBNEGOTIATION_LENGTH = 4096
+
+    _subnegotiationOverflowReported = False
 
     def __init__(self):
         self.options = {}
@@ -546,16 +553,19 @@ class Telnet(protocol.Protocol):
         protocol violation: a warning is logged and the connection is dropped,
         mirroring L{twisted.protocols.basic.LineReceiver.lineLengthExceeded},
         rather than buffering the subnegotiation without bound.  The
-        C{disconnecting} guard keeps this to a single log line if more
-        subnegotiation payload arrives while the connection is still closing.
+        C{_subnegotiationOverflowReported} flag keeps this to a single log line
+        and a single disconnect if more subnegotiation payload arrives while
+        the connection is still closing.
         """
-        if self.transport.disconnecting:
+        if self._subnegotiationOverflowReported:
             return
+        self._subnegotiationOverflowReported = True
         self._log.warn(
             "Telnet subnegotiation exceeded {length} bytes without an "
             "IAC SE terminator; dropping connection.",
             length=self._MAX_SUBNEGOTIATION_LENGTH,
         )
+        assert self.transport is not None
         self.transport.loseConnection()
 
     def dataReceived(self, data):

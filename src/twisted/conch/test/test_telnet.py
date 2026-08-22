@@ -12,7 +12,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.conch import telnet
 from twisted.internet import defer
-from twisted.logger import LogLevel, globalLogPublisher
+from twisted.logger import LogLevel, capturedLogs
 from twisted.python.compat import iterbytes
 from twisted.test import proto_helpers
 from twisted.trial import unittest
@@ -371,9 +371,6 @@ class TelnetTransportTests(unittest.TestCase):
         even when further subnegotiation payload keeps arriving afterwards.
         """
         cap = telnet.Telnet._MAX_SUBNEGOTIATION_LENGTH
-        events = []
-        globalLogPublisher.addObserver(events.append)
-        self.addCleanup(globalLogPublisher.removeObserver, events.append)
         drops = []
         original = self.t.loseConnection
 
@@ -382,9 +379,10 @@ class TelnetTransportTests(unittest.TestCase):
             original()
 
         self.t.loseConnection = countingLoseConnection
-        self.p.dataReceived(telnet.IAC + telnet.SB + b"\x12")
-        self.p.dataReceived(b"A" * (cap * 4))
-        self.p.dataReceived(b"A" * 128)
+        with capturedLogs() as events:
+            self.p.dataReceived(telnet.IAC + telnet.SB + b"\x12")
+            self.p.dataReceived(b"A" * (cap * 4))
+            self.p.dataReceived(b"A" * 128)
         warnings = [
             e
             for e in events
