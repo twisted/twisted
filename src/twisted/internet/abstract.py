@@ -8,28 +8,29 @@ Support for generic select()able objects.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from socket import AF_INET, AF_INET6, inet_pton
 from typing import Protocol, cast
 
 from zope.interface import implementer
 
 from twisted.internet import interfaces, main
+from twisted.internet.error import ConnectionDone
 from twisted.python import failure, reflect
 
 # Twisted Imports
 from twisted.python.compat import lazyByteSlice
 
 
-def _dataMustBeBytes(obj):
+def _dataMustBeBytes(obj: object) -> None:
     if not isinstance(obj, bytes):  # no, really, I mean it
         raise TypeError("Data must be bytes")
 
 
 # Python 3.4+ can join bytes and memoryviews; using a
 # memoryview prevents the slice from copying
-def _concatenate(bObj, offset, bArray):
-    return b"".join([memoryview(bObj)[offset:]] + bArray)
+def _concatenate(bObj: bytes, offset: int, bArray: Sequence[bytes]) -> bytes:
+    return b"".join((memoryview(bObj)[offset:], *bArray))
 
 
 class _ConsumerMixinType(Protocol):
@@ -169,7 +170,7 @@ class _LogOwner:
             return applicationObject.logPrefix()
         return applicationObject.__class__.__name__
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """
         Override this method to insert custom logging behavior.  Its
         return value will be inserted in front of every line.  It may
@@ -210,7 +211,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     SEND_LIMIT = 128 * 1024
 
-    def __init__(self, reactor: interfaces.IReactorFDSet | None = None):
+    def __init__(self, reactor: interfaces.IReactorFDSet | None = None) -> None:
         """
         @param reactor: An L{IReactorFDSet} provider which this descriptor will
             use to get readable and writeable event notifications.  If no value
@@ -225,7 +226,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._tempDataBuffer: list[bytes] = []
         self._tempDataLen = 0
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: failure.Failure) -> None:
         """The connection was lost.
 
         This is called when the connection on a selectable object has been
@@ -243,7 +244,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.stopReading()
         self.stopWriting()
 
-    def writeSomeData(self, data: bytes) -> int | BaseException:
+    def writeSomeData(self, data: bytes) -> int | Exception:
         """
         Write as much as possible of the given data, immediately.
 
@@ -257,7 +258,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             "%s does not implement writeSomeData" % reflect.qual(self.__class__)
         )
 
-    def doRead(self):
+    def doRead(self) -> failure.Failure | None:
         """
         Called when data is available for reading.
 
@@ -268,7 +269,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             "%s does not implement doRead" % reflect.qual(self.__class__)
         )
 
-    def doWrite(self):
+    # IWriteDescriptor only declares Failure | None, but this implementation
+    # historically returns exception instances and negative integers.
+    def doWrite(  # type: ignore[override]
+        self,
+    ) -> failure.Failure | Exception | int | None:
         """
         Called when data can be written.
 
@@ -323,7 +328,12 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             ):
                 # tell them to supply some more.
                 self.producerPaused = False
-                self.producer.resumeProducing()
+                if self.streamingProducer:
+                    pushProducer = cast(interfaces.IPushProducer, self.producer)
+                    pushProducer.resumeProducing()
+                else:
+                    pullProducer = cast(interfaces.IPullProducer, self.producer)
+                    pullProducer.resumeProducing()
             elif self.disconnecting:
                 # But if I was previously asked to let the connection die, do
                 # so.
@@ -338,7 +348,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 return result
         return None
 
-    def _postLoseConnection(self):
+    def _postLoseConnection(self) -> ConnectionDone:
         """Called after a loseConnection(), when all data has been written.
 
         Whatever this returns is then returned by doWrite.
@@ -346,11 +356,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # default implementation, telling reactor we're finished
         return main.CONNECTION_DONE
 
-    def _closeWriteConnection(self):
+    def _closeWriteConnection(self) -> failure.Failure | Exception | int | None:
         # override in subclasses
         pass
 
-    def writeConnectionLost(self, reason):
+    def writeConnectionLost(self, reason: failure.Failure) -> None:
         # in current code should never be called
         self.connectionLost(reason)
 
@@ -358,15 +368,15 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         # override in subclasses
         self.connectionLost(reason)
 
-    def getHost(self):
+    def getHost(self) -> interfaces.IAddress:
         # ITransport.getHost
         raise NotImplementedError()
 
-    def getPeer(self):
+    def getPeer(self) -> interfaces.IAddress:
         # ITransport.getPeer
         raise NotImplementedError()
 
-    def _isSendBufferFull(self):
+    def _isSendBufferFull(self) -> bool:
         """
         Determine whether the user-space send buffer for this transport is full
         or not.
@@ -379,7 +389,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         return len(self.dataBuffer) + self._tempDataLen > self.bufferSize
 
-    def _maybePauseProducer(self):
+    def _maybePauseProducer(self) -> None:
         """
         Possibly pause a producer, if there is one and the send buffer is full.
         """
@@ -389,7 +399,8 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
             if self._isSendBufferFull():
                 # pause it.
                 self.producerPaused = True
-                self.producer.pauseProducing()
+                pushProducer = cast(interfaces.IPushProducer, self.producer)
+                pushProducer.pauseProducing()
 
     def write(self, data: bytes) -> None:
         """Reliably write some data.
@@ -434,7 +445,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self._maybePauseProducer()
         self.startWriting()
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """Close the connection at the next available opportunity.
 
         Call this to cause this FileDescriptor to lose its connection.  It will
@@ -459,11 +470,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
                 self.startWriting()
                 self.disconnecting = 1
 
-    def loseWriteConnection(self):
+    def loseWriteConnection(self) -> None:
         self._writeDisconnecting = True
         self.startWriting()
 
-    def stopReading(self):
+    def stopReading(self) -> None:
         """Stop waiting for read availability.
 
         Call this to remove this selectable from being notified when it is
@@ -471,7 +482,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         self.reactor.removeReader(self)
 
-    def stopWriting(self):
+    def stopWriting(self) -> None:
         """Stop waiting for write availability.
 
         Call this to remove this selectable from being notified when it is ready
@@ -479,11 +490,11 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         """
         self.reactor.removeWriter(self)
 
-    def startReading(self):
+    def startReading(self) -> None:
         """Start waiting for read availability."""
         self.reactor.addReader(self)
 
-    def startWriting(self):
+    def startWriting(self) -> None:
         """Start waiting for write availability.
 
         Call this to have this FileDescriptor be notified whenever it is ready for
@@ -499,7 +510,7 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
     producer: interfaces.IProducer | None = None
     bufferSize = 2**2**2**2
 
-    def stopConsuming(self):
+    def stopConsuming(self) -> None:
         """Stop consuming data.
 
         This is called when a producer has lost its connection, to tell the
@@ -511,17 +522,17 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
 
     # producer interface implementation
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if self.connected and not self.disconnecting:
             self.startReading()
 
-    def pauseProducing(self):
+    def pauseProducing(self) -> None:
         self.stopReading()
 
-    def stopProducing(self):
+    def stopProducing(self) -> None:
         self.loseConnection()
 
-    def fileno(self):
+    def fileno(self) -> int:
         """File Descriptor number for select().
 
         This method must be overridden or assigned in subclasses to
@@ -576,11 +587,9 @@ def isIPv6Address(addr: str) -> bool:
 
     @param addr: A string which may or may not be the hex
         representation of an IPv6 address.
-    @type addr: C{str}
 
     @return: C{True} if C{addr} represents an IPv6 address, C{False}
         otherwise.
-    @rtype: C{bool}
     """
     return isIPAddress(addr, AF_INET6)
 
