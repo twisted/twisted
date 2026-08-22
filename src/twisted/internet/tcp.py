@@ -241,7 +241,11 @@ class Connection(
         """Return the socket for this connection."""
         return self.socket
 
-    def doRead(self) -> ConnectionLost | ConnectionDone | None:
+    # IReadDescriptor requires Failure | None, but this implementation
+    # historically returns exception instances for the reactor to interpret.
+    def doRead(  # type: ignore[override]
+        self,
+    ) -> ConnectionLost | ConnectionDone | None:
         """Calls self.protocol.dataReceived with all available data.
 
         This reads up to self.bufferSize bytes of data from its socket, then
@@ -353,6 +357,14 @@ class Connection(
 
     def setTcpKeepAlive(self, enabled: bool) -> None:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
+
+    def getHost(self) -> address.IPv4Address | address.IPv6Address:
+        # ITCPTransport.getHost
+        raise NotImplementedError()
+
+    def getPeer(self) -> address.IPv4Address | address.IPv6Address:
+        # ITCPTransport.getPeer
+        raise NotImplementedError()
 
 
 class _BaseBaseClient:

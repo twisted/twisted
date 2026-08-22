@@ -463,7 +463,6 @@ module = [
     'twisted.internet._sslverify',
     'twisted.internet._win32serialport',
     'twisted.internet._win32stdio',
-    'twisted.internet.abstract',
     'twisted.internet.asyncioreactor',
     'twisted.internet.cfreactor',
     'twisted.internet.endpoints',
