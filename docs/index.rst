@@ -22,7 +22,6 @@ Welcome to the Twisted documentation!
 
    security
    community
-   api/index
    GitHub <https://github.com/twisted/twisted>
    PyPI <https://pypi.org/project/twisted>
 
