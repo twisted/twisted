@@ -87,10 +87,10 @@ class Resolver(common.ResolverBase):
 
     def _aRecords(self, name):
         """
-        Return a tuple of L{dns.RRHeader} instances for all of the IPv4
+        Return a list of L{dns.RRHeader} instances for all of the IPv4
         addresses in the hosts file.
         """
-        return tuple(
+        return list(
             dns.RRHeader(name, dns.A, dns.IN, self.ttl, dns.Record_A(addr, self.ttl))
             for addr in searchFileForAll(FilePath(self.file), name)
             if isIPAddress(addr)
@@ -98,10 +98,10 @@ class Resolver(common.ResolverBase):
 
     def _aaaaRecords(self, name):
         """
-        Return a tuple of L{dns.RRHeader} instances for all of the IPv6
+        Return a list of L{dns.RRHeader} instances for all of the IPv6
         addresses in the hosts file.
         """
-        return tuple(
+        return list(
             dns.RRHeader(
                 name, dns.AAAA, dns.IN, self.ttl, dns.Record_AAAA(addr, self.ttl)
             )
@@ -117,15 +117,15 @@ class Resolver(common.ResolverBase):
         @param name: The DNS name the response is for.
         @type name: C{str}
 
-        @param records: A tuple of L{dns.RRHeader} instances giving the results
+        @param records: A list of L{dns.RRHeader} instances giving the results
             that will go into the response.
 
-        @return: A L{Deferred} which will fire with a three-tuple of result
-            records, authority records, and additional records, or which will
-            fail with L{dns.DomainError} if there are no result records.
+        @return: A L{Deferred} which will fire with a
+            L{common.ResolverResponse} instance, or which will fail with
+            L{dns.DomainError} if there are no result records.
         """
         if records:
-            return defer.succeed((records, (), ()))
+            return defer.succeed(common.ResolverResponse(answer=records))
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
     def lookupAddress(self, name, timeout=None):
