@@ -114,6 +114,27 @@ For more information on different ways you can make outgoing connections
 to different types of endpoints, as well as parsing strings into endpoints,
 see :doc:`the documentation for the endpoints API <endpoints>` .
 
+Binding to Specific Addresses
+-----------------------------
+
+When connecting, it is possible for clients to bind a socket to a specific address and/or port.
+There are various ways to do this and (on POSIX systems) flags such as ``SO_REUSEADDR`` and ``SO_REUSEPORT`` to consider as well.
+
+Due to backwards-compatibility and API changes, there are variety of ways to specify these intentions, typically as a ``bindAddress=`` keyword argument to relevant functions.
+
+For endpoints, types such as :py:class:`HostnameEndpoint <twisted.internet.endpoints.HostnameEndpoint>`, :py:class:`TCP4ClientEndpoint <twisted.internet.endpoints.TCP4ClientEndpoint>`, :py:class:`TCP6ClientEndpoint <twisted.internet.endpoints.TCP6ClientEndpoint>` etc. accept a ``bindAddress=`` argument that is one of several types:
+
+- ``None``: the default behavior
+- ``bytes | str``: an interface name, expressed as ``bytes`` (or ``str``)
+- ``2-tuple``: an "interface name + port" pair, where the "interface name" is ``bytes`` or ``str``
+- ``Binding``: an instance returned from :py:func:`makeBinding <twisted.internet.tcp.makeBinding>`
+
+The modern preference is to use :py:func:`makeBinding <twisted.internet.tcp.makeBinding>`.
+This is also the only way to specify the ``SO_REUSEADDR`` and ``SO_REUSEPORT`` options -- corresponding to the ``reuseAddress`` and ``reusePort`` keyword arguments to ``makeBinding``.
+
+Legacy ClientCreator
+--------------------
+
 You may come across code using :py:class:`ClientCreator <twisted.internet.protocol.ClientCreator>` , an older API which is not as flexible as
 the endpoint API.  Rather than calling ``connect`` on an endpoint,
 such code will look like this:
