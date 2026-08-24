@@ -369,11 +369,17 @@ class FileDescriptor(_ConsumerMixin, _LogOwner):
         self.connectionLost(reason)
 
     def getHost(self) -> interfaces.IAddress:
-        # ITransport.getHost
+        """
+        This is not a complete implementation of L{ITransport.getHost}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
     def getPeer(self) -> interfaces.IAddress:
-        # ITransport.getPeer
+        """
+        This is not a complete implementation of L{ITransport.getPeer}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
     def _isSendBufferFull(self) -> bool:
