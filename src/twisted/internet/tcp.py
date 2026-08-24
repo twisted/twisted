@@ -359,11 +359,17 @@ class Connection(
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, enabled)
 
     def getHost(self) -> address.IPv4Address | address.IPv6Address:
-        # ITCPTransport.getHost
+        """
+        This is not a complete implementation of L{ITCPTransport.getHost}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
     def getPeer(self) -> address.IPv4Address | address.IPv6Address:
-        # ITCPTransport.getPeer
+        """
+        This is not a complete implementation of L{ITCPTransport.getPeer}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
 
