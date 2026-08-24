@@ -1611,6 +1611,33 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         self.assertFalse(key.verify(self.rsaSignature, b"a"))
         self.assertFalse(key.verify(self.dsaSignature, b""))
 
+    def test_verifySignatureTypeMatches(self):
+        """
+        A signature verifies successfully when the caller's expected
+        signature algorithm matches the one embedded in the signature.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        self.assertTrue(key.verify(self.rsaSignature, b"", signatureType=b"ssh-rsa"))
+
+    def test_verifySignatureTypeMismatch(self):
+        """
+        verify() raises L{keys.BadSignatureAlgorithmError} when the
+        caller's expected signature algorithm does not match the one
+        embedded in the signature, even though the signature itself is
+        valid for the algorithm it does embed. This prevents a signature
+        made under one algorithm name from being replayed as if it had
+        been made using a different one advertised elsewhere, such as in
+        C{MSG_USERAUTH_REQUEST}.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.verify,
+            self.rsaSignature,
+            b"",
+            signatureType=b"rsa-sha2-256",
+        )
+
     def test_verifyDSA(self):
         """
         A known-good DSA signature verifies successfully.

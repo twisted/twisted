@@ -1779,7 +1779,7 @@ class Key:
             ret = common.NS(self._keyObject.sign(data))
         return common.NS(signatureType) + ret
 
-    def verify(self, signature, data):
+    def verify(self, signature, data, signatureType=None):
         """
         Verify a signature using this key.
 
@@ -1789,16 +1789,34 @@ class Key:
         @type data: L{bytes}
         @param data: The signed data.
 
+        @param signatureType: The SSH public key algorithm name the
+            signature is expected to use, or L{None} to accept whichever
+            algorithm name is embedded in the signature. Callers that know
+            the algorithm a peer advertised for this signature (for
+            example in C{MSG_USERAUTH_REQUEST}) should always pass it, so
+            that a signature valid under one algorithm name cannot be
+            replayed as if it had been made using a different one.
+
         @rtype: L{bool}
         @return: C{True} if the signature is valid.
+
+        @raise BadSignatureAlgorithmError: if C{signatureType} is given
+            and does not match the algorithm name embedded in the
+            signature.
         """
         if len(signature) == 40:
             # DSA key with no padding
-            signatureType, signature = b"ssh-dss", common.NS(signature)
+            actualSignatureType, signature = b"ssh-dss", common.NS(signature)
         else:
-            signatureType, signature = common.getNS(signature)
+            actualSignatureType, signature = common.getNS(signature)
 
-        hashAlgorithm = self._getHashAlgorithm(signatureType)
+        if signatureType is not None and actualSignatureType != signatureType:
+            raise BadSignatureAlgorithmError(
+                f"signature algorithm {actualSignatureType!r} does not "
+                f"match expected algorithm {signatureType!r}"
+            )
+
+        hashAlgorithm = self._getHashAlgorithm(actualSignatureType)
         if hashAlgorithm is None:
             return False
 
