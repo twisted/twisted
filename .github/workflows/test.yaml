@@ -193,7 +193,7 @@ jobs:
             runs-on: 'windows-2022'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
-            # Distributed trial is not yet suported on Windows.
+            # Distributed trial is not yet supported on Windows.
             # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=iocp'
 
@@ -227,20 +227,29 @@ jobs:
           # Future Python 3.15 work in progress.
           # These tests might have various exceptions and
           # we will remove the exceptions as support is added.
-          - python-version: '3.15.0-beta.1'
+          - python-version: '3.15.0-beta.4'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
             # The arguments can be removed once trial tests are fixed.
             # https://github.com/twisted/twisted/issues/12645
             trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
 
-          - python-version: '3.15.0-beta.1'
+          - python-version: '3.15.0-beta.4'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-macos'
             runs-on: 'macos-14'
             # The arguments can be removed once trial tests are fixed.
             # https://github.com/twisted/twisted/issues/12645
             trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
+
+          - python-version: '3.15.0-beta.4'
+            tox-env: 'nodeps-withcov-posix'
+            job-name: 'nodeps-windows'
+            runs-on: 'windows-2022'
+            # The arguments can be removed once trial tests are fixed.
+            # https://github.com/twisted/twisted/issues/12645
+            trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
+
 
     steps:
     - uses: actions/checkout@v6
