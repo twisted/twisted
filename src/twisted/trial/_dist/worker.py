@@ -89,7 +89,7 @@ class WorkerProtocol(AMP):
         self._forceGarbageCollection = forceGarbageCollection
 
     @workercommands.Run.responder
-    async def run(self, testCase: str) -> RunResult:
+    def run(self, testCase: str) -> Deferred[RunResult]:
         """
         Run a test case by name.
         """
@@ -98,8 +98,24 @@ class WorkerProtocol(AMP):
             suite = TrialSuite([case], self._forceGarbageCollection)
             suite.run(self._result)
 
+        d = DeferredList(results, consumeErrors=True)
+        d.addCallback(
+            lambda results: Deferred.fromCoroutine(
+                self._processRunResults(results, testCase)
+            )
+        )
+        return d  # type: ignore[return-value]
+
+    async def _processRunResults(
+        self,
+        results: list[tuple[bool, object]],
+        testCase: str,
+    ) -> RunResult:
+        """
+        Process the results of reporting test outcomes to the manager.
+        """
         allSucceeded = True
-        for success, result in await DeferredList(results, consumeErrors=True):
+        for success, result in results:
             if success:
                 # Nothing to do here, proceed to the next result.
                 continue
