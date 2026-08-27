@@ -91,6 +91,16 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         for another state (read -> read/write for example).
         """
         fd = xer.fileno()
+
+        # File descriptor numbers can be reused after the old descriptor is
+        # closed.  If this number is still tracked for a different selectable,
+        # its old epoll registration is already gone and this must be a fresh
+        # registration.
+        if (fd in primary or fd in other) and selectables.get(fd) is not xer:
+            primary.discard(fd)
+            other.discard(fd)
+            selectables.pop(fd, None)
+
         if fd not in primary:
             flags = event
             # epoll_ctl can raise all kinds of IOErrors, and every one
