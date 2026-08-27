@@ -61,7 +61,11 @@ class SSHSession(channel.SSHChannel):
 
     def request_subsystem(self, data):
         if self.client is not None:
-            log.error("Cannot start subsystem: a program is already running")
+            log.error(
+                "Cannot start subsystem on channel {channelID}: "
+                "a program is already running",
+                channelID=self.id,
+            )
             return 0
         subsystem, ignored = common.getNS(data)
         log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)

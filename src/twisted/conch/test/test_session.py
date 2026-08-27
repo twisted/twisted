@@ -19,6 +19,7 @@ from zope.interface import implementer
 from twisted.internet import defer, error, protocol
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessDone, ProcessTerminated
+from twisted.logger import LogLevel, capturedLogs
 from twisted.python import components, failure
 from twisted.python.failure import Failure
 from twisted.python.reflect import requireModule
@@ -592,7 +593,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
-    def test_repeatedSubsystemRequest(self):
+    def test_repeatedSubsystemRequest(self) -> None:
         """
         Once a subsystem has started, another subsystem request is rejected
         without looking up a new subsystem or replacing the existing client.
@@ -604,14 +605,24 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         )
         firstClient = self.session.client
         firstSubsystem = self.session.avatar.subsystem
+        self.session.id = 123
 
-        result = self.session.requestReceived(
-            b"subsystem", common.NS(b"TestSubsystem") + b"second"
-        )
+        with capturedLogs() as events:
+            result = self.session.requestReceived(
+                b"subsystem", common.NS(b"TestSubsystem") + b"second"
+            )
 
         self.assertFalse(result)
         self.assertIs(self.session.client, firstClient)
         self.assertIs(self.session.avatar.subsystem, firstSubsystem)
+        rejections = [
+            event
+            for event in events
+            if event.get("log_level") is LogLevel.error
+            and event.get("log_format", "").startswith("Cannot start subsystem")
+        ]
+        self.assertEqual(len(rejections), 1)
+        self.assertEqual(rejections[0]["channelID"], 123)
 
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
