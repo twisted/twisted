@@ -61,12 +61,16 @@ class StubAvatar:
     It implements the I{ISession} interface.
     """
 
+    def __init__(self) -> None:
+        self.subsystemRequests: list[tuple[bytes, bytes]] = []
+
     def lookupSubsystem(self, name, data):
         """
         If the user requests the TestSubsystem subsystem, connect them to a
         MockProtocol.  If they request neither, then None is returned which is
         interpreted by SSHSession as a failure.
         """
+        self.subsystemRequests.append((name, data))
         if name == b"TestSubsystem":
             self.subsystem = MockProtocol()
             self.subsystem.packetData = data
@@ -613,13 +617,21 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             )
 
         self.assertFalse(result)
+        self.assertEqual(
+            self.session.avatar.subsystemRequests,
+            [(b"TestSubsystem", common.NS(b"TestSubsystem") + b"first")],
+        )
         self.assertIs(self.session.client, firstClient)
         self.assertIs(self.session.avatar.subsystem, firstSubsystem)
         rejections = [
             event
             for event in events
             if event.get("log_level") is LogLevel.error
-            and event.get("log_format", "").startswith("Cannot start subsystem")
+            and event.get("log_format")
+            == (
+                "Cannot start subsystem on channel {channelID}: "
+                "a program is already running"
+            )
         ]
         self.assertEqual(len(rejections), 1)
         self.assertEqual(rejections[0]["channelID"], 123)
