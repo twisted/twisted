@@ -592,6 +592,27 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
+    def test_repeatedSubsystemRequest(self):
+        """
+        Once a subsystem has started, another subsystem request is rejected
+        without looking up a new subsystem or replacing the existing client.
+        """
+        self.assertTrue(
+            self.session.requestReceived(
+                b"subsystem", common.NS(b"TestSubsystem") + b"first"
+            )
+        )
+        firstClient = self.session.client
+        firstSubsystem = self.session.avatar.subsystem
+
+        result = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem") + b"second"
+        )
+
+        self.assertFalse(result)
+        self.assertIs(self.session.client, firstClient)
+        self.assertIs(self.session.avatar.subsystem, firstSubsystem)
+
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
         Previously, if one only wanted to implement a subsystem, an ISession

@@ -1,0 +1,1 @@
+Conch SSH servers now reject additional subsystem requests after a program has already started on the channel.
