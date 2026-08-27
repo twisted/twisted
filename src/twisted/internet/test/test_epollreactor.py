@@ -73,6 +73,15 @@ class EPollReactorTests(TestCase):
         reactor._selectables = {}
         return reactor
 
+    def test_fakeEPollModifyMissingDescriptorRaises(self):
+        """
+        Modifying a descriptor that is not registered reproduces epoll's
+        ENOENT failure mode.
+        """
+        poller = FakeEPoll()
+        error = self.assertRaises(FileNotFoundError, poller.modify, 1, 0)
+        self.assertEqual(error.errno, errno.ENOENT)
+
     def test_reusedDescriptorInOtherSetIsRegistered(self):
         """
         A reused descriptor number tracked for a different writer is treated
