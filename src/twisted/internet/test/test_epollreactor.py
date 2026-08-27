@@ -5,6 +5,7 @@
 Tests for L{twisted.internet.epollreactor}.
 """
 
+import errno
 from unittest import skipIf
 
 from twisted.internet.error import ConnectionDone
@@ -38,6 +39,96 @@ class Descriptor:
     def connectionLost(self, reason):
         reason.trap(ConnectionDone)
         self.events.append("lost")
+
+
+class FakeEPoll:
+    """
+    Minimal epoll implementation that models registration lifetime.
+    """
+
+    def __init__(self):
+        self.registrations = {}
+
+    def register(self, fd, flags):
+        self.registrations[fd] = flags
+
+    def modify(self, fd, flags):
+        if fd not in self.registrations:
+            raise FileNotFoundError(errno.ENOENT, "No such file or directory")
+        self.registrations[fd] = flags
+
+
+@skipIf(not epollreactor, "epoll not supported in this environment.")
+class EPollReactorTests(TestCase):
+    """
+    L{epollreactor.EPollReactor} keeps its descriptor tracking synchronized
+    with epoll.
+    """
+
+    def _reactor(self):
+        reactor = object.__new__(epollreactor.EPollReactor)
+        reactor._poller = FakeEPoll()
+        reactor._reads = set()
+        reactor._writes = set()
+        reactor._selectables = {}
+        return reactor
+
+    def test_reusedDescriptorInOtherSetIsRegistered(self):
+        """
+        A reused descriptor number tracked for a different writer is treated
+        as a fresh reader registration rather than an epoll modification.
+        """
+        reactor = self._reactor()
+        old = Descriptor()
+        new = Descriptor()
+        reactor._writes.add(1)
+        reactor._selectables[1] = old
+
+        reactor.addReader(new)
+
+        self.assertEqual(reactor._poller.registrations, {1: epollreactor.EPOLLIN})
+        self.assertEqual(reactor._reads, {1})
+        self.assertEqual(reactor._writes, set())
+        self.assertIs(reactor._selectables[1], new)
+
+    def test_reusedDescriptorInPrimarySetIsRegistered(self):
+        """
+        A reused descriptor number tracked for a different reader does not
+        cause registration of the new reader to be silently skipped.
+        """
+        reactor = self._reactor()
+        old = Descriptor()
+        new = Descriptor()
+        reactor._reads.add(1)
+        reactor._selectables[1] = old
+
+        reactor.addReader(new)
+
+        self.assertEqual(reactor._poller.registrations, {1: epollreactor.EPOLLIN})
+        self.assertEqual(reactor._reads, {1})
+        self.assertEqual(reactor._writes, set())
+        self.assertIs(reactor._selectables[1], new)
+
+    def test_sameDescriptorAddsSecondEventByModify(self):
+        """
+        A descriptor already registered as a writer is modified when the same
+        selectable is also registered as a reader.
+        """
+        reactor = self._reactor()
+        descriptor = Descriptor()
+        reactor._poller.register(1, epollreactor.EPOLLOUT)
+        reactor._writes.add(1)
+        reactor._selectables[1] = descriptor
+
+        reactor.addReader(descriptor)
+
+        self.assertEqual(
+            reactor._poller.registrations,
+            {1: epollreactor.EPOLLIN | epollreactor.EPOLLOUT},
+        )
+        self.assertEqual(reactor._reads, {1})
+        self.assertEqual(reactor._writes, {1})
+        self.assertIs(reactor._selectables[1], descriptor)
 
 
 @skipIf(not epollreactor, "epoll not supported in this environment.")
