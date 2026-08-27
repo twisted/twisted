@@ -1,0 +1,1 @@
+twisted.internet.epollreactor now recognizes when an operating-system file descriptor number has been reused for a different selectable, preventing stale reactor bookkeeping from causing epoll registration failures.
