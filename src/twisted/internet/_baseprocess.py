@@ -7,8 +7,6 @@ Cross-platform process-related functionality used by different
 L{IReactorProcess} implementations.
 """
 
-from typing import Optional
-
 from twisted.logger import Logger
 from twisted.python.failure import Failure
 
@@ -16,8 +14,8 @@ _log = Logger()
 
 
 class BaseProcess:
-    pid: Optional[int] = None
-    status: Optional[int] = None
+    pid: int | None = None
+    status: int | None = None
     lostProcess = 0
     proto = None
 
