@@ -1,3 +1,4 @@
+
 # This file lists commits that should be ignored by the `git blame` command.
 # You can configure your checkout to use it by default by running:
 #
@@ -10,4 +11,5 @@
 # Note that these features require Git 2.23 (released August 2019).
 03cabb7f55d54e2b09eefd0e03df2d440f962bc4
 bc96c774be6e307e8e3e4d39780d37b045d0973a
+2249eebd81b195c72c9293a1a2224fa1134d4ca3
 1e42d3e2a81ed2476f83e6f53a3f9ec8bc42c8ae
