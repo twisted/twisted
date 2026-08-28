@@ -1160,7 +1160,6 @@ class FakeObject:
     """
 
 
-@skipIf(not FilePath("/dev/tty").exists(), "Platform lacks /dev/tty")
 class DefaultAPITests(TestCase):
     """
     The API in L{twisted.conch.client.default.verifyHostKey} is the integration
