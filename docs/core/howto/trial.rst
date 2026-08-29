@@ -174,7 +174,7 @@ We'll do that in a new version of the above base_1 module, ``calculus/base_2.py`
 .. literalinclude:: listings/trial/calculus/base_2.py
 
 
-We'll also create a new version of test_base_1 which imports and test this new implementation, in ``calculus/test_base_2.py``:
+We'll also create a new version of test_base_1 which imports and test this new implementation, in ``calculus/test/test_base_2.py``:
 
 :download:`test_base_2.py <listings/trial/calculus/test/test_base_2.py>`
 
