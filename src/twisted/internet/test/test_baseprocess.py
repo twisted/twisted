@@ -49,3 +49,16 @@ class BaseProcessTests(TestCase):
         process._callProcessExited(reason)
         proto.reason.trap(RuntimeError)
         self.assertIs(reason, proto.reason.value)
+
+    def test_maybeCallProcessEndedWithoutStatus(self) -> None:
+        """
+        L{BaseProcess.maybeCallProcessEnded} retains the process protocol until
+        an exit status is available.
+        """
+        proto = ProcessProtocol()
+        process = BaseProcess(proto)
+
+        process.maybeCallProcessEnded()
+
+        # Protocol remains unchanged
+        self.assertIs(process.proto, proto)
