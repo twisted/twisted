@@ -26,7 +26,9 @@ class BaseProcessTests(TestCase):
         """
         process = BaseProcess(None)
         process._callProcessExited(RuntimeError("fake reason"))
-        self.assertIsNone(process.proto)
+
+        # When there is no protocol, there should be no Exception logged
+        self.assertEqual(self.flushLoggedErrors(), [])
 
     def test_callProcessExited(self) -> None:
         """
