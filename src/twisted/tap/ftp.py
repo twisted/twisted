@@ -47,6 +47,17 @@ class Options(usage.Options, strcred.AuthOptionMixin):
         warnings.warn(msg, category=DeprecationWarning, stacklevel=2)
         self.addChecker(checkers.FilePasswordDB(filename, cache=True))
 
+    def opt_passive_port_range(self, port_range_str):
+        """
+        Two numbers, colon separated, denoting the range of passive ports (both
+        ends inclusive). E.g. "--passive-port-range=30000:31000".
+        """
+        # Let it fail upon invalid user inputs.
+        port_0, port_1 = [int(x) for x in port_range_str.split(":")]
+        assert port_0 <= port_1
+        # See also twisted.protocols.ftp.FTPFactory.passivePortRange
+        self["passivePortRange"] = range(port_0, port_1 + 1)
+
 
 def makeService(config):
     f = ftp.FTPFactory()
@@ -58,6 +69,8 @@ def makeService(config):
     f.userAnonymous = config["userAnonymous"]
     f.portal = p
     f.protocol = ftp.FTP
+    if config.get("passivePortRange"):
+        f.passivePortRange = config["passivePortRange"]
 
     try:
         portno = int(config["port"])
