@@ -21,3 +21,5 @@ exclude_lines =
     if TYPE_CHECKING
     \s*\.\.\.$
     raise NotImplementedError
+    # pass might be later removed if we decide to rewrite code not to use it.
+    pass
