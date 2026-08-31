@@ -6,7 +6,6 @@
 L{twisted.words} support for Instance Messenger.
 """
 
-
 from zope.interface import implementer
 
 from twisted.internet import defer, error

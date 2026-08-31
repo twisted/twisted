@@ -22,7 +22,6 @@ Future Plans::
 Maintainer: James Y Knight
 """
 
-
 from twisted.python.runtime import platform
 
 if platform.isWindows():

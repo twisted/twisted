@@ -4,6 +4,7 @@
 """
 Tests for Deferred handling by L{twisted.trial.unittest.TestCase}.
 """
+
 from __future__ import annotations
 
 from twisted.internet import defer, reactor, threads

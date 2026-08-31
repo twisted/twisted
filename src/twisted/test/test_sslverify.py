@@ -1193,7 +1193,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         # type contract and expect some random explosion. Just specifying
         # AttributeError here so if behavior changes and it's something else we
         # get notified in the future.
-        cb(None, None, None, 0, None)  # type:ignore
+        cb(None, None, None, 0, None)  # type: ignore
         self.flushLoggedErrors(AttributeError)
         del proto
         gc.collect()
@@ -1609,8 +1609,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         """
         Repr of a L{sslverify.Certificate} for which both the certificate and the signing CA have no subject, contains the empty string as the subject.
         """
-        ubuntuOneGoDaddyPem = textwrap.dedent(
-            """\
+        ubuntuOneGoDaddyPem = textwrap.dedent("""\
             -----BEGIN CERTIFICATE-----
             MIIE3jCCA8agAwIBAgICAwEwDQYJKoZIhvcNAQEFBQAwYzELMAkGA1UEBhMCVVMx
             ITAfBgNVBAoTGFRoZSBHbyBEYWRkeSBHcm91cCwgSW5jLjExMC8GA1UECxMoR28g
@@ -1640,8 +1639,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
             qDTMBqLdElrRhjZkAzVvb3du6/KFUJheqwNTrZEjYx8WnM25sgVjOuH0aBsXBTWV
             U+4=
             -----END CERTIFICATE-----
-            """
-        )
+            """)
         c = sslverify.Certificate.loadPEM(ubuntuOneGoDaddyPem)
         self.assertEqual(
             repr(c),
@@ -1779,7 +1777,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
 
         def afterLost(result):
-            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            (cSuccess, cResult), (sSuccess, sResult) = result
             self.assertFalse(cSuccess)
             self.assertFalse(sSuccess)
             # Win32 fails to report the SSL Error, and report a connection lost
@@ -1814,7 +1812,7 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         d = defer.DeferredList([onClientLost, onServerLost], consumeErrors=True)
 
         def afterLost(result):
-            ((cSuccess, cResult), (sSuccess, sResult)) = result
+            (cSuccess, cResult), (sSuccess, sResult) = result
             self.assertFalse(cSuccess)
             self.assertFalse(sSuccess)
 

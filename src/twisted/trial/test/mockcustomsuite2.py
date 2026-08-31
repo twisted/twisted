@@ -7,7 +7,6 @@ should load the tests from the C{testSuite}, not from the C{Foo} C{TestCase}.
 See L{twisted.trial.test.test_loader.LoaderTest.test_loadModuleWith_testSuite}.
 """
 
-
 from twisted.trial import runner, unittest
 
 

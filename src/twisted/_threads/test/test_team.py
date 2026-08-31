@@ -266,7 +266,7 @@ class TeamTests(SynchronousTestCase):
             originalSet()
             self.performAllOutstandingWork()
 
-        self.team._quit.set = performWorkConcurrently  # type:ignore[method-assign]
+        self.team._quit.set = performWorkConcurrently  # type: ignore[method-assign]
         self.team.quit()
         self.assertRaises(AlreadyQuit, self.team.quit)
         self.assertRaises(AlreadyQuit, self.team.do, list)

@@ -660,7 +660,7 @@ class IRC(protocol.Protocol):
             this member's real name.
         """
         for info in memberInfo:
-            (username, hostmask, server, nickname, flag, hops, realName) = info
+            username, hostmask, server, nickname, flag, hops, realName = info
             assert flag in ("H", "G")
             self.sendLine(
                 ":%s %s %s %s %s %s %s %s %s :%d %s"
@@ -2420,7 +2420,7 @@ class IRCClient(basic.LineReceiver):
         if len(data) < 3:
             raise IRCBadMessage(f"malformed DCC SEND request: {data!r}")
 
-        (filename, address, port) = data[:3]
+        filename, address, port = data[:3]
 
         address = dccParseAddress(address)
         try:
@@ -2442,7 +2442,7 @@ class IRCClient(basic.LineReceiver):
         data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage(f"malformed DCC SEND ACCEPT request: {data!r}")
-        (filename, port, resumePos) = data[:3]
+        filename, port, resumePos = data[:3]
         try:
             port = int(port)
             resumePos = int(resumePos)
@@ -2455,7 +2455,7 @@ class IRCClient(basic.LineReceiver):
         data = shlex.split(data)
         if len(data) < 3:
             raise IRCBadMessage(f"malformed DCC SEND RESUME request: {data!r}")
-        (filename, port, resumePos) = data[:3]
+        filename, port, resumePos = data[:3]
         try:
             port = int(port)
             resumePos = int(resumePos)
@@ -2469,7 +2469,7 @@ class IRCClient(basic.LineReceiver):
         if len(data) < 3:
             raise IRCBadMessage(f"malformed DCC CHAT request: {data!r}")
 
-        (filename, address, port) = data[:3]
+        filename, address, port = data[:3]
 
         address = dccParseAddress(address)
         try:
@@ -3024,7 +3024,7 @@ def dccDescribe(data):
     if len(data) < 4:
         return orig_data
 
-    (dcctype, arg, address, port) = data[:4]
+    dcctype, arg, address, port = data[:4]
 
     if "." in address:
         pass

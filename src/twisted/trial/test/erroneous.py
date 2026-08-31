@@ -12,7 +12,6 @@ this code is arranged.
 Some of these tests are also used by L{twisted.trial._dist.test}.
 """
 
-
 from unittest import skipIf
 
 from twisted.internet import defer, protocol, reactor

@@ -6,6 +6,7 @@
 """
 IProxyParser implementation for version two of the PROXY protocol.
 """
+
 from __future__ import annotations
 
 import binascii
@@ -62,7 +63,7 @@ class V2Parser:
     Version two of the PROXY protocol is a binary format.
     """
 
-    PREFIX = b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+    PREFIX = b"\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a"
     VERSIONS = [32]
     COMMANDS = {0: _LOCALCOMMAND, 1: _PROXYCOMMAND}
     ADDRESSFORMATS = {
@@ -196,9 +197,9 @@ class V2Parser:
         addrType: Literal["TCP"] | Literal["UDP"] = "TCP"
         if netproto is NetProtocol.DGRAM:
             addrType = "UDP"
-        addrCls: (
-            type[address.IPv4Address] | type[address.IPv6Address]
-        ) = address.IPv4Address
+        addrCls: type[address.IPv4Address] | type[address.IPv6Address] = (
+            address.IPv4Address
+        )
         addrParser: Callable[[bytes], bytes] = cls._bytesToIPv4
         if family is NetFamily.INET6:
             addrCls = address.IPv6Address

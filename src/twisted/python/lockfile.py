@@ -7,7 +7,6 @@
 Filesystem-based interprocess mutex.
 """
 
-
 import errno
 import os
 from time import time as _uniquefloat

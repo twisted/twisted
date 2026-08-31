@@ -365,12 +365,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         namespace: dict[str, FunctionType] = {}
         exec(
-            dedent(
-                """
+            dedent("""
             async def coro(x):
                 return x
-            """
-            ),
+            """),
             namespace,
         )
         coro = namespace["coro"]
@@ -386,12 +384,10 @@ class SerializationTests(FlattenTestCase, XMLAssertionMixin):
 
         namespace = dict(succeed=succeed)
         exec(
-            dedent(
-                """
+            dedent("""
             async def coro(x):
                 return await succeed(x)
-            """
-            ),
+            """),
             namespace,
         )
         coro = namespace["coro"]
@@ -693,8 +689,7 @@ class FlattenerErrorTests(SynchronousTestCase):
 
             def lookupRenderMethod(  # type: ignore[empty-body]
                 self, name: str
-            ) -> Callable[[IRequest | None, Tag], Flattenable]:
-                ...
+            ) -> Callable[[IRequest | None, Tag], Flattenable]: ...
 
             def render(self, request: IRequest | None) -> Flattenable:
                 return failing
@@ -711,17 +706,14 @@ class FlattenerErrorTests(SynchronousTestCase):
         self.assertRegex(
             str(failure.value),
             re.compile(
-                dedent(
-                    """\
+                dedent("""\
                     Exception while flattening:
                       \\[<unrenderable>\\]
                       <unrenderable>
                       <Deferred at .* current result: <twisted.python.failure.Failure builtins.RuntimeError: example>>
                       File ".*", line \\d*, in _flattenTree
                         element = await element.*
-                    """
-                )
-                + column_marker,
+                    """) + column_marker,
                 flags=re.MULTILINE,
             ),
         )

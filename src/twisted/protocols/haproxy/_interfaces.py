@@ -5,6 +5,7 @@
 """
 Interfaces used by the PROXY protocol modules.
 """
+
 from __future__ import annotations
 
 import zope.interface

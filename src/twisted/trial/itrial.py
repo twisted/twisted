@@ -56,12 +56,10 @@ class IReporter(zi.Interface):
     shouldStop = zi.Attribute(
         "A boolean indicating that this reporter would like the " "test run to stop."
     )
-    testsRun = zi.Attribute(
-        """
+    testsRun = zi.Attribute("""
         The number of tests that seem to have been run according to this
         reporter.
-        """
-    )
+        """)
 
     def startTest(method):
         """
@@ -162,11 +160,9 @@ class IReporterWithDurations(IReporter):
     standard library in 3.12.
     """
 
-    collectedDurations: list[tuple[str, float]] = zi.Attribute(
-        """
+    collectedDurations: list[tuple[str, float]] = zi.Attribute("""
         The collected durations of the tests reported.
-        """
-    )
+        """)
 
     def addDuration(test: TestCase, elapsed: float) -> None:
         """

@@ -10,7 +10,6 @@ Usage:
     $ sudo python endpointconstructor.py [<docker API path>]
 """
 
-
 from sys import argv
 
 from zope.interface import implementer

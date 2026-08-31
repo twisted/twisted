@@ -6,6 +6,7 @@
 Implementation of a L{Team} of workers; a thread-pool that can allocate work to
 workers.
 """
+
 from __future__ import annotations
 
 from collections import deque

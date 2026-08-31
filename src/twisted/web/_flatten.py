@@ -6,6 +6,7 @@
 Context-free flattener/serializer for rendering Python objects, possibly
 complex or arbitrarily nested, as strings.
 """
+
 from __future__ import annotations
 
 from collections.abc import Coroutine, Generator, Mapping, Sequence
@@ -421,7 +422,7 @@ async def _flattenTree(
             for generator in stack:
                 generatorFrame: FrameType = (
                     # FIXME: typeshed bug?
-                    generator.gi_frame  # type:ignore[attr-defined]
+                    generator.gi_frame  # type: ignore[attr-defined]
                 )
                 if generatorFrame is not None:
                     roots.append(generatorFrame.f_locals["root"])

@@ -7,6 +7,7 @@ IPv6-aware hostname resolution.
 
 @see: L{IHostnameResolver}
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -107,8 +108,7 @@ class _LikeGetAddrInfo(Protocol):
             str,
             tuple[str, int] | tuple[str, int, int, int] | tuple[int, bytes],
         ]
-    ]:
-        ...
+    ]: ...
 
 
 @implementer(IHostnameResolver)

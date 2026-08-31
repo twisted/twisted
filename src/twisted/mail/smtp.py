@@ -8,7 +8,6 @@
 Simple Mail Transfer Protocol implementation.
 """
 
-
 import base64
 import binascii
 import os
@@ -152,12 +151,12 @@ def rfc822date(timeinfo=None, local=1):
         else:
             tz = -time.timezone
 
-        (tzhr, tzmin) = divmod(abs(tz), 3600)
+        tzhr, tzmin = divmod(abs(tz), 3600)
         if tz:
             tzhr *= int(abs(tz) // tz)
-        (tzmin, tzsec) = divmod(tzmin, 60)
+        tzmin, tzsec = divmod(tzmin, 60)
     else:
-        (tzhr, tzmin) = (0, 0)
+        tzhr, tzmin = (0, 0)
 
     return networkString(
         "%s, %02d %s %04d %02d:%02d:%02d %+03d%02d"
@@ -784,7 +783,7 @@ class SMTP(basic.LineOnlyReceiver, policies.TimeoutMixin):
         """
         Save the state resulting from a successful anonymous cred login.
         """
-        (iface, avatar, logout) = result
+        iface, avatar, logout = result
         if issubclass(iface, IMessageDeliveryFactory):
             self.deliveryFactory = avatar
             self.delivery = None

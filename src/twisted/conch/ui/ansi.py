@@ -90,7 +90,7 @@ class AnsiParser:
             if show == 0 and string[i] in _sets:
                 show = 1
             elif show:
-                n = string.find("\x1B", i)
+                n = string.find("\x1b", i)
                 if n == -1:
                     return result + string[i:]
                 else:
@@ -111,7 +111,7 @@ class AnsiParser:
         if self.prepend:
             str = self.prepend + str
             self.prepend = ""
-        parts = str.split("\x1B")
+        parts = str.split("\x1b")
 
         if len(parts) == 1:
             self.writeString(self.formatText(parts[0]))
@@ -158,7 +158,7 @@ class AnsiParser:
                     # self.parseErase('2J')
                     self.writeString(self.formatText(s))
                 elif i == L:
-                    self.prepend = "\x1B[" + s
+                    self.prepend = "\x1b[" + s
                 else:
                     _log.warn(
                         "Unhandled ANSI control type: {control_type}", control_type=s[i]

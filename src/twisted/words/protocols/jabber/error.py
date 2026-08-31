@@ -7,7 +7,6 @@
 XMPP Error support.
 """
 
-
 import copy
 from typing import Optional
 

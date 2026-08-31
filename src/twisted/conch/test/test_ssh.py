@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh}.
 """
 
-
 import struct
 from itertools import chain
 

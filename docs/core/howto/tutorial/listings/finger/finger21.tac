@@ -126,7 +126,6 @@ class IRCReplyBot(irc.IRCClient):
 
 
 class IIRCClientFactory(Interface):
-
     """
     @ivar nickname
     """
@@ -174,15 +173,12 @@ class UserStatusTree(resource.Resource):
         userOutput = "".join(
             [f'<li><a href="{user}">{user}</a></li>' for user in users]
         )
-        request.write(
-            """
+        request.write("""
             <html><head><title>Users</title></head><body>
             <h1>Users</h1>
             <ul>
             %s
-            </ul></body></html>"""
-            % userOutput
-        )
+            </ul></body></html>""" % userOutput)
         request.finish()
 
     def render_GET(self, request):
@@ -206,13 +202,10 @@ class UserStatus(resource.Resource):
         self.service = service
 
     def _cb_render_GET(self, status, request):
-        request.write(
-            """<html><head><title>%s</title></head>
+        request.write("""<html><head><title>%s</title></head>
         <body><h1>%s</h1>
         <p>%s</p>
-        </body></html>"""
-            % (self.user, self.user, status)
-        )
+        </body></html>""" % (self.user, self.user, status))
         request.finish()
 
     def render_GET(self, request):

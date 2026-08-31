@@ -3,6 +3,7 @@
 """
 Test cases for using NMEA sentences.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -550,16 +551,13 @@ class _State(TypedDict, total=False):
 
 class _FixerTestMixinBase(Protocol):
     @property
-    def adapter(self) -> nmea.NMEAAdapter:
-        ...
+    def adapter(self) -> nmea.NMEAAdapter: ...
 
-    def assertEqual(self, a: object, b: object) -> object:
-        ...
+    def assertEqual(self, a: object, b: object) -> object: ...
 
     def assertRaises(
         self, exception: type[Exception], f: Callable[[], object]
-    ) -> object:
-        ...
+    ) -> object: ...
 
 
 class FixerTestMixin:

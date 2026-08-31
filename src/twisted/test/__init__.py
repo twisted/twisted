@@ -5,7 +5,6 @@
 Twisted's unit tests.
 """
 
-
 from twisted.python.deprecate import deprecatedModuleAttribute
 from twisted.python.versions import Version
 from twisted.test import proto_helpers

@@ -405,11 +405,11 @@ class Canvas(Widget):
             self.y = height - 1
 
     def __getitem__(self, index):
-        (x, y) = index
+        x, y = index
         return self.contents[(self._width * y) + x]
 
     def __setitem__(self, index, value):
-        (x, y) = index
+        x, y = index
         self.contents[(self._width * y) + x] = value
 
     def clear(self):
@@ -454,8 +454,8 @@ def rectangle(terminal, position, dimension):
     @type dimension: L{tuple}
     @param dimension: A tuple of the (width, height) size of the rectangle.
     """
-    (top, left) = position
-    (width, height) = dimension
+    top, left = position
+    width, height = dimension
     terminal.selectCharacterSet(insults.CS_DRAWING, insults.G0)
 
     terminal.cursorPosition(top, left)

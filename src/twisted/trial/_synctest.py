@@ -7,6 +7,7 @@ Things likely to be used by writers of unit tests.
 
 Maintainer: Jonathan Lange
 """
+
 from __future__ import annotations
 
 import inspect
@@ -86,7 +87,7 @@ class Todo:
 
 
 def makeTodo(
-    value: (str | tuple[type[BaseException] | Iterable[type[BaseException]], str])
+    value: str | tuple[type[BaseException] | Iterable[type[BaseException]], str],
 ) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
@@ -421,7 +422,7 @@ class _Assertions(pyunit.TestCase):
     # get a spurious error here *or not* which is why there's also the
     # unused-ignore ignore here; in upstream unittest this method is now
     # entirely removed, since Python 3.12, so there's nothing to conflict with.
-    failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
+    failUnlessRaises = assertRaises  # type: ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
         """
@@ -1041,7 +1042,7 @@ class SynchronousTestCase(_Assertions):
         else:
             result = new_result
         result.startTest(self)
-        (doSkip, skipReason) = self.getSkip()
+        doSkip, skipReason = self.getSkip()
         if doSkip:  # don't run test methods that are marked as .skip
             result.addSkip(self, skipReason)
             result.stopTest(self)

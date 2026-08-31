@@ -5,7 +5,6 @@
 Tests for L{twisted.python.runtime}.
 """
 
-
 import sys
 
 from twisted.python.reflect import namedModule
@@ -187,8 +186,7 @@ class DockerPlatformTests(SynchronousTestCase):
         cgroupsFile = self.mktemp()
         with open(cgroupsFile, "wb") as f:
             # real cgroups file from inside a Debian 7 docker container
-            f.write(
-                b"""10:debug:/
+            f.write(b"""10:debug:/
 9:net_prio:/
 8:perf_event:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 7:net_cls:/
@@ -197,8 +195,7 @@ class DockerPlatformTests(SynchronousTestCase):
 4:blkio:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 3:cpuacct:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
 2:cpu:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f
-1:cpuset:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f"""
-            )
+1:cpuset:/docker/104155a6453cb67590027e397dc90fc25a06a7508403c797bc89ea43adf8d35f""")
 
         platform = Platform(None, "linux")
         self.assertTrue(platform.isDocker(_initCGroupLocation=cgroupsFile))
@@ -212,8 +209,7 @@ class DockerPlatformTests(SynchronousTestCase):
         cgroupsFile = self.mktemp()
         with open(cgroupsFile, "wb") as f:
             # real cgroups file from a Fedora 17 system
-            f.write(
-                b"""9:perf_event:/
+            f.write(b"""9:perf_event:/
 8:blkio:/
 7:net_cls:/
 6:freezer:/
@@ -221,8 +217,7 @@ class DockerPlatformTests(SynchronousTestCase):
 4:memory:/
 3:cpuacct,cpu:/
 2:cpuset:/
-1:name=systemd:/system"""
-            )
+1:name=systemd:/system""")
 
         platform = Platform(None, "linux")
         self.assertFalse(platform.isDocker(_initCGroupLocation=cgroupsFile))

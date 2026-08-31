@@ -71,14 +71,12 @@ class Expose:
     _nodefault = object()
 
     @overload
-    def get(self, instance: object, methodName: str) -> Callable[..., Any]:
-        ...
+    def get(self, instance: object, methodName: str) -> Callable[..., Any]: ...
 
     @overload
     def get(
         self, instance: object, methodName: str, default: T
-    ) -> Callable[..., Any] | T:
-        ...
+    ) -> Callable[..., Any] | T: ...
 
     def get(
         self, instance: object, methodName: str, default: object = _nodefault

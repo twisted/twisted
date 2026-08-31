@@ -7,7 +7,7 @@ A PTY server that spawns a shell upon connection.
 Run this example by typing in:
 > python ptyserv.py
 
-Telnet to the server once you start it by typing in: 
+Telnet to the server once you start it by typing in:
 > telnet localhost 5823
 """
 

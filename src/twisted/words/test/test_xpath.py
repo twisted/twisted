@@ -281,10 +281,8 @@ class XPathTests(unittest.TestCase):
         """
         Test multiple boolean operators in condition with parens.
         """
-        xp = XPathQuery(
-            """//bar[@attrib4='value4' and
-                                 (@attrib5='value4' or @attrib5='value6')]"""
-        )
+        xp = XPathQuery("""//bar[@attrib4='value4' and
+                                 (@attrib5='value4' or @attrib5='value6')]""")
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar6, self.bar7])
 
@@ -292,11 +290,9 @@ class XPathTests(unittest.TestCase):
         """
         Test multiple boolean operators in condition without parens.
         """
-        xp = XPathQuery(
-            """//bar[@attrib5='value4' or
+        xp = XPathQuery("""//bar[@attrib5='value4' or
                                  @attrib5='value5' or
-                                 @attrib5='value6']"""
-        )
+                                 @attrib5='value6']""")
         self.assertEqual(xp.matches(self.e), True)
         self.assertEqual(xp.queryForNodes(self.e), [self.bar5, self.bar6, self.bar7])
 

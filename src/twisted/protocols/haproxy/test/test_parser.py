@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.protocols.haproxy._parser}.
 """
+
 from __future__ import annotations
 
 from twisted.internet.endpoints import (

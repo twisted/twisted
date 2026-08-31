@@ -5,7 +5,6 @@
 Test cases for convenience functionality in L{twisted._threads._convenience}.
 """
 
-
 from twisted.trial.unittest import SynchronousTestCase
 from .._convenience import Quit
 from .._ithreads import AlreadyQuit
@@ -36,7 +35,7 @@ class QuitTests(SynchronousTestCase):
         L{Quit.check} initially does nothing and returns L{None}.
         """
         quit = Quit()
-        checked = quit.check()  # type:ignore[func-returns-value]
+        checked = quit.check()  # type: ignore[func-returns-value]
         self.assertIs(checked, None)
 
     def test_checkAfterSetRaises(self) -> None:

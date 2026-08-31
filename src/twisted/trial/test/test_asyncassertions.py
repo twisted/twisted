@@ -5,7 +5,6 @@
 Tests for async assertions provided by C{twisted.trial.unittest.TestCase}.
 """
 
-
 import unittest as pyunit
 
 from twisted.internet import defer

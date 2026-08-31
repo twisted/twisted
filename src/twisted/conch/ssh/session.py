@@ -9,7 +9,6 @@ allows access to a shell and a python interpreter over SSH.
 Maintainer: Paul Swartz
 """
 
-
 import os
 import signal
 import struct
@@ -413,7 +412,7 @@ def packRequest_pty_req(term, geometry, modes):
     @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
-    (rows, cols, xpixel, ypixel) = geometry
+    rows, cols, xpixel, ypixel = geometry
     termPacked = common.NS(term)
     winSizePacked = struct.pack(">4L", cols, rows, xpixel, ypixel)
     modesPacked = common.NS(modes)  # depend on the client packing modes
@@ -436,5 +435,5 @@ def packRequest_window_change(geometry):
     @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
-    (rows, cols, xpixel, ypixel) = geometry
+    rows, cols, xpixel, ypixel = geometry
     return struct.pack(">4L", cols, rows, xpixel, ypixel)

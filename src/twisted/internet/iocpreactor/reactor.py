@@ -6,7 +6,6 @@
 Reactor that uses IO completion ports
 """
 
-
 import socket
 import sys
 import warnings

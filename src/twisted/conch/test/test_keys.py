@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh.keys}.
 """
 
-
 import base64
 import os
 from textwrap import dedent
@@ -491,7 +490,7 @@ SUrCyZXsNh6VXwjs3gKQ
         passphrases.
         """
         key = keys.Key(self.rsaObj)
-        key_data = key.toString("openssh", passphrase="verschl\u00FCsselt".encode())
+        key_data = key.toString("openssh", passphrase="verschl\u00fcsselt".encode())
         self.assertEqual(
             keys.Key.fromString(key_data, passphrase="verschlu\u0308sselt"), key
         )
@@ -501,7 +500,7 @@ SUrCyZXsNh6VXwjs3gKQ
             keys.PassphraseNormalizationError,
             keys.Key.fromString,
             key_data,
-            passphrase="unassigned \uFFFF",
+            passphrase="unassigned \uffff",
         )
 
     def test_fromStringErrors(self):
@@ -1466,7 +1465,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
         key = keys.Key(self.rsaObj)
         key_data = key.toString("openssh", passphrase="verschlu\u0308sselt")
         self.assertEqual(
-            keys.Key.fromString(key_data, passphrase="verschl\u00FCsselt".encode()),
+            keys.Key.fromString(key_data, passphrase="verschl\u00fcsselt".encode()),
             key,
         )
         # U+FFFF is a "noncharacter" and guaranteed to have General_Category
@@ -1475,7 +1474,7 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             keys.PassphraseNormalizationError,
             key.toString,
             "openssh",
-            passphrase="unassigned \uFFFF",
+            passphrase="unassigned \uffff",
         )
 
     def test_toStringErrors(self):
@@ -1746,8 +1745,7 @@ attr n:
         """
         self.assertEqual(
             repr(keys.Key(self.ecObj).public()),
-            dedent(
-                """\
+            dedent("""\
                 <Elliptic Curve Public Key (256 bits)
                 curve:
                 \tecdsa-sha2-nistp256
@@ -1755,8 +1753,7 @@ attr n:
                 \t{x}
                 y:
                 \t{y}>
-                """
-            ).format(**keydata.ECDatanistp256),
+                """).format(**keydata.ECDatanistp256),
         )
 
     def test_reprPrivateECDSA(self):
@@ -1766,8 +1763,7 @@ attr n:
         """
         self.assertEqual(
             repr(keys.Key(self.ecObj)),
-            dedent(
-                """\
+            dedent("""\
                 <Elliptic Curve Private Key (256 bits)
                 curve:
                 \tecdsa-sha2-nistp256
@@ -1777,8 +1773,7 @@ attr n:
                 \t{x}
                 y:
                 \t{y}>
-                """
-            ).format(**keydata.ECDatanistp256),
+                """).format(**keydata.ECDatanistp256),
         )
 
     @skipWithoutEd25519
@@ -1789,14 +1784,12 @@ attr n:
         """
         self.assertEqual(
             repr(keys.Key(self.ed25519Obj).public()),
-            dedent(
-                """\
+            dedent("""\
                 <Ed25519 Public Key (256 bits)
                 attr a:
                 \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
                 \t0d:b2:52:a0:ae:2a:6b:23:13:73:45:fd:40:d9:57:
-                \t7b:8b>"""
-            ),
+                \t7b:8b>"""),
         )
 
     @skipWithoutEd25519
@@ -1807,8 +1800,7 @@ attr n:
         """
         self.assertEqual(
             repr(keys.Key(self.ed25519Obj)),
-            dedent(
-                """\
+            dedent("""\
                 <Ed25519 Private Key (256 bits)
                 attr a:
                 \tf1:16:d1:15:4a:1e:15:0e:19:5e:19:46:b5:f2:44:
@@ -1817,8 +1809,7 @@ attr n:
                 attr k:
                 \t37:2f:25:da:8d:d4:a8:9a:78:7c:61:f0:98:01:c6:
                 \tf4:5e:6d:67:05:69:31:37:4c:69:0d:05:55:bb:c9:
-                \t44:58>"""
-            ),
+                \t44:58>"""),
         )
 
 

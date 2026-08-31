@@ -102,9 +102,7 @@ class PersistTests(unittest.TestCase):
         global mainWhileLoading
         mainWhileLoading = None
         with open(filename, "w") as f:
-            f.write(
-                dedent(
-                    """
+            f.write(dedent("""
             app = []
             import __main__
             app.append(__main__.testMainModGetattr == 1)
@@ -116,9 +114,7 @@ class PersistTests(unittest.TestCase):
                 app.append(False)
             from twisted.test import test_sob
             test_sob.mainWhileLoading = __main__
-            """
-                )
-            )
+            """))
 
         loaded = sob.load(filename, "source")
         self.assertIsInstance(loaded, list)

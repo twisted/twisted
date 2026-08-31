@@ -21,7 +21,6 @@ is intentionally only provided by TestCase, not SynchronousTestCase, is excepted
 of course.
 """
 
-
 import gc
 import sys
 import unittest as pyunit

@@ -5,7 +5,6 @@
 Tests for generic file descriptor based reactor support code.
 """
 
-
 from socket import AF_IPX
 
 from twisted.internet.abstract import isIPAddress

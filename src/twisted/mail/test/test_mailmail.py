@@ -288,87 +288,67 @@ class OptionsTests(TestCase):
         L{twisted.mail.scripts.mailmail.loadConfig}
         parses the config file for mailmail.
         """
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [addresses]
-smarthost=localhost"""
-        )
+smarthost=localhost""")
         self.assertEqual(config.smarthost, "localhost")
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [addresses]
-default_domain=example.com"""
-        )
+default_domain=example.com""")
         self.assertEqual(config.domain, "example.com")
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [addresses]
 smarthost=localhost
-default_domain=example.com"""
-        )
+default_domain=example.com""")
         self.assertEqual(config.smarthost, "localhost")
         self.assertEqual(config.domain, "example.com")
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [identity]
 host1=invalid
-host2=username:password"""
-        )
+host2=username:password""")
         self.assertNotIn("host1", config.identities)
         self.assertEqual(config.identities["host2"], ["username", "password"])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [useraccess]
 allow=invalid1,35
-order=allow"""
-        )
+order=allow""")
         self.assertEqual(config.allowUIDs, [35])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [useraccess]
 deny=35,36
-order=deny"""
-        )
+order=deny""")
         self.assertEqual(config.denyUIDs, [35, 36])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [useraccess]
 allow=35,36
 deny=37,38
-order=deny"""
-        )
+order=deny""")
         self.assertEqual(config.allowUIDs, [35, 36])
         self.assertEqual(config.denyUIDs, [37, 38])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [groupaccess]
 allow=gid1,41
-order=allow"""
-        )
+order=allow""")
         self.assertEqual(config.allowGIDs, [41])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [groupaccess]
 deny=41
-order=deny"""
-        )
+order=deny""")
         self.assertEqual(config.denyGIDs, [41])
 
-        config = self.getConfigFromFile(
-            """
+        config = self.getConfigFromFile("""
 [groupaccess]
 allow=41,42
 deny=43,44
-order=allow,deny"""
-        )
+order=allow,deny""")
         self.assertEqual(config.allowGIDs, [41, 42])
         self.assertEqual(config.denyGIDs, [43, 44])
 

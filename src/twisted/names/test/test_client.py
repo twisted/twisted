@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.client}.
 """
 
-
 import errno
 
 from zope.interface.verify import verifyClass, verifyObject

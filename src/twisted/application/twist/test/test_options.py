@@ -57,7 +57,7 @@ class OptionsTests(twisted.trial.unittest.TestCase):
 
             self.opened.append((name, mode))
             # https://github.com/python/mypy/issues/18914
-            return NotImplemented  # type:ignore[no-any-return]
+            return NotImplemented  # type: ignore[no-any-return]
 
         self.patch(_options, "openFile", fakeOpen)
 
