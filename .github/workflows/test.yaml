@@ -68,6 +68,10 @@ jobs:
       # On Windows, we don't yet enable distributed tests as is not yet
       # supported.
       TRIAL_ARGS: "${{ matrix.trial-args || '-j 4' }}"
+      # Allow diagnostic jobs to select a reporter or coverage core while
+      # preserving the defaults for all existing jobs.
+      TRIAL_REPORTER: "${{ matrix.trial-reporter || 'verbose' }}"
+      COVERAGE_CORE: "${{ matrix.coverage-core }}"
     strategy:
       fail-fast: false
       # The matrix is designed to not expand into any job.
@@ -88,6 +92,10 @@ jobs:
         tox-env: ['']
         # We just go with the default arguments.
         trial-args: ['']
+        # Use Trial's default reporter.
+        trial-reporter: ['']
+        # Use coverage.py's interpreter-dependent default core.
+        coverage-core: ['']
         # By default, tests are executed without disabling IPv6.
         noipv6: ['']
         # By default, tests are executed without extra platform dependencies.
@@ -168,6 +176,33 @@ jobs:
             runs-on: 'macos-15'
             job-name: 'macos-15-default-tests'
             tox-env: 'macos-withcov-alldeps'
+
+          # Diagnose where the macOS 15 test suite spends its time.
+          - python-version: '3.14'
+            runs-on: 'macos-15'
+            job-name: 'macos-15-timing-tests'
+            tox-env: 'macos-withcov-alldeps'
+            trial-reporter: 'timing'
+
+          # Compare Python 3.14's default sysmon coverage core with CTracer.
+          - python-version: '3.14'
+            runs-on: 'macos-15'
+            job-name: 'macos-15-ctrace-tests'
+            tox-env: 'macos-withcov-alldeps'
+            coverage-core: 'ctrace'
+
+          # Compare the standard ARM runner with the macOS 15 Intel runner.
+          - python-version: '3.14'
+            runs-on: 'macos-15-intel'
+            job-name: 'macos-15-intel-tests'
+            tox-env: 'macos-withcov-alldeps'
+
+          # Measure the macOS 15 test suite without coverage instrumentation.
+          - python-version: '3.14'
+            runs-on: 'macos-15'
+            job-name: 'macos-15-no-coverage-tests'
+            tox-env: 'macos-nocov-alldeps'
+            skip-coverage: yes
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.10'
