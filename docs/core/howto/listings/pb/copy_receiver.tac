@@ -11,7 +11,6 @@ See the twistd(1) man page or
 http://twistedmatrix.com/documents/current/howto/application for details.
 """
 
-
 import sys
 
 if __name__ == "__main__":

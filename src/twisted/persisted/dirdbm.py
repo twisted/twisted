@@ -227,12 +227,10 @@ class DirDBM:
         return self[key]
 
     @overload
-    def get(self, key: bytes) -> bytes:
-        ...
+    def get(self, key: bytes) -> bytes: ...
 
     @overload
-    def get(self, key: bytes, default: _T) -> bytes | _T:
-        ...
+    def get(self, key: bytes, default: _T) -> bytes | _T: ...
 
     def get(self, key: bytes, default: _T | None = None) -> bytes | _T | None:
         """

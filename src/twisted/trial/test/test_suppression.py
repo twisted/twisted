@@ -5,7 +5,6 @@
 Tests for warning suppression features of Trial.
 """
 
-
 import unittest as pyunit
 
 from twisted.python.reflect import namedAny

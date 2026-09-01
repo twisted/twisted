@@ -13,7 +13,6 @@ denied, a 401 will be sent in the response along with I{WWW-Authenticate}
 headers for each of the allowed authentication schemes.
 """
 
-
 from zope.interface import implementer
 
 from twisted.cred import error

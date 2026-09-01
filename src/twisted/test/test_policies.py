@@ -5,7 +5,6 @@
 Test code for policies.
 """
 
-
 import builtins
 from io import StringIO
 

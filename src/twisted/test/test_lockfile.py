@@ -5,6 +5,7 @@
 """
 Tests for L{twisted.python.lockfile}.
 """
+
 from __future__ import annotations
 
 import errno

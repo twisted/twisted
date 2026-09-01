@@ -4,6 +4,7 @@
 """
 Test cases for L{twisted.logger._format}.
 """
+
 from __future__ import annotations
 
 import logging as py_logging

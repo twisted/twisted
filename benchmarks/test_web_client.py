@@ -15,11 +15,7 @@ Foo: bar
 Gaz: baz
 Content-length: 3
 
-abc""".replace(
-    "\n", "\r\n"
-).encode(
-    "utf-8"
-)
+abc""".replace("\n", "\r\n").encode("utf-8")
 
 
 def test_http_client_small_response(benchmark):

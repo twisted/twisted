@@ -10,6 +10,7 @@ Post-office Protocol version 3.
 @author: Glyph Lefkowitz
 @author: Jp Calderone
 """
+
 from __future__ import annotations
 
 import base64
@@ -777,7 +778,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @type user: L{bytes}
         @param user: The user being authenticated.
         """
-        (interface, avatar, logout) = result
+        interface, avatar, logout = result
         if interface is not IMailbox:
             self.failResponse(b"Authentication failed")
             log.err("_cbMailbox() called with an interface other than IMailbox")
@@ -1332,12 +1333,10 @@ class Mailbox:
     """
 
     @overload
-    def listMessages(self) -> list[int]:
-        ...
+    def listMessages(self) -> list[int]: ...
 
     @overload
-    def listMessages(self, i: int) -> int:
-        ...
+    def listMessages(self, i: int) -> int: ...
 
     def listMessages(self, i: int | None = None) -> int | list[int]:
         """

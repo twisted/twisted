@@ -11,6 +11,7 @@ parse string representations into them with proper checking for illegal
 characters, case folding and canonicalisation through
 L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
+
 from __future__ import annotations
 
 from twisted.words.protocols.jabber.xmpp_stringprep import (

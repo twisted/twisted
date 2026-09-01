@@ -203,7 +203,7 @@ class PotentialCallWrapper:
     def __getitem__(self, name: str) -> object:
         # The sub-object may not be indexable, but if it isn't, that's the
         # caller's problem.
-        value = self._wrapped[name]  # type:ignore[index]
+        value = self._wrapped[name]  # type: ignore[index]
         return PotentialCallWrapper(value)
 
     def __format__(self, format_spec: str) -> str:

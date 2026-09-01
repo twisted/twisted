@@ -7,7 +7,6 @@
 Message should only be printed second time around.
 """
 
-
 import sys
 import warnings
 

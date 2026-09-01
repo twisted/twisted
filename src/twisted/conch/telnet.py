@@ -8,7 +8,6 @@ Telnet protocol implementation.
 @author: Jean-Paul Calderone
 """
 
-
 import struct
 
 from zope.interface import implementer

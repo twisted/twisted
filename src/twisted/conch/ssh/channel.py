@@ -9,7 +9,6 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
-
 from zope.interface import implementer
 
 from twisted.internet import interfaces

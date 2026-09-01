@@ -8,7 +8,6 @@ C{Foo} C{TestCase} nor from the C{test_suite} method.
 See {twisted.trial.test.test_loader.LoaderTest.test_loadModuleWithBothCustom}.
 """
 
-
 from twisted.trial import runner, unittest
 
 

@@ -6,7 +6,6 @@
 Tests for L{twisted.conch.ssh.filetransfer}.
 """
 
-
 import os
 import re
 import struct

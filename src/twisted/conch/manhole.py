@@ -330,7 +330,7 @@ def lastColorizedLine(source):
     s = BytesIO(source)
 
     for token in tokenize.tokenize(s.readline):
-        (tokenType, string, start, end, line) = token
+        tokenType, string, start, end, line = token
         p(tokenType, string, start, end, line)
 
     return bytes(w)

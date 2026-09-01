@@ -6,6 +6,7 @@ Test the C{I...Endpoint} implementations that wrap the L{IReactorTCP},
 L{IReactorSSL}, and L{IReactorUNIX} interfaces found in
 L{twisted.internet.endpoints}.
 """
+
 from __future__ import annotations
 
 from abc import abstractmethod
@@ -538,27 +539,24 @@ class ClientEndpointTestCaseMixin(FakeTestBase):
     @abstractmethod
     def createClientEndpoint(
         self, reactor: IReactorTCP, clientFactory: IProtocolFactory, **connectArgs: Any
-    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]:
-        ...
+    ) -> tuple[IStreamClientEndpoint, tuple[object, ...], IAddress]: ...
 
     @abstractmethod
-    def connectArgs(self) -> dict[str, object]:
-        ...
+    def connectArgs(self) -> dict[str, object]: ...
 
     @abstractmethod
-    def expectedClients(self, reactor: MemoryReactor) -> Sequence[tuple[object, ...]]:
-        ...
+    def expectedClients(
+        self, reactor: MemoryReactor
+    ) -> Sequence[tuple[object, ...]]: ...
 
     @abstractmethod
     def assertConnectArgs(
         self, receivedArgs: tuple[object, ...], expectedArgs: tuple[object, ...]
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @property
     @abstractmethod
-    def expectedAddress(self) -> str:
-        ...
+    def expectedAddress(self) -> str: ...
 
     def test_interface(self):
         """
@@ -713,8 +711,7 @@ class ServerEndpointTestCaseMixin(FakeTestBase):
     @abstractmethod
     def createServerEndpoint(
         self, reactor: IReactorTCP, serverFactory: IProtocolFactory, **connectArgs: Any
-    ) -> tuple[IStreamServerEndpoint, tuple[object, ...], IAddress]:
-        ...
+    ) -> tuple[IStreamServerEndpoint, tuple[object, ...], IAddress]: ...
 
     def test_interface(self):
         """
@@ -1395,7 +1392,7 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -1508,7 +1505,7 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -1656,7 +1653,7 @@ class TCP6EndpointNameResolutionTests(ClientEndpointTestCaseMixin, unittest.Test
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -2000,7 +1997,7 @@ class _HostnameEndpointMemoryReactorMixin(ClientEndpointTestCaseMixin):
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -2262,7 +2259,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin, unittest.TestCa
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -2460,7 +2457,7 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin, unittest.TestCa
             C{timeout}, C{bindAddress}) that we expect to have been passed
             to L{IReactorTCP.connectTCP}.
         """
-        (host, port, ignoredFactory, timeout, bindAddress) = receivedArgs
+        host, port, ignoredFactory, timeout, bindAddress = receivedArgs
         (
             expectedHost,
             expectedPort,
@@ -2721,7 +2718,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         self.endpoint.connect(clientFactory)
 
         self.mreactor.advance(0.3)
-        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+        host, port, factory, timeout, bindAddress = self.mreactor.tcpClients[1]
         self.assertEqual(len(self.mreactor.tcpClients), 2)
         self.assertEqual(host, "1:2::3:4")
         self.assertEqual(port, 80)
@@ -2741,7 +2738,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         d = self.endpoint.connect(clientFactory)
         results = []
         d.addCallback(results.append)
-        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[0]
+        host, port, factory, timeout, bindAddress = self.mreactor.tcpClients[0]
 
         self.assertEqual(host, "1.2.3.4")
         self.assertEqual(port, 80)
@@ -2774,7 +2771,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         d.addCallback(results.append)
 
         self.mreactor.advance(0.3)
-        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+        host, port, factory, timeout, bindAddress = self.mreactor.tcpClients[1]
 
         self.assertEqual(host, "1:2::3:4")
         self.assertEqual(port, 80)
@@ -2806,7 +2803,7 @@ class HostnameEndpointsFasterConnectionTests(unittest.TestCase):
         d.addCallback(results.append)
 
         self.mreactor.advance(0.3)
-        (host, port, factory, timeout, bindAddress) = self.mreactor.tcpClients[1]
+        host, port, factory, timeout, bindAddress = self.mreactor.tcpClients[1]
 
         proto = factory.buildProtocol((host, port))
         fakeTransport = object()
@@ -3271,7 +3268,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         pump.flush()
         cconn = self.successResultOf(d)
         pump.flush()
-        transport: ITransport = cconn.transport  # type:ignore[attr-defined]
+        transport: ITransport = cconn.transport  # type: ignore[attr-defined]
         transport.write(b"some bytes")
         pump.flush()
         if error is None:
@@ -3405,7 +3402,7 @@ class UNIXEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             that we expect to have been passed to L{IReactorUNIX.connectUNIX}.
         """
 
-        (path, ignoredFactory, timeout, checkPID) = receivedArgs
+        path, ignoredFactory, timeout, checkPID = receivedArgs
 
         (
             expectedPath,

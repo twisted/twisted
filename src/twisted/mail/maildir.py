@@ -6,6 +6,7 @@
 """
 Maildir-style mailbox support.
 """
+
 from __future__ import annotations
 
 import io
@@ -446,7 +447,7 @@ class _MaildirMailboxAppendMessageTask:
                 self.osrename(self.tmpname, newname)
                 break
             except OSError as e:
-                (err, estr) = e.args
+                err, estr = e.args
                 import errno
 
                 # if the newname exists, retry with a new newname.
@@ -521,12 +522,10 @@ class MaildirMailbox(pop3.Mailbox):
         self.list: list[int | bytes] = [el[1] for el in computing]
 
     @overload
-    def listMessages(self) -> list[int]:
-        ...
+    def listMessages(self) -> list[int]: ...
 
     @overload
-    def listMessages(self, i: int) -> int:
-        ...
+    def listMessages(self, i: int) -> int: ...
 
     def listMessages(self, i: int | None = None) -> int | list[int]:
         """
@@ -619,7 +618,7 @@ class MaildirMailbox(pop3.Mailbox):
             try:
                 os.rename(trash, real)
             except OSError as e:
-                (err, estr) = e.args
+                err, estr = e.args
                 import errno
 
                 # If the file has been deleted from disk, oh well!

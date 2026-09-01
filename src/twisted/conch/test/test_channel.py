@@ -4,6 +4,7 @@
 """
 Test ssh/channel.py.
 """
+
 from __future__ import annotations
 
 from unittest import skipIf

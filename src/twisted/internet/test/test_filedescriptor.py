@@ -5,7 +5,6 @@
 Whitebox tests for L{twisted.internet.abstract.FileDescriptor}.
 """
 
-
 from zope.interface.verify import verifyClass
 
 from twisted.internet.abstract import FileDescriptor

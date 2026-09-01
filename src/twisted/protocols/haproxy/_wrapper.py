@@ -6,6 +6,7 @@
 """
 Protocol wrapper that provides HAProxy PROXY protocol support.
 """
+
 from typing import Optional, Union
 
 from typing_extensions import Self

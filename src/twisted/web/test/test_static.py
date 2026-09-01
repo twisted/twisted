@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.web.static}.
 """
+
 import errno
 import inspect
 import mimetypes

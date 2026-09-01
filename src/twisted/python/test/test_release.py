@@ -7,6 +7,7 @@ Tests for L{twisted.python.release} and L{twisted.python._release}.
 All of these tests are skipped on platforms other than Linux, as the release is
 only ever performed on Linux.
 """
+
 import glob
 import operator
 import os

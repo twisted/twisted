@@ -48,7 +48,7 @@ class BytesTestCase(TestCase):
         """
         Return a temporary path, encoded as bytes.
         """
-        return TestCase.mktemp(self).encode("utf-8")  # type:ignore[no-any-return]
+        return TestCase.mktemp(self).encode("utf-8")  # type: ignore[no-any-return]
 
 
 class AbstractFilePathTests(BytesTestCase):
@@ -368,15 +368,16 @@ class TrackingFilePath(filepath.FilePath[AnyStr]):
         self,
         path: AnyStr,
         alwaysCreate: bool = False,
-        trackingList: None
-        | (list[TrackingFilePath[str] | TrackingFilePath[bytes]]) = None,
+        trackingList: None | (
+            list[TrackingFilePath[str] | TrackingFilePath[bytes]]
+        ) = None,
     ) -> None:
         filepath.FilePath.__init__(self, path, alwaysCreate)
         if trackingList is None:
             trackingList = []
-        self.trackingList: list[
-            TrackingFilePath[str] | TrackingFilePath[bytes]
-        ] = trackingList
+        self.trackingList: list[TrackingFilePath[str] | TrackingFilePath[bytes]] = (
+            trackingList
+        )
         self.openedFiles: list[IO[bytes]] = []
 
     def open(self, mode: FileMode = "r") -> IO[bytes]:
@@ -422,8 +423,9 @@ class ExplodingFilePath(filepath.FilePath[AnyStr]):
     def __init__(
         self,
         pathName: AnyStr,
-        originalExploder: None
-        | (ExplodingFilePath[str] | ExplodingFilePath[bytes]) = None,
+        originalExploder: None | (
+            ExplodingFilePath[str] | ExplodingFilePath[bytes]
+        ) = None,
     ) -> None:
         """
         Initialize an L{ExplodingFilePath} with a name and a reference to the
@@ -449,7 +451,7 @@ class ExplodingFilePath(filepath.FilePath[AnyStr]):
         @return: A new C{ExplodingFile}.
         """
         f = self._originalExploder.fp = ExplodingFile()
-        return f  # type:ignore[return-value]
+        return f  # type: ignore[return-value]
 
     def clonePath(
         self, name: OtherAnyStr, alwaysCreate: bool = False
@@ -974,7 +976,7 @@ class FilePathTests(AbstractFilePathTests):
         # Make it look like something to copy, even though it doesn't exist.
         # This could happen if the file is deleted between the isfile check and
         # the file actually being opened.
-        nosuch.isfile = lambda: True  # type:ignore
+        nosuch.isfile = lambda: True  # type: ignore
 
         # We won't get as far as writing to this file, but it's still useful for
         # tracking whether we closed it.
@@ -1309,7 +1311,7 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b"explicit-binary")
-        opener = writer.open("wb")  # type:ignore[arg-type]
+        opener = writer.open("wb")  # type: ignore[arg-type]
         with opener as file:
             file.write(b"abc\ndef")
         self.assertTrue(writer.exists)
@@ -1325,7 +1327,7 @@ class FilePathTests(AbstractFilePathTests):
         See http://bugs.python.org/issue7686 for details about the bug.
         """
         writer = self.path.child(b"multiple-binary")
-        opener = writer.open("wbb")  # type:ignore[arg-type]
+        opener = writer.open("wbb")  # type: ignore[arg-type]
         with opener as file:
             file.write(b"abc\ndef")
         self.assertTrue(writer.exists)
@@ -1550,9 +1552,9 @@ class FilePathTests(AbstractFilePathTests):
         fake = FakeStat()
 
         def fakeRestat(*args: object, **kwargs: object) -> None:
-            self.path._statinfo = fake  # type:ignore
+            self.path._statinfo = fake  # type: ignore
 
-        self.path.restat = fakeRestat  # type:ignore
+        self.path.restat = fakeRestat  # type: ignore
 
         # ensure that restat will need to be called to get values
         self.path._statinfo = None

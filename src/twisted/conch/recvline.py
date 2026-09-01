@@ -97,15 +97,12 @@ class TransportSequence:
         self.transports = transports
 
     for method in insults.ITerminalTransport:
-        exec(
-            """\
+        exec("""\
 def %s(self, *a, **kw):
     for tpt in self.transports:
         result = tpt.%s(*a, **kw)
     return result
-"""
-            % (method, method)
-        )
+""" % (method, method))
 
     def getHost(self):
         # ITransport.getHost

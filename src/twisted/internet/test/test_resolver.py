@@ -6,7 +6,6 @@ Tests for implementations of L{IHostnameResolver} and their interactions with
 reactor implementations.
 """
 
-
 from collections import defaultdict
 from socket import (
     AF_INET,

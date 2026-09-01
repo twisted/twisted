@@ -7,6 +7,7 @@ A miscellany of code used to run Trial tests.
 
 Maintainer: Jonathan Lange
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -64,8 +65,7 @@ _P = ParamSpec("_P")
 class _Debugger(Protocol):
     def runcall(
         self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
-    ) -> object:
-        ...
+    ) -> object: ...
 
 
 def isPackage(module):
@@ -808,13 +808,11 @@ def _logFile(logfile: str) -> Generator[None]:
 class _Runner(Protocol):
     stream: TextIO
 
-    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter:
-        ...
+    def run(self, test: pyunit.TestCase | pyunit.TestSuite) -> itrial.IReporter: ...
 
     def runUntilFailure(
         self, test: pyunit.TestCase | pyunit.TestSuite
-    ) -> itrial.IReporter:
-        ...
+    ) -> itrial.IReporter: ...
 
 
 @define

@@ -5,6 +5,7 @@
 """
 Handling of RSA, DSA, ECDSA, and Ed25519 keys.
 """
+
 from __future__ import annotations
 
 import binascii
@@ -1748,7 +1749,7 @@ class Key:
 
         elif keyType == "DSA":
             sig = self._keyObject.sign(data, hashAlgorithm)
-            (r, s) = decode_dss_signature(sig)
+            r, s = decode_dss_signature(sig)
             # SSH insists that the DSS signature blob be two 160-bit integers
             # concatenated together. The sig[0], [1] numbers from obj.sign
             # are just numbers, and could be any length from 0 to 160 bits.
@@ -1757,7 +1758,7 @@ class Key:
 
         elif keyType == "EC":  # Pragma: no branch
             signature = self._keyObject.sign(data, ec.ECDSA(hashAlgorithm))
-            (r, s) = decode_dss_signature(signature)
+            r, s = decode_dss_signature(signature)
 
             rb = int_to_bytes(r)
             sb = int_to_bytes(s)

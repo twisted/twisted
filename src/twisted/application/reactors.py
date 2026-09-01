@@ -6,6 +6,7 @@
 Plugin-based system for enumerating available reactors and installing one of
 them.
 """
+
 from collections.abc import Iterable
 from typing import cast
 
@@ -21,17 +22,13 @@ class IReactorInstaller(Interface):
     Definition of a reactor which can probably be installed.
     """
 
-    shortName = Attribute(
-        """
+    shortName = Attribute("""
     A brief string giving the user-facing name of this reactor.
-    """
-    )
+    """)
 
-    description = Attribute(
-        """
+    description = Attribute("""
     A longer string giving a user-facing description of this reactor.
-    """
-    )
+    """)
 
     def install() -> None:
         """

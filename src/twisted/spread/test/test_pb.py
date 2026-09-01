@@ -1658,7 +1658,7 @@ class NewCredTests(unittest.TestCase):
         d = gatherResults([firstLogin, secondLogin])
 
         def cbLoggedIn(result):
-            (first, second) = result
+            first, second = result
             return gatherResults(
                 [first.callRemote("getAvatarId"), second.callRemote("getAvatarId")]
             )

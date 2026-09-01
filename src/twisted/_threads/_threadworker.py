@@ -5,6 +5,7 @@
 """
 Implementation of an L{IWorker} based on native threads and queues.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -31,16 +32,14 @@ U = TypeVar("U")
 
 
 class SimpleQueue(Protocol[T]):
-    def put(self, item: T) -> None:
-        ...
+    def put(self, item: T) -> None: ...
 
-    def get(self) -> T:
-        ...
+    def get(self) -> T: ...
 
 
 # when the sentinel value is a literal in a union, this is how iter works
 smartiter: Callable[[Callable[[], T | U], U], Iterator[T]]
-smartiter = iter  # type:ignore[assignment]
+smartiter = iter  # type: ignore[assignment]
 
 
 @implementer(IExclusiveWorker)
@@ -97,11 +96,9 @@ class ThreadWorker:
 
 
 class SimpleLock(Protocol):
-    def acquire(self) -> bool:
-        ...
+    def acquire(self) -> bool: ...
 
-    def release(self) -> None:
-        ...
+    def release(self) -> None: ...
 
 
 @implementer(IExclusiveWorker)

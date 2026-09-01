@@ -970,7 +970,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         del self._user
 
         def _cbLogin(result):
-            (interface, avatar, logout) = result
+            interface, avatar, logout = result
             assert interface is IFTPShell, "The realm is busted, jerk."
             self.shell = avatar
             self.logout = logout

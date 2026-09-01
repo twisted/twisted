@@ -81,9 +81,11 @@ class GlibTimeTestsBuilder(ReactorBuilder):
     requiredInterfaces = (IReactorTime,)
 
     _reactors = [
-        "twisted.internet.gireactor.PortableGIReactor"
-        if platform.isWindows()
-        else "twisted.internet.gireactor.GIReactor"
+        (
+            "twisted.internet.gireactor.PortableGIReactor"
+            if platform.isWindows()
+            else "twisted.internet.gireactor.GIReactor"
+        )
     ]
 
     def test_timeout_add(self):

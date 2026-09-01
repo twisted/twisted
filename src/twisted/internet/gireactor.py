@@ -20,7 +20,6 @@ Then use twisted.internet APIs as usual.
 On Python 3, pygobject v3.4 or later is required.
 """
 
-
 from typing import Union
 
 from gi.repository import GLib

@@ -6,7 +6,6 @@ This module contains tests for L{twisted.internet.task.Cooperator} and
 related functionality.
 """
 
-
 from twisted.internet import defer, reactor, task
 from twisted.trial import unittest
 

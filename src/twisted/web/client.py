@@ -276,7 +276,7 @@ def _requireSSL(decoratee: Callable[_P, _T]) -> Callable[_P, _T]:
     """
     if SSL is None:
 
-        @wraps(decoratee)  # type:ignore[unreachable]
+        @wraps(decoratee)  # type: ignore[unreachable]
         def raiseNotImplemented(*a: _P.args, **kw: _P.kwargs) -> _T:
             """
             pyOpenSSL is not available.
@@ -405,9 +405,9 @@ class HostnameCachingHTTPSPolicy:
         @param cacheSize: The maximum size of the hostname cache.
         """
         self._policyForHTTPS = policyforHTTPS
-        self._cache: collections.OrderedDict[
-            str, IOpenSSLClientConnectionCreator
-        ] = collections.OrderedDict()
+        self._cache: collections.OrderedDict[str, IOpenSSLClientConnectionCreator] = (
+            collections.OrderedDict()
+        )
         self._cacheSize = cacheSize
 
     def creatorForNetloc(
@@ -820,7 +820,7 @@ class HTTPConnectionPool:
         factory = self._factory(quiescentCallback, repr(endpoint))
         result: Deferred[HTTP11ClientProtocol] = endpoint.connect(
             factory
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         return result
 
     def _removeConnection(self, key, connection):
@@ -1299,7 +1299,7 @@ class _FakeStdlibRequest(_RequestBase):
 class _FakeUrllibResponseInfo(_InfoType):
     response: IResponse
 
-    def get_all(self, name: str, default: bytes) -> list[str]:  # type:ignore[override]
+    def get_all(self, name: str, default: bytes) -> list[str]:  # type: ignore[override]
         headers = self.response.headers.getRawHeaders(networkString(name), default)
         h = [nativeString(x) for x in headers]
         return h

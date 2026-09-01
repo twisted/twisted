@@ -5,7 +5,6 @@
 Tests for L{twisted.web.vhost}.
 """
 
-
 from twisted.internet.defer import gatherResults
 from twisted.trial.unittest import TestCase
 from twisted.web.http import NOT_FOUND

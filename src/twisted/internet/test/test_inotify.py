@@ -4,6 +4,7 @@
 """
 Tests for the inotify wrapper in L{twisted.internet.inotify}.
 """
+
 import sys
 
 from twisted.internet import defer, reactor
@@ -73,7 +74,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
 
         def cbNotified(result):
-            (watch, filename, events) = result
+            watch, filename, events = result
             self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & mask)
 
@@ -226,7 +227,7 @@ class INotifyTests(unittest.TestCase):
         """
 
         def cbNotified(result):
-            (watch, filename, events) = result
+            watch, filename, events = result
             self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
@@ -337,7 +338,7 @@ class INotifyTests(unittest.TestCase):
                 except Exception:
                     d.errback()
 
-            (ignored, filename, events) = result
+            ignored, filename, events = result
             self.assertEqual(filename.asBytesMode(), self.dirname.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
             reactor.callLater(0, _)
@@ -446,7 +447,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
 
         def cbNotified(result):
-            (ignored, filename, events) = result
+            ignored, filename, events = result
             self.assertEqual(filename.asBytesMode(), expectedPath.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 
@@ -485,7 +486,7 @@ class INotifyTests(unittest.TestCase):
         notified = defer.Deferred()
 
         def cbNotified(result):
-            (ignored, filename, events) = result
+            ignored, filename, events = result
             self.assertEqual(filename.asBytesMode(), expectedPath2.asBytesMode())
             self.assertTrue(events & inotify.IN_DELETE_SELF)
 

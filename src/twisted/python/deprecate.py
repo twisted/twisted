@@ -79,6 +79,7 @@ See also L{incremental.Version}.
 @var DEPRECATION_WARNING_FORMAT: The default deprecation warning string format
     to use when one is not provided by the user.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -689,7 +690,7 @@ def _passedSignature(
 
 
 def _mutuallyExclusiveArguments(
-    argumentPairs: Sequence[tuple[str, str]]
+    argumentPairs: Sequence[tuple[str, str]],
 ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
     """
     Decorator which causes its decoratee to raise a L{TypeError} if two of the

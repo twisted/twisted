@@ -7,6 +7,7 @@
 """
 Defines classes that handle the results of tests.
 """
+
 from __future__ import annotations
 
 import os
@@ -99,7 +100,7 @@ class TestResult(pyunit.TestResult):
 
     errors: list[
         tuple[itrial.ITestCase | pyunit.TestCase, str | Failure]
-    ]  # type:ignore[assignment]
+    ]  # type: ignore[assignment]
     skips: list[tuple[itrial.ITestCase, str]]
     expectedFailures: list[tuple[itrial.ITestCase, str | Failure, Todo]]  # type: ignore[assignment]
     unexpectedSuccesses: list[tuple[itrial.ITestCase, str]]  # type: ignore[assignment]
@@ -176,9 +177,11 @@ class TestResult(pyunit.TestResult):
     def addError(
         self,
         test: pyunit.TestCase,
-        error: Failure
-        | tuple[type[BaseException], BaseException, TracebackType]
-        | tuple[None, None, None],
+        error: (
+            Failure
+            | tuple[type[BaseException], BaseException, TracebackType]
+            | tuple[None, None, None]
+        ),
     ) -> None:
         """
         Report an error that occurred while running the given test.

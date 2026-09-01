@@ -5,7 +5,6 @@
 Test that twisted scripts can be invoked as modules.
 """
 
-
 import sys
 from io import StringIO
 

@@ -1127,7 +1127,7 @@ class FTPServerPasvDataConnectionTests(FTPServerTestCase):
         chainDeferred.addCallback(queueCommand)
 
         def downloadDone(result):
-            (ignored, downloader) = result
+            ignored, downloader = result
             return downloader.buffer
 
         return chainDeferred.addCallback(downloadDone)
@@ -1883,7 +1883,7 @@ class FTPFileListingTests(TestCase):
         line = "-rw-r--r--   1 root     other        531 Jan 29 03:26 README"
 
         def check(fileOther):
-            ((file,), other) = fileOther
+            (file,), other = fileOther
             self.assertFalse(other, f"unexpect unparsable lines: {repr(other)}")
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
@@ -1906,7 +1906,7 @@ class FTPFileListingTests(TestCase):
         line3 = "woohoo! "
 
         def check(result):
-            ((file1, file2), (other,)) = result
+            (file1, file2), (other,) = result
             self.assertTrue(other == "woohoo! \r", "incorrect other line")
             # file 1
             self.assertTrue(file1["filetype"] == "d", "misparsed fileitem")
@@ -1937,7 +1937,7 @@ class FTPFileListingTests(TestCase):
         """
 
         def check(result):
-            (files, others) = result
+            files, others = result
             self.assertFalse(files, "unexpected file entries")
             self.assertTrue(
                 others == ["ABC\r", "not a file\r"],
@@ -1957,7 +1957,7 @@ class FTPFileListingTests(TestCase):
         )
 
         def check(result):
-            (files, others) = result
+            files, others = result
             self.assertEqual([], others, "unexpected others entries")
             self.assertEqual("A B", files[0]["filename"], "misparsed filename")
             self.assertEqual("B A", files[1]["filename"], "misparsed filename")
@@ -1976,7 +1976,7 @@ class FTPFileListingTests(TestCase):
         )
 
         def check(result):
-            (files, others) = result
+            files, others = result
             self.assertEqual([], others, "unexpected others entries")
             self.assertEqual("A B", files[0]["filename"], "misparsed filename")
             self.assertEqual("B A", files[1]["filename"], "misparsed filename")

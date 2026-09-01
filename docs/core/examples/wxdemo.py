@@ -3,7 +3,6 @@
 
 """Demo of wxPython integration with Twisted."""
 
-
 import sys
 
 from wx import EVT_CLOSE, EVT_MENU, App, DefaultPosition, Frame, Menu, MenuBar, Size

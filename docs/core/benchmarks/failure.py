@@ -1,6 +1,5 @@
 """See how slow failure creation is"""
 
-
 import random
 
 from twisted.python import failure
@@ -33,13 +32,10 @@ def deepFailure%d_%d():
         )
     exec(s)
 
-    exec(
-        """
+    exec("""
 def deepFailure%d_%d():
     1 / 0
-"""
-        % (nLocals, DEPTH)
-    )
+""" % (nLocals, DEPTH))
 
 R = range(5000)
 

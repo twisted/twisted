@@ -9,7 +9,6 @@ Save and load Small OBjects to and from files, using various formats.
 Maintainer: Moshe Zadka
 """
 
-
 import os
 import pickle
 import sys
@@ -21,7 +20,6 @@ from twisted.python import log, runtime
 
 
 class IPersistable(Interface):
-
     """An object which can be saved in several formats to a file"""
 
     def setStyle(style):

@@ -5,6 +5,7 @@
 """
 Select reactor
 """
+
 from __future__ import annotations
 
 import select

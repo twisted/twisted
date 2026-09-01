@@ -2,8 +2,7 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-"""Exception definitions for Words
-"""
+"""Exception definitions for Words"""
 
 
 class WordsError(Exception):

@@ -5,6 +5,7 @@
 """
 Static resources for L{twisted.web}.
 """
+
 from __future__ import annotations
 
 import errno
@@ -246,7 +247,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         filepath.FilePath.__init__(self, path)
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
-            warnings.warn(  # type:ignore[unreachable]
+            warnings.warn(  # type: ignore[unreachable]
                 "ignoredExts should receive a list, not a boolean"
             )
             if ignoredExts or allowExt:

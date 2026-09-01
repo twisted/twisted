@@ -4,7 +4,6 @@
 Tests for positioning sentences.
 """
 
-
 import itertools
 
 from twisted.positioning import _sentence

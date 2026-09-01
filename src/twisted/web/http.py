@@ -324,13 +324,13 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     part: Message
     # "per Python docs, a list of Message objects when is_multipart() is True,
     # or a string when is_multipart() is False"
-    for part in msg.get_payload():  # type:ignore[assignment]
+    for part in msg.get_payload():  # type: ignore[assignment]
         name: str | None = part.get_param(
             "name", header="content-disposition"
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         if not name:
             continue
-        payload: bytes = part.get_payload(decode=True)  # type:ignore[assignment]
+        payload: bytes = part.get_payload(decode=True)  # type: ignore[assignment]
         result[name.encode("utf8")].append(payload)
     return result
 
@@ -912,7 +912,7 @@ class Request:
     etag = None
     lastModified = None
     args = None
-    path: bytes = None  # type:ignore[assignment]
+    path: bytes = None  # type: ignore[assignment]
     content = None
     _forceSSL = 0
     _disconnected = False
@@ -2560,8 +2560,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             transport, which will fully handle all delivered data for this
             channel.
         """
-        self.dataReceived = protocol.dataReceived  # type:ignore[method-assign]
-        self.connectionLost = protocol.connectionLost  # type:ignore[method-assign]
+        self.dataReceived = protocol.dataReceived  # type: ignore[method-assign]
+        self.connectionLost = protocol.connectionLost  # type: ignore[method-assign]
         assert (
             self.transport is not None
         ), "websocket upgraded attempted on disconnected HTTP channel"
@@ -3374,7 +3374,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
         """
         if reactor is None:
             from twisted.internet import reactor
-        self.reactor: IReactorTime = reactor  # type:ignore[assignment]
+        self.reactor: IReactorTime = reactor  # type: ignore[assignment]
 
         if logPath is not None:
             logPath = os.path.abspath(logPath)
@@ -3410,7 +3410,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
     def _set_logFile(self, newLogFile: BufferedIOBase | _MinimalLogFile) -> None:
         if isinstance(newLogFile, BufferedIOBase):
             newLogFile = TextIOWrapper(
-                newLogFile,  # type:ignore[type-var]
+                newLogFile,  # type: ignore[type-var]
                 "utf-8",
                 write_through=True,
                 newline="\n",
@@ -3436,11 +3436,11 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
         # ideally be resolved by passing the reactor more generally to the
         # HTTPChannel, but that won't work for the TimeoutMixin until we fix
         # https://twistedmatrix.com/trac/ticket/8488
-        p.callLater = self.reactor.callLater  # type:ignore[union-attr]
+        p.callLater = self.reactor.callLater  # type: ignore[union-attr]
 
         # timeOut needs to be on the Protocol instance cause
         # TimeoutMixin expects it there
-        p.timeOut = self.timeOut  # type:ignore[union-attr]
+        p.timeOut = self.timeOut  # type: ignore[union-attr]
         return p
 
     def startFactory(self) -> None:

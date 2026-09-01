@@ -10,6 +10,7 @@ configurations.  Instead of sending mail directly to the recipient, a sender
 sends mail to a smart host.  The smart host finds the mail exchange server for
 the recipient and sends on the message.
 """
+
 from __future__ import annotations
 
 import email.utils

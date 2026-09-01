@@ -2990,7 +2990,7 @@ class EndToEndTests(unittest.TestCase):
         resource = Data(b"hello world", "application/octet-stream")
         resource.isLeaf = True
         port = IReactorSSL(reactor).listenSSL(0, Site(resource), serverCert.options())
-        hostAddress: IPv4Address = port.getHost()  # type:ignore[assignment]
+        hostAddress: IPv4Address = port.getHost()  # type: ignore[assignment]
         portNum = hostAddress.port
         self.addCleanup(port.stopListening)
 
@@ -3001,6 +3001,6 @@ class EndToEndTests(unittest.TestCase):
             client.close()
             return result
 
-        (httpVersion, content) = await deferToThread(run_http2_query)
+        httpVersion, content = await deferToThread(run_http2_query)
         self.assertEqual(httpVersion, "HTTP/2")
         self.assertEqual(content, b"hello world")

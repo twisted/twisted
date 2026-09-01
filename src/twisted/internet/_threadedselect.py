@@ -46,6 +46,7 @@ would normally have initiated the shutdown procedure for the foreign event
 loop.  Shutdown functions that could be used in place of "foreignEventloopStop"
 would be the ExitMainLoop method of the wxApp instance with wxPython.
 """
+
 from __future__ import annotations
 
 from errno import EBADF, EINTR
@@ -165,7 +166,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             (True, self.reads, reads),
             (False, self.writes, writes),
         ]:
-            for each in fdmap:  # type:ignore[attr-defined]
+            for each in fdmap:  # type: ignore[attr-defined]
                 d[each.fileno()] = each
 
         mainWaker = self.mainWaker
@@ -266,7 +267,7 @@ class ThreadedSelectReactor(posixbase.PosixReactorBase):
             self.writes.remove(writer)
 
     def removeAll(self) -> list[IReadDescriptor | IWriteDescriptor]:
-        return self._removeAll(self.reads, self.writes)  # type:ignore[no-any-return]
+        return self._removeAll(self.reads, self.writes)  # type: ignore[no-any-return]
 
     def getReaders(self) -> list[IReadDescriptor]:
         return list(self.reads)

@@ -3,9 +3,8 @@
 # See LICENSE for details.
 
 
-""" A temporary placeholder for client-capable strports, until we
-sufficient use cases get identified """
-
+"""A temporary placeholder for client-capable strports, until we
+sufficient use cases get identified"""
 
 from twisted.internet.endpoints import _parse
 
