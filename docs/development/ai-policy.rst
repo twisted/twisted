@@ -133,7 +133,11 @@ proof-of-concept by hand.
       context of an otherwise-human-written report.
 
    However, in our experience with such tools so far, even code that humans
-   claim to have already carefully reviewed often tends to miss the point, so
-   the process of rewriting the example is still useful to require the
-   submitter to *really* look carefully at what they are submitting, so the
-   general ban still applies.
+   claim to have already carefully reviewed often tends to be low-quality.
+   Such examples often fail to demonstrate the issue, fail to run properly, or
+   demonstrate a problem that is not really interesting to fix.
+
+   For now, we consider the process of rewriting any examples to be a forcing
+   function that requires the submitter to *really* look carefully at what they
+   are submitting, so the general ban on directly including outputs still
+   applies.
