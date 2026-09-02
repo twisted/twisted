@@ -17,3 +17,4 @@ This documentation is for people who work on the Twisted codebase itself, rather
    compatibility-policy
    naming
    philosophy
+   ai-policy
