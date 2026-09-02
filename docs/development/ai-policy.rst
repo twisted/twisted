@@ -15,7 +15,7 @@ AI Policy
 Rationale
 =========
 
-We will not accept the outputs of these tools for two specific reasons:
+We will not accept the outputs of these tools for two core reasons:
 
 1. We do not allow the inclusion of generative AI outputs into our repository
    (i.e.: our code, documentation, or configuration) because the copyright
@@ -31,6 +31,10 @@ We will not accept the outputs of these tools for two specific reasons:
    an inherent asymmetry into communication.  A generative AI user can produce
    text faster than a human can read it, which allows the generative AI user to
    outpace and spam other users, creating unnecessary burden on maintainers.
+
+We have also found AI-generated contributions to be quite low quality, as well
+as distracting and exhausitng for code reviewers to keep up with.  However,
+low-quality contributions are.
 
 Enforcement
 ===========
@@ -83,21 +87,36 @@ yet at this time.
 Policy vs. Preference
 =====================
 
-I (Glyph, the founder of the Twisted project) personally dislike the usage of
-generative AI tools for the environmental, psychological, and economic harms
-they cause.  I would, personally, ask that you refrain from using such tools in
-any context.
-
-..  I wrote this paragraph from a first-person perspective because I do not
+..  I wrote this section from a first-person perspective because I do not
     want to be speaking for all contributors here, but if you would like to
     co-sign, please feel free to submit a pull request upgrading this to a
     “we”, including your own name.
 
+The goal of this project policy is to protect the health and sustainability of
+the project itself, not to regulate your behavior elsewhere.
+
+I (Glyph, the founder of the Twisted project) personally dislike the usage of
+generative AI tools for the environmental, psychological, and economic harms
+they cause.  I think that these harms should really matter to you.
+
+I would, personally, ask that you refrain from using such tools in any context.
+
 However, I recognize that there is strong disagreement about the scale and
 scope of these harms, and that usage of generative AI tools is currently
-pervasive throughout the software development community.  Therefore the goal of
-this project policy is to protect the health and sustainability of the project
-itself, not to regulate your behavior elsewhere.
+pervasive throughout the software development community.
+
+.. If generative AI systems **were** to hypothetically comprehensively address
+   the primary project-health considerations described above, and the rest of
+   the community were to decide that we should begin accepting generative AI
+   contributions, I (Glyph) would personally resign from the project, and
+   maintaining my significant contribution (as of this writing, I remain the
+   2nd most prolific contributor of all time, and the most prolific still
+   active) might be enough of a reason to continue to have such a policy on its
+   own.  However, I would rather not have this policy litigate every single
+   harm of an enormously, overwhelmingly complex techno-economic industrial
+   complex, or resort to personality-driven motivations, which is itself a
+   massive project I am working on elsehwere and ought not to be directly
+   relevant to Twisted.
 
 Allowable Use
 =============
