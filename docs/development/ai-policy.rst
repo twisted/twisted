@@ -101,10 +101,10 @@ false positives and false negatives; while they can provide a useful signal to
 compare against, we must take care when relying on them.  We don't want to
 create an incentive for generative AI users to find ways to fool such tools to
 circumvent such a mechanical check, and we don't want legitimate contributors
-who just happen to enjoy emdashes to feel like they are under constant
+who just happen to enjoy em-dashes to feel like they are under constant
 scrutiny.
 
-Such automations are best used to double-check snap judgements when something
+Such automations are best used to double-check snap judgement when something
 looks like it is “obviously” AI to a human but might just be something like an
 unfamiliar writing style, to provide a mechanism for a double-check without
 requiring undue mental effort from overloaded maintainers dealing with
@@ -142,7 +142,7 @@ pervasive throughout the software development community.
    own.  However, I would rather not have this policy litigate every single
    harm of an enormously, overwhelmingly complex techno-economic industrial
    complex, or resort to personality-driven motivations, which is itself a
-   massive project I am working on elsehwere and ought not to be directly
+   massive project I am working on elsewhere and ought not to be directly
    relevant to Twisted.
 
 Allowable Use
@@ -173,7 +173,7 @@ proof-of-concept by hand.
 
    1. It would be difficult for them to implicate serious copyright
       considerations as they are specific to a situated bug in a particular
-      verison of Twisted.
+      version of Twisted.
 
    2. It would also be difficult for them to be spamming the maintainers in the
       context of an otherwise-human-written report.
