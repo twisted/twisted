@@ -33,8 +33,20 @@ We will not accept the outputs of these tools for two core reasons:
    outpace and spam other users, creating unnecessary burden on maintainers.
 
 We have also found AI-generated contributions to be quite low quality, as well
-as distracting and exhausitng for code reviewers to keep up with.  However,
-low-quality contributions are.
+as distracting and exhausting for code reviewers to keep up with.  However,
+low-quality contributions are fine on their own, *because* they are an
+opportunity to onboard a new member to the community, and not for the value of
+the contribution itself, even if it is eventually merged.
+
+If the code review is going to feed back to a generative AI system that will
+learn nothing from the result, it is a waste of reviewer effort that will
+degrade other opportunities to build and maintain the community.  This process
+problem is one example of why the policy here must be about generative AI usage
+specifically, and *not* about the quality of the generated code.
+
+This one process problem is not an exhaustive description of well-known
+problems with the outputs from generative AI; comprehensively enumerating those
+is a task far too large for a single project's policy document.
 
 Enforcement
 ===========
