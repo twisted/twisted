@@ -483,7 +483,6 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendClose(self)
 
     def closed(self):
-        global old
         log.msg(f"closed {self}")
         log.msg(repr(self.conn.channels))
 

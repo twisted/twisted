@@ -7,24 +7,15 @@ Cross-platform process-related functionality used by different
 L{IReactorProcess} implementations.
 """
 
-from typing import Optional
-
 from twisted.logger import Logger
-from twisted.python.deprecate import getWarningMethod
 from twisted.python.failure import Failure
-from twisted.python.reflect import qual
 
 _log = Logger()
 
-_missingProcessExited = (
-    "Since Twisted 8.2, IProcessProtocol.processExited "
-    "is required.  %s must implement it."
-)
-
 
 class BaseProcess:
-    pid: Optional[int] = None
-    status: Optional[int] = None
+    pid: int | None = None
+    status: int | None = None
     lostProcess = 0
     proto = None
 
@@ -32,17 +23,8 @@ class BaseProcess:
         self.proto = protocol
 
     def _callProcessExited(self, reason):
-        default = object()
-        processExited = getattr(self.proto, "processExited", default)
-        if processExited is default:
-            getWarningMethod()(
-                _missingProcessExited % (qual(self.proto.__class__),),
-                DeprecationWarning,
-                stacklevel=0,
-            )
-        else:
-            with _log.failuresHandled("while calling processExited:"):
-                processExited(Failure(reason))
+        with _log.failuresHandled("while calling processExited:"):
+            self.proto.processExited(Failure(reason))
 
     def processEnded(self, status):
         """

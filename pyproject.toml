@@ -2,7 +2,7 @@
 requires = [
     "hatchling >= 1.10.0",
     "hatch-fancy-pypi-readme >= 22.5.0",
-    "incremental >= 24.7.0",
+    "incremental >= 24.7.1",
 ]
 build-backend = "hatchling.build"
 
@@ -15,7 +15,7 @@ dynamic = [
     "optional-dependencies",
 ]
 description = "An asynchronous networking framework written in Python"
-license = { text = "MIT License" }
+license = "MIT"
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.10"
 authors = [
@@ -31,13 +31,13 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "zope.interface >= 5",
+    "zope.interface >= 8",
     "constantly >= 15.1",
     "incremental >= 24.7.0",
-    "Automat >= 24.8.0",
-    "hyperlink >= 17.1.1",
+    "automat >= 24.8.1",
+    "hyperlink >= 18.0.0",
     "attrs >= 22.2.0",
-    "typing_extensions >= 4.2.0",
+    "typing_extensions >= 4.13.2",
 ]
 
 # Switch to this when the legacy optional dependency names are removed
@@ -59,39 +59,42 @@ test = [
 
 # List of dependencies required to build the documentation and test the
 # release scripts and process.
+# The normal automated tests should not depend on this.
+# This will allow to build the documentation using a newer Sphinx version
+# Newer Sphinx version don't support older Python versions.
 dev-release = [
     "pydoctor ~= 25.4.0",
-    "sphinx-rtd-theme ~= 1.3",
-    "sphinx >= 6, <7",
+    "sphinx-rtd-theme ~= 3.1",
+    "sphinx >= 9, <10",
     "twisted[dev]",
 ]
 
 # All the extra tools used to help with the development process.
 dev = [
     "twisted[test]",
-    "pyflakes ~= 2.2",
+    # We don't use pyflakes directly. It is used via flake8.
+    # When updating pyflakes, also update .pre-commit-config.yaml
+    "pyflakes ~= 3.4",
     "python-subunit ~= 1.4",
-    "twistedchecker ~= 0.7",
     "coverage ~= 7.15",
-    "towncrier ~= 23.6",
+    "towncrier ~= 25.8",
 ]
 
 tls = [
-    "pyopenssl >= 25.2.0",
-    # service_identity 18.1.0 added support for validating IP addresses in
-    # certificate subjectAltNames
-    "service_identity >= 18.1.0",
-    "idna >= 2.4",
+    "pyopenssl >= 25.3.0",
+    "service_identity >= 21.1.0",
+    "idna >= 2.5",
 ]
 
 conch = [
-    "cryptography >= 38",
+    "cryptography >= 46",
     "appdirs >= 1.4.0",
     "bcrypt >= 3.2.1",
 ]
 
 serial = [
     "pyserial >= 3.0",
+    # When updating this consider updating the types-pywin32 version.
     "pywin32 != 226; platform_system == 'Windows'",
 ]
 
@@ -101,7 +104,7 @@ http2 = [
 ]
 
 websocket = [
-    "wsproto",
+    "wsproto >= 1.2.0",
 ]
 
 all-non-platform = [
@@ -132,10 +135,11 @@ gtk-platform = [
 
 mypy = [
     "twisted[dev,all-non-platform]",
-    "mypy==2.3.0",
+    "mypy==2.3.1",
     "mypy-zope==1.0.16",
     "types-setuptools",
     "types-pyOpenSSL",
+    "types-pywin32~=312.0",
 ]
 
 [project.scripts]
@@ -330,21 +334,15 @@ follow_imports = "silent"
 follow_imports_for_stubs = true
 module = [
 
+  "hyperlink",
+  "hyperlink._url",
+  "hyperframe",
+  "service_identity.*",
+
+  "bcrypt",
   # pyobjc is not installed on linux
   "CFNetwork",
   "CoreFoundation",
-
-  # neither is pywin32
-  "pywintypes",
-  "win32api",
-  "win32con",
-  "win32com.*",
-  "win32event",
-  "win32file",
-  "win32pipe",
-  "win32process",
-  "win32security",
-  "win32console",
 
   # pyserial is very optional
   "serial",
@@ -375,8 +373,8 @@ module = [
   # subunit is untyped
   "subunit",
 
-  # oh this is fun, not even totally sure what library this is, since it's not
-  # documented as an extra.
+  "hamcrest.*",
+
   "utmp",
 
   # I think only used by `twisted.web.script.ResourceTemplate`
@@ -891,7 +889,6 @@ module = [
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',
-    'twisted.web.http_headers',
     'twisted.web.iweb',
     'twisted.web.rewrite',
     'twisted.web.script',

@@ -286,15 +286,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
         PosixReactorBase._moveCallLaterSooner(self, tple)
         self._reschedule()
 
-    def callLater(self, seconds, f, *args, **kwargs):
-        dc = PosixReactorBase.callLater(self, seconds, f, *args, **kwargs)
+    def callLater(self, delay, callable, *args, **kwargs):
+        dc = PosixReactorBase.callLater(self, delay, callable, *args, **kwargs)
         abs_time = self._asyncioEventloop.time() + self.timeout()
         if self._scheduledAt is None or abs_time < self._scheduledAt:
             self._reschedule()
         return dc
 
-    def callFromThread(self, f, *args, **kwargs):
-        g = lambda: self.callLater(0, f, *args, **kwargs)
+    def callFromThread(self, callable, *args, **kwargs):
+        g = lambda: self.callLater(0, callable, *args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
 
 
