@@ -59,6 +59,7 @@ jobs:
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
     runs-on: "${{ matrix.runs-on || 'ubuntu-24.04' }}"
+    timeout-minutes: 10
     env:
       # By default we run all tests with all deps with coverage.
       TOXENV: "${{ matrix.tox-env || 'alldeps-withcov-posix' }}"
@@ -108,11 +109,12 @@ jobs:
           # The minimum supported Python version should be used to maximize
           # coverage of code that otherwise depends on backports.
 
-          # Distributed test run is disabled here so that we also have
-          # end to end functional test usage for non-distributed trial runs.
-          # When updating the minimum Python version here, also update the
-          # `python_requires` from `setup.cfg`.
-          # Here we should have the oldest Python version supported
+          # Distributed test run is disabled here so that we also have end to
+          # end functional test usage for non-distributed trial runs.  When
+          # updating the lowest supported Python major version here, also
+          # update the `python_requires` from `setup.cfg`.
+
+          # Here we should have the lowest Python major version supported
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use.
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
@@ -120,16 +122,27 @@ jobs:
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
 
-          # `noipv6` is created to make sure all is OK on an OS which doesn't
-          # have IPv6 available.
-          # Any supported Python version is OK for this job.
-          # We go with latest micro release for the smallest minor release
-          # that is supported by GitHub Actions for the target OS.
-          # This is also used to run tests with minimum dependency versions.
+          # The `lowdeps-nodeps-noipv6` job tests the lowest-version dependency
+          # footprint for Twisted; all the lowest versions, nothing but the
+          # core dependencies, no extras.
+
+          # Separately, *some* job needs to have '-noipv6' to verify that we
+          # have tested that Twisted works on a system with no IPv6 stack; the
+          # selection of this job to have this flag is not particularly
+          # meaningful; the reasoning is just "older systems are probably the
+          # ones more likely to not have IPv6 configured".
+
           - python-version: '3.10'
             noipv6: '-noipv6'
-            tox-env: 'mindeps-withcov-posix'
-            job-name: 'minimum-deps-noipv6'
+            tox-env: 'lowdeps-nodeps-withcov-posix'
+            job-name: 'lowdeps-nodeps-noipv6'
+
+          # The `lowdeps-alldeps` job tests the lowest supported dependency
+          # versions for a full-featured version of Twisted; all the lowest
+          # versions, but every extra installed.
+          - python-version: '3.10'
+            tox-env: 'lowdeps-alldeps-withcov-posix'
+            job-name: 'lowdeps-alldeps'
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
@@ -144,7 +157,7 @@ jobs:
           - python-version: '3.14'
 
           # Oldest Intel macOS (available on GitHub)
-          # and oldest Python (major) supported versions.
+          # and lowest Python (major) supported versions.
           - python-version: '3.10'
             runs-on: 'macos-14'
             job-name: 'macos-14-default-tests'
@@ -203,7 +216,7 @@ jobs:
           # We run the full test suite with the GI reactor against an X virtual
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
-          # This is executed using the oldest Python that we support.
+          # This is executed using the lowest Python major version that we support.
           - python-version: '3.10'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
@@ -317,6 +330,7 @@ jobs:
   coverage-report:
     name: Coverage report
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Always run the coverage report, even when the tests fail.
     # As long as the job is not cancelled.
     if: ${{ !cancelled() }}
@@ -385,6 +399,7 @@ jobs:
 
   benchmarks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read  # required for actions/checkout
       id-token: write # required for OIDC authentication with CodSpeed
@@ -447,6 +462,7 @@ jobs:
 
   static-checks:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
@@ -482,6 +498,7 @@ jobs:
   apidocs:
     name: API docs build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
@@ -504,6 +521,7 @@ jobs:
   narrativedocs:
     name: Narrative docs build
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
     - name: Set up Python
