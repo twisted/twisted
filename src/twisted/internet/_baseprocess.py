@@ -32,7 +32,7 @@ class BaseProcess:
 
         @return: An exception describing how the process terminated.
         """
-        raise NotImplementedError
+        raise NotImplementedError("_getReason")
 
     def _callProcessExited(self, reason: BaseException) -> None:
         if self.proto is not None:
