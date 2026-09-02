@@ -92,9 +92,9 @@ exist.
 
 We would like to have a fair process for appeal and deliberation here, but
 unfortunately such processes are prone to abuse, especially when they may be
-requested by automated systems without a human even making the request.
-Alternate processes for verification are under consideration but none exists
-yet at this time.
+requested by automated systems without a human even making the request.  We are
+considering alternate processes for verification of human authorship, but we
+have not enacted any at this time.
 
 Policy vs. Preference
 =====================
