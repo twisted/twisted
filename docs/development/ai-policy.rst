@@ -76,14 +76,6 @@ that have been insufficiently monitored.  Twisted team members will also be
 given wide discretion to assess the likelihood that activity is coming from an
 automated system or from a human who appears to be lying about their usage.
 
-When team members suspect such usage, we **may** use automated systems such as
-`AgentScan <https://agentscan.tools>`_ in order to supplement our subjective
-assessment of generative AI usage.  Team members should always publicly
-document the causes for their suspicion and never *begin* with automated tools,
-as such detection systems are often built with generative AI themselves and no
-reliable, empirically validated methods for detecting generative AI outputs
-exist.
-
 .. caution::
 
    If we believe that you are lying about generative AI use, you may receive a
@@ -95,6 +87,29 @@ unfortunately such processes are prone to abuse, especially when they may be
 requested by automated systems without a human even making the request.  We are
 considering alternate processes for verification of human authorship, but we
 have not enacted any at this time.
+
+Automated Detections
+####################
+
+When team members suspect such usage, we **must** always begin by documenting
+the specific causes of our suspicion.  We then **may** supplement that
+judgement with automated systems such as `AgentScan
+<https://agentscan.tools>`_.  Systems for generative-AI detection have `proven
+to be unreliable
+<https://lawlibguides.sandiego.edu/c.php?g=1443311&p=10721367>`_, with many
+false positives and false negatives; while they can provide a useful signal to
+compare against, we must take care when relying on them.  We don't want to
+create an incentive for generative AI users to find ways to fool such tools to
+circumvent such a mechanical check, and we don't want legitimate contributors
+who just happen to enjoy emdashes to feel like they are under constant
+scrutiny.
+
+Such automations are best used to double-check snap judgements when something
+looks like it is “obviously” AI to a human but might just be something like an
+unfamiliar writing style, to provide a mechanism for a double-check without
+requiring undue mental effort from overloaded maintainers dealing with
+bad-faith bots.
+
 
 Policy vs. Preference
 =====================
