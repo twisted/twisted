@@ -8,6 +8,8 @@ Report a security issue
 We take security very seriously.
 Your input and feedback on our security is always appreciated.
 
+For DoS (Denial of Service) issues check the dedicates section below.
+
 You can send urgent or sensitive reports via `GitHub Security Advisory <https://github.com/twisted/twisted/security/advisories/new>`_.
 
 If you prefer, you can send via email to <security@twistedmatrix.com>.
@@ -23,6 +25,22 @@ Feel free to follow up if you think an unreasonable amount of time has elapsed w
 
 All releases, including security releases, are announced on the mailing list.
 Consider subscribing to receive notification about the availability of a security fix.
+
+
+Denial of service (DoS) as security issues
+==========================================
+
+There is no expectation that Twisted will be able to run a single-threaded event loop uninterrupted if an attacker is flooding it.
+Any DoS protection should be implemented outside of the Twisted loop,
+or even outside of the Twisted application.
+
+We do want to fix DoS issues and implement measures to increase the attackers' cost.
+Handling them as security advisories and developing a fix under an embargo doesn't make much sense.
+
+For DoS issues, please report them to the Twisted GitHub Issues tracker and we will work on a fix via the public GitHub Pull Request process.
+This will allow us to run the automated tests.
+
+Unauthenticated remote memory-exhaustion denial of service attacks should also be reported via GitHub Issues.
 
 
 Security Procedure for Developers
@@ -433,34 +451,3 @@ Below is the PGP key for security@twistedmatrix.com::
     2pOVp6XTYdUW
     =HDSq
     -----END PGP PUBLIC KEY BLOCK-----
-
-
-Security Audit
-==============
-
-We need to do a full audit of Twisted, module by module.
-This document list the sort of things you want to look for
-when doing this, or when writing your own code.
-
-
-Bad input
----------
-
-Any place we receive untrusted data, we need to be careful.
-In some cases we are not careful enough. For example, in HTTP
-there are many places where strings need to be converted to
-ints, so we use ``int()`` . The problem
-is that this will accept negative or hexadecimal (`0x123`) numbers as well, whereas
-the protocol should only accept positive numbers.
-
-
-Resource Exhaustion and DoS
----------------------------
-
-Make sure we never allow users to create arbitrarily large
-strings or files. Some of the protocols still have issues
-like this. Place a limit which allows reasonable use but
-will cut off huge requests, and allow changing of this limit.
-
-Another operation to look out for are exceptions. They can fill
-up logs and take a lot of CPU time to render in web pages.
