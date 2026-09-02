@@ -315,7 +315,7 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     # Required constructor arguments.
     _wsconn: WSConnection | Connection
     _bootstrap: _Bootstrap
-    _wsp: _WSP
+    _wsp: _WSP  # type: ignore[misc]
 
     factory: ProtocolFactory[_WebSocketWireProtocol[_WSP]] = field(init=False)
 
