@@ -111,8 +111,8 @@ those same discoveries without telling us.
 .. tip::
 
    If you have access to the resources to burn a lot of LLM tokens searching
-   through Twisted for security vulnerabilities, please consider simply
-   spending those resources paying a human security researcher.
+   through Twisted for security vulnerabilities, please consider spending those
+   resources paying a human security researcher.
 
 Thus, we specifically do not forbid contributions that are *derived* from
 information obtained from LLM outputs, as long as you have fully reviewed those
