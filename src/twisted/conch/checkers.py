@@ -232,7 +232,9 @@ class SSHPublicKeyDatabase:
         else:
             try:
                 pubKey = keys.Key.fromString(credentials.blob)
-                if pubKey.verify(credentials.signature, credentials.sigData):
+                if pubKey.verify(
+                    credentials.signature, credentials.sigData, credentials.algName
+                ):
                     return credentials.username
             except Exception:  # any error should be treated as a failed login
                 _log.failure("Error while verifying key")
@@ -633,7 +635,9 @@ class SSHPublicKeyChecker:
         @rtype: L{bytes}
         """
         try:
-            if pubKey.verify(credentials.signature, credentials.sigData):
+            if pubKey.verify(
+                credentials.signature, credentials.sigData, credentials.algName
+            ):
                 return credentials.username
         except Exception as e:  # Any error should be treated as a failed login
             raise UnauthorizedLogin("Error while verifying key") from e
