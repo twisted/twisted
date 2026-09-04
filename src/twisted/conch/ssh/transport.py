@@ -31,6 +31,12 @@ except ImportError:
     # Deprecated path, will be removed in cryptography 48.0.0
     from cryptography.hazmat.primitives.ciphers.algorithms import TripleDES
 
+try:
+    from cryptography.hazmat.primitives.asymmetric import mlkem
+except ImportError:
+    # We have version older than 48.0.0 without support for mlkem.
+    mlkem = None  # type: ignore[assignment]
+
 from twisted import __version__ as twisted_version
 from twisted.conch.ssh import _kex, address, keys
 from twisted.conch.ssh.common import MP, NS, ffs, getMP, getNS
@@ -1550,6 +1556,93 @@ class SSHServerTransport(SSHTransportBase):
         )
         self._keySetup(sharedSecret, exchangeHash)
 
+    def _ssh_KEX_HYBRID_INIT(self, packet: bytes) -> None:
+        """
+        Called to handle PQ/T Hybrid key exchanges (e.g. mlkem768x25519-sha256).
+
+        Payload::
+            string C_INIT (C_PK2 concatenated with C_PK1)
+
+        C_PK1 represents a traditional (i.e., ECDH) key exchange public key.
+        C_PK2 represents the 'pk' output of the corresponding post-quantum KEM's
+        'KeyGen' at the client.
+
+        See https://www.ietf.org/archive/id/draft-ietf-sshm-mlkem-hybrid-kex-10.html
+
+        @param packet: The message data.
+        """
+        cInit, packet = getNS(packet)
+
+        kex = _kex.getPQHybridKex(self.kexAlg)
+
+        if len(cInit) != kex.c_pk1_length + kex.c_pk2_length:
+            self.sendDisconnect(DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid C_INIT length")
+            return
+
+        c_pk1 = cInit[kex.c_pk2_length :]
+        c_pk2 = cInit[: kex.c_pk2_length]
+
+        pubHostKey, privHostKey = self._getHostKeys(self.keyAlg)
+
+        # Calculate K_CL (X25519 shared secret)
+        ourKey = x25519.X25519PrivateKey.generate()
+        try:
+            peerKey = x25519.X25519PublicKey.from_public_bytes(c_pk1)
+            traditionalExchange = ourKey.exchange(peerKey)
+        except Exception:
+            self.sendDisconnect(
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer X25519 public key"
+            )
+            return
+
+        # Calculate K_PQ (ML-KEM shared secret)
+        try:
+            # encapsulate returns (ciphertext, shared_secret)
+            peerMLKEM = mlkem.MLKEM768PublicKey.from_public_bytes(c_pk2)
+            primitiveSharedSecret, ciperText = peerMLKEM.encapsulate()
+        except Exception:
+            self.sendDisconnect(
+                DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer ML-KEM public key"
+            )
+            return
+
+        hashProcessor = kex.hashProcessor
+        # K = HASH(K_PQ || K_CL)
+        # K is the shared secret.
+        sharedSecret = NS(
+            hashProcessor(primitiveSharedSecret + traditionalExchange).digest()
+        )
+
+        # S_REPLY = S_CT2 || S_PK1
+        ourPublicBlob = ourKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        sReply = ciperText + ourPublicBlob
+
+        h = hashProcessor()
+        h.update(NS(self.otherVersionString))
+        h.update(NS(self.ourVersionString))
+        h.update(NS(self.otherKexInitPayload))
+        h.update(NS(self.ourKexInitPayload))
+        h.update(NS(pubHostKey.blob()))
+        h.update(NS(cInit))
+        h.update(NS(sReply))
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+
+        # byte     SSH_MSG_KEX_HYBRID_REPLY
+        # string   K_S, server's public host key
+        # string   S_REPLY
+        # string   the signature on the exchange hash
+        self.sendPacket(
+            OVERLAP_MSG_KEX_HYBRID_REPLY,
+            NS(pubHostKey.blob())
+            + NS(sReply)
+            + NS(privHostKey.sign(exchangeHash, signatureType=self.keyAlg)),
+        )
+
+        self._keySetup(sharedSecret, exchangeHash)
+
     def _ssh_KEXDH_INIT(self, packet: bytes) -> None:
         """
         Called to handle the beginning of a non-group key exchange.
@@ -1594,7 +1687,7 @@ class SSHServerTransport(SSHTransportBase):
     def ssh_KEX_DH_GEX_REQUEST_OLD(self, packet: bytes) -> None:
         """
         This represents different key exchange methods that share the same
-        integer value.  If the message is determined to be a KEXDH_INIT,
+        integer value (30).  If the message is determined to be a KEXDH_INIT,
         L{_ssh_KEXDH_INIT} is called to handle it. If it is a KEX_ECDH_INIT,
         L{_ssh_KEX_ECDH_INIT} is called.
         Otherwise, for KEX_DH_GEX_REQUEST_OLD payload::
@@ -1621,6 +1714,8 @@ class SSHServerTransport(SSHTransportBase):
             return self._ssh_KEXDH_INIT(packet)
         elif _kex.isEllipticCurve(self.kexAlg):
             return self._ssh_KEX_ECDH_INIT(packet)
+        elif _kex.isPQHybrid(self.kexAlg):
+            return self._ssh_KEX_HYBRID_INIT(packet)
         else:
             self.dhGexRequest = packet
             ideal = struct.unpack(">L", packet)[0]
@@ -1783,6 +1878,13 @@ class SSHClientTransport(SSHTransportBase):
     """
 
     isClient = True
+
+    # FIXME https://github.com/twisted/twisted/issues/12624
+    # The client does not yet implement PQ/T Hybrid key exchange, so filter
+    # those algorithms out to prevent negotiating an unsupported method.
+    supportedKeyExchanges = [
+        kex for kex in _kex.getSupportedKeyExchanges() if not _kex.isPQHybrid(kex)
+    ]
 
     # Recommended minimal and maximal values from RFC 4419, 3.
     _dhMinimalGroupSize = 1024
@@ -2233,6 +2335,13 @@ MSG_KEX_DH_GEX_GROUP = 31
 MSG_KEX_DH_GEX_INIT = 32
 MSG_KEX_DH_GEX_REPLY = 33
 
+# FIXME: https://github.com/twisted/twisted/issues/12624
+# When defining the client-side INIT value the server fails.
+# Here as a warning when working on the client-side implementation.
+# MSG_KEX_HYBRID_INIT = 30
+# Uses a non standard name to work around the way messages are generated.
+# We should refactor the way messages are generated.
+OVERLAP_MSG_KEX_HYBRID_REPLY = 31  # Same value as MSG_KEXDH_REPLY
 
 DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT = 1
 DISCONNECT_PROTOCOL_ERROR = 2
