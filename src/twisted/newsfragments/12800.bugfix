@@ -1,0 +1,1 @@
+twisted.conch.ssh.session.SSHSession now rejects duplicate subsystem channel requests per RFC 4254 Section 6.5, preventing multiple competing protocol handlers and server resource exhaustion.

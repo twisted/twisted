@@ -60,6 +60,9 @@ class SSHSession(channel.SSHChannel):
         self.session = None
 
     def request_subsystem(self, data):
+        if self.client is not None:
+            log.error("Rejecting duplicate subsystem request on existing session")
+            return 0
         subsystem, ignored = common.getNS(data)
         log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
         client = self.avatar.lookupSubsystem(subsystem, data)

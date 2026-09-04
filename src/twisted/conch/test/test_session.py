@@ -592,6 +592,24 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
+    def test_duplicateSubsystemRequestRejected(self):
+        """
+        Subsequent subsystem requests on an active session channel are rejected
+        with 0 per RFC 4254 Section 6.5.
+        """
+        ret1 = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem") + b"data"
+        )
+        self.assertTrue(ret1)
+        originalClient = self.session.client
+        self.assertIsNotNone(originalClient)
+
+        ret2 = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem") + b"data2"
+        )
+        self.assertFalse(ret2)
+        self.assertIs(self.session.client, originalClient)
+
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
         Previously, if one only wanted to implement a subsystem, an ISession
