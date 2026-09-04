@@ -1,0 +1,1 @@
+twisted.words.protocols.irc.IRC now uses socket.gethostname() instead of socket.getfqdn() for its default hostname, avoiding multi-second stalls on platforms where reverse DNS is slow (such as macOS CI runners).
