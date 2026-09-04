@@ -77,7 +77,9 @@ dev = [
     "pyflakes ~= 3.4",
     "python-subunit ~= 1.4",
     "coverage ~= 7.15",
+    "codespell >= 2.4",
     "towncrier ~= 25.8",
+    "pre-commit ~= 4.5",
 ]
 
 tls = [
@@ -163,6 +165,18 @@ Issues = "https://github.com/twisted/twisted/issues"
 Source = "https://github.com/twisted/twisted"
 Funding-PSF = "https://psfmember.org/civicrm/contribute/transact/?reset=1&id=44"
 Funding-GitHub = "https://github.com/sponsors/twisted"
+
+[tool.codespell]
+# Add any other sub-folders that you might have in your dev environment.
+# codespell does not have an include config option, only exclude.
+# See https://github.com/codespell-project/codespell/issues/3997
+skip = 'apidocs*, ./docs/_build/*, venv*, .venv*, .nox*, .git*, dist*, .tox*, .*_cache/*, ./_trial_temp*, ./src/*.egg-info/*, ./docs/core/howto/glossary.rst'
+count = false
+quiet-level = 3
+check-hidden = true
+# Once we use a newer version of codespell that has improved ignore features
+# we can remove some words from this list.
+ignore-words-list = "ans, aEr, Nd, ser, rin, bale, shiftIn, ques, someMore, scrip, WONT, wont, crypted, aNULL, defered, writen, transfering, indentify, Persistant, Referencable, adaptee, Homogenous, SUPRESS, funktion, Re-using, re-use, re-using, re-used, implementor, implementors, adaptee, sponsoree"
 
 [tool.hatch.metadata]
 # This is here to enable backward compatible extra dependencies
@@ -289,8 +303,8 @@ target-version = ['py310', 'py311', 'py312']
 
 [tool.isort]
 profile = "black"
-sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
-default_section = "THIRDPARTY"
+sections = "FUTURE,STDLIB,ZOPE,OPENSSL,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"  # codespell:ignore
+default_section = "THIRDPARTY"  # codespell:ignore
 no_lines_before = "LOCALFOLDER"
 known_first_party = "twisted"
 known_zope = "zope"

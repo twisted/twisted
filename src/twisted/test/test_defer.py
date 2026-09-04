@@ -773,7 +773,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         """
         # test successful list of deferreds
         dgood = defer.succeed(1)
-        dbad = defer.fail(RuntimeError("oh noes"))
+        dbad = defer.fail(RuntimeError("oh no"))
         d = defer.gatherResults([dgood, dbad], consumeErrors=True)
         unconsumedErrors: list[Failure] = []
         dbad.addErrback(unconsumedErrors.append)

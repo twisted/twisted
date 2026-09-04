@@ -99,7 +99,7 @@ class NameToLabelTests(TestCase):
         """
         nameData = [
             ("f", "F"),
-            ("fo", "Fo"),
+            ("fo", "Fo"),  # codespell:ignore
             ("foo", "Foo"),
             ("fooBar", "Foo Bar"),
             ("fooBarBaz", "Foo Bar Baz"),

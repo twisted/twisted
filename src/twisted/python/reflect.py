@@ -545,7 +545,7 @@ def objgrep(
     L{objgrep} finds paths between C{start} and C{goal}.
 
     Starting at the python object C{start}, we will loop over every reachable
-    reference, tring to find the python object C{goal} (i.e. every object
+    reference, trying to find the python object C{goal} (i.e. every object
     C{candidate} for whom C{eq(candidate, goal)} is truthy), and return a
     L{list} of L{str}, where each L{str} is Python syntax for a path between
     C{start} and C{goal}.

@@ -1499,8 +1499,8 @@ class AMPTests(TestCase):
         HELLO = THING_I_DONT_UNDERSTAND
         c.sendHello(HELLO).addErrback(L.append)
         p.flush()
-        ure = L.pop()
-        ure.trap(amp.UnknownRemoteError)
+        userReceivedElement = L.pop()
+        userReceivedElement.trap(amp.UnknownRemoteError)
         c.sendHello(HELLO).addErrback(L.append)
         cl = L.pop()
         cl.trap(error.ConnectionDone)

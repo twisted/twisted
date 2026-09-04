@@ -113,7 +113,7 @@ class XPathTests(unittest.TestCase):
 
     def test_locationAllChilds(self) -> None:
         """
-        Test finding childs of foo.
+        Test finding children of foo.
         """
         xp = XPathQuery("/foo/*")
         self.assertEqual(xp.matches(self.e), True)

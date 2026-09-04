@@ -206,7 +206,7 @@ class ZshTests(unittest.TestCase):
 
         class TmpOptions(FighterAceExtendedOptions):
             # Note typo of detail
-            compData = Completions(optActions={"detaill": None})
+            compData = Completions(optActions={"detaill": None})  # codespell:ignore
 
         self.assertRaises(
             ValueError, _shellcomp.ZshArgumentsGenerator, TmpOptions(), "ace", BytesIO()

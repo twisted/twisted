@@ -1472,7 +1472,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
 
         def cbConsumer(cons):
             """
-            Called after the file was opended for reading.
+            Called after the file was opened for reading.
 
             Prepare the data transfer channel and send the response
             to the command channel.

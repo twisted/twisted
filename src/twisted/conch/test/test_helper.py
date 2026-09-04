@@ -484,17 +484,17 @@ class ExpectTests(unittest.TestCase):
 
     def testBrokenUpString(self) -> None:
         result: list[re.Match[bytes]] = []
-        d = self.term.expect(b"hello world")
+        d = self.term.expect(b"hello world!")
         d.addCallback(result.append)
 
         self.assertFalse(result)
         self.term.write(b"hello ")
         self.assertFalse(result)
-        self.term.write(b"worl")
+        self.term.write(b"world")
         self.assertFalse(result)
-        self.term.write(b"d")
+        self.term.write(b"!")
         self.assertTrue(result)
-        self.assertEqual(result[0].group(), b"hello world")
+        self.assertEqual(result[0].group(), b"hello world!")
 
     def testMultiple(self) -> None:
         result: list[re.Match[bytes]] = []

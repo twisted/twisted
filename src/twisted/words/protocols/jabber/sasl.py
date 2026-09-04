@@ -83,7 +83,7 @@ def fromBase64(s):
     rejects any characters that are not in the base64 alphabet and padding
     occurring elsewhere from the last or last two characters, as specified in
     section 14.9 of RFC 3920. This safeguards against various attack vectors
-    among which the creation of a covert channel that "leaks" information.
+    among which the creation of a convert channel that "leaks" information.
     """
 
     if base64Pattern.match(s) is None:

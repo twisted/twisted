@@ -4311,14 +4311,14 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
             d = c.fetchSpecific(
                 "1:*", headerType="HEADER.FIELDS", headerArgs=["SUBJECT"]
             )
-            c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {38}\r\n')
-            c.dataReceived(b"Subject: Suprise for your woman...\r\n")
+            c.dataReceived(b'* 1 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {32}\r\n')
+            c.dataReceived(b"Subject: Surprise for you...\r\n")
             c.dataReceived(b"\r\n")
             c.dataReceived(b")\r\n")
             c.dataReceived(b"* 1 FETCH (FLAGS (\\Seen))\r\n")
-            c.dataReceived(b'* 2 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {75}\r\n')
+            c.dataReceived(b'* 2 FETCH (BODY[HEADER.FIELDS ("SUBJECT")] {72}\r\n')
             c.dataReceived(
-                b"Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n"
+                b"Subject: What you been doing. Order your food here . ,. Baba ganoush\r\n"
             )
             c.dataReceived(b"\r\n")
             c.dataReceived(b")\r\n")
@@ -4338,14 +4338,14 @@ class HandCraftedTests(IMAP4HelperMixin, TestCase):
                         [
                             "BODY",
                             ["HEADER.FIELDS", ["SUBJECT"]],
-                            "Subject: Suprise for your woman...\r\n\r\n",
+                            "Subject: Surprise for you...\r\n\r\n",
                         ]
                     ],
                     2: [
                         [
                             "BODY",
                             ["HEADER.FIELDS", ["SUBJECT"]],
-                            "Subject: What you been doing. Order your meds here . ,. handcuff madsen\r\n\r\n",
+                            "Subject: What you been doing. Order your food here . ,. Baba ganoush\r\n\r\n",
                         ]
                     ],
                 },
@@ -7788,7 +7788,7 @@ class IMAP4ServerFetchTests(TestCase):
         # We need to clear out the welcome message.
         self.transport.clear()
         # Let's send out the faulty command.
-        self.server.dataReceived(b"0001 FETCH 1 FULLL\r\n")
+        self.server.dataReceived(b"0001 FETCH 1 FULLFILL\r\n")
         expected = b"0001 BAD Illegal syntax: Invalid Argument\r\n"
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()

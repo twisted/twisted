@@ -1202,7 +1202,7 @@ def optionsForClientTLS(
         after the TLS negotiation has completed, advertised over ALPN.  If this
         argument is specified, and no overlap can be found with the other peer,
         the connection will fail to be established.  If the remote peer does
-        not offer ALPN, the connection will be established, but no protocol wil
+        not offer ALPN, the connection will be established, but no protocol will
         be negotiated.  Protocols earlier in the list are preferred over those
         later in the list.
 
@@ -1411,7 +1411,7 @@ class OpenSSLCertificateOptions:
             this argument is specified, and no overlap can be found with the
             other peer, the connection will fail to be established.  If the
             remote peer does not offer ALPN, the connection will be
-            established, but no protocol wil be negotiated.  Protocols earlier
+            established, but no protocol will be negotiated.  Protocols earlier
             in the list are preferred over those later in the list.
         @type acceptableProtocols: L{list} of L{bytes}
 

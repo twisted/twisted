@@ -521,7 +521,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         """
         SSHSession.extReceived() passed data of type EXTENDED_DATA_STDERR along
         to the client.  If the data comes before there is a client, or if the
-        data is not of type EXTENDED_DATA_STDERR, it is discared.
+        data is not of type EXTENDED_DATA_STDERR, it is discarded.
         """
         self.session.extReceived(connection.EXTENDED_DATA_STDERR, b"1")
         self.session.extReceived(255, b"2")  # 255 is arbitrary

@@ -540,7 +540,7 @@ class ApplicationRunnerTests(TestCase):
 
     def test_preAndPostApplication(self):
         """
-        Test thet preApplication and postApplication methods are
+        Test that preApplication and postApplication methods are
         called by ApplicationRunner.run() when appropriate.
         """
         s = TestApplicationRunner(self.config)

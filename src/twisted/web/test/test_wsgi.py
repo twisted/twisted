@@ -956,8 +956,8 @@ class InputStreamTestMixin(WSGITestsMixin):
         number of bytes available.
         """
         bytes = b"hello, world."
-        d = self._renderAndReturnReaderResult(lambda input: input.read(3), bytes)
-        d.addCallback(self.assertEqual, b"hel")
+        d = self._renderAndReturnReaderResult(lambda input: input.read(5), bytes)
+        d.addCallback(self.assertEqual, b"hello")
         return d
 
     def test_readMoreThan(self):
