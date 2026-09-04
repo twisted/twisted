@@ -737,6 +737,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         When openShell raises an exception on the initial request, the error
         is logged and requestReceived returns False.
         """
+
         def failingOpenShell(pp):
             raise RuntimeError("failed to open shell")
 
