@@ -78,6 +78,9 @@ class SSHSession(channel.SSHChannel):
             return 0
 
     def request_shell(self, data):
+        if self.client is not None:
+            log.error("Rejecting shell request on session with active program")
+            return 0
         log.info("Getting shell")
         if not self.session:
             self.session = ISession(self.avatar)
@@ -92,6 +95,9 @@ class SSHSession(channel.SSHChannel):
             return 1
 
     def request_exec(self, data):
+        if self.client is not None:
+            log.error("Rejecting exec request on session with active program")
+            return 0
         if not self.session:
             self.session = ISession(self.avatar)
         f, data = common.getNS(data)

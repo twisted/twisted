@@ -610,6 +610,46 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertFalse(ret2)
         self.assertIs(self.session.client, originalClient)
 
+    def test_multipleProgramExecutionRequestsRejected(self):
+        """
+        Per RFC 4254 Section 6.5, only one of "shell", "exec", or "subsystem"
+        requests can succeed per channel. Once any program has started, subsequent
+        requests for shell, exec, or subsystem are rejected.
+        """
+        # 1. Start with shell, reject shell, exec, and subsystem
+        s1 = self.getSSHSession()
+        self.assertTrue(s1.requestReceived(b"shell", b""))
+        client1 = s1.client
+        self.assertIsNotNone(client1)
+        self.assertFalse(s1.requestReceived(b"shell", b""))
+        self.assertFalse(s1.requestReceived(b"exec", common.NS(b"success")))
+        self.assertFalse(s1.requestReceived(b"subsystem", common.NS(b"TestSubsystem")))
+        self.assertIs(s1.client, client1)
+
+        # 2. Start with exec, reject exec, shell, and subsystem
+        s2 = self.getSSHSession()
+        self.assertTrue(s2.requestReceived(b"exec", common.NS(b"success")))
+        client2 = s2.client
+        self.assertIsNotNone(client2)
+        self.assertFalse(s2.requestReceived(b"exec", common.NS(b"success")))
+        self.assertFalse(s2.requestReceived(b"shell", b""))
+        self.assertFalse(s2.requestReceived(b"subsystem", common.NS(b"TestSubsystem")))
+        self.assertIs(s2.client, client2)
+
+        # 3. Start with subsystem, reject subsystem, shell, and exec
+        s3 = self.getSSHSession()
+        self.assertTrue(
+            s3.requestReceived(b"subsystem", common.NS(b"TestSubsystem") + b"data")
+        )
+        client3 = s3.client
+        self.assertIsNotNone(client3)
+        self.assertFalse(
+            s3.requestReceived(b"subsystem", common.NS(b"TestSubsystem") + b"data")
+        )
+        self.assertFalse(s3.requestReceived(b"shell", b""))
+        self.assertFalse(s3.requestReceived(b"exec", common.NS(b"success")))
+        self.assertIs(s3.client, client3)
+
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
         Previously, if one only wanted to implement a subsystem, an ISession
@@ -689,9 +729,22 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertSessionIsStubSession()
         self.assertIsInstance(self.session.client, session.SSHSessionProcessProtocol)
         self.assertIs(self.session.session.shellProtocol, self.session.client)
-        # doesn't get a shell the second time
+        # doesn't get a shell the second time per RFC 4254 Section 6.5
+        self.assertFalse(self.session.requestReceived(b"shell", b""))
+
+    def test_requestShellError(self):
+        """
+        When openShell raises an exception on the initial request, the error
+        is logged and requestReceived returns False.
+        """
+        def failingOpenShell(pp):
+            raise RuntimeError("failed to open shell")
+
+        self.session.session = StubSessionForStubAvatar(self.session.avatar)
+        self.session.session.openShell = failingOpenShell
         self.assertFalse(self.session.requestReceived(b"shell", b""))
         self.assertRequestRaisedRuntimeError()
+        self.assertIsNone(self.session.client)
 
     def test_requestShellWithData(self):
         """

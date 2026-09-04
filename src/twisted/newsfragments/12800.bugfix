@@ -1,1 +1,1 @@
-twisted.conch.ssh.session.SSHSession now rejects duplicate subsystem channel requests per RFC 4254 Section 6.5, preventing multiple competing protocol handlers and server resource exhaustion.
+twisted.conch.ssh.session.SSHSession now rejects requests to start a shell, execute a command, or run a subsystem if a program has already been started on the session channel, strictly adhering to RFC 4254 Section 6.5.
