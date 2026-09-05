@@ -7,7 +7,6 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 See also RFC 4254.
 """
 
-
 import os
 import signal
 import struct
@@ -131,11 +130,9 @@ class StubSessionForStubAvatar:
         process protocol in the shellProtocol variable, connect it to the
         EchoTransport and store that as shellTransport.
         """
-        if self.shellProtocol is not None:
-            raise RuntimeError("not getting a shell this time")
-        else:
-            self.shellProtocol = pp
-            self.shellTransport = EchoTransport(pp)
+        assert self.shellProtocol is None, "duplicate calls prevented by conch"
+        self.shellProtocol = pp
+        self.shellTransport = EchoTransport(pp)
 
     def execCommand(self, pp, command):
         """
@@ -592,6 +589,24 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
+    def test_onlyOneOf(self) -> None:
+        """
+        When a subsystem, exec, or shell request has been successful, all other
+        subsystem, shell, or exec requests will fail.
+        """
+        success = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem")
+        )
+        self.assertTrue(success)
+        success = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem")
+        )
+        self.assertFalse(success)
+        success = self.session.requestReceived(b"shell", b"")
+        self.assertFalse(success)
+        success = self.session.requestReceived(b"exec", common.NS(b"SomeCommand"))
+        self.assertFalse(success)
+
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
         Previously, if one only wanted to implement a subsystem, an ISession
@@ -659,7 +674,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         )
         errors[0].trap(RuntimeError)
 
-    def test_requestShell(self):
+    def test_requestShell(self) -> None:
         """
         When a client requests a shell, the SSHSession object should get
         the shell by getting an ISession adapter for the avatar, then
@@ -673,7 +688,6 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertIs(self.session.session.shellProtocol, self.session.client)
         # doesn't get a shell the second time
         self.assertFalse(self.session.requestReceived(b"shell", b""))
-        self.assertRequestRaisedRuntimeError()
 
     def test_requestShellWithData(self):
         """

@@ -104,15 +104,22 @@ class SSHSession(channel.SSHChannel):
         (see RFC 4254, section 6.5), of which only one may be executed per
         session.
         """
+        if self.client is not None:
+            log.error(
+                "multiple shell, exec, or subsystem requests sent to the same session"
+            )
+            return 0
         log.info("getting")
-        if not prepare():
-            log.info("get fail")
+        with log.failuresHandled("while preparing") as op:
+            if not prepare():
+                log.info("get fail")
+                return 0
+        if op.failed:
             return 0
         pp = SSHSessionProcessProtocol(self)
-        try:
+        with log.failuresHandled("while getting:") as op:
             complete(pp)
-        except Exception:
-            log.failure("error getting")
+        if op.failed:
             return 0
         self.client = pp
         return 1
@@ -133,8 +140,13 @@ class SSHSession(channel.SSHChannel):
             return True
 
         def complete(pp: SSHSessionProcessProtocol) -> None:
-            # was this always just broken??!
-            subsys.makeConnection(wrapProcessProtocol(pp))
+            asProcProt = wrapProcessProtocol(pp)
+            # note: this type signature is wrong but un-annotated
+            # BaseProtocol.makeConnection allows it to pass without any type
+            # errors.  given that subsystems are very lightly used within
+            # Twisted (pretty much *just* file transfer) it's possible that
+            # this is just broken and always has been
+            subsys.makeConnection(asProcProt)
             pp.makeConnection(wrapProtocol(subsys))
 
         return self._shellOrCommand(
