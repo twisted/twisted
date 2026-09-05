@@ -1,1 +1,2 @@
-twisted.conch.ssh.session.SSHSession now rejects requests to start a shell, execute a command, or run a subsystem if a program has already been started on the session channel, strictly adhering to RFC 4254 Section 6.5.
+twisted.conch.ssh.session.SSHSession now rejects `shell`, `exec`, and `subsystem` channel requests once one of them have been successful.  Per RFC 4254 Section 6.5, "Only one of these requests can succeed per channel." This prevents multiple protocol handlers from competing with each other and corrupting the channel's state.
+

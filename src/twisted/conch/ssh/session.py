@@ -59,9 +59,14 @@ class SSHSession(channel.SSHChannel):
         self.client = None
         self.session = None
 
-    def request_subsystem(self, data):
+    def request_subsystem(self, data: bytes) -> int:
         if self.client is not None:
-            log.error("Rejecting duplicate subsystem request on existing session")
+            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            log.warn(
+                "Rejecting concurrent subsystem request on channel {channelId} from {peer}: a program is already active",
+                channelId=getattr(self, "id", None),
+                peer=peer,
+            )
             return 0
         subsystem, ignored = common.getNS(data)
         log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
@@ -77,9 +82,14 @@ class SSHSession(channel.SSHChannel):
             log.error("Failed to get subsystem")
             return 0
 
-    def request_shell(self, data):
+    def request_shell(self, data: bytes) -> int:
         if self.client is not None:
-            log.error("Rejecting shell request on session with active program")
+            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            log.warn(
+                "Rejecting concurrent shell request on channel {channelId} from {peer}: a program is already active",
+                channelId=getattr(self, "id", None),
+                peer=peer,
+            )
             return 0
         log.info("Getting shell")
         if not self.session:
@@ -94,9 +104,14 @@ class SSHSession(channel.SSHChannel):
             self.client = pp
             return 1
 
-    def request_exec(self, data):
+    def request_exec(self, data: bytes) -> int:
         if self.client is not None:
-            log.error("Rejecting exec request on session with active program")
+            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            log.warn(
+                "Rejecting concurrent exec request on channel {channelId} from {peer}: a program is already active",
+                channelId=getattr(self, "id", None),
+                peer=peer,
+            )
             return 0
         if not self.session:
             self.session = ISession(self.avatar)

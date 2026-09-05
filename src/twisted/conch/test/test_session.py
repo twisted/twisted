@@ -592,7 +592,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
-    def test_duplicateSubsystemRequestRejected(self):
+    def test_duplicateSubsystemRequestRejected(self) -> None:
         """
         Subsequent subsystem requests on an active session channel are rejected
         with 0 per RFC 4254 Section 6.5.
@@ -610,7 +610,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertFalse(ret2)
         self.assertIs(self.session.client, originalClient)
 
-    def test_multipleProgramExecutionRequestsRejected(self):
+    def test_multipleProgramExecutionRequestsRejected(self) -> None:
         """
         Per RFC 4254 Section 6.5, only one of "shell", "exec", or "subsystem"
         requests can succeed per channel. Once any program has started, subsequent
@@ -732,7 +732,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         # doesn't get a shell the second time per RFC 4254 Section 6.5
         self.assertFalse(self.session.requestReceived(b"shell", b""))
 
-    def test_requestShellError(self):
+    def test_requestShellError(self) -> None:
         """
         When openShell raises an exception on the initial request, the error
         is logged and requestReceived returns False.
