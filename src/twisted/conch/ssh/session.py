@@ -36,21 +36,6 @@ from twisted.python.failure import Failure
 log = Logger()
 
 
-def _startClient(
-    shellOrCommandStarter: Callable[
-        [SSHSession, bytes],
-        SSHSessionProcessProtocol | None,
-    ],
-) -> Callable[[SSHSession, bytes], int]:
-    def impl(self: SSHSession, data: bytes) -> int:
-        proto = shellOrCommandStarter(self, data)
-        if proto is None:
-            return 1
-        return 0
-
-    return impl
-
-
 class SSHSession(channel.SSHChannel):
     """
     A generalized implementation of an SSH session.
@@ -88,45 +73,40 @@ class SSHSession(channel.SSHChannel):
         session = self.session = ISession(self.avatar)
         return session
 
+    def _shellOrCommand(
+        self, appCode: Callable[[SSHSessionProcessProtocol], None]
+    ) -> int:
+        log.info("getting")
+        pp = SSHSessionProcessProtocol(self)
+        try:
+            appCode(pp)
+        except Exception:
+            log.failure("error getting")
+            return 0
+        self.client = pp
+        return 1
+
     def request_subsystem(self, data: bytes) -> int:
         subsystem, ignored = common.getNS(data)
         log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
         subsys = self.avatar.lookupSubsystem(subsystem, data)
-        if subsys:
-            pp = SSHSessionProcessProtocol(self)
-            proto = wrapProcessProtocol(pp)
-            subsys.makeConnection(proto)
-            pp.makeConnection(wrapProtocol(subsys))
-            self.client = pp
-            return 1
-        else:
+        if subsys is None:
             log.error("Failed to get subsystem")
             return 0
 
+        def complete(pp: SSHSessionProcessProtocol) -> None:
+            subsys.makeConnection(wrapProcessProtocol(pp))
+            pp.makeConnection(wrapProtocol(subsys))
+
+        return self._shellOrCommand(complete)
+
     def request_shell(self, data: bytes) -> int:
-        log.info("Getting shell")
-        try:
-            pp = SSHSessionProcessProtocol(self)
-            self._session.openShell(pp)
-        except Exception:
-            log.failure("Error getting shell")
-            return 0
-        else:
-            self.client = pp
-            return 1
+        return self._shellOrCommand(self._session.openShell)
 
     def request_exec(self, data: bytes) -> int:
         f, data = common.getNS(data)
         log.info('Executing command "{f}"', f=f)
-        try:
-            pp = SSHSessionProcessProtocol(self)
-            self._session.execCommand(pp, f)
-        except Exception:
-            log.failure('Error executing command "{f}"', f=f)
-            return 0
-        else:
-            self.client = pp
-            return 1
+        return self._shellOrCommand(lambda pp: self._session.execCommand(pp, f))
 
     def request_pty_req(self, data: bytes) -> int:
         term, windowSize, modes = parseRequest_pty_req(data)
