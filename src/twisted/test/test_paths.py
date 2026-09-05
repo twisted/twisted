@@ -870,6 +870,7 @@ class FilePathTests(AbstractFilePathTests):
         self.assertRaises(filepath.InsecurePath, self.path.child, b"CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, b"C:CON")
         self.assertRaises(filepath.InsecurePath, self.path.child, r"C:\CON")
+        self.assertRaises(filepath.InsecurePath, self.path.child, r"\\.\CON")
 
     def testComparison(self) -> None:
         self.assertEqual(filepath.FilePath(b"a"), filepath.FilePath(b"a"))
