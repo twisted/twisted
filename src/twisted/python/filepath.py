@@ -69,6 +69,9 @@ from twisted.python.win32 import (
     O_BINARY,
 )
 
+if sys.version_info <= (3, 12):
+    from pathlib import PureWindowsPath
+
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
@@ -914,8 +917,6 @@ class FilePath(AbstractFilePath[AnyStr]):
             if sys.version_info >= (3, 13):
                 reserved = os.path.isreserved(norm)
             else:
-                from pathlib import PureWindowsPath
-
                 path = os.fsdecode(norm)  # Convert bytes -> string
                 reserved = PureWindowsPath(path).is_reserved()
             if reserved:
