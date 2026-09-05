@@ -911,6 +911,17 @@ class FilePath(AbstractFilePath[AnyStr]):
         if sep in norm:
             raise InsecurePath(f"{path!r} contains one or more directory separators")
 
+        if platform.isWindows():
+            if sys.version_info >= (3, 13):
+                reserved = os.path.isreserved(norm)
+            else:
+                from pathlib import PureWindowsPath
+
+                path = os.fsdecode(norm)  # Convert bytes -> string
+                reserved = PureWindowsPath(path).is_reserved()
+            if reserved:
+                raise InsecurePath(f"{path!r} is a reserved Windows path.")
+
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
             raise InsecurePath(f"{newpath!r} is not a child of {ourPath!r}")
