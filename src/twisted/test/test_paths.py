@@ -14,9 +14,10 @@ import pickle
 import stat
 import sys
 import time
+from collections.abc import Callable
 from functools import total_ordering
 from pprint import pformat
-from typing import IO, AnyStr, Callable, NoReturn, TypeVar
+from typing import IO, AnyStr, NoReturn, TypeVar
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
