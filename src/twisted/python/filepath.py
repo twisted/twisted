@@ -12,7 +12,7 @@ import base64
 import errno
 import os
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from os import listdir, stat, utime
 from os.path import (
     abspath,
@@ -46,7 +46,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
-    Callable,
     Generic,
     Literal,
     TypeVar,
