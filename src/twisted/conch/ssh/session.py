@@ -17,7 +17,7 @@ import struct
 import sys
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Callable
+from typing import Callable, TypeVar
 
 from zope.interface import implementer
 
@@ -37,6 +37,7 @@ from twisted.python.compat import networkString
 from twisted.python.failure import Failure
 
 log = Logger()
+_T = TypeVar("_T")
 
 
 class SSHSession(channel.SSHChannel):
@@ -96,8 +97,8 @@ class SSHSession(channel.SSHChannel):
     def _shellOrCommand(
         self,
         *,
-        prepare: Callable[[], bool],
-        complete: Callable[[SSHSessionProcessProtocol], None],
+        prepare: Callable[[], _T | None],
+        complete: Callable[[SSHSessionProcessProtocol, _T], None],
     ) -> int:
         """
         Dedicate this session to a specific type of shell, exec, or subsystem
@@ -111,35 +112,32 @@ class SSHSession(channel.SSHChannel):
             return 0
         log.info("getting")
         with log.failuresHandled("while preparing") as op:
-            if not prepare():
+            preparation = prepare()
+            if preparation is None:
                 log.info("get fail")
                 return 0
         if op.failed:
             return 0
         pp = SSHSessionProcessProtocol(self)
         with log.failuresHandled("while getting:") as op:
-            complete(pp)
+            complete(pp, preparation)
         if op.failed:
             return 0
         self.client = pp
         return 1
 
     def request_subsystem(self, data: bytes) -> int:
-        subsys: Protocol
-
-        def prepare() -> bool:
-            nonlocal subsys
+        def prepare() -> Protocol | None:
             subsystem, _ = common.getNS(data)
             log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
             assert self.avatar is not None, "should already be authenticated"
             lookup = self.avatar.lookupSubsystem(subsystem, data)
             if lookup is None:
                 log.error("Failed to get subsystem")
-                return False
-            subsys = lookup
-            return True
+                return None
+            return lookup
 
-        def complete(pp: SSHSessionProcessProtocol) -> None:
+        def complete(pp: SSHSessionProcessProtocol, subsys: Protocol) -> None:
             asProcProt = wrapProcessProtocol(pp)
             # note: this type signature is wrong but un-annotated
             # BaseProtocol.makeConnection allows it to pass without any type
@@ -157,18 +155,14 @@ class SSHSession(channel.SSHChannel):
     def request_shell(self, data: bytes) -> int:
         return self._shellOrCommand(
             prepare=lambda: True,
-            complete=self._session.openShell,
+            complete=lambda pp, true: self._session.openShell(pp),
         )
 
     def request_exec(self, data: bytes) -> int:
-        f: bytes
+        def parseNS() -> bytes | None:
+            return common.getNS(data)[0]
 
-        def parseNS() -> bool:
-            nonlocal f
-            f, _ = common.getNS(data)
-            return True
-
-        def completer(pp: SSHSessionProcessProtocol) -> None:
+        def completer(pp: SSHSessionProcessProtocol, f: bytes) -> None:
             log.info('Executing command "{f}"', f=f)
             self._session.execCommand(pp, f)
 

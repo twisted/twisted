@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 
 from zope.interface import Attribute, Interface
 
+from twisted.internet.protocol import Protocol
+
 if TYPE_CHECKING:
     from twisted.conch.ssh.keys import Key
 
@@ -49,7 +51,7 @@ class IConchUser(Interface):
         @rtype:             a subclass of L{SSHChannel} or L{None}
         """
 
-    def lookupSubsystem(subsystem, data):
+    def lookupSubsystem(subsystem: bytes, data: bytes) -> Protocol | None:
         """
         The other side requested a subsystem.
 
@@ -57,10 +59,7 @@ class IConchUser(Interface):
         If the subsystem is not available, we return C{None}.
 
         @param subsystem: The name of the subsystem being requested
-        @type subsystem: L{bytes}
         @param data:     Additional request data (often nothing)
-        @type data:      L{bytes}
-        @rtype:          L{Protocol} or L{None}
         """
 
     def gotGlobalRequest(requestType, data):
