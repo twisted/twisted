@@ -913,7 +913,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         if sep in norm:
             raise InsecurePath(f"{path!r} contains one or more directory separators")
 
-        if platform.isWindows():
+        if sys.platform == "win32":
             if sys.version_info >= (3, 13):
                 reserved = os.path.isreserved(norm)
             else:
