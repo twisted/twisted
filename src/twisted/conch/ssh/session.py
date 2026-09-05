@@ -137,7 +137,7 @@ class SSHSession(channel.SSHChannel):
             subsys.makeConnection(wrapProcessProtocol(pp))
             pp.makeConnection(wrapProtocol(subsys))
 
-        return self._shellOrCommand(complete=complete)
+        return self._shellOrCommand(prepare=prepare, complete=complete)
 
     def request_shell(self, data: bytes) -> int:
         return self._shellOrCommand(complete=self._session.openShell)
