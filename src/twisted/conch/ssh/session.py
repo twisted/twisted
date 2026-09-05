@@ -61,7 +61,9 @@ class SSHSession(channel.SSHChannel):
 
     def request_subsystem(self, data: bytes) -> int:
         if self.client is not None:
-            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            peer = getattr(
+                getattr(self.conn, "transport", None), "getPeer", lambda: None
+            )()
             log.warn(
                 "Rejecting concurrent subsystem request on channel {channelId} from {peer}: a program is already active",
                 channelId=getattr(self, "id", None),
@@ -84,7 +86,9 @@ class SSHSession(channel.SSHChannel):
 
     def request_shell(self, data: bytes) -> int:
         if self.client is not None:
-            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            peer = getattr(
+                getattr(self.conn, "transport", None), "getPeer", lambda: None
+            )()
             log.warn(
                 "Rejecting concurrent shell request on channel {channelId} from {peer}: a program is already active",
                 channelId=getattr(self, "id", None),
@@ -106,7 +110,9 @@ class SSHSession(channel.SSHChannel):
 
     def request_exec(self, data: bytes) -> int:
         if self.client is not None:
-            peer = getattr(getattr(self.conn, "transport", None), "getPeer", lambda: None)()
+            peer = getattr(
+                getattr(self.conn, "transport", None), "getPeer", lambda: None
+            )()
             log.warn(
                 "Rejecting concurrent exec request on channel {channelId} from {peer}: a program is already active",
                 channelId=getattr(self, "id", None),
