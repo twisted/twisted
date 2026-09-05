@@ -171,7 +171,7 @@ jobs:
 
           # Windows, minimum Python version with select reactor.
           - python-version: '3.10'
-            runs-on: 'windows-2022'
+            runs-on: 'windows-2025'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
             # Distributed trial is not yet suported on Windows so we overwrite
@@ -183,14 +183,14 @@ jobs:
           - python-version: '3.14'
             tox-env: 'nodeps-withcov-windows'
             job-name: 'nodeps-windows-select'
-            runs-on: 'windows-2022'
+            runs-on: 'windows-2025'
             # Should be removed once we can run distributed tests on Windows
             # https://github.com/twisted/twisted/issues/12521
             trial-args: '--reactor=select'
 
           # Windows, newest Python supported version with iocp reactor.
           - python-version: '3.14'
-            runs-on: 'windows-2022'
+            runs-on: 'windows-2025'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-iocp'
             # Distributed trial is not yet suported on Windows.

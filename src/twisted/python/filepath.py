@@ -12,7 +12,7 @@ import base64
 import errno
 import os
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from os import listdir, stat, utime
 from os.path import (
     abspath,
@@ -46,7 +46,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AnyStr,
-    Callable,
     Generic,
     Literal,
     TypeVar,
@@ -69,6 +68,9 @@ from twisted.python.win32 import (
     ERROR_PATH_NOT_FOUND,
     O_BINARY,
 )
+
+if sys.version_info <= (3, 12):
+    from pathlib import PureWindowsPath
 
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
@@ -910,6 +912,15 @@ class FilePath(AbstractFilePath[AnyStr]):
         norm = normpath(path)
         if sep in norm:
             raise InsecurePath(f"{path!r} contains one or more directory separators")
+
+        if sys.platform == "win32":
+            if sys.version_info >= (3, 13):
+                reserved = os.path.isreserved(norm)
+            else:
+                path = os.fsdecode(norm)  # Convert bytes -> string
+                reserved = PureWindowsPath(path).is_reserved()
+            if reserved:
+                raise InsecurePath(f"{path!r} is a reserved Windows path.")
 
         newpath = abspath(joinpath(ourPath, norm))
         if not newpath.startswith(ourPath):
