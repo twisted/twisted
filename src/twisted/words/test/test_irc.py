@@ -1522,7 +1522,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
             bufferValue = bufferValue.decode("utf-8")
         self.assertEqual(bufferValue, s)
 
-    def test_connectionMadeUsesLocalHostname(self):
+    def test_connectionMadeUsesLocalHostname(self) -> None:
         """
         When no hostname is configured, L{IRC.connectionMade} uses
         L{socket.gethostname} as the default hostname.
@@ -1533,12 +1533,14 @@ class BasicServerFunctionalityTests(IRCTestCase):
         protocolInstance.makeConnection(transport)
         self.assertEqual(protocolInstance.hostname, "test-local-host")
 
-    def test_connectionMadePreservesConfiguredHostname(self):
+    def test_connectionMadePreservesConfiguredHostname(self) -> None:
         """
         An explicitly configured hostname is not replaced on connection.
         """
-        protocolInstance = irc.IRC()
-        protocolInstance.hostname = "configured.example"
+        class ConfiguredIRC(irc.IRC):
+            hostname = "configured.example"
+
+        protocolInstance = ConfiguredIRC()
         transport = protocol.FileWrapper(StringIOWithoutClosing())
         protocolInstance.makeConnection(transport)
         self.assertEqual(protocolInstance.hostname, "configured.example")
