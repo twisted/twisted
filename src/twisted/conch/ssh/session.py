@@ -96,7 +96,7 @@ class SSHSession(channel.SSHChannel):
     def _shellOrCommand(
         self,
         *,
-        prepare: Callable[[], bool] = lambda: True,
+        prepare: Callable[[], bool],
         complete: Callable[[SSHSessionProcessProtocol], None],
     ) -> int:
         """
@@ -137,10 +137,16 @@ class SSHSession(channel.SSHChannel):
             subsys.makeConnection(wrapProcessProtocol(pp))
             pp.makeConnection(wrapProtocol(subsys))
 
-        return self._shellOrCommand(prepare=prepare, complete=complete)
+        return self._shellOrCommand(
+            prepare=prepare,
+            complete=complete,
+        )
 
     def request_shell(self, data: bytes) -> int:
-        return self._shellOrCommand(complete=self._session.openShell)
+        return self._shellOrCommand(
+            prepare=lambda: True,
+            complete=self._session.openShell,
+        )
 
     def request_exec(self, data: bytes) -> int:
         f: bytes
