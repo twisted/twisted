@@ -23,12 +23,15 @@ from zope.interface import implementer
 
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted,
+    IConchUser,
     ISession,
     ISessionSetEnv,
 )
 from twisted.conch.ssh import channel, common, connection
+from twisted.conch.ssh.connection import SSHConnection
 from twisted.internet import interfaces, protocol
 from twisted.internet.interfaces import IAddress, IProtocol, ITransport
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.python.compat import networkString
 from twisted.python.failure import Failure
@@ -61,8 +64,25 @@ class SSHSession(channel.SSHChannel):
     client: SSHSessionProcessProtocol | None
     session: ISession | None
 
-    def __init__(self, *args: object, **kw: object) -> None:
-        channel.SSHChannel.__init__(self, *args, **kw)
+    def __init__(
+        self,
+        localWindow: int = 0,
+        localMaxPacket: int = 0,
+        remoteWindow: int = 0,
+        remoteMaxPacket: int = 0,
+        conn: SSHConnection | None = None,
+        data: bytes | None = None,
+        avatar: IConchUser | None = None,
+    ) -> None:
+        super().__init__(
+            localWindow,
+            localMaxPacket,
+            remoteWindow,
+            remoteMaxPacket,
+            conn,
+            data,
+            avatar,
+        )
         self.buf = b""
         self.client = None
         self.session = None
@@ -74,12 +94,23 @@ class SSHSession(channel.SSHChannel):
         return session
 
     def _shellOrCommand(
-        self, appCode: Callable[[SSHSessionProcessProtocol], None]
+        self,
+        *,
+        prepare: Callable[[], bool] = lambda: True,
+        complete: Callable[[SSHSessionProcessProtocol], None],
     ) -> int:
+        """
+        Dedicate this session to a specific type of shell, exec, or subsystem
+        (see RFC 4254, section 6.5), of which only one may be executed per
+        session.
+        """
         log.info("getting")
+        if not prepare():
+            log.info("get fail")
+            return 0
         pp = SSHSessionProcessProtocol(self)
         try:
-            appCode(pp)
+            complete(pp)
         except Exception:
             log.failure("error getting")
             return 0
@@ -87,26 +118,43 @@ class SSHSession(channel.SSHChannel):
         return 1
 
     def request_subsystem(self, data: bytes) -> int:
-        subsystem, ignored = common.getNS(data)
-        log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
-        subsys = self.avatar.lookupSubsystem(subsystem, data)
-        if subsys is None:
-            log.error("Failed to get subsystem")
-            return 0
+        subsys: Protocol
+
+        def prepare() -> bool:
+            nonlocal subsys
+            subsystem, _ = common.getNS(data)
+            log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
+            assert self.avatar is not None, "should already be authenticated"
+            lookup = self.avatar.lookupSubsystem(subsystem, data)
+            if lookup is None:
+                log.error("Failed to get subsystem")
+                return False
+            subsys = lookup
+            return True
 
         def complete(pp: SSHSessionProcessProtocol) -> None:
+            # was this always just broken??!
             subsys.makeConnection(wrapProcessProtocol(pp))
             pp.makeConnection(wrapProtocol(subsys))
 
-        return self._shellOrCommand(complete)
+        return self._shellOrCommand(complete=complete)
 
     def request_shell(self, data: bytes) -> int:
-        return self._shellOrCommand(self._session.openShell)
+        return self._shellOrCommand(complete=self._session.openShell)
 
     def request_exec(self, data: bytes) -> int:
-        f, data = common.getNS(data)
-        log.info('Executing command "{f}"', f=f)
-        return self._shellOrCommand(lambda pp: self._session.execCommand(pp, f))
+        f: bytes
+
+        def parseNS() -> bool:
+            nonlocal f
+            f, _ = common.getNS(data)
+            return True
+
+        def completer(pp: SSHSessionProcessProtocol) -> None:
+            log.info('Executing command "{f}"', f=f)
+            self._session.execCommand(pp, f)
+
+        return self._shellOrCommand(prepare=parseNS, complete=completer)
 
     def request_pty_req(self, data: bytes) -> int:
         term, windowSize, modes = parseRequest_pty_req(data)
@@ -188,6 +236,9 @@ class SSHSession(channel.SSHChannel):
         if self.session:
             self.session.eofReceived()
         elif self.client:
+            assert (
+                self.conn is not None
+            ), "connection should be established if EOF is being received"
             self.conn.sendClose(self)
 
     def closed(self) -> None:

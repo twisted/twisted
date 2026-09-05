@@ -9,9 +9,10 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
-
 from zope.interface import implementer
 
+from twisted.conch.interfaces import IConchUser
+from twisted.conch.ssh.connection import SSHConnection
 from twisted.internet import interfaces
 from twisted.logger import Logger
 from twisted.python import log
@@ -56,14 +57,14 @@ class SSHChannel(log.Logger):
 
     def __init__(
         self,
-        localWindow=0,
-        localMaxPacket=0,
-        remoteWindow=0,
-        remoteMaxPacket=0,
-        conn=None,
-        data=None,
-        avatar=None,
-    ):
+        localWindow: int = 0,
+        localMaxPacket: int = 0,
+        remoteWindow: int = 0,
+        remoteMaxPacket: int = 0,
+        conn: SSHConnection | None = None,
+        data: bytes | None = None,
+        avatar: IConchUser | None = None,
+    ) -> None:
         self.localWindowSize = localWindow or 131072
         self.localWindowLeft = self.localWindowSize
         self.localMaxPacket = localMaxPacket or 32768
@@ -72,10 +73,10 @@ class SSHChannel(log.Logger):
         self.areWriting = 1
         self.conn = conn
         self.data = data
-        self.avatar = avatar
+        self.avatar: IConchUser | None = avatar
         self.specificData = b""
         self.buf = b""
-        self.extBuf = []
+        self.extBuf: list[tuple[int, bytes]] = []
         self.closing = 0
         self.localClosed = 0
         self.remoteClosed = 0
