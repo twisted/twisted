@@ -268,7 +268,10 @@ class IRC(protocol.Protocol):
     def connectionMade(self):
         self.channels = []
         if self.hostname is None:
-            self.hostname = socket.getfqdn()
+            # Prefer gethostname() over getfqdn(). Reverse DNS for a
+            # fallback server name is slow on some platforms (notably
+            # macOS CI runners) and is not needed here.
+            self.hostname = socket.gethostname()
 
     def sendLine(self, line):
         line = line + CR + LF
