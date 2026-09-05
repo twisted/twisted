@@ -1537,6 +1537,7 @@ class BasicServerFunctionalityTests(IRCTestCase):
         """
         An explicitly configured hostname is not replaced on connection.
         """
+
         class ConfiguredIRC(irc.IRC):
             hostname = "configured.example"
 
