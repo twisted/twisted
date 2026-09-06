@@ -9,13 +9,17 @@ are session, direct-tcp, and forwarded-tcp.
 Maintainer: Paul Swartz
 """
 
+from typing import TYPE_CHECKING
+
 from zope.interface import implementer
 
 from twisted.conch.interfaces import IConchUser
-from twisted.conch.ssh.connection import SSHConnection
 from twisted.internet import interfaces
 from twisted.logger import Logger
 from twisted.python import log
+
+if TYPE_CHECKING:
+    from twisted.conch.ssh.connection import SSHConnection
 
 
 @implementer(interfaces.ITransport)
