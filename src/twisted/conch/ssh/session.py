@@ -119,7 +119,7 @@ class SSHSession(channel.SSHChannel):
         return 1
 
     def request_subsystem(self, data: bytes) -> int:
-        def prepare() -> Protocol | None:
+        def getSubsystem() -> Protocol | None:
             subsystem, _ = common.getNS(data)
             log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
             assert self.avatar is not None, "should already be authenticated"
@@ -129,7 +129,7 @@ class SSHSession(channel.SSHChannel):
                 return None
             return subsys
 
-        def complete(pp: SSHSessionProcessProtocol, subsys: Protocol) -> None:
+        def connectSubsystem(pp: SSHSessionProcessProtocol, subsys: Protocol) -> None:
             asProcProt = wrapProcessProtocol(pp)
             # note: this type signature is wrong but un-annotated
             # BaseProtocol.makeConnection allows it to pass without any type
@@ -139,7 +139,7 @@ class SSHSession(channel.SSHChannel):
             subsys.makeConnection(asProcProt)
             pp.makeConnection(wrapProtocol(subsys))
 
-        return self._shellOrCommand(prepare=prepare, complete=complete)
+        return self._shellOrCommand(prepare=getSubsystem, complete=connectSubsystem)
 
     def request_shell(self, data: bytes) -> int:
         def logShellRequest() -> bool | None:
