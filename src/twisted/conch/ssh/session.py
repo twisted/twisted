@@ -110,14 +110,11 @@ class SSHSession(channel.SSHChannel):
                 "multiple shell, exec, or subsystem requests sent to the same session"
             )
             return 0
-        log.info("getting")
         preparation = prepare()
         if preparation is None:
-            log.info("get fail")
             return 0
-        pp = SSHSessionProcessProtocol(self)
         with log.failuresHandled("while getting:") as op:
-            complete(pp, preparation)
+            complete(pp := SSHSessionProcessProtocol(self), preparation)
         if op.failed:
             return 0
         self.client = pp
@@ -128,9 +125,15 @@ class SSHSession(channel.SSHChannel):
             subsystem, _ = common.getNS(data)
             log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
             assert self.avatar is not None, "should already be authenticated"
-            lookup = self.avatar.lookupSubsystem(subsystem, data)
+            handler = log.failuresHandled(
+                "while looking up subsystem {subsystem}", subsystem=subsystem
+            )
+            with handler as op:
+                lookup = self.avatar.lookupSubsystem(subsystem, data)
+            if op.failed:
+                return None
             if lookup is None:
-                log.error("Failed to get subsystem")
+                log.error("Failed to get subsystem {subsystem}", subsystem=subsystem)
                 return None
             return lookup
 
@@ -144,23 +147,25 @@ class SSHSession(channel.SSHChannel):
             subsys.makeConnection(asProcProt)
             pp.makeConnection(wrapProtocol(subsys))
 
-        return self._shellOrCommand(
-            prepare=prepare,
-            complete=complete,
-        )
+        return self._shellOrCommand(prepare=prepare, complete=complete)
 
     def request_shell(self, data: bytes) -> int:
-        return self._shellOrCommand(
-            prepare=lambda: "shell",
-            complete=lambda pp, ignored: self._session.openShell(pp),
-        )
+        def logShellRequest() -> bool | None:
+            log.info("requesting shell")
+            return True
+
+        def openShell(pp: SSHSessionProcessProtocol, ignored: bool) -> None:
+            self._session.openShell(pp)
+
+        return self._shellOrCommand(prepare=logShellRequest, complete=openShell)
 
     def request_exec(self, data: bytes) -> int:
         def parseNS() -> bytes | None:
-            return common.getNS(data)[0]
+            f = common.getNS(data)[0]
+            log.info('Executing command "{f}"', f=f)
+            return f
 
         def completer(pp: SSHSessionProcessProtocol, f: bytes) -> None:
-            log.info('Executing command "{f}"', f=f)
             self._session.execCommand(pp, f)
 
         return self._shellOrCommand(prepare=parseNS, complete=completer)
