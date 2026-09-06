@@ -106,14 +106,12 @@ class SSHSession(channel.SSHChannel):
         session.
         """
         if self.client is not None:
-            log.error(
-                "multiple shell, exec, or subsystem requests sent to the same session"
-            )
+            log.error("multiple session-client requests sent to the same session")
             return 0
-        preparation = prepare()
-        if preparation is None:
+        if (preparation := prepare()) is None:
+            # No logging here, subsystem setup preparation logs itself below.
             return 0
-        with log.failuresHandled("while getting:") as op:
+        with log.failuresHandled("while establishing session client:") as op:
             complete(pp := SSHSessionProcessProtocol(self), preparation)
         if op.failed:
             return 0
