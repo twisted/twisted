@@ -6,6 +6,7 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 
 See also RFC 4254.
 """
+from __future__ import annotations
 
 import os
 import signal
