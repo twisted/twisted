@@ -11,11 +11,10 @@ from unittest import skipIf
 
 from zope.interface.verify import verifyObject
 
-from twisted.conch.ssh.connection import SSHConnection
-
 try:
     from twisted.conch.ssh import channel
     from twisted.conch.ssh.address import SSHTransportAddress
+    from twisted.conch.ssh.connection import SSHConnection
     from twisted.conch.ssh.service import SSHService
     from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.internet import interfaces
@@ -26,6 +25,7 @@ try:
 except ImportError:
     skipTest = "Conch SSH not supported."
     SSHService = object  # type: ignore[assignment,misc]
+    SSHConnection = object  # type: ignore[assignment,misc]
 from twisted.trial.unittest import TestCase
 
 
