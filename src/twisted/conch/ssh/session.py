@@ -125,17 +125,11 @@ class SSHSession(channel.SSHChannel):
             subsystem, _ = common.getNS(data)
             log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
             assert self.avatar is not None, "should already be authenticated"
-            handler = log.failuresHandled(
-                "while looking up subsystem {subsystem}", subsystem=subsystem
-            )
-            with handler as op:
-                lookup = self.avatar.lookupSubsystem(subsystem, data)
-            if op.failed:
-                return None
-            if lookup is None:
+            subsys = self.avatar.lookupSubsystem(subsystem, data)
+            if subsys is None:
                 log.error("Failed to get subsystem {subsystem}", subsystem=subsystem)
                 return None
-            return lookup
+            return subsys
 
         def complete(pp: SSHSessionProcessProtocol, subsys: Protocol) -> None:
             asProcProt = wrapProcessProtocol(pp)
