@@ -6,10 +6,12 @@
 Tests for L{twisted.conch.ssh.filetransfer}.
 """
 
+from __future__ import annotations
 
 import os
 import re
 import struct
+from typing import TYPE_CHECKING
 from unittest import skipIf
 
 from hamcrest import assert_that, equal_to
@@ -29,12 +31,15 @@ except ImportError:
 else:
     cryptography = _cryptography
 
-try:
-    from twisted.conch.avatar import ConchUser as _ConchUser
-except ImportError:
-    ConchUser = object
+if TYPE_CHECKING:
+    from twisted.conch.avatar import ConchUser
 else:
-    ConchUser = _ConchUser  # type: ignore[misc]
+    try:
+        from twisted.conch.avatar import ConchUser as _ConchUser
+    except ImportError:
+        ConchUser = object
+    else:
+        ConchUser = _ConchUser
 
 try:
     from twisted.conch.ssh import common, connection, filetransfer, session
@@ -43,7 +48,7 @@ except ImportError:
 
 
 class TestAvatar(ConchUser):
-    def __init__(self):
+    def __init__(self) -> None:
         ConchUser.__init__(self)
         self.channelLookup[b"session"] = session.SSHSession
         self.subsystemLookup[b"sftp"] = filetransfer.FileTransferServer
