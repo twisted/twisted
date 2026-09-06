@@ -111,12 +111,9 @@ class SSHSession(channel.SSHChannel):
             )
             return 0
         log.info("getting")
-        with log.failuresHandled("while preparing") as op:
-            preparation = prepare()
-            if preparation is None:
-                log.info("get fail")
-                return 0
-        if op.failed:
+        preparation = prepare()
+        if preparation is None:
+            log.info("get fail")
             return 0
         pp = SSHSessionProcessProtocol(self)
         with log.failuresHandled("while getting:") as op:
@@ -154,8 +151,8 @@ class SSHSession(channel.SSHChannel):
 
     def request_shell(self, data: bytes) -> int:
         return self._shellOrCommand(
-            prepare=lambda: True,
-            complete=lambda pp, true: self._session.openShell(pp),
+            prepare=lambda: "shell",
+            complete=lambda pp, ignored: self._session.openShell(pp),
         )
 
     def request_exec(self, data: bytes) -> int:
