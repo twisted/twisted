@@ -22,6 +22,7 @@ import win32file
 import win32pipe
 import win32process
 import win32security
+from typing_extensions import override
 
 from twisted.internet import _pollingfile, error
 from twisted.internet._baseprocess import BaseProcess
@@ -263,7 +264,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
 
-    def _getReason(self, status):
+    @override
+    def _getReason(self, status: int) -> BaseException:
         if status == 0:
             return error.ProcessDone(status)
         return error.ProcessTerminated(status)
