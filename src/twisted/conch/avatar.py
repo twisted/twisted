@@ -8,13 +8,13 @@ from zope.interface import implementer
 from twisted.conch.error import ConchError
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
-from twisted.internet.interfaces import IProtocol
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
 
 
 class SubsystemFactory(TypingProtocol):
-    def __call__(self, data: bytes, avatar: IConchUser) -> IProtocol:
+    def __call__(self, data: bytes, avatar: IConchUser) -> Protocol:
         ...
 
 
@@ -46,13 +46,13 @@ class ConchUser:
                 avatar=self,
             )
 
-    def lookupSubsystem(self, subsystem: bytes, data: bytes) -> IProtocol | None | bool:
+    def lookupSubsystem(self, subsystem: bytes, data: bytes) -> Protocol | None:
         self._log.debug(
             "Subsystem lookup: {subsystem!r}", subsystem=self.subsystemLookup
         )
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
-            return False
+            return None
         return klass(data, avatar=self)
 
     def gotGlobalRequest(self, requestType, data):
