@@ -26,7 +26,7 @@ Consider subscribing to receive notification about the availability of a securit
 
 
 Security Procedure for Developers
-=================================
+---------------------------------
 
 The goal of the normal Twisted development procedure is to make all steps transparent and record all information at all times in a public location - either the issue tracker or a branch.
 
@@ -436,7 +436,7 @@ Below is the PGP key for security@twistedmatrix.com::
 
 
 Security Audit
-==============
+--------------
 
 We need to do a full audit of Twisted, module by module.
 This document list the sort of things you want to look for

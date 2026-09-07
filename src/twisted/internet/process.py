@@ -33,6 +33,8 @@ if not TYPE_CHECKING:
 
 from zope.interface import implementer
 
+from typing_extensions import override
+
 from twisted.internet import abstract, error, fdesc
 from twisted.internet._baseprocess import BaseProcess
 from twisted.internet.interfaces import IProcessTransport
@@ -318,7 +320,8 @@ class _BaseProcess(BaseProcess):
             unregisterReapProcessHandler(pid, self)
             self.processEnded(status)
 
-    def _getReason(self, status):
+    @override
+    def _getReason(self, status: int) -> BaseException:
         exitCode = sig = None
         if os.WIFEXITED(status):
             exitCode = os.WEXITSTATUS(status)

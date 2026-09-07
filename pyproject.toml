@@ -15,7 +15,7 @@ dynamic = [
     "optional-dependencies",
 ]
 description = "An asynchronous networking framework written in Python"
-license = { text = "MIT License" }
+license = "MIT"
 # When updating this value, make sure our CI matrix includes a matching minimum version.
 requires-python = ">=3.10"
 authors = [
@@ -469,7 +469,6 @@ module = [
     'twisted.cred.test.test_digestauth',
     'twisted.cred.test.test_strcred',
     'twisted.enterprise.adbapi',
-    'twisted.internet._baseprocess',
     'twisted.internet._dumbwin32proc',
     'twisted.internet._glibbase',
     'twisted.internet._newtls',
@@ -501,7 +500,6 @@ module = [
     'twisted.internet.test.test_address',
     'twisted.internet.test.test_asyncioreactor',
     'twisted.internet.test.test_base',
-    'twisted.internet.test.test_baseprocess',
     'twisted.internet.test.test_defer_yieldfrom',
     'twisted.internet.test.test_endpoints',
     'twisted.internet.test.test_epollreactor',
@@ -903,7 +901,6 @@ module = [
     'twisted.web._auth.digest',
     'twisted.web.demo',
     'twisted.web.html',
-    'twisted.web.http_headers',
     'twisted.web.iweb',
     'twisted.web.rewrite',
     'twisted.web.script',
