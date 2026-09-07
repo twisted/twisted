@@ -261,7 +261,7 @@ class IRC(protocol.Protocol):
 
     buffer = ""
     MAX_LENGTH = 16384
-    hostname = None
+    hostname: Optional[str] = None
 
     encoding: Optional[str] = None
 
