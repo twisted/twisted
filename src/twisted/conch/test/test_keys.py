@@ -1613,20 +1613,37 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
 
     def test_verifySignatureTypeMatches(self):
         """
-        A signature verifies successfully when the caller's expected
-        signature algorithm matches the one embedded in the signature.
+        A signature verifies successfully when the algorithm embedded in
+        the signature is one of the caller's acceptable algorithms.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
-        self.assertTrue(key.verify(self.rsaSignature, b"", signatureType=b"ssh-rsa"))
+        self.assertTrue(
+            key.verify(self.rsaSignature, b"", acceptableAlgorithms={b"ssh-rsa"})
+        )
+
+    def test_verifySignatureTypeMatchesOneOfSeveral(self):
+        """
+        A signature verifies successfully when the algorithm embedded in
+        the signature is any one of several caller-provided acceptable
+        algorithms.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        self.assertTrue(
+            key.verify(
+                self.rsaSignature,
+                b"",
+                acceptableAlgorithms={b"rsa-sha2-256", b"ssh-rsa"},
+            )
+        )
 
     def test_verifySignatureTypeMismatch(self):
         """
         verify() raises L{keys.BadSignatureAlgorithmError} when the
-        caller's expected signature algorithm does not match the one
-        embedded in the signature, even though the signature itself is
-        valid for the algorithm it does embed. This prevents a signature
-        made under one algorithm name from being replayed as if it had
-        been made using a different one advertised elsewhere, such as in
+        algorithm embedded in the signature is not one of the caller's
+        acceptable algorithms, even though the signature itself is valid
+        for the algorithm it does embed. This prevents a signature made
+        under one algorithm name from being replayed as if it had been
+        made using a different one advertised elsewhere, such as in
         C{MSG_USERAUTH_REQUEST}.
         """
         key = keys.Key.fromString(keydata.publicRSA_openssh)
@@ -1635,8 +1652,30 @@ xEm4DxjEoaIp8dW/JOzXQ2EF+WaSOgdYsw3Ac+rnnjnNptCdOEDGP6QBkt+oXj4P
             key.verify,
             self.rsaSignature,
             b"",
-            signatureType=b"rsa-sha2-256",
+            acceptableAlgorithms={b"rsa-sha2-256"},
         )
+
+    def test_verifySignatureTypeMismatchExceptionInformation(self):
+        """
+        The L{keys.BadSignatureAlgorithmError} raised by verify() records
+        the algorithm that was actually used and the algorithms that
+        would have been accepted, and its message includes both.
+        """
+        key = keys.Key.fromString(keydata.publicRSA_openssh)
+        exception = self.assertRaises(
+            keys.BadSignatureAlgorithmError,
+            key.verify,
+            self.rsaSignature,
+            b"",
+            acceptableAlgorithms={b"rsa-sha2-256", b"rsa-sha2-512"},
+        )
+        self.assertEqual(exception.actualAlgorithm, b"ssh-rsa")
+        self.assertEqual(
+            exception.acceptableAlgorithms, {b"rsa-sha2-256", b"rsa-sha2-512"}
+        )
+        self.assertIn(repr(b"ssh-rsa"), str(exception))
+        self.assertIn(repr(b"rsa-sha2-256"), str(exception))
+        self.assertIn(repr(b"rsa-sha2-512"), str(exception))
 
     def test_verifyDSA(self):
         """

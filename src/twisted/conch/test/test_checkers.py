@@ -319,6 +319,13 @@ class SSHPublicKeyDatabaseTests(TestCase):
         Valid keys with invalid signatures should cause
         L{SSHPublicKeyDatabase.requestAvatarId} to return a {UnauthorizedLogin}
         failure
+
+        This also covers the case where the signature is valid but was
+        made using a different algorithm than the one advertised in the
+        credentials: L{keys.Key.verify} raises
+        L{keys.BadSignatureAlgorithmError} for that, and it must be
+        treated the same as any other invalid signature, without being
+        logged as an unexpected error.
         """
 
         def _checkKey(ignored):
@@ -333,7 +340,9 @@ class SSHPublicKeyDatabaseTests(TestCase):
             keys.Key.fromString(keydata.privateDSA_openssh).sign(b"foo"),
         )
         d = self.checker.requestAvatarId(credentials)
-        return self.assertFailure(d, UnauthorizedLogin)
+        result = self.assertFailure(d, UnauthorizedLogin)
+        self.assertEqual(self.flushLoggedErrors(), [])
+        return result
 
     def test_requestAvatarIdNormalizeException(self):
         """
@@ -852,7 +861,11 @@ class SSHPublicKeyCheckerTests(TestCase):
         """
         Calling L{checkers.SSHPublicKeyChecker.requestAvatarId} with
         credentials that are incorrectly signed fails with
-        L{UnauthorizedLogin}.
+        L{UnauthorizedLogin}. This includes the case where the signature
+        was made using a different algorithm than the one advertised in
+        the credentials, which surfaces as
+        L{keys.BadSignatureAlgorithmError} from L{keys.Key.verify} and
+        must be treated the same as any other invalid signature.
         """
         self.credentials.signature = keys.Key.fromString(
             keydata.privateDSA_openssh
@@ -860,6 +873,7 @@ class SSHPublicKeyCheckerTests(TestCase):
         self.failureResultOf(
             self.checker.requestAvatarId(self.credentials), UnauthorizedLogin
         )
+        self.assertEqual(self.flushLoggedErrors(), [])
 
     def test_failureVerifyingKey(self):
         """

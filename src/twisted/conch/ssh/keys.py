@@ -67,8 +67,28 @@ class BadKeyError(Exception):
 class BadSignatureAlgorithmError(Exception):
     """
     Raised when a public key signature algorithm name isn't defined for this
-    public key format.
+    public key format, or when it is not one of a set of acceptable
+    algorithms.
+
+    @ivar actualAlgorithm: The signature algorithm that was actually used,
+        if this was raised because of an unacceptable algorithm. Otherwise
+        L{None}.
+    @ivar acceptableAlgorithms: The signature algorithms that would have
+        been accepted, if this was raised because of an unacceptable
+        algorithm. Otherwise L{None}.
     """
+
+    actualAlgorithm: bytes | None = None
+    acceptableAlgorithms: set[bytes] | None = None
+
+    def __str__(self) -> str:
+        message = super().__str__()
+        if self.acceptableAlgorithms is None:
+            return message
+        return (
+            f"{message} (used {self.actualAlgorithm!r}, "
+            f"acceptable: {sorted(self.acceptableAlgorithms)!r})"
+        )
 
 
 class EncryptedKeyError(Exception):
@@ -1779,30 +1799,32 @@ class Key:
             ret = common.NS(self._keyObject.sign(data))
         return common.NS(signatureType) + ret
 
-    def verify(self, signature, data, signatureType=None):
+    def verify(
+        self,
+        signature: bytes,
+        data: bytes,
+        acceptableAlgorithms: set[bytes] | None = None,
+    ) -> bool:
         """
         Verify a signature using this key.
 
-        @type signature: L{bytes}
         @param signature: The signature to verify.
 
-        @type data: L{bytes}
         @param data: The signed data.
 
-        @param signatureType: The SSH public key algorithm name the
-            signature is expected to use, or L{None} to accept whichever
+        @param acceptableAlgorithms: The SSH public key algorithm names the
+            signature is allowed to use, or L{None} to accept whichever
             algorithm name is embedded in the signature. Callers that know
-            the algorithm a peer advertised for this signature (for
-            example in C{MSG_USERAUTH_REQUEST}) should always pass it, so
+            which algorithm(s) a peer advertised for this signature (for
+            example in C{MSG_USERAUTH_REQUEST}) should always pass them, so
             that a signature valid under one algorithm name cannot be
             replayed as if it had been made using a different one.
 
-        @rtype: L{bool}
         @return: C{True} if the signature is valid.
 
-        @raise BadSignatureAlgorithmError: if C{signatureType} is given
-            and does not match the algorithm name embedded in the
-            signature.
+        @raise BadSignatureAlgorithmError: if C{acceptableAlgorithms} is
+            given and the algorithm name embedded in the signature is not
+            one of them.
         """
         if len(signature) == 40:
             # DSA key with no padding
@@ -1810,17 +1832,21 @@ class Key:
         else:
             actualSignatureType, signature = common.getNS(signature)
 
-        if signatureType is not None and actualSignatureType != signatureType:
-            raise BadSignatureAlgorithmError(
-                f"signature algorithm {actualSignatureType!r} does not "
-                f"match expected algorithm {signatureType!r}"
-            )
+        if (
+            acceptableAlgorithms is not None
+            and actualSignatureType not in acceptableAlgorithms
+        ):
+            error = BadSignatureAlgorithmError("signature algorithm not acceptable")
+            error.actualAlgorithm = actualSignatureType
+            error.acceptableAlgorithms = acceptableAlgorithms
+            raise error
 
         hashAlgorithm = self._getHashAlgorithm(actualSignatureType)
         if hashAlgorithm is None:
             return False
 
         keyType = self.type()
+        args: tuple[Any, ...]
         if keyType == "RSA":
             k = self._keyObject
             if not self.isPublic():

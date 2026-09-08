@@ -233,9 +233,16 @@ class SSHPublicKeyDatabase:
             try:
                 pubKey = keys.Key.fromString(credentials.blob)
                 if pubKey.verify(
-                    credentials.signature, credentials.sigData, credentials.algName
+                    credentials.signature,
+                    credentials.sigData,
+                    {credentials.algName},
                 ):
                     return credentials.username
+            except keys.BadSignatureAlgorithmError:
+                # The signature doesn't use the algorithm the peer
+                # advertised for it; treat this the same as any other
+                # invalid signature, without logging it as an error.
+                pass
             except Exception:  # any error should be treated as a failed login
                 _log.failure("Error while verifying key")
                 return failure.Failure(UnauthorizedLogin("error while verifying key"))
@@ -636,9 +643,15 @@ class SSHPublicKeyChecker:
         """
         try:
             if pubKey.verify(
-                credentials.signature, credentials.sigData, credentials.algName
+                credentials.signature,
+                credentials.sigData,
+                {credentials.algName},
             ):
                 return credentials.username
+        except keys.BadSignatureAlgorithmError:
+            # The signature doesn't use the algorithm the peer advertised
+            # for it; treat this the same as any other invalid signature.
+            pass
         except Exception as e:  # Any error should be treated as a failed login
             raise UnauthorizedLogin("Error while verifying key") from e
 
