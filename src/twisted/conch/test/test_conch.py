@@ -9,6 +9,7 @@ import subprocess
 import sys
 from itertools import count
 from typing import Any
+from unittest import skipIf
 
 from zope.interface import implementer
 
@@ -575,15 +576,15 @@ class OpenSSHClientMixin:
         return result
 
 
+_openSSHPath = which("ssh")
+
+
+@skipIf(not _openSSHPath, "ssh client not found")
 class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCase):
     """
     Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
     OpenSSH.
     """
-
-    _openSSHPath = which("ssh")
-    if not _openSSHPath:  # pragma: no cover
-        skip = "ssh client not found"
 
     def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo: str) -> Deferred[Any]:
         """
@@ -599,7 +600,7 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         kexAlgorithms = []
 
         output = subprocess.check_output(
-            [self._openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
+            [_openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
         )
         kexAlgorithms = output.decode("utf-8").split()
 
