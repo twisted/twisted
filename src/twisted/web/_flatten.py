@@ -16,6 +16,8 @@ from traceback import extract_tb
 from types import FrameType, GeneratorType
 from typing import Any, Callable, TypeVar, Union, cast
 
+from typing_extensions import Never
+
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python.compat import nativeString
 from twisted.python.failure import Failure
@@ -41,7 +43,7 @@ Flattenable = Union[
     Tag,
     tuple[FlattenableRecursive, ...],
     list[FlattenableRecursive],
-    Generator[FlattenableRecursive, None, None],
+    Generator[FlattenableRecursive, Never, object],
     CharRef,
     Deferred[FlattenableRecursive],
     Coroutine[Deferred[FlattenableRecursive], object, FlattenableRecursive],

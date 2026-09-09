@@ -22,7 +22,7 @@ from twisted.conch import ls
 from twisted.conch.interfaces import ISFTPFile
 from twisted.conch.test.test_filetransfer import FileTransferTestAvatar, SFTPTestBase
 from twisted.cred import portal
-from twisted.internet import defer, error, interfaces, protocol, reactor
+from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet.task import Clock
 from twisted.internet.testing import StringTransport
 from twisted.internet.utils import getProcessOutputAndValue
@@ -986,12 +986,6 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
         d = self.stopServer()
         d.addCallback(lambda _: self.processProtocol.killProcess())
         return d
-
-    def _killProcess(self, ignored):
-        try:
-            self.processProtocol.transport.signalProcess("KILL")
-        except error.ProcessExitedAlready:
-            pass
 
     def runCommand(self, command):
         """

@@ -8,7 +8,7 @@ Tests for L{twisted.python.url}.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Protocol
+from typing import Any, Protocol
 
 from twisted.trial.unittest import SynchronousTestCase
 from ..url import URL
@@ -694,7 +694,7 @@ class TestURL(SynchronousTestCase):
         argument is converted into an N-tuple of 2-tuples.
         """
         # note the type here is invalid as only 2-tuples are accepted
-        url = URL(query=[["alpha", "beta"]])  # type: ignore[list-item]
+        url = URL(query=[("alpha", "beta")])
         self.assertEqual(url.query, (("alpha", "beta"),))
 
     def test_pathIterable(self) -> None:
@@ -733,7 +733,9 @@ class TestURL(SynchronousTestCase):
 
         def check(param: str, expectation: str = defaultExpectation) -> None:
             with self.assertRaises(TypeError) as raised:
-                URL(**{param: Unexpected()})  # type: ignore[arg-type]
+                # Unpack to make mypy happy.
+                kwargs: dict[str, Any] = {param: Unexpected()}
+                URL(**kwargs)
             assertRaised(raised, expectation, param)
 
         check("scheme")

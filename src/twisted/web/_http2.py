@@ -935,7 +935,6 @@ class H2Stream:
         self.path = None
         self.producer = None
         self._producerProducing = False
-        self._hasStreamingProducer = None
         self._inboundDataBuffer = deque()
         self._conn = connection
         self._request = requestFactory(self, queued=False)

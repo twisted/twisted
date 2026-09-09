@@ -18,17 +18,6 @@ from twisted.names import common, dns, error
 from twisted.python.failure import Failure
 
 
-class _DummyController:
-    """
-    A do-nothing DNS controller.  This is useful when all messages received
-    will be responses to previously issued queries.  Anything else received
-    will be ignored.
-    """
-
-    def messageReceived(self, *args):
-        pass
-
-
 class Resolver(common.ResolverBase):
     """
     L{Resolver} implements recursive lookup starting from a specified list of

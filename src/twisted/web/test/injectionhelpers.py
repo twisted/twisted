@@ -31,8 +31,6 @@ class MethodInjectionTestsMixin:
 
         @param method: the method (e.g. C{GET\x00})
 
-        @param uri: the URI
-
         @type method:
         """
         raise NotImplementedError()

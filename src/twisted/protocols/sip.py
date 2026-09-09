@@ -954,10 +954,6 @@ class Proxy(Base):
         """
         (srcHost, srcPort) = sourcePeer
 
-        def _mungContactHeader(uri, message):
-            message.headers["contact"][0] = uri.toString()
-            return self.sendMessage(uri, message)
-
         viaHeader = self.getVia()
         if viaHeader.toString() in message.headers["via"]:
             # Must be a loop, so drop message

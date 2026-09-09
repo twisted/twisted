@@ -239,7 +239,7 @@ class ErrorReportingTests(StringTest):
             isFailure(
                 type=equal_to(RuntimeError),
                 value=after(str, equal_to("something blew up")),
-                frames=has_item(similarFrame("go", "erroneous.py")),  # type: ignore[arg-type]
+                frames=has_item(similarFrame("go", "erroneous.py")),
             ),
         )
 
@@ -252,7 +252,7 @@ class ErrorReportingTests(StringTest):
                 value=after(
                     str, equal_to("Deliberate failure to mask the hidden exception")
                 ),
-                frames=has_item(similarFrame("testHiddenException", "erroneous.py")),  # type: ignore[arg-type]
+                frames=has_item(similarFrame("testHiddenException", "erroneous.py")),
             ),
         )
 

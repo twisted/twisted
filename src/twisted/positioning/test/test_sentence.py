@@ -14,24 +14,6 @@ sentinelValueOne = "someStringValue"
 sentinelValueTwo = "someOtherStringValue"
 
 
-class DummyProtocol:
-    """
-    A simple, fake protocol.
-    """
-
-    @staticmethod
-    def getSentenceAttributes():
-        return ["type", sentinelValueOne, sentinelValueTwo]
-
-
-class DummySentence(_sentence._BaseSentence):
-    """
-    A sentence for L{DummyProtocol}.
-    """
-
-    ALLOWED_ATTRIBUTES = DummyProtocol.getSentenceAttributes()
-
-
 class MixinProtocol(_sentence._PositioningSentenceProducerMixin):
     """
     A simple, fake protocol that declaratively tells you the sentences

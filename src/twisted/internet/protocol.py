@@ -30,29 +30,12 @@ from twisted.python import components, failure, log
 from twisted.python.failure import Failure
 
 P = TypeVar("P", bound="_ProtoWithFactory", default="_ProtoWithFactory")
-SomeProtocol = TypeVar("SomeProtocol")
 _FactoryParams = ParamSpec("_FactoryParams")
 R = TypeVar("R", bound="Factory")
-_Value = TypeVar("_Value", covariant=True)
-
-
-class _LSPViolationHelper(Generic[_Value]):
-    def __get__(  # type:ignore[empty-body]
-        self, instance: object, owner: type[object] | None = None
-    ) -> _Value:
-        ...
-
-    def __set__(self, instance: object, value: Any) -> None:
-        ...
-
-    def __delete__(self, instance: object) -> None:
-        ...
 
 
 @implementer(interfaces.IProtocol)
 class _ProtoWithFactory(TypingProtocol):
-    # factory: _LSPViolationHelper[Factory[Self]]
-
     @property
     def factory(self) -> Factory[Self]:
         ...

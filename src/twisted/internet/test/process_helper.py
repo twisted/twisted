@@ -3,6 +3,7 @@
 
 import os
 import sys
+from typing import cast
 
 
 def grandchild() -> None:
@@ -31,7 +32,7 @@ def main() -> None:
                 None,
                 1,
                 0,
-                os.environ,
+                cast(dict[str, str], os.environ),
                 scriptDir,
                 info,
             )

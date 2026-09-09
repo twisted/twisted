@@ -609,6 +609,10 @@ def elementStream():
 
 
 class SuxElementStream(sux.XMLParser):
+    # Same bounds as ExpatElementStream.
+    maxStanzaSize = 10 * 1024 * 1024
+    maxElementCount = 100000
+
     def __init__(self):
         self.connectionMade()
         self.DocumentStartEvent = None
@@ -619,12 +623,17 @@ class SuxElementStream(sux.XMLParser):
         self.documentStarted = False
         self.defaultNsStack = []
         self.prefixStack = []
+        self.elementCount = 0
+        self.stanzaSize = 0
 
     def parse(self, buffer):
+        self.stanzaSize += len(buffer)
         try:
             self.dataReceived(buffer)
         except sux.ParseError as e:
             raise ParserError(str(e))
+        if self.stanzaSize > self.maxStanzaSize:
+            raise ParserError("Maximum stanza size exceeded")
 
     def findUri(self, prefix):
         # Walk prefix stack backwards, looking for the uri
@@ -686,6 +695,9 @@ class SuxElementStream(sux.XMLParser):
 
         # Document already started
         if self.documentStarted:
+            self.elementCount += 1
+            if self.elementCount > self.maxElementCount:
+                raise ParserError("Maximum element count exceeded")
             # Starting a new packet
             if self.currElem is None:
                 self.currElem = e
@@ -770,6 +782,8 @@ class SuxElementStream(sux.XMLParser):
                 self.currElem.parent = self.rootElem
                 self.ElementEvent(self.currElem)
                 self.currElem = None
+                self.elementCount = 0
+                self.stanzaSize = 0
 
             # Anything else is just some element wrapping up
             else:
@@ -777,6 +791,11 @@ class SuxElementStream(sux.XMLParser):
 
 
 class ExpatElementStream:
+    # Per-stanza byte and element caps, reset when the stanza is emitted. Bytes
+    # are counted in parse() so the parser's internal buffering is bounded too.
+    maxStanzaSize = 10 * 1024 * 1024
+    maxElementCount = 100000
+
     def __init__(self):
         import pyexpat
 
@@ -794,12 +813,17 @@ class ExpatElementStream:
         self.defaultNsStack = [""]
         self.documentStarted = 0
         self.localPrefixes = {}
+        self.elementCount = 0
+        self.stanzaSize = 0
 
     def parse(self, buffer):
+        self.stanzaSize += len(buffer)
         try:
             self.parser.Parse(buffer)
         except self.error as e:
             raise ParserError(str(e))
+        if self.stanzaSize > self.maxStanzaSize:
+            raise ParserError("Maximum stanza size exceeded")
 
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name.  See
@@ -829,6 +853,9 @@ class ExpatElementStream:
 
         # Document already started
         if self.documentStarted == 1:
+            self.elementCount += 1
+            if self.elementCount > self.maxElementCount:
+                raise ParserError("Maximum element count exceeded")
             if self.currElem != None:
                 self.currElem.children.append(e)
                 e.parent = self.currElem
@@ -849,6 +876,8 @@ class ExpatElementStream:
         elif self.currElem.parent is None:
             self.ElementEvent(self.currElem)
             self.currElem = None
+            self.elementCount = 0
+            self.stanzaSize = 0
 
         # Anything else is just some element in the current
         # packet wrapping up

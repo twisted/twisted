@@ -8,6 +8,7 @@ An API for storing HTTP header names and values.
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
+from types import NotImplementedType
 from typing import AnyStr, ClassVar, TypeVar, overload
 
 from twisted.python.compat import cmp, comparable
@@ -74,7 +75,7 @@ class Headers:
             self._rawHeaders,
         )
 
-    def __cmp__(self, other):
+    def __cmp__(self, other: object) -> int | NotImplementedType:
         """
         Define L{Headers} instances as being equal to each other if they have
         the same raw headers.
@@ -83,7 +84,8 @@ class Headers:
             return cmp(
                 sorted(self._rawHeaders.items()), sorted(other._rawHeaders.items())
             )
-        return NotImplemented
+        # https://github.com/python/mypy/issues/18914
+        return NotImplemented  # type:ignore[no-any-return]
 
     def copy(self) -> Headers:
         """
@@ -223,7 +225,7 @@ class _NameEncoder:
 
     _MAX_CACHED_HEADERS: ClassVar[int] = 10_000
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._canonicalHeaderCache = {}
 
     def encode(self, name: str | bytes) -> bytes:

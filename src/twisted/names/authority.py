@@ -251,15 +251,6 @@ class FileAuthority(common.ResolverBase):
             return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
-    def _cbAllRecords(self, results):
-        ans, auth, add = [], [], []
-        for res in results:
-            if res[0]:
-                ans.extend(res[1][0])
-                auth.extend(res[1][1])
-                add.extend(res[1][2])
-        return ans, auth, add
-
 
 class PySourceAuthority(FileAuthority):
     """
