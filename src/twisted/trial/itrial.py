@@ -17,8 +17,7 @@ class ITestCase(zi.Interface):
     """
 
     skip: str | None = zi.Attribute(
-        "A string indicating the reason why this test case should be skipped, "
-        "or L{None} if it should not be skipped."
+        "The reason why this test case should be skipped, or C{None} to not skip."
     )
 
     failureException = zi.Attribute(

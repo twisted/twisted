@@ -581,7 +581,7 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
     OpenSSH.
     """
 
-    def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo):
+    def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo: str) -> Deferred[Any]:
         """
         Call execute() method of L{OpenSSHClientMixin} with an ssh option that
         forces the exclusive use of the key exchange algorithm specified by
@@ -593,14 +593,17 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         @return: L{defer.Deferred}
         """
         kexAlgorithms = []
+        openSSHPath = which("ssh")
+        if not openSSHPath:
+            raise SkipTest("ssh client not found")
         try:
             output = subprocess.check_output(
-                [which("ssh")[0], "-Q", "kex"], stderr=subprocess.STDOUT
+                [openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
             )
-            if not isinstance(output, str):
-                output = output.decode("utf-8")
-            kexAlgorithms = output.split()
-        except BaseException:
+
+            kexAlgorithms = output.decode("utf-8").split()
+        except Exception:
+            # We ignore any errors and assume OpenSSH client is not available.
             pass
 
         if keyExchangeAlgo not in kexAlgorithms:
@@ -634,13 +637,13 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         """
         return self.assertExecuteWithKexAlgorithm("ecdh-sha2-nistp521")
 
-    def test_CURVE25519_SHA256(self):
+    def test_CURVE25519_SHA256(self) -> Deferred[Any]:
         """
         The curve25519-sha256 key exchange algorithm is compatible with OpenSSH.
         """
         return self.assertExecuteWithKexAlgorithm("curve25519-sha256")
 
-    def test_MLKEM768X25519_SHA256(self):
+    def test_MLKEM768X25519_SHA256(self) -> Deferred[Any]:
         """
         The mlkem768x25519-sha256 key exchange algorithm is compatible with OpenSSH.
         """
