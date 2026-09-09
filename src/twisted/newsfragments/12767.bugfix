@@ -1,0 +1,4 @@
+twisted.internet.asyncioreactor.AsyncioSelectorReactor.callLater now has the
+same signature as twisted.internet.interfaces.IReactorTime.callLater.
+twisted.internet.asyncioreactor.AsyncioSelectorReactor.callFromThread now has the
+same signature as twisted.internet.interfaces.IReactorFromThreads.callFromThread.

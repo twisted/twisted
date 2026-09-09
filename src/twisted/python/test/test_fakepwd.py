@@ -13,7 +13,7 @@ else:
     pwd = _pwd
 
 try:
-    import spwd as _spwd
+    import spwd as _spwd  # type: ignore[import-not-found]
 except ImportError:
     spwd = None
 else:

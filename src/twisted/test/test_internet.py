@@ -1271,7 +1271,7 @@ class ProducerTests(TestCase):
         Pull consumers don't get their C{pauseProducing} method called if the
         descriptor buffer fills up.
 
-        @param _methodName: Either 'write', or 'writeSequence', indicating
+        @param methodName: Either 'write', or 'writeSequence', indicating
             which transport method to write data to.
         """
         descriptor = SillyDescriptor()

@@ -187,7 +187,6 @@ class SSHCiphers:
         return Cipher(
             algorithmClass(key[:keySize]),
             modeClass(iv[: algorithmClass.block_size // 8]),
-            backend=default_backend(),
         )
 
     def _getMAC(
@@ -316,7 +315,6 @@ def _getSupportedCiphers():
             Cipher(
                 algorithmClass(b" " * keySize),
                 modeClass(b" " * (algorithmClass.block_size // 8)),
-                backend=default_backend(),
             ).encryptor()
         except UnsupportedAlgorithm:
             pass
@@ -1155,7 +1153,7 @@ class SSHTransportBase(protocol.Protocol):
         """
 
         numbers = dh.DHParameterNumbers(self.p, self.g)
-        parameters = numbers.parameters(default_backend())
+        parameters = numbers.parameters()
         self.dhSecretKey = parameters.generate_private_key()
         y = self.dhSecretKey.public_key().public_numbers().y
         self.dhSecretKeyPublicMP = MP(y)
@@ -1173,7 +1171,7 @@ class SSHTransportBase(protocol.Protocol):
 
         remoteKey = dh.DHPublicNumbers(
             remoteDHpublicKey, dh.DHParameterNumbers(self.p, self.g)
-        ).public_key(default_backend())
+        ).public_key()
         secret = self.dhSecretKey.exchange(remoteKey)
         del self.dhSecretKey
 
@@ -1360,7 +1358,7 @@ class SSHTransportBase(protocol.Protocol):
             except KeyError:
                 raise UnsupportedAlgorithm("unused-key")
 
-            return ec.generate_private_key(curve, default_backend())
+            return ec.generate_private_key(curve)
         elif self.kexAlg in (b"curve25519-sha256", b"curve25519-sha256@libssh.org"):
             return x25519.X25519PrivateKey.generate()
         else:

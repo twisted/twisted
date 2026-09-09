@@ -195,7 +195,6 @@ def setUnjellyableForClass(classname, unjellyable):
     overlap.  The rules are the same.
     """
 
-    global unjellyableRegistry
     classname = _maybeClass(classname)
     unjellyableRegistry[classname] = unjellyable
     globalSecurity.allowTypes(classname)
@@ -215,7 +214,6 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     factory instead of creating an instance.
     """
 
-    global unjellyableFactoryRegistry
     classname = _maybeClass(classname)
     unjellyableFactoryRegistry[classname] = copyFactory
     globalSecurity.allowTypes(classname)

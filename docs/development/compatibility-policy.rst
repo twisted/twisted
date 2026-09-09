@@ -273,7 +273,7 @@ The **private**  is still protected against direct instantiation.
         def getActiveUsers(self):
             return []
 
-        def getExpiredusers(self):
+        def getExpiredUsers(self):
             return []
 
 
@@ -281,16 +281,15 @@ The **private**  is still protected against direct instantiation.
         """
         Public class inheriting from a private class.
         """
-        pass
 
 
-In the following example ``_Base`` is effectively **public**, since ``getActiveUsers()`` and ``getExpiredusers()`` are both exposed via the **public** ``Users`` class.
+In the following example ``_Base`` is effectively **public**, since ``getActiveUsers()`` and ``getExpiredUsers()`` are both exposed via the **public** ``Users`` class.
 
 
 Documented and Tested Gross Violation of Specifications
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If the behaviour of a what was later found as a bug was documented, or fixing it caused existing tests to break, then the change should be considered incompatible, regardless of how gross its violation.
+If the behavior of a what was later found as a bug was documented, or fixing it caused existing tests to break, then the change should be considered incompatible, regardless of how gross its violation.
 It may be that such violations are introduced specifically to deal with other grossly non-compliant implementations of said specification.
 If it is determined that those reasons are invalid or ought to be exposed through a different API, the change is compatible.
 
@@ -313,6 +312,37 @@ A distribution release + Python version is only considered supported when a `Git
 
 Removing support for a Python version will be announced at least 1 release prior to the removal.
 
+Supporting and De-supporting Versions of Packages We Depend On
+--------------------------------------------------------------
+
+Our goal with this policy is that if a downstream package that depends on Twisted and can run its tests without warnings, they should be able to upgrade Twisted in an independent change, ideally without changing anything else.
+This means that in addition to a stable API with predictable changes, we need support for a range of versions of packages of our dependencies, wide enough that users do not need to upgrade all their dependencies at the same time to catch up with current Twisted.
+
+To ensure that dependencies are all properly installed, we declare them in ``pyproject.toml``.
+So that users will know what our lowest version constraint is, we use a ``>=`` version specifier to declare that lower bound.
+We do not express version maximums, i.e. ``<`` constraints, because we can't know in advance when those packages will have incompatible changes.
+Downstream applications which use Twisted are expected to pin their own dependencies and do their own testing, even if ``pip install twisted`` may sometimes break with the latest versions of some dependencies.
+
+To ensure that we work with those declared older versions of our dependencies, we test them in CI.
+Our CI uses ``lowest-constraints.txt`` that contains ``==`` version constraints for the lowest versions of everything we depend on.
+
+For example, if we depend on ``example``, we should have something like ``example>=2.5`` as a dependency in ``pyproject.toml``, and ``example==2.5`` in ``lowest-constraints.txt``.
+
+.. important::
+
+    When you need to upgrade to a new version of a dependency, you must update **both** the ``>=`` constraint in ``pyproject.toml`` and the ``==`` pin in ``lowest-constraints.txt`` for that dependency to the same version.
+    These are currently kept in sync manually.
+
+As long as you are updating to a version of the package released more than 1 year ago from the current date, we consider that a “compatible” change.
+To require a version more recent than 1 year ago, you can follow the `Procedure for Incompatible Changes`_.
+(This only applies to updating the versions of old dependencies. Adding recent a version when you add a new dependency is fine.)
+
+To test these locally yourself, the way CI does, you can use the ``lowdeps`` tox factor.
+For example, ``tox -e lowdeps-alldeps-py314-withcov-posix`` will test the lowest supported version of every one of Twisted's dependencies, on Python 3.14, with all dependencies for all of Twisted's extras (such as ``[conch]``, ``[http2]``, and so on), with test coverage enabled, for POSIX systems.
+
+Finally, while we should try to provide users a generous window of versions to upgrade within, do not expend undue amounts of effort to support extremely old versions of dependencies.
+Users can upgrade to intermediate versions of Twisted as they upgrade their other dependencies, rather than upgrading all at once; we do not need to support 10-year-old dependency packages.
+In fact, encouraging that level of outdatedness might be harmful, as it allows people to remain catastrophically out of date on security updates.
 
 How to Deprecate APIs
 ---------------------
@@ -530,7 +560,7 @@ This is the most precise, but also the most verbose, way to assert that you've r
         def test_deprecationUsingAssertWarns(self):
             """
             assertWarns() is designed as a general helper to check any
-            type of warnings and can be used for DeprecationsWarnings.
+            type of warnings and can be used for DeprecationWarnings.
             """
             self.assertWarns(
                 DeprecationWarning,
@@ -559,7 +589,7 @@ Making calls to the deprecated code without raising these warnings can be done u
         def test_getUserHomePath(self):
             """
             This is a test in which we check the returned value of C{getUser}
-            but we also explicitly handle the deprecations warnings emitted
+            but we also explicitly handle the deprecation warnings emitted
             during its execution.
             """
             user = self.callDeprecated(
@@ -583,9 +613,9 @@ Tests which need to use deprecated classes should use the :py:meth:`getDeprecate
         """
         Tests for L{UsernameHashedPassword}.
         """
-        def test_initialisation(self):
+        def test_initialization(self):
             """
-            The initialisation of L{UsernameHashedPassword} will set C{username}
+            The initialization of L{UsernameHashedPassword} will set C{username}
             and C{hashed} on it.
             """
             UsernameHashedPassword = self.getDeprecatedModuleAttribute(

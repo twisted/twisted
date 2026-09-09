@@ -2196,20 +2196,32 @@ class ParsingTests(unittest.TestCase):
                 [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
             )
 
-    def test_invalidHeaderValueNUL(self):
+    def test_invalidHeaderValueControlChars(self) -> None:
         """
-        A request with a header value that contains a NUL byte
-        is rejected with a 400 status code.
+        A header value containing NUL, CR, or LF is rejected with a 400 (RFC
+        9110 section 5.5). A bare CR or LF would additionally let a following
+        header be hidden from the parser, enabling request smuggling.
         """
-        for header in [
-            b"x-foo: \x00",  # NUL byte
-            b"x-foo: a\x00",  # trailing NUL
-            b"x-foo: \x00baz",  # leading NUL
-            b"x-foo:  \x00\x00\x00x0\0 ",  # lots of NULs
+        for value in [
+            b"\x00",  # NUL
+            b"a\x00",  # trailing NUL
+            b"\x00baz",  # leading NUL
+            b"a\rb",  # bare CR
+            b"a\rContent-Length: 5",  # bare CR hiding a header
         ]:
             self.assertRequestRejected(
-                [b"GET / HTTP/1.1", b"Host: foo.example", header, b"", b""]
+                [b"GET / HTTP/1.1", b"Host: foo.example", b"x-foo: " + value, b"", b""]
             )
+        # runRequest normalises a bare LF to CRLF, so feed those bytes directly.
+        for value in [b"a\nb", b"a\nContent-Length: 5"]:
+            channel = http.HTTPChannel()
+            transport = StringTransport()
+            channel.makeConnection(transport)
+            channel.dataReceived(
+                b"GET / HTTP/1.1\r\nHost: foo.example\r\nx-foo: " + value + b"\r\n\r\n"
+            )
+            self.assertTrue(transport.disconnecting)
+            self.assertEqual(transport.value(), b"HTTP/1.1 400 Bad Request\r\n\r\n")
 
     def test_headerLimitPerRequest(self):
         """

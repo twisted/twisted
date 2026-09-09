@@ -12,16 +12,16 @@ Overview
 This document explains how you can use Twisted to implement network protocol parsing and handling for TCP servers (the same code can be reused for SSL and Unix socket servers).
 There is a :doc:`separate document <udp>` covering UDP.
 
-Your protocol handling class will usually subclass :py:class:`twisted.internet.protocol.Protocol`.
-Most protocol handlers inherit either from this class or from one of its convenience children.
+Your protocol handling class must implement the :py:class:`IProtocol <twisted.internet.interfaces.IProtocol>` interface, and may subclass :py:class:`twisted.internet.protocol.Protocol` for a convenient default implementation so you don't need to implement every method yourself.
+Most protocols inherit either from this class or from one of its convenience children.
 An instance of the protocol class is instantiated per-connection, on demand, and will go away when the connection is finished.
-This means that persistent configuration is not saved in the ``Protocol``.
+This means that any state that lives longer than a single connection, such as configuration, cannot be stored on the protocol.
 
-The persistent configuration is kept in a ``Factory`` class, which usually inherits from :py:class:`twisted.internet.protocol.Factory`.
-The ``buildProtocol`` method of the ``Factory`` is used to create a ``Protocol`` for each new connection.
+Connection-independent configuration is kept in a protocol factory, which must implement the :py:class:`IProtocolFactory <twisted.internet.interfaces.IProtocolFactory>` interface, and may similarly inherit from :py:class:`twisted.internet.protocol.Factory` for a convenient default initial implementation.
+The ``buildProtocol`` method of the factory is used to create a protocol for each new connection.
 
 It is usually useful to be able to offer the same service on multiple ports or network addresses.
-This is why the ``Factory`` does not listen to connections, and in fact does not know anything about the network.
+This is why the factory does not listen to connections, and in fact does not know anything about the network.
 See :doc:`the endpoints documentation <endpoints>` for more information, or :py:meth:`IReactorTCP.listenTCP <twisted.internet.interfaces.IReactorTCP.listenTCP>` and the other ``IReactor*.listen*`` APIs for the lower level APIs that endpoints are based on.
 
 This document will explain each step of the way.
@@ -102,7 +102,7 @@ Note that ``abortConnection`` is only available in Twisted 11.1 and newer.
 Using the Protocol
 ~~~~~~~~~~~~~~~~~~
 
-In this section, you will learn how to run a server which uses your ``Protocol``.
+In this section, you will learn how to run a server which uses your protocol.
 
 Here is code that will run the QOTD server discussed earlier::
 
@@ -119,7 +119,7 @@ Here is code that will run the QOTD server discussed earlier::
     endpoint.listen(QOTDFactory())
     reactor.run()
 
-In this example, I create a protocol ``Factory``.
+In this example, I create a protocol factory.
 I want to tell this factory that its job is to build QOTD protocol instances, so I set its ``buildProtocol`` method to return instances of the QOTD class.
 Then, I want to listen on a TCP port, so I make a :py:class:`TCP4ServerEndpoint <twisted.internet.endpoints.TCP4ServerEndpoint>` to identify the port that I want to bind to, and then pass the factory I just created to its ``listen`` method.
 
@@ -168,13 +168,13 @@ Several other helpers exist, such as a :py:class:`netstring based protocol <twis
 State Machines
 ~~~~~~~~~~~~~~
 
-Many Twisted protocol handlers need to write a state machine to record the state they are at.
+Many Twisted protocols need to write a state machine to record the state they are at.
 Here are some pieces of advice which help to write state machines:
 
 - Don't write big state machines.
   Prefer to write a state machine which deals with one level of abstraction at a time.
 - Don't mix application-specific code with Protocol handling code.
-  When the protocol handler has to make an application-specific call, keep it as a method call.
+  When the protocol has to make an application-specific call, keep it as a method call.
 
 
 Factories
@@ -183,9 +183,9 @@ Factories
 Simpler Protocol Creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For a factory which simply instantiates instances of a specific protocol class, there is a simpler way to implement the factory.
-The default implementation of the ``buildProtocol`` method calls the ``protocol`` attribute of the factory to create a ``Protocol`` instance, and then sets an attribute on it called ``factory`` which points to the factory itself.
-This lets every ``Protocol`` access, and possibly modify, the persistent configuration.
+For a factory whose only customization is to instantiate a particular protocol class in buildProtocol, there is a simpler way to implement the factory.
+:py:class:`twisted.internet.protocol.Factory`'s implementation of :py:class:`IProtocolFactory.buildProtocol<twisted.internet.protocol.IProtocolFactory.buildProtocol>` calls the ``protocol`` attribute of the factory, with no arguments, to create a protocol instance, and then sets an attribute on it called ``factory`` which points to the factory itself.
+This lets every protocol access the connection-independent state on the factory.
 Here is an example that uses these features instead of overriding ``buildProtocol``::
 
     from twisted.internet.protocol import Factory, Protocol
@@ -218,7 +218,9 @@ If all you need is a simple factory that builds a protocol without any additiona
 Factory Startup and Shutdown
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A Factory has two methods to perform application-specific building up and tearing down (since a Factory is frequently persisted, it is often not appropriate to do them in ``__init__`` or ``__del__``, and would frequently be too early or too late).
+:py:class:`Factory <twisted.internet.protocol.Factory>` has two methods you can override to perform application-specific setup and teardown: ``startFactory`` and ``stopFactory``.
+
+These are called when the factory begins listening on its first port, and when it stops listening on its last port, respectively.
 
 Here is an example of a factory which allows its Protocols to write to a special log-file::
 
@@ -257,7 +259,7 @@ It demonstrates the use of shared state in the factory, a state machine for each
 .. literalinclude:: listings/servers/chat.py
 
 The only API you might not be familiar with is ``listenTCP``.
-:py:meth:`listenTCP <twisted.internet.interfaces.IReactorTCP.listenTCP>` is the method which connects a ``Factory`` to the network.
+:py:meth:`listenTCP <twisted.internet.interfaces.IReactorTCP.listenTCP>` is the method which connects a protocol factory to the network.
 This is the lower-level API that :doc:`endpoints <endpoints>` wraps for you.
 
 Here's a sample transcript of a chat session (emphasised text is entered by the user):

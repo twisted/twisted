@@ -74,7 +74,7 @@ if platform.isWindows():
 
         processEnabled = True
     except ImportError:
-        win32process = None
+        win32process = None  # type: ignore[assignment]
 
 
 class _DisconnectSelectableMixin:

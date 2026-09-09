@@ -15,10 +15,9 @@ from OpenSSL import SSL
 
 from twisted.internet import ssl
 from twisted.internet.interfaces import IOpenSSLContextFactory
-from twisted.python.compat import nativeString
 from twisted.python.filepath import FilePath
 
-certPath = nativeString(FilePath(__file__.encode("utf-8")).sibling(b"server.pem").path)
+certPath = FilePath(__file__).sibling("server.pem").path
 
 
 class ClientTLSContext(ssl.ClientContextFactory):
