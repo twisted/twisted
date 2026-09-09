@@ -581,6 +581,10 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
     OpenSSH.
     """
 
+    _openSSHPath = which("ssh")
+    if not _openSSHPath:  # pragma: no cover
+        skip = "ssh client not found"
+
     def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo: str) -> Deferred[Any]:
         """
         Call execute() method of L{OpenSSHClientMixin} with an ssh option that
@@ -593,18 +597,11 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         @return: L{defer.Deferred}
         """
         kexAlgorithms = []
-        openSSHPath = which("ssh")
-        if not openSSHPath:
-            raise SkipTest("ssh client not found")
-        try:
-            output = subprocess.check_output(
-                [openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
-            )
 
-            kexAlgorithms = output.decode("utf-8").split()
-        except Exception:
-            # We ignore any errors and assume OpenSSH client is not available.
-            pass
+        output = subprocess.check_output(
+            [self._openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
+        )
+        kexAlgorithms = output.decode("utf-8").split()
 
         if keyExchangeAlgo not in kexAlgorithms:
             raise SkipTest(f"{keyExchangeAlgo} not supported by ssh client")
