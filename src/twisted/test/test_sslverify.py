@@ -726,6 +726,7 @@ class OpenSSLOptionsTestsMixin:
     that creates TLS a connections with them.
     """
 
+    skip: str | None = None
     if skipSSL:
         skip = skipSSL
 

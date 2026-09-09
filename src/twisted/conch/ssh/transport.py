@@ -1586,10 +1586,11 @@ class SSHServerTransport(SSHTransportBase):
 
         # Calculate K_CL (X25519 shared secret)
         ourKey = x25519.X25519PrivateKey.generate()
+        # The length of c_pk1 was already validated.
+        peerKey = x25519.X25519PublicKey.from_public_bytes(c_pk1)
         try:
-            peerKey = x25519.X25519PublicKey.from_public_bytes(c_pk1)
             traditionalExchange = ourKey.exchange(peerKey)
-        except Exception:
+        except ValueError:
             self.sendDisconnect(
                 DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer X25519 public key"
             )
@@ -1597,14 +1598,13 @@ class SSHServerTransport(SSHTransportBase):
 
         # Calculate K_PQ (ML-KEM shared secret)
         try:
-            # encapsulate returns (ciphertext, shared_secret)
             peerMLKEM = mlkem.MLKEM768PublicKey.from_public_bytes(c_pk2)
-            primitiveSharedSecret, ciperText = peerMLKEM.encapsulate()
-        except Exception:
+        except ValueError:
             self.sendDisconnect(
                 DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer ML-KEM public key"
             )
             return
+        primitiveSharedSecret, ciperText = peerMLKEM.encapsulate()
 
         hashProcessor = kex.hashProcessor
         # K = HASH(K_PQ || K_CL)

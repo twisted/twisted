@@ -24,6 +24,7 @@ from twisted.python.compat import iterbytes
 from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
 from twisted.test import proto_helpers
+from twisted.trial.itrial import ITestCaseVar
 from twisted.trial.unittest import TestCase
 
 cryptography = requireModule("cryptography")
@@ -72,16 +73,18 @@ def skipWithoutX25519(f):
     return f
 
 
-_hpke = requireModule("cryptography.hazmat.primitives.hpke")
-ML_KEM_SUPPORTED = bool(_hpke) and X25519_SUPPORTED
-if _hpke:
+if _kex.cryptographyHasMLKEM:
     from cryptography.hazmat.primitives.asymmetric import x25519
     from cryptography.hazmat.primitives.asymmetric.mlkem import MLKEM768PrivateKey
 
 
-def skipWithoutMLKEM(f):
-    if not ML_KEM_SUPPORTED:
-        f.skip = "hpke or x25519 not supported by cryptography version"
+def skipWithoutMLKEM(f: ITestCaseVar) -> ITestCaseVar:
+    """
+    Helper to skip tests if mlkem not supported by current cryptography
+    version.
+    """
+    if not _kex.cryptographyHasMLKEM:
+        f.skip = "mlkem not supported by cryptography version"
     return f
 
 
@@ -1368,7 +1371,7 @@ class ServerAndClientSSHTransportBaseCase:
     Tests that need to be run on both the server and the client.
     """
 
-    def checkDisconnected(self, kind=None, description=None):
+    def checkDisconnected(self: TransportTestCase, kind: int | None = None, description: bytes | None = None) -> None:  # type: ignore[misc]
         """
         Helper function to check if the transport disconnected.
         """
@@ -2271,7 +2274,7 @@ class ServerSSHTransportMLKEM768X25519Tests(
             description=b"Invalid C_INIT length",
         )
 
-    def test_disconnectHYBRID_INIT_invalidX25519Key(self):
+    def test_disconnectHYBRID_INIT_invalidX25519Key(self) -> None:
         """
         If the C_PK1 portion of C_INIT is invalid, the
         server disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.

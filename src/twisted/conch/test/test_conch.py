@@ -289,6 +289,7 @@ run()"""
 
 
 class ConchServerSetupMixin:
+    skip: str | None = None
     if not cryptography:
         skip = "can't run without cryptography"
 
@@ -522,6 +523,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 
 
 class OpenSSHClientMixin:
+    skip: str | None = None
     if not which("ssh"):
         skip = "no ssh command-line client available"
 

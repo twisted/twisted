@@ -5,6 +5,7 @@
 Interfaces for Trial.
 """
 
+from typing import TypeVar, Union
 from unittest import TestCase
 
 import zope.interface as zi
@@ -14,6 +15,11 @@ class ITestCase(zi.Interface):
     """
     The interface that a test case must implement in order to be used in Trial.
     """
+
+    skip: str | None = zi.Attribute(
+        "A string indicating the reason why this test case should be skipped, "
+        "or L{None} if it should not be skipped."
+    )
 
     failureException = zi.Attribute(
         "The exception class that is raised by failed assertions"
@@ -46,6 +52,9 @@ class ITestCase(zi.Interface):
         """
         Return a short description of the test.
         """
+
+
+ITestCaseVar = TypeVar("ITestCaseVar", bound=Union[ITestCase, type[ITestCase]])
 
 
 class IReporter(zi.Interface):

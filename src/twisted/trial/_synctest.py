@@ -951,6 +951,7 @@ class SynchronousTestCase(_Assertions):
     """
 
     failureException = FailTest
+    skip: str | None = None
 
     def __init__(self, methodName="runTest"):
         super().__init__(methodName)

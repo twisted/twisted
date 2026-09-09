@@ -23,9 +23,9 @@ try:
     import cryptography.hazmat.primitives.hpke  # noqa: F401
 except ImportError:
     # Most probably we have cryptography older than 48.0
-    is_ml_kem_supported = False
+    cryptographyHasMLKEM = False
 else:
-    is_ml_kem_supported = True
+    cryptographyHasMLKEM = True
 
 
 class _HashFactory(Protocol):
@@ -288,9 +288,11 @@ def isPQHybrid(kexAlgorithm: bytes) -> bool:
     return _IPQHybridKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-def isNonFixedGroup(kexAlgorithm: bytes) -> bool:
+def isDynamicPrimesGroup(kexAlgorithm: bytes) -> bool:
     """
-    Returns C{True} if C{kexAlgorithm} uses group exchange.
+    Returns C{True} if C{kexAlgorithm} uses group exchange with dynamic primes.
+
+    Dynamic primes are designed to allow changing their values during the lifetime of the process.
 
     @param kexAlgorithm: The key exchange algorithm name.
 
@@ -365,7 +367,7 @@ def getSupportedKeyExchanges() -> list[bytes]:
         elif keyAlgorithm == b"mlkem768x25519-sha256":
             # If we support mklem we most probably also support x25519
             # so just keep it simple.
-            supported = is_ml_kem_supported
+            supported = cryptographyHasMLKEM
         else:
             supported = True
         if not supported:
