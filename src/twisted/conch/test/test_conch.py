@@ -289,7 +289,7 @@ run()"""
 
 
 class ConchServerSetupMixin:
-    skip: str | None = None
+    skip = None
     if not cryptography:
         skip = "can't run without cryptography"
 
