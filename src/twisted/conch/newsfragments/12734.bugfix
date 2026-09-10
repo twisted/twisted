@@ -1,0 +1,3 @@
+twisted.conch.ssh.connection.SSHConnection.ssh_CHANNEL_OPEN_CONFIRMATION
+now validates the minimum and maximum value for the remote maximum packet size.
+It rejects values outside of the 32KB and 256KB range.
