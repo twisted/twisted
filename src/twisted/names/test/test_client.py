@@ -16,7 +16,7 @@ from twisted.internet.interfaces import IResolver
 from twisted.internet.task import Clock
 from twisted.internet.test.modulehelpers import AlternateReactor
 from twisted.names import cache, client, dns, error, hosts
-from twisted.names.common import ResolverBase
+from twisted.names.common import ResolverBase, ResolverResponse
 from twisted.names.error import DNSQueryTimeoutError
 from twisted.names.test import test_util
 from twisted.names.test.test_hosts import GoodTempPathMixin
@@ -50,10 +50,8 @@ class FakeResolver(ResolverBase):
         else:
             rr = dns.RRHeader(name=name, type=qtype, cls=cls, ttl=60)
 
-        results = [rr]
-        authority = []
-        additional = []
-        return defer.succeed((results, authority, additional))
+        response = ResolverResponse(answer=[rr])
+        return defer.succeed(response)
 
 
 class StubPort:
@@ -367,10 +365,13 @@ class ResolverTests(unittest.TestCase):
 
         d = defer.gatherResults([firstResult, secondResult])
 
+        firstExpected = ResolverResponse(answer=[answer])
+        secondExpected = ResolverResponse(answer=[answer])
+
         def cbFinished(responses):
             firstResponse, secondResponse = responses
-            self.assertEqual(firstResponse, ([answer], [], []))
-            self.assertEqual(secondResponse, ([answer], [], []))
+            self.assertEqual(firstResponse, firstExpected)
+            self.assertEqual(secondResponse, secondExpected)
 
         d.addCallback(cbFinished)
         return d
@@ -832,12 +833,11 @@ class ClientTests(unittest.TestCase):
         """
         client.theResolver = None
 
-    def checkResult(self, results, qtype):
+    def checkResult(self, resolver_response, qtype):
         """
         Verify that the result is the same query type as what is expected.
         """
-        answers, authority, additional = results
-        result = answers[0]
+        result = resolver_response.answer[0]
         self.assertEqual(result.name.name, self.hostname)
         self.assertEqual(result.type, qtype)
 
@@ -1081,9 +1081,15 @@ class FilterAnswersTests(unittest.TestCase):
             response.additional = ["additional"]
             return defer.succeed(response)
 
+        expected = ResolverResponse(
+            answer=["answer"],
+            authority=["authority"],
+            additional=["additional"],
+        )
+
         self.resolver.queryTCP = queryTCP
         d = self.resolver.filterAnswers(m)
-        d.addCallback(self.assertEqual, (["answer"], ["authority"], ["additional"]))
+        d.addCallback(self.assertEqual, expected)
         return d
 
     def _rcodeTest(self, rcode, exc):

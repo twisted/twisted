@@ -40,8 +40,8 @@ from twisted.python.filepath import FilePath
 from twisted.trial import unittest
 
 
-def justPayload(results):
-    return [r.payload for r in results[0]]
+def justAnswerPayload(resolver_response):
+    return [r.payload for r in resolver_response.answer]
 
 
 class NoFileAuthority(authority.FileAuthority):
@@ -250,7 +250,7 @@ class ServerDNSTests(unittest.TestCase):
         """
 
         def checkResults(response):
-            receivedRecords = justPayload(response)
+            receivedRecords = justAnswerPayload(response)
             self.assertEqual(set(expectedRecords), set(receivedRecords))
 
         querying.addCallback(checkResults)
@@ -482,17 +482,36 @@ class ServerDNSTests(unittest.TestCase):
         Test DNS 'AXFR' queries (Zone transfer)
         """
         default_ttl = soa_record.expire
+        expectedRecords = [
+            copy.copy(r) for r in reduce(operator.add, test_domain_com.records.values())
+        ]
+        for r in expectedRecords:
+            if r.ttl is None:
+                r.ttl = default_ttl
+
+        def checkResults(response):
+            receivedRecords = [r.payload for r in response[0][:-1]]
+            self.assertEqual(set(expectedRecords), set(receivedRecords))
+
+        d = self.resolver.lookupZone("test-domain.com")
+        d.addCallback(checkResults)
+
+        return d
+
+    def test_zoneTransferTimeout(self):
+        """
+        An AXFR query for an unkown host fails with L{error.TimeoutError}.
+        """
+        default_ttl = soa_record.expire
         results = [
             copy.copy(r) for r in reduce(operator.add, test_domain_com_records.values())
         ]
         for r in results:
             if r.ttl is None:
                 r.ttl = default_ttl
-        return self.namesTest(
-            self.resolver.lookupZone("test-domain.com").addCallback(
-                lambda r: (r[0][:-1],)
-            ),
-            results,
+        return self.assertFailure(
+            self.resolver.lookupZone("unknown.host", timeout=0.1),
+            error.TimeoutError,
         )
 
     def test_zoneTransferConnectionFails(self):
@@ -505,11 +524,13 @@ class ServerDNSTests(unittest.TestCase):
             resolver.lookupZone("impossible.invalid"), error.DNSLookupError
         )
 
-    def test_similarZonesDontInterfere(self):
-        """Tests that unrelated zones don't mess with each other."""
-        return self.namesTest(
+    def test_domainOutsideZoneButInZoneFile(self):
+        """Tests that a name outside of the zone is not resolved, even if the
+        zone file contains a record associated to it"""
+        self.assertIn(b"anothertest-domain.com", test_domain_com.records)
+        return self.assertFailure(
             self.resolver.lookupAddress("anothertest-domain.com"),
-            [dns.Record_A("1.2.3.4", ttl=19283784)],
+            DomainError,
         )
 
     def test_NAPTR(self):
@@ -646,6 +667,9 @@ class ResolvConfHandlingTests(unittest.TestCase):
         r._parseCall.cancel()
 
 
+outside_domain = "other.com"
+
+
 class AuthorityTests(unittest.TestCase):
     """
     Tests for the basic response record selection code in L{FileAuthority}
@@ -681,12 +705,12 @@ class AuthorityTests(unittest.TestCase):
                 ]
             },
         )
-        answer, authority, additional = self.successResultOf(
-            authority.lookupAddress(soa_record.mname.name)
-        )
-        self.assertEqual(answer, [])
+
+        resp = self.successResultOf(authority.lookupAddress(soa_record.mname.name))
+        self.assertEqual(resp.response_code, dns.OK)
+        self.assertEqual(resp.answer, [])
         self.assertEqual(
-            authority,
+            resp.authority,
             [
                 dns.RRHeader(
                     soa_record.mname.name,
@@ -697,7 +721,56 @@ class AuthorityTests(unittest.TestCase):
                 )
             ],
         )
-        self.assertEqual(additional, [])
+        self.assertEqual(resp.additional, [])
+
+    def test_queryNXDOMAINInZone(self):
+        """
+        Requesting a record where no records exist for the name in question,
+        when the name belongs to the authoritative zone of the
+        L{FileAuthority}, results in a NXDOMAIN response with the SOA record
+        in the authority section.
+        """
+        testDomain = test_domain_com
+        testDomainName = b"nonexistent.subdomain." + testDomain.soa[0]
+
+        # The SOA record used when creating the testDomain
+        soa = soa_record
+
+        expectedResponse = common.ResolverResponse(
+            response_code=dns.ENAME,
+            answer=[],
+            authority=[
+                dns.RRHeader(
+                    str(soa.mname),
+                    soa.TYPE,
+                    dns.IN,
+                    soa.ttl,
+                    soa,
+                    auth=True,
+                )
+            ],
+            additional=[],
+        )
+
+        resp = self.successResultOf(
+            testDomain.query(Query(name=testDomainName, type=dns.A))
+        )
+
+        self.assertEqual(resp, expectedResponse)
+
+    def test_queryNXDOMAINOutside(self):
+        """
+        Requesting a name that is neither in the authoritative zone of
+        L{FileAuthority}, or its children, results in L{DomainError}.
+        """
+        testDomain = test_domain_com
+        testDomainName = outside_domain
+
+        f = self.failureResultOf(
+            testDomain.query(Query(name=testDomainName, type=dns.A))
+        )
+
+        self.assertIsInstance(f.value, DomainError)
 
     def test_unknownTypeNXDOMAIN(self):
         """
@@ -718,10 +791,10 @@ class AuthorityTests(unittest.TestCase):
         name in question results in an empty answer set.
         """
         unknownType = max(common.typeToMethod) + 1
-        answer, authority, additional = self.successResultOf(
+        resp = self.successResultOf(
             my_domain_com.query(Query(name="my-domain.com", type=unknownType))
         )
-        self.assertEqual(answer, [])
+        self.assertEqual(resp.answer, [])
 
     def _referralTest(self, method):
         """
@@ -740,10 +813,11 @@ class AuthorityTests(unittest.TestCase):
             },
         )
         d = getattr(authority, method)(subdomain)
-        answer, authority, additional = self.successResultOf(d)
-        self.assertEqual(answer, [])
+        resp = self.successResultOf(d)
+        self.assertEqual(resp.response_code, dns.OK)
+        self.assertEqual(resp.answer, [])
         self.assertEqual(
-            authority,
+            resp.authority,
             [
                 dns.RRHeader(
                     subdomain,
@@ -754,7 +828,7 @@ class AuthorityTests(unittest.TestCase):
                 )
             ],
         )
-        self.assertEqual(additional, [])
+        self.assertEqual(resp.additional, [])
 
     def test_referral(self):
         """
@@ -859,7 +933,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         target = b"mail." + soa_record.mname.name
         d = self._lookupSomeRecords(method, soa_record, makeRecord, target, addresses)
-        answer, authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
 
         self.assertRecordsMatch(
             [
@@ -872,7 +946,7 @@ class AdditionalProcessingTests(unittest.TestCase):
                 )
                 for address in addresses
             ],
-            additional,
+            resp.additional,
         )
 
     def _additionalMXTest(self, addresses):
@@ -948,7 +1022,7 @@ class AdditionalProcessingTests(unittest.TestCase):
         d = self._lookupSomeRecords(
             "lookupCanonicalName", soa_record, dns.Record_CNAME, target, addresses
         )
-        answer, authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
 
         alias = dns.RRHeader(
             soa_record.mname.name,
@@ -969,7 +1043,7 @@ class AdditionalProcessingTests(unittest.TestCase):
                 for address in addresses
             ]
             + [alias],
-            answer,
+            resp.answer,
         )
 
     def test_canonicalNameAnswerA(self):
@@ -1217,10 +1291,15 @@ class SecondaryAuthorityTests(unittest.TestCase):
         data = answer.toStr()
         proto.dataReceived(pack("!H", len(data)) + data)
 
-        result = self.successResultOf(secondary.lookupAddress("example.com"))
-        self.assertEqual(
-            ([RRHeader(b"example.com", payload=a, auth=True)], [], []), result
+        expected_resp = common.ResolverResponse(
+            response_code=dns.OK,
+            answer=[RRHeader(b"example.com", payload=a, auth=True)],
+            authority=[],
+            additional=[],
         )
+
+        resp = self.successResultOf(secondary.lookupAddress("example.com"))
+        self.assertEqual(resp, expected_resp)
 
 
 sampleBindZone = b"""\
@@ -1329,7 +1408,8 @@ class BindAuthorityTests(unittest.TestCase):
             (b"example.com", "10.0.0.1"),
             (b"no-in.example.com", "10.0.0.2"),
         ]:
-            [[rr], [], []] = self.successResultOf(self.auth.lookupAddress(dom))
+            resp = self.successResultOf(self.auth.lookupAddress(dom))
+            rr = resp.answer[0]
             self.assertEqual(
                 dns.Record_A(
                     ip,
@@ -1342,9 +1422,8 @@ class BindAuthorityTests(unittest.TestCase):
         """
         AAAA records are loaded.
         """
-        [[rr], [], []] = self.successResultOf(
-            self.auth.lookupIPV6Address(b"example.com")
-        )
+        resp = self.successResultOf(self.auth.lookupIPV6Address(b"example.com"))
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_AAAA(
                 "2001:db8:10::1",
@@ -1357,9 +1436,10 @@ class BindAuthorityTests(unittest.TestCase):
         """
         MX records are loaded.
         """
-        [[rr], [], []] = self.successResultOf(
+        resp = self.successResultOf(
             self.auth.lookupMailExchange(b"not-fqdn.example.com")
         )
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_MX(
                 preference=10,
@@ -1373,10 +1453,8 @@ class BindAuthorityTests(unittest.TestCase):
         """
         CNAME records are loaded.
         """
-        [answers, [], []] = self.successResultOf(
-            self.auth.lookupIPV6Address(b"www.example.com")
-        )
-        rr = answers[0]
+        resp = self.successResultOf(self.auth.lookupIPV6Address(b"www.example.com"))
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_CNAME(
                 name="example.com",
@@ -1481,7 +1559,8 @@ class PySourceAuthorityTests(unittest.TestCase):
             (b"example.com", "10.0.0.1"),
             (b"no-in.example.com", "10.0.0.2"),
         ]:
-            [[rr], [], []] = self.successResultOf(self.auth.lookupAddress(dom))
+            resp = self.successResultOf(self.auth.lookupAddress(dom))
+            rr = resp.answer[0]
             self.assertEqual(
                 dns.Record_A(ip),
                 rr.payload,
@@ -1491,9 +1570,8 @@ class PySourceAuthorityTests(unittest.TestCase):
         """
         AAAA records are loaded.
         """
-        [[rr], [], []] = self.successResultOf(
-            self.auth.lookupIPV6Address(b"example.com")
-        )
+        resp = self.successResultOf(self.auth.lookupIPV6Address(b"example.com"))
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_AAAA("2001:db8:10::1"),
             rr.payload,
@@ -1503,9 +1581,10 @@ class PySourceAuthorityTests(unittest.TestCase):
         """
         MX records are loaded.
         """
-        [[rr], [], []] = self.successResultOf(
+        resp = self.successResultOf(
             self.auth.lookupMailExchange(b"not-fqdn.example.com")
         )
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_MX(
                 preference=10,
@@ -1518,10 +1597,8 @@ class PySourceAuthorityTests(unittest.TestCase):
         """
         CNAME records are loaded.
         """
-        [answers, [], []] = self.successResultOf(
-            self.auth.lookupIPV6Address(b"www.example.com")
-        )
-        rr = answers[0]
+        resp = self.successResultOf(self.auth.lookupIPV6Address(b"www.example.com"))
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_CNAME(
                 name="example.com",
@@ -1533,10 +1610,8 @@ class PySourceAuthorityTests(unittest.TestCase):
         """
         PTR records are loaded.
         """
-        [answers, [], []] = self.successResultOf(
-            self.auth.lookupPointer(b"2.0.0.10.in-addr.arpa")
-        )
-        rr = answers[0]
+        resp = self.successResultOf(self.auth.lookupPointer(b"2.0.0.10.in-addr.arpa"))
+        rr = resp.answer[0]
         self.assertEqual(
             dns.Record_PTR(
                 name=b"no-in.example.com",

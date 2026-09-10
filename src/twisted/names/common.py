@@ -8,6 +8,7 @@ Base functionality useful to various parts of Twisted Names.
 
 
 import socket
+from dataclasses import dataclass, field
 
 from zope.interface import implementer
 
@@ -22,12 +23,6 @@ from twisted.names.error import (
     DNSServerError,
     DNSUnknownError,
 )
-
-# Helpers for indexing the three-tuples that get thrown around by this code a
-# lot.
-_ANS, _AUTH, _ADD = range(3)
-
-EMPTY_RESULT = (), (), ()
 
 
 @implementer(interfaces.IResolver)
@@ -162,12 +157,33 @@ class ResolverBase:
         d.addCallback(self._cbRecords, name, effort)
         return d
 
-    def _cbRecords(self, records, name, effort):
-        (ans, auth, add) = records
+    def _cbRecords(self, resp, name, effort):
+        ans, auth, add = resp.answer, resp.authority, resp.additional
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
             raise error.DNSLookupError(name)
         return result
+
+
+@dataclass
+class ResolverResponse:
+    """
+    DNS message data that can be written by a resolver. This can be seen
+    as a selective view of a DNS message.
+    """
+
+    response_code: int = 0
+    """Represents the RCODE field in a DNS message header, as specified in
+    RFC1035 Section 4.1.1."""
+    answer: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the answer section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
+    authority: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the authority section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
+    additional: list[dns.RRHeader] = field(default_factory=list)
+    """Represents the additional section in a DNS message, as specified in
+    RFC1035 Section 4.1."""
 
 
 def extractRecord(resolver, name, answers, level=10):
