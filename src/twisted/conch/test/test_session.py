@@ -6,16 +6,18 @@ Tests for the 'session' channel implementation in twisted.conch.ssh.session.
 
 See also RFC 4254.
 """
-
+from __future__ import annotations
 
 import os
 import signal
 import struct
 import sys
+from typing import TYPE_CHECKING
 from unittest import skipIf
 
 from zope.interface import implementer
 
+from twisted.conch.interfaces import IConchUser
 from twisted.internet import defer, error, protocol
 from twisted.internet.address import IPv4Address
 from twisted.internet.error import ProcessDone, ProcessTerminated
@@ -39,6 +41,12 @@ else:
         )
 
 
+if TYPE_CHECKING:
+    LikeSSHConnection = connection.SSHConnection
+else:
+    LikeSSHConnection = object
+
+
 class SubsystemOnlyAvatar:
     """
     A stub class representing an avatar that is only useful for
@@ -54,7 +62,9 @@ class SubsystemOnlyAvatar:
         return MockProtocol()
 
 
-class StubAvatar:
+@implementer(IConchUser)
+# as-yet incomplete implementation
+class StubAvatar:  # type: ignore[misc]
     """
     A stub class representing the avatar representing the authenticated user.
     It implements the I{ISession} interface.
@@ -131,11 +141,9 @@ class StubSessionForStubAvatar:
         process protocol in the shellProtocol variable, connect it to the
         EchoTransport and store that as shellTransport.
         """
-        if self.shellProtocol is not None:
-            raise RuntimeError("not getting a shell this time")
-        else:
-            self.shellProtocol = pp
-            self.shellTransport = EchoTransport(pp)
+        assert self.shellProtocol is None, "duplicate calls prevented by conch"
+        self.shellProtocol = pp
+        self.shellTransport = EchoTransport(pp)
 
     def execCommand(self, pp, command):
         """
@@ -304,7 +312,7 @@ class MockProtocol(protocol.Protocol):
         self.reason = reason
 
 
-class StubConnection:
+class StubConnection(LikeSSHConnection):
     """
     A stub for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
@@ -321,7 +329,7 @@ class StubConnection:
         a close.
     """
 
-    def __init__(self, transport=None):
+    def __init__(self, transport):
         """
         Initialize our instance variables.
         """
@@ -478,14 +486,14 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             )
         self.session = self.getSSHSession()
 
-    def getSSHSession(self, register_adapters=True):
+    def getSSHSession(self, register_adapters: bool = True) -> session.SSHSession:
         """
         Return a new SSH session.
         """
         return session.SSHSession(
             remoteWindow=500,
             remoteMaxPacket=100,
-            conn=StubConnection(),
+            conn=StubConnection(StubTransport()),
             avatar=StubAvatar(),
         )
 
@@ -592,13 +600,33 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
             self.session.client.transport.proto, self.session.avatar.subsystem
         )
 
+    def test_onlyOneOf(self) -> None:
+        """
+        When a subsystem, exec, or shell request has been successful, all other
+        subsystem, shell, or exec requests will fail.
+        """
+        success = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem")
+        )
+        self.assertTrue(success)
+        success = self.session.requestReceived(
+            b"subsystem", common.NS(b"TestSubsystem")
+        )
+        self.assertFalse(success)
+        success = self.session.requestReceived(b"shell", b"")
+        self.assertFalse(success)
+        success = self.session.requestReceived(b"exec", common.NS(b"SomeCommand"))
+        self.assertFalse(success)
+
     def test_lookupSubsystemDoesNotNeedISession(self):
         """
         Previously, if one only wanted to implement a subsystem, an ISession
         adapter wasn't needed because subsystems were looked up using the
         lookupSubsystem method on the avatar.
         """
-        s = session.SSHSession(avatar=SubsystemOnlyAvatar(), conn=StubConnection())
+        s = session.SSHSession(
+            avatar=SubsystemOnlyAvatar(), conn=StubConnection(StubTransport())
+        )
         ret = s.request_subsystem(common.NS(b"subsystem") + b"data")
         self.assertTrue(ret)
         self.assertIsNotNone(s.client)
@@ -659,7 +687,7 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         )
         errors[0].trap(RuntimeError)
 
-    def test_requestShell(self):
+    def test_requestShell(self) -> None:
         """
         When a client requests a shell, the SSHSession object should get
         the shell by getting an ISession adapter for the avatar, then
@@ -673,7 +701,6 @@ class SessionInterfaceTests(RegistryUsingMixin, TestCase):
         self.assertIs(self.session.session.shellProtocol, self.session.client)
         # doesn't get a shell the second time
         self.assertFalse(self.session.requestReceived(b"shell", b""))
-        self.assertRequestRaisedRuntimeError()
 
     def test_requestShellWithData(self):
         """
@@ -977,6 +1004,15 @@ class WrappersTests(TestCase):
         has write(), writeSequence(), loseConnection() methods which call the
         Protocol's dataReceived() and connectionLost() methods, respectively.
         """
+        # maintenance note: dataReceived is never called, *and* isn't part of
+        # ITransport, and should probably just be removed? getHost and getPeer
+        # aren't called and it's not clear to me how they would be; I don't
+        # think application code can get a direct bead on this object; the
+        # transport *of* the subsystem protocol itself, for example, is the
+        # result of wrapProcessProtocol, not this.  wrapProtocol is tested as
+        # if it ought to be a public API but it's kind of broken and probably
+        # just shouldn't be here. It should certainly be less confused about
+        # its role.
         protocol = MockProtocol()
         protocol.transport = StubTransport()
         protocol.connectionMade()
@@ -986,6 +1022,8 @@ class WrappersTests(TestCase):
         wrapped.write(b"data")
         wrapped.writeSequence([b"1", b"2"])
         wrapped.loseConnection()
+        self.assertEqual(wrapped.getHost(), protocol.transport.getHost())
+        self.assertEqual(wrapped.getPeer(), protocol.transport.getPeer())
         self.assertEqual(protocol.data, b"data12")
         protocol.reason.trap(error.ConnectionDone)
 
