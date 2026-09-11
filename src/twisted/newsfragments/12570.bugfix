@@ -1,0 +1,1 @@
+twisted.trial._dist.worker.WorkerProtocol.run is now a synchronous function returning a Deferred instead of an async def, so that test suite execution in distributed trial workers does not run inside an _inlineCallbacks coroutine context.
