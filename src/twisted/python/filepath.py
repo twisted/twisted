@@ -72,6 +72,11 @@ from twisted.python.win32 import (
 if sys.version_info <= (3, 12):
     from pathlib import PureWindowsPath
 
+if TYPE_CHECKING:
+    IS_WINDOWS = sys.platform == "win32"
+else:
+    IS_WINDOWS = platform.isWindows()
+
 # Please keep this as light as possible on other Twisted imports; many, many
 # things import this module, and it would be good if it could easily be
 # modified for inclusion in the standard library.  --glyph
@@ -905,7 +910,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         sep = _coerceToFilesystemEncoding(path, os.sep)
         ourPath = self._getPathAsSameTypeAs(path)
 
-        if platform.isWindows() and path.count(colon):
+        if IS_WINDOWS and path.count(colon):
             # Catch paths like C:blah that don't have a slash
             raise InsecurePath(f"{path!r} contains a colon.")
 
@@ -913,7 +918,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         if sep in norm:
             raise InsecurePath(f"{path!r} contains one or more directory separators")
 
-        if sys.platform == "win32":
+        if IS_WINDOWS:
             if sys.version_info >= (3, 13):
                 reserved = os.path.isreserved(norm)
             else:
@@ -1180,7 +1185,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         @rtype: L{int}
         @since: 11.0
         """
-        if platform.isWindows():
+        if IS_WINDOWS:
             raise NotImplementedError
 
         st = self._statinfo
@@ -1204,7 +1209,7 @@ class FilePath(AbstractFilePath[AnyStr]):
 
         @since: 11.0
         """
-        if platform.isWindows():
+        if IS_WINDOWS:
             raise NotImplementedError
 
         st = self._statinfo
@@ -1230,7 +1235,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         @rtype: L{int}
         @since: 11.0
         """
-        if platform.isWindows():
+        if IS_WINDOWS:
             raise NotImplementedError
 
         st = self._statinfo
@@ -1250,7 +1255,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         @rtype: L{int}
         @since: 11.0
         """
-        if platform.isWindows():
+        if IS_WINDOWS:
             raise NotImplementedError
 
         st = self._statinfo
@@ -1270,7 +1275,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         @rtype: L{int}
         @since: 11.0
         """
-        if platform.isWindows():
+        if IS_WINDOWS:
             raise NotImplementedError
 
         st = self._statinfo
@@ -1577,7 +1582,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         sib = self.temporarySibling(ext)
         with sib.open("w") as f:
             f.write(content)
-        if platform.isWindows() and exists(self.path):
+        if IS_WINDOWS and exists(self.path):
             os.unlink(self.path)
         os.rename(sib.path, self.asBytesMode().path)
 
