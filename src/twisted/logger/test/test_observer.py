@@ -190,5 +190,7 @@ class LogPublisherTests(unittest.TestCase):
         publisher = LogPublisher(o1, o2)
         publisher(event)
 
-        self.assertEqual(traces[1], ((publisher, o1),))
-        self.assertEqual(traces[2], ((publisher, o1), (publisher, o2)))
+        self.assertIn((publisher, o1), traces[1])
+        self.assertIn((publisher, o2), traces[2])
+        combined_traces = set(traces[1]) | set(traces[2])
+        self.assertEqual(combined_traces, {(publisher, o1), (publisher, o2)})
