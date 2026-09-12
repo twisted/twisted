@@ -88,14 +88,15 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = LoggingFile(self.logger)
 
-        self.assertRaises(IOError, f.read)
-        self.assertRaises(IOError, f.next)
-        self.assertRaises(IOError, f.readline)
-        self.assertRaises(IOError, f.readlines)
-        self.assertRaises(IOError, f.xreadlines)
-        self.assertRaises(IOError, f.seek)
-        self.assertRaises(IOError, f.tell)
-        self.assertRaises(IOError, f.truncate)
+        self.assertRaises(OSError, f.read)
+        self.assertRaises(OSError, f.next)
+        self.assertRaises(OSError, f.readline)
+        self.assertRaises(OSError, f.readlines)
+        self.assertRaises(OSError, f.xreadlines)
+        self.assertRaises(OSError, f.seek)
+        self.assertRaises(OSError, f.tell)
+        self.assertRaises(OSError, f.truncate)
+        self.assertRaises(OSError, f.fileno)
 
     def test_level(self) -> None:
         """
@@ -154,13 +155,6 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = LoggingFile(self.logger)
         f.flush()
-
-    def test_fileno(self) -> None:
-        """
-        L{LoggingFile.fileno} returns C{-1}.
-        """
-        f = LoggingFile(self.logger)
-        self.assertEqual(f.fileno(), -1)
 
     def test_isatty(self) -> None:
         """
