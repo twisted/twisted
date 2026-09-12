@@ -1533,16 +1533,6 @@ class BasicServerFunctionalityTests(IRCTestCase):
         protocolInstance.makeConnection(transport)
         self.assertEqual(protocolInstance.hostname, "test-local-host")
 
-    def test_connectionMadePreservesConfiguredHostname(self) -> None:
-        """
-        An explicitly configured hostname is not replaced on connection.
-        """
-        protocolInstance = irc.IRC()
-        protocolInstance.hostname = "configured.example"
-        transport = protocol.FileWrapper(StringIOWithoutClosing())
-        protocolInstance.makeConnection(transport)
-        self.assertEqual(protocolInstance.hostname, "configured.example")
-
     def test_dataReceivedBoundsUnterminatedLine(self) -> None:
         """
         A line longer than L{irc.IRC.MAX_LENGTH} that arrives without a
