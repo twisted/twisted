@@ -17,7 +17,7 @@ ANOTHER_ATTRIBUTE = "hello"
 
 
 version = Version("Twisted", 8, 0, 0)
-message = "Oh noes!"
+message = "Oh no!"
 
 
 deprecatedModuleAttribute(version, message, __name__, "DEPRECATED_ATTRIBUTE")

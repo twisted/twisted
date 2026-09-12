@@ -207,7 +207,7 @@ class ErrorReportingTests(StringTest):
         for substring in ["1/0", "ZeroDivisionError", "Exception raised:", path]:
             self.assertSubstring(substring, output)
         self.assertTrue(
-            re.search("Fail(ed|ure in) example:", output),
+            re.search("Fail(ed|ure in) example:", output),  # codespell:ignore
             "Couldn't match 'Failure in example: ' " "or 'Failed example: '",
         )
         expect = [self.doubleSeparator, re.compile(r"\[(ERROR|FAIL)\]")]

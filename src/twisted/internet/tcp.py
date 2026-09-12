@@ -690,7 +690,7 @@ def _resolveIPv6(ip, port):
 
     result = socket.getaddrinfo(ip, usedPort, 0, 0, 0, _NUMERIC_ONLY)[0][4]
     # On Windows and Linux `getaddrinfo` will also "resolve" invalid port numbers,
-    # and covert them into a valid one.
+    # and convert them into a valid one.
     # Example 123456 is resolved as 57920, or -1 to 65535.
     #
     # We want to preserve the initial port number,

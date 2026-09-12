@@ -20,7 +20,7 @@ class ReactorWithRiggedTime(ReactorBase):
 
     def advance(self, seconds: float) -> None:
         """
-        Advance time by the given numbe of seconds.
+        Advance time by the given number of seconds.
         """
         self._currentTime += seconds
 

@@ -81,7 +81,7 @@ sampleHostIPLine = (
 )
 
 sampleHashedLine = (
-    b"|1|gJbSEPBG9ZSBoZpHNtZBD1bHKBA=|bQv+0Xa0dByrwkA1EB0E7Xop/Fo= ssh-rsa "
+    b"|1|gJbSEPBG9ZSBoZpHNtZBD1bHKBA=|bQv+0Xa0dByrwkA1EB0E7Xop/Fo= ssh-rsa "  # codespell:ignore
     + sampleEncodedKey
     + b"\n"
 )
@@ -211,7 +211,7 @@ class HashedEntryTests(EntryTestsMixin, ComparisonTestsMixin, TestCase):
         public key type, public key, and comment fields must all be equal.
         """
         hostSalt = b"gJbSEPBG9ZSBoZpHNtZBD1bHKBA"
-        hostHash = b"bQv+0Xa0dByrwkA1EB0E7Xop/Fo"
+        hostHash = b"bQv+0Xa0dByrwkA1EB0E7Xop/Fo"  # codespell:ignore
         publicKey = Key.fromString(sampleKey)
         keyType = networkString(publicKey.type())
         comment = b"hello, world"

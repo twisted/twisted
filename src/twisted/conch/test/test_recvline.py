@@ -677,7 +677,7 @@ class RecvlineLoopbackMixin:
 
     def testInsert(self):
         return self._trivialTest(
-            b"third ine" + left * 3 + b"l\ndone",
+            b"third ine" + left * 3 + b"l\ndone",  # codespell:ignore
             [b">>> third line", b"third line", b">>> done"],
         )
 

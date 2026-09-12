@@ -3729,7 +3729,7 @@ def ctcpExtract(message):
     messages = message.split(X_DELIM)
     odd = 0
 
-    # X1 extended data X2 nomal data X3 extended data X4 normal...
+    # X1 extended data X2 normal data X3 extended data X4 normal...
     while messages:
         if odd:
             extended_messages.append(messages.pop(0))

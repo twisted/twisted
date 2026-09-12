@@ -363,7 +363,7 @@ class SSHConnection(service.SSHService):
 
     def _ebChannelRequest(self, result, localChannel):
         """
-        Called if the other wisde wanted a reply to the channel requeset and
+        Called if the other wisde wanted a reply to the channel request and
         the channel request failed.
 
         @param result: a Failure, but it's not used.

@@ -87,7 +87,7 @@ class SystemEventTestsBuilder(ReactorBuilder):
 
     def test_signalHandlersInstalledDuringStartup(self) -> None:
         """
-        Signal handlers are installed in responsed to the C{"during"}
+        Signal handlers are installed in responded to the C{"during"}
         C{"startup"}.
         """
         reactor = self.buildReactor()

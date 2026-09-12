@@ -174,9 +174,9 @@ class ElementTests(TestCase):
         If the L{renderer} decorator  is called without any arguments, it will
         raise a comprehensible exception.
         """
-        te = self.assertRaises(TypeError, renderer)
+        error = self.assertRaises(TypeError, renderer)
         self.assertEqual(
-            str(te), "Expose.__call__() missing 1 required positional argument: 'f'"
+            str(error), "Expose.__call__() missing 1 required positional argument: 'f'"
         )
 
     def test_renderGetDirectlyError(self) -> None:
