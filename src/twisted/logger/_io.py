@@ -130,7 +130,7 @@ class LoggingFile:
 
     def fileno(self) -> NoReturn:
         """
-        Raises a C{UnsupportedOperation} because L{LoggingFile} does not use a a file descriptor.
+        Raises a L{io.UnsupportedOperation} because L{LoggingFile} does not use a a file descriptor.
         """
         raise UnsupportedOperation("LoggingFile has no file descriptor.")
 
