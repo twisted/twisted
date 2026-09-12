@@ -73,7 +73,7 @@ class AsynchronousDeprecatedReasonlessSkip(DeprecatedReasonlessSkipMixin, TestCa
 
 
 class SkippedClassMixin:
-    skip = "class"
+    skip: str | None = "class"
 
     def setUp(self):
         self.__class__._setUpRan = True
