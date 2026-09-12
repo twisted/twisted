@@ -1,0 +1,1 @@
+`twisted.names.client.ThreadedResolver`, deprecated since Twisted 9.0, has been removed.
