@@ -1,0 +1,1 @@
+`MemoryReactor.removeAll` now returns the list of removed readers and writers, consistent with the `IReactorFDSet.removeAll` interface.
