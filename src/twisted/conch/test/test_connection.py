@@ -112,7 +112,7 @@ class TestChannel(channel.SSHChannel):
 
     def closed(self):
         """
-        The channel is closed.  Rembember it.
+        The channel is closed.  Remember it.
         """
         self.gotClosed = True
 

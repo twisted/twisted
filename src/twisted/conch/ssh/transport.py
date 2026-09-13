@@ -175,7 +175,7 @@ class SSHCiphers:
         Creates an initialized cipher object.
 
         @param cip: the name of the cipher, maps into cipherMap
-        @param iv: the initialzation vector
+        @param iv: the initialization vector
         @param key: the encryption key
 
         @return: the cipher object.
@@ -1118,7 +1118,7 @@ class SSHTransportBase(protocol.Protocol):
         @param reason: the reason for the disconnect.  Should be one of the
                        DISCONNECT_* values.
         @type reason: L{int}
-        @param desc: a descrption of the reason for the disconnection.
+        @param desc: a description of the reason for the disconnection.
         @type desc: L{str}
         """
         self.sendPacket(MSG_DISCONNECT, struct.pack(">L", reason) + NS(desc) + NS(b""))
@@ -1604,7 +1604,7 @@ class SSHServerTransport(SSHTransportBase):
                 DISCONNECT_KEY_EXCHANGE_FAILED, "Invalid peer ML-KEM public key"
             )
             return
-        primitiveSharedSecret, ciperText = peerMLKEM.encapsulate()
+        primitiveSharedSecret, ciphertext = peerMLKEM.encapsulate()
 
         hashProcessor = kex.hashProcessor
         # K = HASH(K_PQ || K_CL)
@@ -1617,7 +1617,7 @@ class SSHServerTransport(SSHTransportBase):
         ourPublicBlob = ourKey.public_key().public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw
         )
-        sReply = ciperText + ourPublicBlob
+        sReply = ciphertext + ourPublicBlob
 
         h = hashProcessor()
         h.update(NS(self.otherVersionString))
@@ -1963,7 +1963,7 @@ class SSHClientTransport(SSHTransportBase):
             string server Elliptic Curve Diffie-Hellman public key
             string signature
 
-        We verify the host key and continue if it passes verificiation.
+        We verify the host key and continue if it passes verification.
         Otherwise raise an exception and return.
 
         @type packet: L{bytes}

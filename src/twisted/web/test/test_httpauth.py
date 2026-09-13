@@ -396,7 +396,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultUnauthorizedUser(self):
         """
-        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
         results in an L{UnauthorizedResource} when the request has an
         I{Authorization} header with a user which does not exist.
         """
@@ -404,7 +404,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultUnauthorizedPassword(self):
         """
-        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
         results in an L{UnauthorizedResource} when the request has an
         I{Authorization} header with a user which exists and the wrong
         password.
@@ -415,7 +415,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_getChildWithDefaultUnrecognizedScheme(self):
         """
-        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
         results in an L{UnauthorizedResource} when the request has an
         I{Authorization} header with an unrecognized scheme.
         """
@@ -533,7 +533,7 @@ class HTTPAuthHeaderTests(unittest.TestCase):
 
     def test_decodeRaises(self):
         """
-        Resource traversal which enouncters an L{HTTPAuthSessionWrapper}
+        Resource traversal which encounters an L{HTTPAuthSessionWrapper}
         results in an L{UnauthorizedResource} when the request has a I{Basic
         Authorization} header which cannot be decoded using base64.
         """

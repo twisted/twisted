@@ -856,8 +856,8 @@ version                         Print the SFTP version.
         @param line: Arguments received from command line input.
         @type line: L{str}
 
-        @return: Tupple with filename and rest. Return empty values when no path was not found.
-        @rtype: C{tupple}
+        @return: Tuple with filename and rest. Return empty values when no path was not found.
+        @rtype: C{tuple}
         """
         line = line.strip()
         if not line:

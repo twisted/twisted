@@ -386,7 +386,7 @@ class BasicAuthenticatorTests(unittest.TestCase):
         The L{xmlstream.XmlStream} protocol created by the factory has the new
         L{client.BasicAuthenticator} instance in its C{authenticator}
         attribute.  It is set up with C{jid} and C{password} as passed to the
-        factory, C{otherHost} taken from the client JID. The stream futher has
+        factory, C{otherHost} taken from the client JID. The stream further has
         two initializers, for TLS and authentication, of which the first has
         its C{required} attribute set to C{True}.
         """

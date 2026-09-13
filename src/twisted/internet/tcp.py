@@ -1273,7 +1273,7 @@ class Port(base.BasePort, _SocketCloser):
 
     @ivar _type: A string describing the connections which will be created by
         this port.  Normally this is C{"TCP"}, since this is a TCP port, but
-        when the TLS implementation re-uses this class it overrides the value
+        when the TLS implementation reuses this class it overrides the value
         with C{"TLS"}.  Only used for logging.
 
     @ivar _preexistingSocket: If not L{None}, a L{socket.socket} instance which

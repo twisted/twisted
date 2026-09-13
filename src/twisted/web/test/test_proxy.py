@@ -64,7 +64,7 @@ class ReverseProxyResourceTests(TestCase):
         """
         Test that L{ReverseProxyResource.render} will instantiate a child
         resource that will initiate a connection to the given server
-        requesting the apropiate url subpath.
+        requesting the appropriate url subpath.
         """
         return self._testRender(b"/index/page1", b"/path/page1")
 

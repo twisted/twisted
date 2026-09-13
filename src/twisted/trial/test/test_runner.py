@@ -704,7 +704,7 @@ class LoggedErrorsTests(unittest.SynchronousTestCase):
 
     def test_capturesError(self):
         """
-        Chek that a L{LoggedSuite} reports any logged errors to its result.
+        Check that a L{LoggedSuite} reports any logged errors to its result.
         """
         result = reporter.TestResult()
         suite = runner.LoggedSuite([BreakingSuite()])

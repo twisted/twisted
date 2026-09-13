@@ -223,7 +223,7 @@ def _importAndCheckStack(importName):
     Import the given name as a module, then walk the stack to determine whether
     the failure was the module not existing, or some code in the module (for
     example a dependent import) failing.  This can be helpful to determine
-    whether any actual application code was run.  For example, to distiguish
+    whether any actual application code was run.  For example, to distinguish
     administrative error (entering the wrong module name), from programmer
     error (writing buggy code in a module that fails to import).
 
