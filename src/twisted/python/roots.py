@@ -221,7 +221,7 @@ class Locked(Constrained):
 
 
 class Homogenous(Constrained):
-    """A homogenous collection of entities.
+    """A homogeneous collection of entities.
 
     I will only contain entities that are an instance of the class or type
     specified by my 'entityType' attribute.

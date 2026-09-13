@@ -450,7 +450,7 @@ class RunStateTests(unittest.TestCase):
         self.scheduler.pump()
         self.assertEqual(self.work, [1, 2])
         self.task.resume()
-        # Resuming itself shoult not do any work
+        # Resuming itself should not do any work
         self.assertEqual(self.work, [1, 2])
         self.scheduler.pump()
         # But when the scheduler rolls around again...

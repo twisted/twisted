@@ -456,7 +456,7 @@ def endpointForTesting(fireImmediately=False):
     Make a sample endpoint for testing.
 
     @param fireImmediately: If true, fire all L{Deferred}s returned from
-        C{connect} immedaitely.
+        C{connect} immediately.
 
     @return: a 2-tuple of C{(information, endpoint)}, where C{information} is a
         L{ConnectInformation} describing the operations in progress on

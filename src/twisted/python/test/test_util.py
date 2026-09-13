@@ -99,7 +99,7 @@ class NameToLabelTests(TestCase):
         """
         nameData = [
             ("f", "F"),
-            ("fo", "Fo"),
+            ("fo", "Fo"),  # codespell:ignore
             ("foo", "Foo"),
             ("fooBar", "Foo Bar"),
             ("fooBarBaz", "Foo Bar Baz"),
@@ -834,7 +834,7 @@ class InitGroupsTests(TestCase):
     def test_initgroupsInStdlib(self):
         """
         Calling L{util.initgroups} will call the underlying stdlib
-        implmentation.
+        implementation.
         """
         calls = []
 

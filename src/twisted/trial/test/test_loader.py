@@ -101,7 +101,7 @@ def looselyResembles(module: ModuleType) -> Matcher[ModuleType]:
     return after(attrgetter("__spec__"), match_spec)
 
 
-class FileTests(packages.SysPathManglingTest):
+class FileTests(packages.SysPathManglingTest):  # codespell:ignore
     """
     Tests for L{runner.filenameToModule}.
     """

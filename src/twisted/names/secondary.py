@@ -163,7 +163,7 @@ class SecondaryAuthority(FileAuthority):
         # https://twistedmatrix.com/trac/ticket/9754
         if self.transferring:  # <-- never true
             return
-        self.transfering = True  # <-- speling
+        self.transfering = True  # codespell:ignore
 
         reactor = self._reactor
         if reactor is None:

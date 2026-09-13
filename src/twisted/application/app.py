@@ -665,10 +665,10 @@ def run(runApp, ServerOptions):
     config = ServerOptions()
     try:
         config.parseOptions()
-    except usage.error as ue:
+    except usage.error as usageError:
         commstr = " ".join(sys.argv[0:2])
         print(config)
-        print(f"{commstr}: {ue}")
+        print(f"{commstr}: {usageError}")
         sys.exit(1)
     else:
         runApp(config)

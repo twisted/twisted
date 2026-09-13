@@ -52,7 +52,7 @@ def older(olderMethod: Callable[[], Context]) -> SingleArgFactory:
 
 def oldest(isClient: bool, creator: object) -> SingleArgFactory:
     """
-    Comptibility shim that does largely the same thing as L{older} but for
+    Compatibility shim that does largely the same thing as L{older} but for
     things that don't even properly implement the old-style interface; check
     explicitly for the method and try to provide a useful assert if the object
     is just the wrong type rather than simply using an older API.

@@ -206,7 +206,7 @@ class ZshTests(unittest.TestCase):
 
         class TmpOptions(FighterAceExtendedOptions):
             # Note typo of detail
-            compData = Completions(optActions={"detaill": None})
+            compData = Completions(optActions={"detaill": None})  # codespell:ignore
 
         self.assertRaises(
             ValueError, _shellcomp.ZshArgumentsGenerator, TmpOptions(), "ace", BytesIO()
@@ -494,7 +494,7 @@ class FighterAceExtendedOptions(FighterAceOptions):
     """
     Extend the options and zsh metadata provided by FighterAceOptions.
     _shellcomp must accumulate options and metadata from all classes in the
-    hiearchy so this is important to test.
+    hierarchy so this is important to test.
     """
 
     optFlags = [["no-stalls", None, "Turn off the ability to stall your aircraft"]]

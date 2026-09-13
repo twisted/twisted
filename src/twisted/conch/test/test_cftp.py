@@ -623,7 +623,7 @@ class StdioClientTests(TestCase):
                 # For testing we only care about the
                 # PROGRESS_PERCENTAGE and PROGRESS values.
 
-                # Ignore SPPED and ETA.
+                # Ignore SPEED and ETA.
                 line = line.strip().rsplit(" ", 2)[0]
                 # NAME can be followed by a lot of spaces so we need to
                 # reduce them to single space.
@@ -1093,6 +1093,18 @@ class OurServerCmdLineClientTests(CFTPClientTestBase):
             helpText = helpText.encode("utf-8")
         d.addCallback(self.assertEqual, helpText)
         return d
+
+    def testProgress(self):
+        """
+        Toggles the process configuration.
+        """
+        sut = cftp.StdioClient(None)
+        sut.useProgressBar = True
+
+        result = sut.cmd_PROGRESS("ignored")
+
+        self.assertEqual("Not using progress bar.", result)
+        self.assertFalse(sut.useProgressBar)
 
     def assertFilesEqual(self, name1, name2, msg=None):
         """

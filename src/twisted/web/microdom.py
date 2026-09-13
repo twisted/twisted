@@ -1022,11 +1022,11 @@ class MicroDOMParser(XMLParser):
 
     def _gotStandalone(self, factory, data):
         parent = self._getparent()
-        te = factory(data, parent)
+        tagElement = factory(data, parent)
         if parent:
-            parent.appendChild(te)
+            parent.appendChild(tagElement)
         elif self.beExtremelyLenient:
-            self.documents.append(te)
+            self.documents.append(tagElement)
 
     def gotText(self, data):
         if data.strip() or self.shouldPreserveSpace():
