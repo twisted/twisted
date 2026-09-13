@@ -7788,7 +7788,7 @@ class IMAP4ServerFetchTests(TestCase):
         # We need to clear out the welcome message.
         self.transport.clear()
         # Let's send out the faulty command.
-        self.server.dataReceived(b"0001 FETCH 1 FULLFIL\r\n")
+        self.server.dataReceived(b"0001 FETCH 1 FULFILL\r\n")
         expected = b"0001 BAD Illegal syntax: Invalid Argument\r\n"
         self.assertEqual(self.transport.value(), expected)
         self.transport.clear()
