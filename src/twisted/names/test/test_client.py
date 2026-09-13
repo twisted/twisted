@@ -1190,25 +1190,3 @@ class RetryLogicTests(unittest.TestCase):
                 self.assertEqual(timeout, t)
 
         self.assertFalse(fakeProto.queries)
-
-
-class ThreadedResolverTests(unittest.TestCase):
-    """
-    Tests for L{client.ThreadedResolver}.
-    """
-
-    def test_deprecated(self):
-        """
-        L{client.ThreadedResolver} is deprecated.  Instantiating it emits a
-        deprecation warning pointing at the code that does the instantiation.
-        """
-        client.ThreadedResolver()
-        warnings = self.flushWarnings(offendingFunctions=[self.test_deprecated])
-        self.assertEqual(
-            warnings[0]["message"],
-            "twisted.names.client.ThreadedResolver is deprecated since "
-            "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
-            "instead.",
-        )
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(len(warnings), 1)

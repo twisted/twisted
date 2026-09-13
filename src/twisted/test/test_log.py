@@ -12,7 +12,7 @@ import os
 import sys
 import time
 import warnings
-from io import IOBase, StringIO
+from io import IOBase, StringIO, UnsupportedOperation
 from typing import Callable, Protocol
 
 from zope.interface import implementer
@@ -1040,3 +1040,10 @@ class StdioOnnaStickTests(unittest.SynchronousTestCase):
             self.getLogMessages(),
             [unicodeString, "Also, " + unicodeString, unicodeString],
         )
+
+    def test_fileno(self) -> None:
+        """
+        Raise an exception since there is no associated file descriptor.
+        """
+        stdio = log.StdioOnnaStick()
+        self.assertRaises(UnsupportedOperation, stdio.fileno)
