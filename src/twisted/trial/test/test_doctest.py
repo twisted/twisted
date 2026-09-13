@@ -4,6 +4,7 @@
 """
 Test Twisted's doctest support.
 """
+import sys
 import unittest as pyunit
 
 from twisted.trial import itrial, reporter, runner, unittest
@@ -40,8 +41,12 @@ class RunnersTests(unittest.SynchronousTestCase):
         """
         result = reporter.TestResult()
         suite.run(result)
-        self.assertEqual(5, result.successes)
-        self.assertEqual(2, len(result.failures))
+        # Python 3.15+ counts doctest examples differently, resulting in more successes
+        # and also consolidates some failures
+        expected_successes = 7 if sys.version_info >= (3, 15) else 5
+        expected_failures = 1 if sys.version_info >= (3, 15) else 2
+        self.assertEqual(expected_successes, result.successes)
+        self.assertEqual(expected_failures, len(result.failures))
 
     def test_expectedResults(self, count: int = 1) -> None:
         """
