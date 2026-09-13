@@ -74,6 +74,7 @@ from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
 from twisted.python.systemd import ListenFDs
+from ._corohost import start
 from ._idna import _idnaBytes, _idnaText
 
 try:
@@ -1045,8 +1046,9 @@ class HostnameEndpoint:
         """
         if self._badHostname:
             return defer.fail(ValueError(f"invalid hostname: {self._hostText}"))
+        return start(self, protocolFactory)
 
-        resolved: Deferred[list[IAddress]] = Deferred()
+        resolved: Deferred[list[IAddress]] = Deferred()  # type:ignore[unreachable]
         addresses: list[IAddress] = []
 
         @implementer(IResolutionReceiver)
