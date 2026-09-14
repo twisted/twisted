@@ -1,1 +1,0 @@
-twistd -n dns --pyzone example-domain.com will no longer throw an exception on startup with Python 3.

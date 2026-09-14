@@ -29,7 +29,7 @@ Developer Guides
   - :doc:`Using twisted.web <using-twistedweb>`
   - :doc:`Web application development <web-development>`
   - :doc:`HTML Templating with twisted.web.template <twisted-templates>`
-  - :doc:`XML-RPC and SOAP <xmlrpc>`
+  - :doc:`XML-RPC <xmlrpc>`
   - :doc:`Twisted Web in 60 Seconds: A series of short, complete examples using twisted.web <web-in-60/index>`
   - :doc:`Quixote resource templates <resource-templates>`
 

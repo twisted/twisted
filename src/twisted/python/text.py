@@ -32,9 +32,7 @@ def stringyString(object, indentation=""):
                 sl.append(f"{indentation} {key}:\n{value}")
             else:
                 # Oops.  Will have to move that indentation.
-                sl.append(
-                    "{} {}: {}".format(indentation, key, value[len(indentation) + 3 :])
-                )
+                sl.append(f"{indentation} {key}: {value[len(indentation) + 3 :]}")
 
     elif type(object) is tuple or type(object) is list:
         if type(object) is tuple:
@@ -188,7 +186,7 @@ def strFile(p, f, caseSensitive=True):
     @rtype: C{bool}
     """
     buf = type(p)()
-    buf_len = max(len(p), 2 ** 2 ** 2 ** 2)
+    buf_len = max(len(p), 2**2**2**2)
     if not caseSensitive:
         p = p.lower()
     while 1:

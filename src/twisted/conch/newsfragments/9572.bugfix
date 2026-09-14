@@ -1,1 +1,0 @@
-t.c.ssh.filetransfer.FileTransferClient immediately errbacks any attempt to send a request on a closed channel.

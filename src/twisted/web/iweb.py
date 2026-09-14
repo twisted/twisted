@@ -10,10 +10,19 @@ Interface definitions for L{twisted.web}.
     body is not known in advance.
 """
 
-from zope.interface import Interface, Attribute
+from __future__ import annotations
 
-from twisted.internet.interfaces import IPushProducer
+from typing import TYPE_CHECKING, Callable
+
+from zope.interface import Attribute, Interface
+
 from twisted.cred.credentials import IUsernameDigestHash
+from twisted.internet.defer import Deferred
+from twisted.internet.interfaces import IOpenSSLClientConnectionCreator, IPushProducer
+from twisted.web.http_headers import Headers
+
+if TYPE_CHECKING:
+    from twisted.web.template import Flattenable, Tag
 
 
 class IRequest(Interface):
@@ -505,11 +514,12 @@ class IRenderable(Interface):
     L{twisted.web.template} templating system.
     """
 
-    def lookupRenderMethod(name):
+    def lookupRenderMethod(
+        name: str,
+    ) -> Callable[[IRequest | None, Tag], Flattenable]:
         """
         Look up and return the render method associated with the given name.
 
-        @type name: L{str}
         @param name: The value of a render directive encountered in the
             document returned by a call to L{IRenderable.render}.
 
@@ -518,11 +528,10 @@ class IRenderable(Interface):
             was encountered.
         """
 
-    def render(request):
+    def render(request: IRequest | None) -> Flattenable:
         """
         Get the document for this L{IRenderable}.
 
-        @type request: L{IRequest} provider or L{None}
         @param request: The request in response to which this method is being
             invoked.
 
@@ -536,12 +545,12 @@ class ITemplateLoader(Interface):
     L{twisted.web.template.Element}'s C{loader} attribute.
     """
 
-    def load():
+    def load() -> list[Flattenable]:
         """
         Load a template suitable for rendering.
 
-        @return: a L{list} of L{list}s, L{unicode} objects, C{Element}s and
-            other L{IRenderable} providers.
+        @return: a L{list} of flattenable objects, such as byte and unicode
+            strings, L{twisted.web.template.Element}s and L{IRenderable} providers.
         """
 
 
@@ -589,15 +598,15 @@ class IResponse(Interface):
         L{IPushProducer}.  The protocol's C{connectionLost} method will be
         called with:
 
-            - ResponseDone, which indicates that all bytes from the response
+            - L{ResponseDone}, which indicates that all bytes from the response
               have been successfully delivered.
 
-            - PotentialDataLoss, which indicates that it cannot be determined
+            - L{PotentialDataLoss}, which indicates that it cannot be determined
               if the entire response body has been delivered.  This only occurs
               when making requests to HTTP servers which do not set
               I{Content-Length} or a I{Transfer-Encoding} in the response.
 
-            - ResponseFailed, which indicates that some bytes from the response
+            - L{ResponseFailed}, which indicates that some bytes from the response
               were lost.  The C{reasons} attribute of the exception may provide
               more specific indications as to why.
         """
@@ -707,48 +716,60 @@ class IAgent(Interface):
     obtained by combining a number of (hypothetical) implementations::
 
         baseAgent = Agent(reactor)
-        redirect = BrowserLikeRedirectAgent(baseAgent, limit=10)
+        decode = ContentDecoderAgent(baseAgent, [(b"gzip", GzipDecoder())])
+        cookie = CookieAgent(decode, diskStore.cookie)
         authenticate = AuthenticateAgent(
-            redirect, [diskStore.credentials, GtkAuthInterface()])
-        cookie = CookieAgent(authenticate, diskStore.cookie)
-        decode = ContentDecoderAgent(cookie, [(b"gzip", GzipDecoder())])
-        cache = CacheAgent(decode, diskStore.cache)
+            cookie, [diskStore.credentials, GtkAuthInterface()])
+        cache = CacheAgent(authenticate, diskStore.cache)
+        redirect = BrowserLikeRedirectAgent(cache, limit=10)
 
         doSomeRequests(cache)
     """
 
-    def request(method, uri, headers=None, bodyProducer=None):
+    if not TYPE_CHECKING:  # pragma: no branch
+
+        def __init__(self) -> None:  # type:ignore
+            """
+            IAgent does not have any particular requirement upon its
+            constructor.
+            """
+            # This is a workaround for pydoctor bug
+            # https://github.com/twisted/pydoctor/issues/940
+
+        del __init__
+
+    def request(
+        method: bytes,
+        uri: bytes,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
+    ) -> Deferred[IResponse]:
         """
         Request the resource at the given location.
 
-        @param method: The request method to use, such as C{"GET"}, C{"HEAD"},
-            C{"PUT"}, C{"POST"}, etc.
-        @type method: L{bytes}
+        @param method: The request method to use, such as C{b"GET"}, C{b"HEAD"},
+            C{b"PUT"}, C{b"POST"}, etc.
 
         @param uri: The location of the resource to request.  This should be an
             absolute URI but some implementations may support relative URIs
             (with absolute or relative paths).  I{HTTP} and I{HTTPS} are the
             schemes most likely to be supported but others may be as well.
-        @type uri: L{bytes}
 
         @param headers: The headers to send with the request (or L{None} to
             send no extra headers).  An implementation may add its own headers
             to this (for example for client identification or content
             negotiation).
-        @type headers: L{Headers} or L{None}
 
         @param bodyProducer: An object which can generate bytes to make up the
             body of this request (for example, the properly encoded contents of
             a file for a file upload).  Or, L{None} if the request is to have
             no body.
-        @type bodyProducer: L{IBodyProducer} provider
 
         @return: A L{Deferred} that fires with an L{IResponse} provider when
             the header of the response has been received (regardless of the
             response status code) or with a L{Failure} if there is any problem
             which prevents that response from being received (including
             problems that prevent the request from being sent).
-        @rtype: L{Deferred}
         """
 
 
@@ -762,7 +783,7 @@ class IPolicyForHTTPS(Interface):
     @since: 14.0
     """
 
-    def creatorForNetloc(hostname, port):
+    def creatorForNetloc(hostname: bytes, port: int) -> IOpenSSLClientConnectionCreator:
         """
         Create a L{client connection creator
         <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
@@ -770,15 +791,11 @@ class IPolicyForHTTPS(Interface):
         pair.
 
         @param hostname: The name of the requested remote host.
-        @type hostname: L{bytes}
 
         @param port: The number of the requested remote port.
-        @type port: L{int}
 
         @return: A client connection creator expressing the security
             requirements for the given remote host.
-        @rtype: L{client connection creator
-            <twisted.internet.interfaces.IOpenSSLClientConnectionCreator>}
         """
 
 

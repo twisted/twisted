@@ -7,13 +7,14 @@
 A rotating, browsable log file.
 """
 
+from __future__ import annotations
 
 # System Imports
 import glob
 import os
 import stat
 import time
-from typing import BinaryIO, Optional, cast
+from typing import BinaryIO, cast
 
 from twisted.python import threadable
 
@@ -26,7 +27,7 @@ class BaseLogFile:
     synchronized = ["write", "rotate"]
 
     def __init__(
-        self, name: str, directory: str, defaultMode: Optional[int] = None
+        self, name: str, directory: str, defaultMode: int | None = None
     ) -> None:
         """
         Create a log file.
@@ -40,7 +41,7 @@ class BaseLogFile:
         self.name = name
         self.path = os.path.join(directory, name)
         if defaultMode is None and os.path.exists(self.path):
-            self.defaultMode: Optional[int] = stat.S_IMODE(
+            self.defaultMode: int | None = stat.S_IMODE(
                 os.stat(self.path)[stat.ST_MODE]
             )
         else:
@@ -275,7 +276,7 @@ class DailyLogFile(BaseLogFile):
         """Given a unix time, return a LogReader for an old log file."""
         if self.toDate(identifier) == self.lastDate:
             return self.getCurrentLog()
-        filename = "{}.{}".format(self.path, self.suffix(identifier))
+        filename = f"{self.path}.{self.suffix(identifier)}"
         if not os.path.exists(filename):
             raise ValueError("no such logfile exists")
         return LogReader(filename)
@@ -296,7 +297,7 @@ class DailyLogFile(BaseLogFile):
         """
         if not (os.access(self.directory, os.W_OK) and os.access(self.path, os.W_OK)):
             return
-        newpath = "{}.{}".format(self.path, self.suffix(self.lastDate))
+        newpath = f"{self.path}.{self.suffix(self.lastDate)}"
         if os.path.exists(newpath):
             return
         self._file.close()

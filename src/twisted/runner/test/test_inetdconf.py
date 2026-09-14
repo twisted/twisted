@@ -14,10 +14,7 @@ class ServicesConfTests(unittest.TestCase):
     Tests for L{inetdconf.ServicesConf}
     """
 
-    servicesFilename1 = None
-    servicesFilename2 = None
-
-    def setUp(self):
+    def setUp(self) -> None:
         self.servicesFilename1 = self.mktemp()
         with open(self.servicesFilename1, "w") as f:
             f.write(
@@ -36,7 +33,7 @@ class ServicesConfTests(unittest.TestCase):
             """
             )
 
-    def test_parseDefaultFilename(self):
+    def test_parseDefaultFilename(self) -> None:
         """
         Services are parsed from default filename.
         """
@@ -56,7 +53,7 @@ class ServicesConfTests(unittest.TestCase):
             },
         )
 
-    def test_parseFile(self):
+    def test_parseFile(self) -> None:
         """
         Services are parsed from given C{file}.
         """

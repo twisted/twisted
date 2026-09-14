@@ -10,12 +10,14 @@ invoke other programs to handle incoming sockets.
 This is a useful thing as a "networking swiss army knife" tool, like netcat.
 """
 
-import pwd, grp, socket
+import grp
+import pwd
+import socket
 
-from twisted.runner import inetd, inetdconf
-from twisted.python import log, usage
-from twisted.internet.protocol import ServerFactory
 from twisted.application import internet, service as appservice
+from twisted.internet.protocol import ServerFactory
+from twisted.python import log, usage
+from twisted.runner import inetd, inetdconf
 
 # Protocol map
 protocolDict = {"tcp": socket.IPPROTO_TCP, "udp": socket.IPPROTO_UDP}

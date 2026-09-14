@@ -186,7 +186,7 @@ class _CommandDispatcherMixin:
         method = _getMethod("unknown")
         if method is None:
             raise UnhandledCommand(
-                "No handler for {!r} could be found".format(_getMethodName(commandName))
+                f"No handler for {_getMethodName(commandName)!r} could be found"
             )
         return method(commandName, *args)
 
@@ -252,9 +252,15 @@ def parseModes(modes, params, paramModes=("", "")):
 class IRC(protocol.Protocol):
     """
     Internet Relay Chat server protocol.
+
+    @cvar MAX_LENGTH: The maximum length of a line to allow. A received line
+        longer than this drops the connection, matching
+        L{twisted.protocols.basic.LineReceiver}, so an unterminated line cannot
+        grow the buffer without bound. Default is 16384.
     """
 
     buffer = ""
+    MAX_LENGTH = 16384
     hostname = None
 
     encoding: Optional[str] = None
@@ -365,7 +371,7 @@ class IRC(protocol.Protocol):
         tagStrings = []
         for tag, value in tags.items():
             if value:
-                tagStrings.append("{}={}".format(tag, self._escapeTagValue(value)))
+                tagStrings.append(f"{tag}={self._escapeTagValue(value)}")
             else:
                 tagStrings.append(tag)
         return ";".join(tagStrings)
@@ -415,8 +421,17 @@ class IRC(protocol.Protocol):
         # Put the (possibly empty) element after the last LF back in the
         # buffer
         self.buffer = lines.pop()
+        if len(self.buffer) > self.MAX_LENGTH:
+            # An unterminated line too long to be a valid message.
+            line, self.buffer = self.buffer, ""
+            self.lineLengthExceeded(line)
+            return
 
         for line in lines:
+            if len(line) > self.MAX_LENGTH:
+                self.buffer = ""
+                self.lineLengthExceeded(line)
+                return
             if len(line) <= 2:
                 # This is a blank line, at best.
                 continue
@@ -428,6 +443,17 @@ class IRC(protocol.Protocol):
             # DEBUG: log.msg( "%s %s %s" % (prefix, command, params))
 
             self.handleCommand(command, prefix, params)
+
+    def lineLengthExceeded(self, line: str) -> None:
+        """
+        Called when a line longer than C{MAX_LENGTH} is received. The default
+        behaviour, matching L{twisted.protocols.basic.LineReceiver}, drops the
+        connection.
+
+        @param line: The line which exceeded the length limit.
+        """
+        assert self.transport is not None
+        self.transport.loseConnection()
 
     def handleCommand(self, command, prefix, params):
         """
@@ -476,7 +502,7 @@ class IRC(protocol.Protocol):
         @type message: C{str} or C{unicode}
         @param message: The message being sent.
         """
-        self.sendCommand("PRIVMSG", (recip, ":{}".format(lowQuote(message))), sender)
+        self.sendCommand("PRIVMSG", (recip, f":{lowQuote(message)}"), sender)
 
     def notice(self, sender, recip, message):
         """
@@ -546,7 +572,7 @@ class IRC(protocol.Protocol):
                     % (self.hostname, RPL_TOPIC, user, channel, lowQuote(topic))
                 )
         else:
-            self.sendLine(":{} TOPIC {} :{}".format(author, channel, lowQuote(topic)))
+            self.sendLine(f":{author} TOPIC {channel} :{lowQuote(topic)}")
 
     def topicAuthor(self, user, channel, author, date):
         """
@@ -1713,6 +1739,46 @@ class IRCClient(basic.LineReceiver):
         fudge = 10
         return MAX_COMMAND_LENGTH - len(theoretical) - fudge
 
+    def _sendMessage(self, msgType, user, message, length=None):
+        """
+        Send a message or notice to a user or channel.
+
+        The message will be split into multiple commands to the server if:
+         - The message contains any newline characters
+         - Any span between newline characters is longer than the given
+           line-length.
+
+        @param msgType: Whether a PRIVMSG or NOTICE should be sent.
+        @type msgType: C{str}
+
+        @param user: Username or channel name to which to direct the
+            message.
+        @type user: C{str}
+
+        @param message: Text to send.
+        @type message: C{str}
+
+        @param length: Maximum number of octets to send in a single
+            command, including the IRC protocol framing. If L{None} is given
+            then L{IRCClient._safeMaximumLineLength} is used to determine a
+            value.
+        @type length: C{int}
+        """
+        fmt = f"{msgType} {user} :"
+
+        if length is None:
+            length = self._safeMaximumLineLength(fmt)
+
+        # Account for the line terminator.
+        minimumLength = len(fmt) + 2
+        if length <= minimumLength:
+            raise ValueError(
+                "Maximum length must exceed %d for message "
+                "to %s" % (minimumLength, user)
+            )
+        for line in split(message, length - minimumLength):
+            self.sendLine(fmt + line)
+
     def msg(self, user, message, length=None):
         """
         Send a message to a user or channel.
@@ -1735,22 +1801,9 @@ class IRCClient(basic.LineReceiver):
             value.
         @type length: C{int}
         """
-        fmt = f"PRIVMSG {user} :"
+        self._sendMessage("PRIVMSG", user, message, length)
 
-        if length is None:
-            length = self._safeMaximumLineLength(fmt)
-
-        # Account for the line terminator.
-        minimumLength = len(fmt) + 2
-        if length <= minimumLength:
-            raise ValueError(
-                "Maximum length must exceed %d for message "
-                "to %s" % (minimumLength, user)
-            )
-        for line in split(message, length - minimumLength):
-            self.sendLine(fmt + line)
-
-    def notice(self, user, message):
+    def notice(self, user, message, length=None):
         """
         Send a notice to a user.
 
@@ -1759,10 +1812,17 @@ class IRCClient(basic.LineReceiver):
 
         @type user: C{str}
         @param user: The user to send a notice to.
+
         @type message: C{str}
         @param message: The contents of the notice to send.
+
+        @param length: Maximum number of octets to send in a single
+            command, including the IRC protocol framing. If L{None} is given
+            then L{IRCClient._safeMaximumLineLength} is used to determine a
+            value.
+        @type length: C{int}
         """
-        self.sendLine(f"NOTICE {user} :{message}")
+        self._sendMessage("NOTICE", user, message, length)
 
     def away(self, message=""):
         """
@@ -2294,7 +2354,7 @@ class IRCClient(basic.LineReceiver):
             self.ctcpMakeReply(nick, [("CLIENTINFO", " ".join(names))])
         else:
             args = data.split()
-            method = getattr(self, "ctcpQuery_{}".format(args[0]), None)
+            method = getattr(self, f"ctcpQuery_{args[0]}", None)
             if not method:
                 self.ctcpMakeReply(
                     nick,
@@ -2616,8 +2676,7 @@ class IRCClient(basic.LineReceiver):
         basic.LineReceiver.dataReceived(self, data)
 
     def lineReceived(self, line):
-        if bytes != str and isinstance(line, bytes):
-            # decode bytes from transport to unicode
+        if isinstance(line, bytes):
             line = line.decode("utf-8")
 
         line = lowDequote(line)
@@ -2818,7 +2877,7 @@ class DccSendProtocol(protocol.Protocol, styles.Ephemeral):
 
 
 class DccSendFactory(protocol.Factory):
-    protocol = DccSendProtocol  # type: ignore[assignment]
+    protocol = DccSendProtocol
 
     def __init__(self, file):
         self.file = file
@@ -2930,7 +2989,7 @@ class DccChat(basic.LineReceiver, styles.Ephemeral):
 
 
 class DccChatFactory(protocol.ClientFactory):
-    protocol = DccChat  # type: ignore[assignment]
+    protocol = DccChat
     noisy = False
 
     def __init__(self, client, queryData):
@@ -3183,7 +3242,7 @@ class DccFileReceive(DccFileReceiveBasic):
 
     def __str__(self) -> str:
         if not self.connected:
-            return "<Unconnected DccFileReceive object at {:x}>".format(id(self))
+            return f"<Unconnected DccFileReceive object at {id(self):x}>"
         transport = self.transport
         assert transport is not None
         from_ = str(transport.getPeer())
@@ -3194,7 +3253,7 @@ class DccFileReceive(DccFileReceiveBasic):
         return s
 
     def __repr__(self) -> str:
-        s = "<{} at {:x}: GET {}>".format(self.__class__, id(self), self.filename)
+        s = f"<{self.__class__} at {id(self):x}: GET {self.filename}>"
         return s
 
 
@@ -3678,10 +3737,10 @@ def ctcpExtract(message):
             normal_messages.append(messages.pop(0))
         odd = not odd
 
-    extended_messages[:] = filter(None, extended_messages)
-    normal_messages[:] = filter(None, normal_messages)
+    extended_messages[:] = list(filter(None, extended_messages))
+    normal_messages[:] = list(filter(None, normal_messages))
 
-    extended_messages[:] = map(ctcpDequote, extended_messages)
+    extended_messages[:] = list(map(ctcpDequote, extended_messages))
     for i in range(len(extended_messages)):
         m = extended_messages[i].split(SPC, 1)
         tag = m[0]
@@ -3711,7 +3770,7 @@ for k, v in mQuoteTable.items():
     mDequoteTable[v[-1]] = k
 del k, v
 
-mEscape_re = re.compile("{}.".format(re.escape(M_QUOTE)), re.DOTALL)
+mEscape_re = re.compile(f"{re.escape(M_QUOTE)}.", re.DOTALL)
 
 
 def lowQuote(s):
@@ -3741,7 +3800,7 @@ xDequoteTable = {}
 for k, v in xQuoteTable.items():
     xDequoteTable[v[-1]] = k
 
-xEscape_re = re.compile("{}.".format(re.escape(X_QUOTE)), re.DOTALL)
+xEscape_re = re.compile(f"{re.escape(X_QUOTE)}.", re.DOTALL)
 
 
 def ctcpQuote(s):
@@ -3771,7 +3830,7 @@ def ctcpStringify(messages):
     @returns: String
     """
     coded_messages = []
-    for (tag, data) in messages:
+    for tag, data in messages:
         if data:
             if not isinstance(data, str):
                 try:

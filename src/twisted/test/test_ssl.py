@@ -5,20 +5,24 @@
 Tests for twisted SSL support.
 """
 
-from twisted.python.filepath import FilePath
-from twisted.trial.unittest import TestCase
-from twisted.internet import protocol, reactor, interfaces, defer
-from twisted.internet.error import ConnectionDone
-from twisted.protocols import basic
-from twisted.python.runtime import platform
-from twisted.test.test_tcp import ProperlyCloseFilesMixin
-from twisted.test.proto_helpers import waitUntilAllDisconnected
+from __future__ import annotations
 
 import os
+
 import hamcrest
+
+from twisted.internet import defer, interfaces, protocol, reactor
+from twisted.internet.error import ConnectionDone
+from twisted.internet.testing import waitUntilAllDisconnected
+from twisted.protocols import basic
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
+from twisted.test.test_tcp import ProperlyCloseFilesMixin
+from twisted.trial.unittest import TestCase
 
 try:
     from OpenSSL import SSL, crypto
+
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
 except ImportError:
@@ -154,30 +158,21 @@ class ImmediatelyDisconnectingProtocol(protocol.Protocol):
         self.factory.connectionDisconnected.callback(None)
 
 
-def generateCertificateObjects(organization, organizationalUnit):
+def generateCertificateObjects(
+    organization: str, organizationalUnit: str
+) -> tuple[ssl.KeyPair, ssl.CertificateRequest, ssl.Certificate]:
     """
     Create a certificate for given C{organization} and C{organizationalUnit}.
 
     @return: a tuple of (key, request, certificate) objects.
     """
-    pkey = crypto.PKey()
-    pkey.generate_key(crypto.TYPE_RSA, 2048)
-    req = crypto.X509Req()
-    subject = req.get_subject()
-    subject.O = organization
-    subject.OU = organizationalUnit
-    req.set_pubkey(pkey)
-    req.sign(pkey, "md5")
-
-    # Here comes the actual certificate
-    cert = crypto.X509()
-    cert.set_serial_number(1)
-    cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(60)  # Testing certificates need not be long lived
-    cert.set_issuer(req.get_subject())
-    cert.set_subject(req.get_subject())
-    cert.set_pubkey(req.get_pubkey())
-    cert.sign(pkey, "md5")
+    pkey = ssl.KeyPair.generate()
+    distinguishedName = ssl.DistinguishedName(
+        organizationName=organization,
+        organizationalUnitName=organizationalUnit,
+    )
+    req = pkey.requestObject(distinguishedName)
+    cert = pkey.signRequestObject(distinguishedName, req, 1, secondsToExpiry=60)
 
     return pkey, req, cert
 
@@ -189,13 +184,13 @@ def generateCertificateFiles(basename, organization, organizationalUnit):
     """
     pkey, req, cert = generateCertificateObjects(organization, organizationalUnit)
 
-    for ext, obj, dumpFunc in [
-        ("key", pkey, crypto.dump_privatekey),
-        ("req", req, crypto.dump_certificate_request),
-        ("cert", cert, crypto.dump_certificate),
+    for ext, data in [
+        ("key", pkey.dump(crypto.FILETYPE_PEM)),
+        ("req", req.dump(crypto.FILETYPE_PEM)),
+        ("cert", cert.dump(crypto.FILETYPE_PEM)),
     ]:
         fName = os.extsep.join((basename, ext)).encode("utf-8")
-        FilePath(fName).setContent(dumpFunc(crypto.FILETYPE_PEM, obj))
+        FilePath(fName).setContent(data)
 
 
 class ContextGeneratingMixin:
@@ -302,6 +297,7 @@ class StolenTCPTests(ProperlyCloseFilesMixin, TestCase):
                 hamcrest.any_of(
                     hamcrest.equal_to("SSL_write"),
                     hamcrest.equal_to("ssl_write_internal"),
+                    hamcrest.equal_to(""),
                 ),
                 hamcrest.equal_to("protocol is shutdown"),
             ),
@@ -426,7 +422,6 @@ class SpammyTLSTests(TLSTests):
 
 
 class BufferingTests(TestCase):
-
     if interfaces.IReactorSSL(reactor, None) is None:
         skip = "Reactor does not support SSL, cannot run SSL tests"
 
@@ -657,15 +652,14 @@ class DefaultOpenSSLContextFactoryTests(TestCase):
         L{ssl.DefaultOpenSSLContextFactory.getContext} returns an SSL context
         which can use SSLv3 or TLSv1 but not SSLv2.
         """
-        # SSLv23_METHOD allows SSLv2, SSLv3, or TLSv1
-        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+        # TLS_METHOD allows for negotiating multiple versions of TLS
+        self.assertEqual(self.context._method, SSL.TLS_METHOD)
 
-        # And OP_NO_SSLv2 disables the SSLv2 support.
+        # OP_NO_SSLv2 disables SSLv2 support
         self.assertEqual(self.context._options & SSL.OP_NO_SSLv2, SSL.OP_NO_SSLv2)
 
-        # Make sure SSLv3 and TLSv1 aren't disabled though.
-        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
-        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+        # Make sure TLSv1.2 isn't disabled though.
+        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1_2)
 
     def test_missingCertificateFile(self):
         """
@@ -704,9 +698,9 @@ class ClientContextFactoryTests(TestCase):
     def test_method(self):
         """
         L{ssl.ClientContextFactory.getContext} returns a context which can use
-        SSLv3 or TLSv1 but not SSLv2.
+        TLSv1.2 or 1.3 but nothing earlier.
         """
-        self.assertEqual(self.context._method, SSL.SSLv23_METHOD)
+        self.assertEqual(self.context._method, SSL.TLS_METHOD)
         self.assertEqual(self.context._options & SSL.OP_NO_SSLv2, SSL.OP_NO_SSLv2)
-        self.assertFalse(self.context._options & SSL.OP_NO_SSLv3)
-        self.assertFalse(self.context._options & SSL.OP_NO_TLSv1)
+        self.assertTrue(self.context._options & SSL.OP_NO_SSLv3)
+        self.assertTrue(self.context._options & SSL.OP_NO_TLSv1)

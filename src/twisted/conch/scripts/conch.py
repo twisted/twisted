@@ -9,27 +9,25 @@
 # Implementation module for the `conch` command.
 #
 
+import fcntl
+import getpass
+import os
+import signal
+import struct
+import sys
+import tty
+from typing import Any
+
 from twisted.conch.client import connect, default
 from twisted.conch.client.options import ConchOptions
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import connection, common
-from twisted.conch.ssh import session, forwarding, channel
+from twisted.conch.ssh import channel, common, connection, forwarding, session
 from twisted.internet import reactor, stdio, task
 from twisted.python import log, usage
 from twisted.python.compat import ioType, networkString
 
-import os
-import sys
-import getpass
-import struct
-import tty
-import fcntl
-import signal
-from typing import List, Tuple
-
 
 class ClientOptions(ConchOptions):
-
     synopsis = """Usage:   conch [options] host [command]
 """
     longdesc = (
@@ -75,8 +73,8 @@ class ClientOptions(ConchOptions):
         ],
     )
 
-    localForwards: List[Tuple[int, Tuple[int, int]]] = []
-    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
+    localForwards: list[tuple[int, tuple[int, int]]] = []
+    remoteForwards: list[tuple[int, tuple[int, int]]] = []
 
     def opt_escape(self, esc):
         """
@@ -115,7 +113,7 @@ class ClientOptions(ConchOptions):
 
 
 # Rest of code in "run"
-options = None
+options: Any = None
 conn = None
 exitStatus = 0
 old = None
@@ -200,20 +198,21 @@ def _stopReactor():
         pass
 
 
-def doConnect():
+def doConnect() -> None:
     if "@" in options["host"]:
         options["user"], options["host"] = options["host"].split("@", 1)
     if not options.identitys:
         options.identitys = ["~/.ssh/id_rsa", "~/.ssh/id_dsa"]
-    host = options["host"]
+
     if not options["user"]:
         options["user"] = getpass.getuser()
     if not options["port"]:
         options["port"] = 22
     else:
         options["port"] = int(options["port"])
-    host = options["host"]
-    port = options["port"]
+
+    host: str = options["host"]
+    port: int = options["port"]
     vhk = default.verifyHostKey
     if not options["host-key-algorithms"]:
         options["host-key-algorithms"] = default.getHostKeyAlgorithms(host, options)
@@ -374,7 +373,6 @@ class SSHConnection(connection.SSHConnection):
 
 
 class SSHSession(channel.SSHChannel):
-
     name = b"session"
 
     def channelOpen(self, foo):
@@ -470,7 +468,7 @@ class SSHSession(channel.SSHChannel):
 
     def extReceived(self, t, data):
         if t == connection.EXTENDED_DATA_STDERR:
-            log.msg("got {} stderr data".format(len(data)))
+            log.msg(f"got {len(data)} stderr data")
             if ioType(sys.stderr) == str:
                 sys.stderr.buffer.write(data)
             else:
@@ -485,7 +483,6 @@ class SSHSession(channel.SSHChannel):
         self.conn.sendClose(self)
 
     def closed(self):
-        global old
         log.msg(f"closed {self}")
         log.msg(repr(self.conn.channels))
 

@@ -1,5 +1,5 @@
-from twisted.web.template import Element, renderer, XMLFile
 from twisted.python.filepath import FilePath
+from twisted.web.template import Element, XMLFile, renderer
 
 
 class ExampleElement(Element):

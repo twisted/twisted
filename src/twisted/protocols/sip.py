@@ -9,16 +9,15 @@ Documented in RFC 2543.
 [Superseded by 3261]
 """
 
-from collections import OrderedDict
 import socket
 import time
-from typing import Dict, List
 import warnings
+from collections import OrderedDict
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
 
 from twisted import cred
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import defer, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import log
 
@@ -340,7 +339,7 @@ class URL:
             self.headers = headers
 
     def toString(self) -> str:
-        l: List[str] = []
+        l: list[str] = []
         w = l.append
         w("sip:")
         if self.username != None:
@@ -364,7 +363,7 @@ class URL:
             w(
                 "&".join(
                     [
-                        ("{}={}".format(specialCases.get(h) or dashCapitalize(h), v))
+                        (f"{specialCases.get(h) or dashCapitalize(h)}={v}")
                         for (h, v) in self.headers.items()
                     ]
                 )
@@ -530,7 +529,7 @@ class Message:
         s = "%s\r\n" % self._getHeaderLine()
         for n, vs in self.headers.items():
             for v in vs:
-                s += "{}: {}\r\n".format(specialCases.get(n) or dashCapitalize(n), v)
+                s += f"{specialCases.get(n) or dashCapitalize(n)}: {v}\r\n"
         s += "\r\n"
         s += self.body
         return s
@@ -955,10 +954,6 @@ class Proxy(Base):
         """
         (srcHost, srcPort) = sourcePeer
 
-        def _mungContactHeader(uri, message):
-            message.headers["contact"][0] = uri.toString()
-            return self.sendMessage(uri, message)
-
         viaHeader = self.getVia()
         if viaHeader.toString() in message.headers["via"]:
             # Must be a loop, so drop message
@@ -1057,7 +1052,7 @@ class RegisterProxy(Proxy):
 
     registry = None  # Should implement IRegistry
 
-    authorizers: Dict[str, IAuthorizer] = {}
+    authorizers: dict[str, IAuthorizer] = {}
 
     def __init__(self, *args, **kw):
         Proxy.__init__(self, *args, **kw)

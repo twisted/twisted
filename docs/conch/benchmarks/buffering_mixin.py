@@ -8,18 +8,16 @@ L{BufferingMixin<twisted.conch.mixin.BufferingMixin>} mixed in to perform
 Nagle-like write coalescing.
 """
 
-from sys import stdout
 from pprint import pprint
+from sys import stdout
 from time import time
 
-from twisted.python.usage import Options
-from twisted.python.log import startLogging
-
-from twisted.internet.protocol import ServerFactory, Protocol, ClientCreator
-from twisted.internet.defer import Deferred
-from twisted.internet import reactor
-
 from twisted.conch.mixin import BufferingMixin
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.protocol import ClientCreator, Protocol, ServerFactory
+from twisted.python.log import startLogging
+from twisted.python.usage import Options
 
 
 class BufferingBenchmark(Options):

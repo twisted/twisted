@@ -6,15 +6,15 @@ Tests for L{twisted.python.threadpool}
 """
 
 
+import gc
 import pickle
+import threading
 import time
 import weakref
-import gc
-import threading
 
-from twisted.trial import unittest
-from twisted.python import threadpool, threadable, failure, context
 from twisted._threads import Team, createMemoryWorker
+from twisted.python import context, failure, threadable, threadpool
+from twisted.trial import unittest
 
 
 class Synchronization:
@@ -176,14 +176,16 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
 
         # result callback
         def onResult(success, result):
+            # Wait for main thread to delete worker and unique
+            onResultWait.wait(self.getTimeout())
+
             # Spin the GC, which should now delete worker and unique if it's
             # not held on to by callInThreadWithCallback after it is complete
             gc.collect()
-            onResultWait.wait(self.getTimeout())
             refdict["workerRef"] = workerRef()
             refdict["uniqueRef"] = uniqueRef()
-            onResultDone.set()
             resultRef.append(weakref.ref(result))
+            onResultDone.set()
 
         # Here's our function
         def worker(arg, test):
@@ -210,14 +212,9 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         onResultWait.set()
         # wait for onResult
         onResultDone.wait(self.getTimeout())
-        gc.collect()
 
         self.assertIsNone(uniqueRef())
         self.assertIsNone(workerRef())
-
-        # XXX There's a race right here - has onResult in the worker thread
-        # returned and the locals in _worker holding it and the result been
-        # deleted yet?
 
         del onResult
         gc.collect()
@@ -404,11 +401,11 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         event = threading.Event()
 
         def onResult(success, result):
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
             event.set()
 
         def func():
-            threadIds.append(threading.currentThread().ident)
+            threadIds.append(threading.current_thread().ident)
 
         tp = threadpool.ThreadPool(0, 1)
         tp.callInThreadWithCallback(onResult, func)
@@ -507,6 +504,13 @@ class ThreadPoolTests(unittest.SynchronousTestCase):
         self.assertEqual(len(pool.waiters), 1)
         self.assertEqual(len(pool.working), 0)
 
+    def test_q(self) -> None:
+        """
+        There is a property '_queue' for legacy purposes
+        """
+        pool = threadpool.ThreadPool(0, 1)
+        self.assertEqual(pool._queue.qsize(), 0)
+
 
 class RaceConditionTests(unittest.SynchronousTestCase):
     def setUp(self):
@@ -551,7 +555,8 @@ class RaceConditionTests(unittest.SynchronousTestCase):
             self.threadpool.callInThread(self.event.wait)
         self.threadpool.callInThread(self.event.set)
         self.event.wait(timeout)
-        if not self.event.isSet():
+        if not self.event.is_set():  # pragma: no cover
+            # This is not expected in normal test runs.
             self.event.set()
             self.fail("'set' did not run in thread; timed out waiting on 'wait'.")
 

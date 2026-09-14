@@ -18,13 +18,13 @@ class Quit:
     @type isSet: L{bool}
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Create a L{Quit} un-set.
         """
         self.isSet = False
 
-    def set(self):
+    def set(self) -> None:
         """
         Set the flag if it has not been set.
 
@@ -33,7 +33,7 @@ class Quit:
         self.check()
         self.isSet = True
 
-    def check(self):
+    def check(self) -> None:
         """
         Check if the flag has been set.
 

@@ -14,28 +14,28 @@ Please test on Linux, Win32 and macOS:
    (use dialog menu item), when menus are held down, when window is being
    dragged.
 """
-import sys, time
+import sys
+import time
 
 try:
     from wx import (
-        Frame as wxFrame,
+        EVT_MENU,
+        App as wxApp,
         DefaultPosition as wxDefaultPosition,
-        Size as wxSize,
+        Frame as wxFrame,
         Menu as wxMenu,
         MenuBar as wxMenuBar,
-        EVT_MENU,
         MessageDialog as wxMessageDialog,
-        App as wxApp,
+        Size as wxSize,
     )
 except ImportError:
     from wxPython.wx import *
 
-from twisted.python import log
 from twisted.internet import wxreactor
+from twisted.python import log
 
 wxreactor.install()
-from twisted.internet import reactor, defer
-
+from twisted.internet import defer, reactor
 
 # set up so that "hello, world" is printed continuously
 dc = None

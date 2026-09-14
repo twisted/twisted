@@ -119,8 +119,8 @@ class Banana(protocol.Protocol, styles.Ephemeral):
         """
         self.prefixLimit = limit
         self._smallestLongInt = -(2 ** (limit * 7)) + 1
-        self._smallestInt = -(2 ** 31)
-        self._largestInt = 2 ** 31 - 1
+        self._smallestInt = -(2**31)
+        self._largestInt = 2**31 - 1
         self._largestLongInt = 2 ** (limit * 7) - 1
 
     def connectionReady(self):

@@ -5,19 +5,21 @@
 Test cases for L{twisted.logger._logger}.
 """
 
-from typing import List, Optional, Type, cast
+from __future__ import annotations
 
-from constantly import NamedConstant
+from typing import cast
 
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from constantly import NamedConstant
 
+from twisted.python.failure import Failure
+from twisted.trial import unittest
+from .._format import formatEvent
+from .._global import globalLogPublisher
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import InvalidLogLevelError, LogLevel
-from .._format import formatEvent
 from .._logger import Logger
-from .._global import globalLogPublisher
 
 
 class TestLogger(Logger):
@@ -27,7 +29,7 @@ class TestLogger(Logger):
     """
 
     def emit(
-        self, level: NamedConstant, format: Optional[str] = None, **kwargs: object
+        self, level: NamedConstant, format: str | None = None, **kwargs: object
     ) -> None:
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -53,7 +55,7 @@ class LogComposedObject:
 
     log = TestLogger()
 
-    def __init__(self, state: Optional[str] = None) -> None:
+    def __init__(self, state: str | None = None) -> None:
         self.state = state
 
     def __str__(self) -> str:
@@ -71,7 +73,7 @@ class LoggerTests(unittest.TestCase):
         """
         namespace = "bleargh"
         log = Logger(namespace)
-        self.assertEqual(repr(log), "<Logger {}>".format(repr(namespace)))
+        self.assertEqual(repr(log), f"<Logger {repr(namespace)}>")
 
     def test_namespaceDefault(self) -> None:
         """
@@ -86,7 +88,7 @@ class LoggerTests(unittest.TestCase):
         context in which is can't be determined automatically and no namespace
         was specified.
         """
-        result: List[Logger] = []
+        result: list[Logger] = []
         exec(
             "result.append(Logger())",
             dict(Logger=Logger),
@@ -107,12 +109,8 @@ class LoggerTests(unittest.TestCase):
         )
 
         self.assertEqual(cast(TestLogger, obj.log).namespace, expectedNamespace)
-        self.assertEqual(
-            cast(Type[TestLogger], LogComposedObject.log).namespace, expectedNamespace
-        )
-        self.assertIs(
-            cast(Type[TestLogger], LogComposedObject.log).source, LogComposedObject
-        )
+        self.assertEqual(LogComposedObject.log.namespace, expectedNamespace)
+        self.assertIs(LogComposedObject.log.source, LogComposedObject)
         self.assertIs(cast(TestLogger, obj.log).source, obj)
         self.assertIsNone(Logger().source)
 
@@ -120,7 +118,7 @@ class LoggerTests(unittest.TestCase):
         """
         When used as a descriptor, the observer is propagated.
         """
-        observed: List[LogEvent] = []
+        observed: list[LogEvent] = []
 
         class MyObject:
             log = Logger(observer=cast(ILogObserver, observed.append))
@@ -275,3 +273,80 @@ class LoggerTests(unittest.TestCase):
 
         log = TestLogger(observer=publisher)
         log.info("Hello.", log_trace=[])
+
+    def test_failuresHandled(self) -> None:
+        """
+        The L{Logger.failuresHandled} context manager catches any
+        L{BaseException} and converts it into a logged L{Failure}.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = TestLogger(observer=logged)
+        reprd = 0
+
+        class Reprable:
+            def __repr__(self) -> str:
+                nonlocal reprd
+                reprd += 1
+                return f"<repr {reprd}>"
+
+        with log.failuresHandled(
+            "while testing failure handling for {value}", value=Reprable()
+        ) as operation:
+            1 / 0
+        self.assertEqual(operation.succeeded, False)
+        self.assertEqual(operation.failed, True)
+        self.assertEqual(len(events), 1)
+        [logged] = events
+        events[:] = []
+        f: Failure = logged["log_failure"]
+        self.assertEqual(reprd, 0)
+        self.assertEqual(
+            formatEvent(logged), "while testing failure handling for <repr 1>"
+        )
+        self.assertEqual(reprd, 1)
+        self.assertEqual(f.type, ZeroDivisionError)
+        with log.failuresHandled("succeeding for {value}", value=Reprable()) as op2:
+            self.assertEqual(op2.succeeded, False)
+            self.assertEqual(op2.failed, False)
+        self.assertEqual(reprd, 1)
+        self.assertEqual(op2.succeeded, True)
+        self.assertEqual(op2.failed, False)
+
+    def test_failureHandler(self) -> None:
+        """
+        The L{Logger.failureHandler} context manager can safely be shared
+        amongst multiple invocations and converts L{BaseException} into logged
+        L{Failure}s.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = TestLogger(observer=logged)
+
+        failureHandler = log.failureHandler("hello")
+        success = False
+        with failureHandler as fh:
+            success = True
+        self.assertIs(fh, None)
+        self.assertEqual(success, True)
+        self.assertEqual(events, [])
+        success = False
+
+        def raisebase() -> None:
+            raise KeyboardInterrupt()
+
+        with failureHandler as fh:
+            raisebase()
+
+        self.assertEqual(len(events), 1)
+        [logged] = events
+        f = logged["log_failure"]
+        self.assertEqual(f.type, KeyboardInterrupt)

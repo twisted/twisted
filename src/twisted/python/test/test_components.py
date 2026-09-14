@@ -9,13 +9,13 @@ Test cases for Twisted component architecture.
 
 from functools import wraps
 
-from zope.interface import Interface, implementer, Attribute
+from zope.interface import Attribute, Interface, implementer
 from zope.interface.adapter import AdapterRegistry
 
-from twisted.python.compat import comparable, cmp
-from twisted.trial import unittest
 from twisted.python import components
+from twisted.python.compat import cmp, comparable
 from twisted.python.components import _addHook, _removeHook, proxyForInterface
+from twisted.trial import unittest
 
 
 class Compo(components.Componentized):

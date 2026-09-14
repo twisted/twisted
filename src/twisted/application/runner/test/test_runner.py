@@ -5,14 +5,19 @@
 Tests for L{twisted.application.runner._runner}.
 """
 
+from __future__ import annotations
+
 import errno
+from collections.abc import Iterable
 from io import StringIO
 from signal import SIGTERM
 from types import TracebackType
-from typing import Any, Iterable, List, Optional, TextIO, Tuple, Type, Union, cast
+from typing import Any, TextIO, cast
 
-from attr import attrib, attrs, Factory
+from attr import Factory, attrib, attrs
 
+import twisted.trial.unittest
+from twisted.internet.testing import MemoryReactor
 from twisted.logger import (
     FileLogObserver,
     FilteringLogObserver,
@@ -22,15 +27,11 @@ from twisted.logger import (
     LogLevelFilterPredicate,
     LogPublisher,
 )
-from twisted.internet.testing import MemoryReactor
 from twisted.python.filepath import FilePath
-
 from ...runner import _runner
 from .._exit import ExitStatus
-from .._pidfile import PIDFile, NonePIDFile
+from .._pidfile import NonePIDFile, PIDFile
 from .._runner import Runner
-
-import twisted.trial.unittest
 
 
 class RunnerTests(twisted.trial.unittest.TestCase):
@@ -38,7 +39,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
     Tests for L{Runner}.
     """
 
-    def filePath(self, content: Optional[bytes] = None) -> FilePath:
+    def filePath(self, content: bytes | None = None) -> FilePath[str]:
         filePath = FilePath(self.mktemp())
         if content is not None:
             filePath.setContent(content)
@@ -57,7 +58,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch getpid so we get a known result
 
         self.pid = 1337
-        self.pidFileContent = f"{self.pid}\n".encode("utf-8")
+        self.pidFileContent = f"{self.pid}\n".encode()
 
         # Patch globalLogBeginner so that we aren't trying to install multiple
         # global log observers.
@@ -118,7 +119,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         PID file.
         """
         pidFile = PIDFile(self.filePath(self.pidFileContent))
-        pidFile.isRunning = lambda: True  # type: ignore[assignment]
+        pidFile.isRunning = lambda: True  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), pidFile=pidFile)
         runner.run()
@@ -173,7 +174,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         def read() -> int:
             raise OSError(errno.EACCES, "Permission denied")
 
-        pidFile.read = read  # type: ignore[assignment]
+        pidFile.read = read  # type: ignore[method-assign]
 
         runner = Runner(reactor=MemoryReactor(), kill=True, pidFile=pidFile)
         runner.killIfRequested()
@@ -217,7 +218,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # running (started by trial) logging system.
 
         class LogBeginner:
-            observers: List[ILogObserver] = []
+            observers: list[ILogObserver] = []
 
             def beginLoggingTo(self, observers: Iterable[ILogObserver]) -> None:
                 LogBeginner.observers = list(observers)
@@ -227,15 +228,15 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch FilteringLogObserver so we can capture its arguments
 
         class MockFilteringLogObserver(FilteringLogObserver):
-            observer: Optional[ILogObserver] = None
-            predicates: List[LogLevelFilterPredicate] = []
+            observer: ILogObserver | None = None
+            predicates: list[LogLevelFilterPredicate] = []
 
             def __init__(
                 self,
                 observer: ILogObserver,
                 predicates: Iterable[LogLevelFilterPredicate],
                 negativeObserver: ILogObserver = cast(ILogObserver, lambda event: None),
-            ):
+            ) -> None:
                 MockFilteringLogObserver.observer = observer
                 MockFilteringLogObserver.predicates = list(predicates)
                 FilteringLogObserver.__init__(
@@ -247,7 +248,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         # Patch FileLogObserver so we can capture its arguments
 
         class MockFileLogObserver(FileLogObserver):
-            outFile: Optional[TextIO] = None
+            outFile: TextIO | None = None
 
             def __init__(self, outFile: TextIO) -> None:
                 MockFileLogObserver.outFile = outFile
@@ -314,7 +315,7 @@ class RunnerTests(twisted.trial.unittest.TestCase):
         """
         self._testHook("reactorExited")
 
-    def _testHook(self, methodName: str, callerName: Optional[str] = None) -> None:
+    def _testHook(self, methodName: str, callerName: str | None = None) -> None:
         """
         Verify that the named hook is run with the expected arguments as
         specified by the arguments used to create the L{Runner}, when the
@@ -359,7 +360,7 @@ class DummyRunner(Runner):
     Keep track of calls to some methods without actually doing anything.
     """
 
-    calledMethods = attrib(type=List[str], default=Factory(list))
+    calledMethods = attrib(type=list[str], default=Factory(list))
 
     def killIfRequested(self) -> None:
         self.calledMethods.append("killIfRequested")
@@ -387,15 +388,15 @@ class DummyPIDFile(NonePIDFile):
         self.entered = False
         self.exited = False
 
-    def __enter__(self) -> "DummyPIDFile":
+    def __enter__(self) -> DummyPIDFile:
         self.entered = True
         return self
 
     def __exit__(
         self,
-        excType: Optional[Type[BaseException]],
-        excValue: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        excType: type[BaseException] | None,
+        excValue: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         self.exited = True
 
@@ -409,9 +410,7 @@ class DummyExit:
     def __init__(self) -> None:
         self.exited = False
 
-    def __call__(
-        self, status: Union[int, ExitStatus], message: Optional[str] = None
-    ) -> None:
+    def __call__(self, status: int | ExitStatus, message: str | None = None) -> None:
         assert not self.exited
 
         self.status = status
@@ -426,7 +425,7 @@ class DummyKill:
     """
 
     def __init__(self) -> None:
-        self.calls: List[Tuple[int, int]] = []
+        self.calls: list[tuple[int, int]] = []
 
     def __call__(self, pid: int, sig: int) -> None:
         self.calls.append((pid, sig))

@@ -31,15 +31,13 @@ interface.
 
 
 from io import StringIO
-from typing import Dict
 
 # zope3 imports
-from zope.interface import interface, declarations
+from zope.interface import declarations, interface
 from zope.interface.adapter import AdapterRegistry
 
 # twisted imports
 from twisted.python import reflect
-
 
 # Twisted's global adapter registry
 globalRegistry = AdapterRegistry()
@@ -58,7 +56,6 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """
     self = globalRegistry
     assert interfaceClasses, "You need to pass an Interface"
-    global ALLOW_DUPLICATES
 
     # deal with class->interface adapters:
     if not isinstance(origInterface, interface.InterfaceClass):
@@ -333,11 +330,13 @@ def proxyForInterface(iface, originalAttribute="original"):
     def __init__(self, original):
         setattr(self, originalAttribute, original)
 
-    contents: Dict[str, object] = {"__init__": __init__}
+    contents: dict[str, object] = {"__init__": __init__}
     for name in iface:
         contents[name] = _ProxyDescriptor(name, originalAttribute)
-    proxy = type("(Proxy for {})".format(reflect.qual(iface)), (object,), contents)
-    declarations.classImplements(proxy, iface)
+    proxy = type(f"(Proxy for {reflect.qual(iface)})", (object,), contents)
+    # mypy-zope declarations.classImplements only works when passing
+    # a concrete class type
+    declarations.classImplements(proxy, iface)  # type: ignore[misc]
     return proxy
 
 

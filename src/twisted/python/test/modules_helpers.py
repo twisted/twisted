@@ -7,8 +7,8 @@ to load code.
 """
 
 import sys
+from collections.abc import Iterable
 from types import ModuleType
-from typing import List, Iterable, Tuple
 
 from twisted.python.filepath import FilePath
 
@@ -19,7 +19,7 @@ class TwistedModulesMixin:
     methods for manipulating Python's module system.
     """
 
-    def replaceSysPath(self, sysPath: List[str]) -> None:
+    def replaceSysPath(self, sysPath: list[str]) -> None:
         """
         Replace sys.path, for the duration of the test, with the given value.
         """
@@ -31,7 +31,7 @@ class TwistedModulesMixin:
         self.addCleanup(cleanUpSysPath)  # type: ignore[attr-defined]
         sys.path[:] = sysPath
 
-    def replaceSysModules(self, sysModules: Iterable[Tuple[str, ModuleType]]) -> None:
+    def replaceSysModules(self, sysModules: Iterable[tuple[str, ModuleType]]) -> None:
         """
         Replace sys.modules, for the duration of the test, with the given value.
         """
@@ -45,7 +45,7 @@ class TwistedModulesMixin:
         sys.modules.clear()
         sys.modules.update(sysModules)
 
-    def pathEntryWithOnePackage(self, pkgname: str = "test_package") -> FilePath:
+    def pathEntryWithOnePackage(self, pkgname: str = "test_package") -> FilePath[str]:
         """
         Generate a L{FilePath} with one package, named C{pkgname}, on it, and
         return the L{FilePath} of the path entry.

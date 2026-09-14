@@ -5,44 +5,44 @@
 Tests for ssh/transport.py and the classes therein.
 """
 
+from __future__ import annotations
 
 import binascii
 import re
 import string
 import struct
 import types
-from typing import Optional, Type
-
 from hashlib import md5, sha1, sha256, sha384, sha512
+
 from twisted import __version__ as twisted_version
-from twisted.trial.unittest import TestCase
+from twisted.conch.error import ConchError
+from twisted.conch.ssh import _kex, address, service
 from twisted.internet import defer
 from twisted.protocols import loopback
 from twisted.python import randbytes
-from twisted.python.randbytes import insecureRandom
 from twisted.python.compat import iterbytes
-from twisted.conch.ssh import address, service, _kex
-from twisted.conch.error import ConchError
-from twisted.test import proto_helpers
+from twisted.python.randbytes import insecureRandom
 from twisted.python.reflect import requireModule
+from twisted.test import proto_helpers
+from twisted.trial.itrial import ITestCaseVar
+from twisted.trial.unittest import TestCase
 
-pyasn1 = requireModule("pyasn1")
 cryptography = requireModule("cryptography")
 
-if pyasn1 and cryptography:
-    dependencySkip = ""
-    from twisted.conch.ssh import common, transport, keys, factory
-    from twisted.conch.test import keydata
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric import dh, ec
+dependencySkip: str | None
+if cryptography:
+    dependencySkip = None
     from cryptography.exceptions import UnsupportedAlgorithm
+    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import dh, ec
+
+    from twisted.conch.ssh import common, factory, keys, transport
+    from twisted.conch.test import keydata
 
     X25519_SUPPORTED = default_backend().x25519_supported()
 else:
-    if not pyasn1:
-        dependencySkip = "Cannot run without PyASN1"
-    elif not cryptography:
+    if not cryptography:
         dependencySkip = "can't run without cryptography"
     X25519_SUPPORTED = False
 
@@ -70,6 +70,21 @@ else:
 def skipWithoutX25519(f):
     if not X25519_SUPPORTED:
         f.skip = "x25519 not supported on this system"
+    return f
+
+
+if _kex.cryptographyHasMLKEM:
+    from cryptography.hazmat.primitives.asymmetric import x25519
+    from cryptography.hazmat.primitives.asymmetric.mlkem import MLKEM768PrivateKey
+
+
+def skipWithoutMLKEM(f: ITestCaseVar) -> ITestCaseVar:
+    """
+    Helper to skip tests if mlkem not supported by current cryptography
+    version.
+    """
+    if not _kex.cryptographyHasMLKEM:
+        f.skip = "mlkem not supported by cryptography version"
     return f
 
 
@@ -290,7 +305,7 @@ class MockFactory(factory.SSHFactory):
             b"ssh-dsa": keys.Key.fromString(keydata.privateDSA_openssh),
         }
 
-    def getPrimes(self):
+    def getPrimes(self) -> dict[int, list[tuple[int, int]]]:
         """
         Diffie-Hellman primes that can be used for key exchange algorithms
         that use group exchange to establish a prime / generator group.
@@ -305,7 +320,7 @@ class MockFactory(factory.SSHFactory):
         # tests.
         # See OpenSSHFactory.getPrimes.
         group14 = _kex.getDHGeneratorAndPrime(b"diffie-hellman-group14-sha1")
-        return {2048: (group14,), 4096: ((5, 7),)}
+        return {2048: [group14], 4096: [(5, 7)]}
 
 
 class MockOldFactoryPublicKeys(MockFactory):
@@ -351,7 +366,7 @@ def generatePredictableKey(transport):
     try:
         transport.dhSecretKey = dh.DHPrivateNumbers(
             x, dh.DHPublicNumbers(y, dh.DHParameterNumbers(p, g))
-        ).private_key(default_backend())
+        ).private_key()
     except ValueError:
         print(f"\np={p}\ng={g}\nx={x}\n")
         raise
@@ -365,7 +380,7 @@ class TransportTestCase(TestCase):
     Base class for transport test cases.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = None
+    klass: type[transport.SSHTransportBase] | None = None
 
     if dependencySkip:
         skip = dependencySkip
@@ -457,12 +472,21 @@ class Curve25519SHA256Mixin:
     hashProcessor = sha256
 
 
+class MLKEM768X25519SHA256Mixin:
+    """
+    Mixin for mlkem768x25519-sha256 tests.
+    """
+
+    kexAlgorithm = b"mlkem768x25519-sha256"
+    hashProcessor = sha256
+
+
 class BaseSSHTransportBaseCase:
     """
     Base case for TransportBase tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = MockTransportBase
+    klass: type[transport.SSHTransportBase] | None = MockTransportBase
 
 
 class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
@@ -512,6 +536,28 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             + r")*$"
         )
         self.assertRegex(softwareVersion, softwareVersionRegex)
+
+    def test_dataReceiveVersionNotSentMemoryDOS(self):
+        """
+        When the peer is not sending its SSH version but keeps sending data,
+        the connection is disconnected after 4KB to prevent buffering too
+        much and running our of memory.
+        """
+        sut = MockTransportBase()
+        sut.makeConnection(self.transport)
+
+        # Data can be received over multiple chunks.
+        sut.dataReceived(b"SSH-2-Server-Identifier")
+        sut.dataReceived(b"1234567890" * 406)
+        sut.dataReceived(b"1235678")
+        self.assertFalse(self.transport.disconnecting)
+
+        # Here we are going over the limit.
+        sut.dataReceived(b"1234567")
+        # Once a lot of data is received without an SSH version string,
+        # the transport is disconnected.
+        self.assertTrue(self.transport.disconnecting)
+        self.assertIn(b"Preventing a denial of service attack", self.transport.value())
 
     def test_sendPacketPlain(self):
         """
@@ -674,13 +720,15 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         proto.buf = self.transport.value()
         self.assertEqual(proto.getPacket(), b"ABCDEFG")
 
-    def test_ciphersAreValid(self):
+    def test_ciphersAreValid(self) -> None:
         """
         Test that all the supportedCiphers are valid.
         """
         ciphers = transport.SSHCiphers(b"A", b"B", b"C", b"D")
-        iv = key = b"\x00" * 16
+
         for cipName in self.proto.supportedCiphers:
+            _, keySize, _ = ciphers.cipherMap[cipName]
+            iv = key = b"\x00" * keySize
             self.assertTrue(ciphers._getCipher(cipName, iv, key))
 
     def test_sendKexInit(self):
@@ -718,7 +766,9 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
             buf,
         ) = common.getNS(packet[17:], 10)
 
-        self.assertEqual(keyExchanges, b",".join(self.proto.supportedKeyExchanges))
+        self.assertEqual(
+            keyExchanges, b",".join(self.proto.supportedKeyExchanges + [b"ext-info-s"])
+        )
         self.assertEqual(pubkeys, b",".join(self.proto.supportedPublicKeys))
         self.assertEqual(ciphers1, b",".join(self.proto.supportedCiphers))
         self.assertEqual(ciphers2, b",".join(self.proto.supportedCiphers))
@@ -795,6 +845,62 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         # messages which were queued above.
         self.proto._newKeys()
         self.assertEqual(self.transport.value().count(b"foo"), 2)
+
+    def test_sendExtInfo(self):
+        """
+        Test that EXT_INFO messages are sent correctly.  See RFC 8308,
+        section 2.3.
+        """
+        self.proto._peerSupportsExtensions = True
+        self.proto.sendExtInfo(
+            [
+                (b"server-sig-algs", b"ssh-rsa,rsa-sha2-256"),
+                (b"elevation", b"d"),
+            ]
+        )
+        self.assertEqual(
+            self.packets,
+            [
+                (
+                    transport.MSG_EXT_INFO,
+                    b"\x00\x00\x00\x02"
+                    + common.NS(b"server-sig-algs")
+                    + common.NS(b"ssh-rsa,rsa-sha2-256")
+                    + common.NS(b"elevation")
+                    + common.NS(b"d"),
+                )
+            ],
+        )
+
+    def test_sendExtInfoUnsupported(self):
+        """
+        If the peer has not advertised support for extension negotiation, no
+        EXT_INFO message is sent, since RFC 8308 only guarantees that the
+        peer will be prepared to accept it if it has advertised support.
+        """
+        self.proto.sendExtInfo([(b"server-sig-algs", b"ssh-rsa,rsa-sha2-256")])
+        self.assertEqual(self.packets, [])
+
+    def test_EXT_INFO(self):
+        """
+        When an EXT_INFO message is received, the transport stores a mapping
+        of the peer's advertised extensions.  See RFC 8308, section 2.3.
+        """
+        self.proto.dispatchMessage(
+            transport.MSG_EXT_INFO,
+            b"\x00\x00\x00\x02"
+            + common.NS(b"server-sig-algs")
+            + common.NS(b"ssh-rsa,rsa-sha2-256,rsa-sha2-512")
+            + common.NS(b"no-flow-control")
+            + common.NS(b"s"),
+        )
+        self.assertEqual(
+            self.proto.peerExtensions,
+            {
+                b"server-sig-algs": b"ssh-rsa,rsa-sha2-256,rsa-sha2-512",
+                b"no-flow-control": b"s",
+            },
+        )
 
     def test_sendDebug(self):
         """
@@ -1265,7 +1371,7 @@ class ServerAndClientSSHTransportBaseCase:
     Tests that need to be run on both the server and the client.
     """
 
-    def checkDisconnected(self, kind=None):
+    def checkDisconnected(self: TransportTestCase, kind: int | None = None, description: bytes | None = None) -> None:  # type: ignore[misc]
         """
         Helper function to check if the transport disconnected.
         """
@@ -1273,6 +1379,8 @@ class ServerAndClientSSHTransportBaseCase:
             kind = transport.DISCONNECT_PROTOCOL_ERROR
         self.assertEqual(self.packets[-1][0], transport.MSG_DISCONNECT)
         self.assertEqual(self.packets[-1][1][3:4], bytes((kind,)))
+        if description:
+            self.assertEqual(common.getNS(self.packets[-1][1][4:])[0], description)
 
     def connectModifiedProtocol(self, protoModification, kind=None):
         """
@@ -1366,7 +1474,7 @@ class ServerSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     Base case for SSHServerTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHServerTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHServerTransport
 
     def setUp(self):
         TransportTestCase.setUp(self)
@@ -1383,6 +1491,67 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     """
     Tests for SSHServerTransport.
     """
+
+    def test__getHostKeys(self):
+        """
+        L{transport.SSHServerTransport._getHostKeys} returns host keys from
+        the factory, looked up by public key signature algorithm.
+        """
+        self.proto.factory.publicKeys = {
+            b"ssh-rsa": keys.Key.fromString(keydata.publicRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(keydata.publicDSA_openssh),
+            b"ecdsa-sha2-nistp256": keys.Key.fromString(keydata.publicECDSA_openssh),
+            b"ssh-ed25519": keys.Key.fromString(keydata.publicEd25519_openssh),
+        }
+        self.proto.factory.privateKeys = {
+            b"ssh-rsa": keys.Key.fromString(keydata.privateRSA_openssh),
+            b"ssh-dss": keys.Key.fromString(keydata.privateDSA_openssh),
+            b"ecdsa-sha2-nistp256": keys.Key.fromString(keydata.privateECDSA_openssh),
+            b"ssh-ed25519": keys.Key.fromString(keydata.privateEd25519_openssh_new),
+        }
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-rsa"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"rsa-sha2-256"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"rsa-sha2-512"),
+            (
+                self.proto.factory.publicKeys[b"ssh-rsa"],
+                self.proto.factory.privateKeys[b"ssh-rsa"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-dss"),
+            (
+                self.proto.factory.publicKeys[b"ssh-dss"],
+                self.proto.factory.privateKeys[b"ssh-dss"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ecdsa-sha2-nistp256"),
+            (
+                self.proto.factory.publicKeys[b"ecdsa-sha2-nistp256"],
+                self.proto.factory.privateKeys[b"ecdsa-sha2-nistp256"],
+            ),
+        )
+        self.assertEqual(
+            self.proto._getHostKeys(b"ssh-ed25519"),
+            (
+                self.proto.factory.publicKeys[b"ssh-ed25519"],
+                self.proto.factory.privateKeys[b"ssh-ed25519"],
+            ),
+        )
+        self.assertRaises(KeyError, self.proto._getHostKeys, b"ecdsa-sha2-nistp384")
 
     def test_KEXINITMultipleAlgorithms(self):
         """
@@ -1412,11 +1581,37 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertEqual(self.proto.keyAlg, b"ssh-dss")
         self.assertEqual(self.proto.outgoingCompressionType, b"none")
         self.assertEqual(self.proto.incomingCompressionType, b"none")
+        self.assertFalse(self.proto._peerSupportsExtensions)
         ne = self.proto.nextEncryptions
         self.assertEqual(ne.outCipType, b"aes128-ctr")
         self.assertEqual(ne.inCipType, b"aes128-ctr")
         self.assertEqual(ne.outMACType, b"hmac-md5")
         self.assertEqual(ne.inMACType, b"hmac-md5")
+
+    def test_KEXINITExtensionNegotiation(self):
+        """
+        If the client sends "ext-info-c" in its key exchange algorithms,
+        then the server notes that the client supports extension
+        negotiation.  See RFC 8308, section 2.1.
+        """
+        kexInitPacket = (
+            b"\x00" * 16
+            + common.NS(b"diffie-hellman-group-exchange-sha256,ext-info-c")
+            + common.NS(b"ssh-rsa")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"none")
+            + common.NS(b"none")
+            + common.NS(b"")
+            + common.NS(b"")
+            + b"\x00"
+            + b"\x00\x00\x00\x00"
+        )
+        self.proto.ssh_KEXINIT(kexInitPacket)
+        self.assertEqual(self.proto.kexAlg, b"diffie-hellman-group-exchange-sha256")
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def test_ignoreGuessPacketKex(self):
         """
@@ -1511,18 +1706,25 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         self.assertFalse(self.proto.ignoreNextPacket)
         self.assertEqual(self.packets, [])
 
-    def assertKexDHInitResponse(self, kexAlgorithm, bits):
+    def assertKexDHInitResponse(self, kexAlgorithm, keyAlgorithm, bits):
         """
         Test that the KEXDH_INIT packet causes the server to send a
         KEXDH_REPLY with the server's public key and a signature.
 
         @param kexAlgorithm: The key exchange algorithm to use.
-        @type kexAlgorithm: L{str}
+        @type kexAlgorithm: L{bytes}
+
+        @param keyAlgorithm: The public key signature algorithm to use.
+        @type keyAlgorithm: L{bytes}
+
+        @param bits: The bit length of the DH modulus.
+        @type bits: L{int}
         """
         self.proto.supportedKeyExchanges = [kexAlgorithm]
-        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.supportedPublicKeys = [keyAlgorithm]
         self.proto.dataReceived(self.transport.value())
 
+        pubHostKey, privHostKey = self.proto._getHostKeys(keyAlgorithm)
         g, p = _kex.getDHGeneratorAndPrime(kexAlgorithm)
         e = pow(g, 5000, p)
 
@@ -1535,22 +1737,20 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         h = sha1()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(common.MP(e))
         h.update(f)
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        signature = self.proto.factory.privateKeys[b"ssh-rsa"].sign(exchangeHash)
+        signature = privHostKey.sign(exchangeHash, signatureType=keyAlgorithm)
 
         self.assertEqual(
             self.packets,
             [
                 (
                     transport.MSG_KEXDH_REPLY,
-                    common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
-                    + f
-                    + common.NS(signature),
+                    common.NS(pubHostKey.blob()) + f + common.NS(signature),
                 ),
                 (transport.MSG_NEWKEYS, b""),
             ],
@@ -1597,9 +1797,30 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
     def test_KEXDH_INIT_GROUP14(self):
         """
         KEXDH_INIT messages are processed when the
-        diffie-hellman-group14-sha1 key exchange algorithm is requested.
+        diffie-hellman-group14-sha1 key exchange algorithm and the ssh-rsa
+        public key signature algorithm are requested.
         """
-        self.assertKexDHInitResponse(b"diffie-hellman-group14-sha1", 2048)
+        self.assertKexDHInitResponse(b"diffie-hellman-group14-sha1", b"ssh-rsa", 2048)
+
+    def test_KEXDH_INIT_GROUP14_rsa_sha2_256(self):
+        """
+        KEXDH_INIT messages are processed when the
+        diffie-hellman-group14-sha1 key exchange algorithm and the
+        rsa-sha2-256 public key signature algorithm are requested.
+        """
+        self.assertKexDHInitResponse(
+            b"diffie-hellman-group14-sha1", b"rsa-sha2-256", 2048
+        )
+
+    def test_KEXDH_INIT_GROUP14_rsa_sha2_512(self):
+        """
+        KEXDH_INIT messages are processed when the
+        diffie-hellman-group14-sha1 key exchange algorithm and the
+        rsa-sha2-256 public key signature algorithm are requested.
+        """
+        self.assertKexDHInitResponse(
+            b"diffie-hellman-group14-sha1", b"rsa-sha2-512", 2048
+        )
 
     def test_keySetup(self):
         """
@@ -1617,6 +1838,31 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
             self.proto.nextEncryptions.keys,
             (newKeys[1], newKeys[3], newKeys[0], newKeys[2], newKeys[5], newKeys[4]),
         )
+
+    def test_keySetupWithExtInfo(self):
+        """
+        If the client advertised support for extension negotiation, then
+        _keySetup sends SSH_MSG_EXT_INFO with the "server-sig-algs"
+        extension as the next packet following the server's first
+        SSH_MSG_NEWKEYS.  See RFC 8308, sections 2.4 and 3.1.
+        """
+        self.proto.supportedPublicKeys = [b"ssh-rsa", b"rsa-sha2-256", b"rsa-sha2-512"]
+        self.proto.kexAlg = b"diffie-hellman-group14-sha1"
+        self.proto.nextEncryptions = MockCipher()
+        self.proto._peerSupportsExtensions = True
+        self.simulateKeyExchange(b"AB", b"CD")
+        self.assertEqual(self.packets[-2], (transport.MSG_NEWKEYS, b""))
+        self.assertEqual(
+            self.packets[-1],
+            (
+                transport.MSG_EXT_INFO,
+                b"\x00\x00\x00\x01"
+                + common.NS(b"server-sig-algs")
+                + common.NS(b"ssh-rsa,rsa-sha2-256,rsa-sha2-512"),
+            ),
+        )
+        self.simulateKeyExchange(b"AB", b"EF")
+        self.assertEqual(self.packets[-1], (transport.MSG_NEWKEYS, b""))
 
     def test_ECDH_keySetup(self):
         """
@@ -1721,14 +1967,14 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         self.proto.kexAlg = None
         self.assertRaises(ConchError, self.proto.ssh_KEX_DH_GEX_REQUEST_OLD, None)
 
-    def test_KEX_DH_GEX_REQUEST(self):
+    def test_KEX_DH_GEX_REQUEST(self, keyAlgorithm=b"ssh-rsa"):
         """
         Test that the KEX_DH_GEX_REQUEST message causes the server to reply
         with a KEX_DH_GEX_GROUP message with the correct Diffie-Hellman
         group.
         """
         self.proto.supportedKeyExchanges = [self.kexAlgorithm]
-        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.supportedPublicKeys = [keyAlgorithm]
         self.proto.dataReceived(self.transport.value())
         self.proto.ssh_KEX_DH_GEX_REQUEST(
             b"\x00\x00\x04\x00\x00\x00\x08\x00" + b"\x00\x00\x0c\x00"
@@ -1753,6 +1999,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         message with a public key and signature.
         """
         self.test_KEX_DH_GEX_REQUEST_OLD()
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 512)[0]
         self.assertEqual(self.proto.dhSecretKey.private_numbers().x, y)
@@ -1762,7 +2009,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         h = self.hashProcessor()
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(b"\x00\x00\x04\x00")
         h.update(common.MP(self.proto.p))
         h.update(common.MP(self.proto.g))
@@ -1776,11 +2023,9 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             [
                 (
                     transport.MSG_KEX_DH_GEX_REPLY,
-                    common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
+                    common.NS(pubHostKey.blob())
                     + f
-                    + common.NS(
-                        self.proto.factory.privateKeys[b"ssh-rsa"].sign(exchangeHash)
-                    ),
+                    + common.NS(privHostKey.sign(exchangeHash)),
                 ),
                 (transport.MSG_NEWKEYS, b""),
             ],
@@ -1793,6 +2038,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
         with a public key and signature.
         """
         self.test_KEX_DH_GEX_REQUEST()
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         e = pow(self.proto.g, 3, self.proto.p)
         y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 256)[0]
         f = _MPpow(self.proto.g, y, self.proto.p)
@@ -1802,7 +2048,7 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
 
         h.update(common.NS(self.proto.ourVersionString) * 2)
         h.update(common.NS(self.proto.ourKexInitPayload) * 2)
-        h.update(common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(b"\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x0c\x00")
         h.update(common.MP(self.proto.p))
         h.update(common.MP(self.proto.g))
@@ -1815,10 +2061,47 @@ class ServerSSHTransportDHGroupExchangeBaseCase(ServerSSHTransportBaseCase):
             self.packets[1],
             (
                 transport.MSG_KEX_DH_GEX_REPLY,
-                common.NS(self.proto.factory.publicKeys[b"ssh-rsa"].blob())
+                common.NS(pubHostKey.blob())
+                + f
+                + common.NS(privHostKey.sign(exchangeHash)),
+            ),
+        )
+
+    def test_KEX_DH_GEX_INIT_after_REQUEST_rsa_sha2_512(self):
+        """
+        Test that the KEX_DH_GEX_INIT message after the client sends
+        KEX_DH_GEX_REQUEST using a public key signature algorithm other than
+        the default for the public key format causes the server to send a
+        KEX_DH_GEX_INIT message with a public key and signature.
+        """
+        self.test_KEX_DH_GEX_REQUEST(keyAlgorithm=b"rsa-sha2-512")
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"rsa-sha2-512")
+        e = pow(self.proto.g, 3, self.proto.p)
+        y = common.getMP(b"\x00\x00\x01\x00" + b"\x99" * 256)[0]
+        f = _MPpow(self.proto.g, y, self.proto.p)
+        sharedSecret = _MPpow(e, y, self.proto.p)
+
+        h = self.hashProcessor()
+
+        h.update(common.NS(self.proto.ourVersionString) * 2)
+        h.update(common.NS(self.proto.ourKexInitPayload) * 2)
+        h.update(common.NS(pubHostKey.blob()))
+        h.update(b"\x00\x00\x04\x00\x00\x00\x08\x00\x00\x00\x0c\x00")
+        h.update(common.MP(self.proto.p))
+        h.update(common.MP(self.proto.g))
+        h.update(common.MP(e))
+        h.update(f)
+        h.update(sharedSecret)
+        exchangeHash = h.digest()
+        self.proto.ssh_KEX_DH_GEX_INIT(common.MP(e))
+        self.assertEqual(
+            self.packets[1],
+            (
+                transport.MSG_KEX_DH_GEX_REPLY,
+                common.NS(pubHostKey.blob())
                 + f
                 + common.NS(
-                    self.proto.factory.privateKeys[b"ssh-rsa"].sign(exchangeHash)
+                    privHostKey.sign(exchangeHash, signatureType=b"rsa-sha2-512")
                 ),
             ),
         )
@@ -1858,8 +2141,7 @@ class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
         self.proto.supportedPublicKeys = [b"ssh-rsa"]
         self.proto.dataReceived(self.transport.value())
 
-        privKey = self.proto.factory.privateKeys[b"ssh-rsa"]
-        pubKey = self.proto.factory.publicKeys[b"ssh-rsa"]
+        pubHostKey, privHostKey = self.proto._getHostKeys(b"ssh-rsa")
         ecPriv = self.proto._generateECPrivateKey()
         ecPub = ecPriv.public_key()
         encPub = self.proto._encodeECPublicKey(ecPub)
@@ -1875,20 +2157,20 @@ class ServerSSHTransportECDHBaseCase(ServerSSHTransportBaseCase):
         h.update(common.NS(self.proto.ourVersionString))
         h.update(common.NS(self.proto.otherKexInitPayload))
         h.update(common.NS(self.proto.ourKexInitPayload))
-        h.update(common.NS(pubKey.blob()))
+        h.update(common.NS(pubHostKey.blob()))
         h.update(common.NS(encPub))
         h.update(common.NS(self.proto._encodeECPublicKey(self.proto.ecPub)))
         h.update(sharedSecret)
         exchangeHash = h.digest()
 
-        signature = privKey.sign(exchangeHash)
+        signature = privHostKey.sign(exchangeHash)
 
         self.assertEqual(
             self.packets,
             [
                 (
                     transport.MSG_KEXDH_REPLY,
-                    common.NS(pubKey.blob())
+                    common.NS(pubHostKey.blob())
                     + common.NS(self.proto._encodeECPublicKey(self.proto.ecPub))
                     + common.NS(signature),
                 ),
@@ -1914,12 +2196,134 @@ class ServerSSHTransportCurve25519SHA256Tests(
     """
 
 
+@skipWithoutMLKEM
+class ServerSSHTransportMLKEM768X25519Tests(
+    ServerSSHTransportBaseCase,
+    MLKEM768X25519SHA256Mixin,
+    TransportTestCase,
+):
+    """
+    mlkem768x25519-sha256 tests for SSHServerTransport.
+    """
+
+    def test_KEX_HYBRID_INIT(self):
+        """
+        SSHServerTransport responds to SSH_MSG_KEX_HYBRID_INIT with
+        SSH_MSG_KEX_HYBRID_REPLY containing the server host key blob,
+        S_REPLY (S_CT2 || S_PK1), and a valid signature over the exchange
+        hash H.  It also sends SSH_MSG_NEWKEYS.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        peerPrivateKey = MLKEM768PrivateKey.generate()
+        c_pk2 = peerPrivateKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        c_sk1 = x25519.X25519PrivateKey.generate()
+        c_pk1 = c_sk1.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        cInit = c_pk2 + c_pk1
+
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(cInit))
+
+        self.assertEqual(len(self.packets), 2)
+        self.assertEqual(self.packets[0][0], transport.OVERLAP_MSG_KEX_HYBRID_REPLY)
+        self.assertEqual(self.packets[1], (transport.MSG_NEWKEYS, b""))
+
+        k_s, sReply, signature, _ = common.getNS(self.packets[0][1], 3)
+
+        self.assertEqual(len(sReply), 1088 + 32)
+        s_ct2 = sReply[:1088]
+        s_pk1 = sReply[1088:]
+
+        k_pq = peerPrivateKey.decapsulate(s_ct2)
+        k_cl = c_sk1.exchange(x25519.X25519PublicKey.from_public_bytes(s_pk1))
+        sharedSecret = self.hashProcessor(k_pq + k_cl).digest()
+
+        pubHostKey, _ = self.proto._getHostKeys(b"ssh-rsa")
+        h = self.hashProcessor()
+        h.update(common.NS(self.proto.otherVersionString))
+        h.update(common.NS(self.proto.ourVersionString))
+        h.update(common.NS(self.proto.otherKexInitPayload))
+        h.update(common.NS(self.proto.ourKexInitPayload))
+        h.update(common.NS(pubHostKey.blob()))
+        h.update(common.NS(cInit))
+        h.update(common.NS(sReply))
+        h.update(common.NS(sharedSecret))
+        exchangeHash = h.digest()
+
+        self.assertTrue(keys.Key.fromString(k_s).verify(signature, exchangeHash))
+
+    def test_disconnectHYBRID_INIT_badLength(self):
+        """
+        If the C_INIT payload has a length other than 1216 bytes
+        (1184 ML-KEM 768 encap key + 32 X25519 pubkey), the server
+        disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(b"\x00" * 100))
+
+        self.checkDisconnected(
+            transport.DISCONNECT_KEY_EXCHANGE_FAILED,
+            description=b"Invalid C_INIT length",
+        )
+
+    def test_disconnectHYBRID_INIT_invalidX25519Key(self) -> None:
+        """
+        If the C_PK1 portion of C_INIT is invalid, the
+        server disconnects with SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        peerPrivateKey = MLKEM768PrivateKey.generate()
+        c_pk2 = peerPrivateKey.public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw
+        )
+        c_pk1 = b"\x00" * 32
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
+
+        self.checkDisconnected(
+            transport.DISCONNECT_KEY_EXCHANGE_FAILED,
+            description=b"Invalid peer X25519 public key",
+        )
+
+    def test_disconnectHYBRID_INIT_invalidMLKEMKey(self):
+        """
+        If the C_PK2 portion of C_INIT is not a valid ML-KEM 768
+        encapsulation key, the server disconnects with
+        SSH_DISCONNECT_KEY_EXCHANGE_FAILED.
+        """
+
+        self.proto.supportedKeyExchanges = [self.kexAlgorithm]
+        self.proto.supportedPublicKeys = [b"ssh-rsa"]
+        self.proto.dataReceived(self.transport.value())
+
+        # Invalid encapsulation key
+        c_pk2 = b"\xff" * 1184
+        c_pk1 = (
+            x25519.X25519PrivateKey.generate()
+            .public_key()
+            .public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+        )
+        self.proto.ssh_KEX_DH_GEX_REQUEST_OLD(common.NS(c_pk2 + c_pk1))
+
+        self.checkDisconnected(transport.DISCONNECT_KEY_EXCHANGE_FAILED)
+
+
 class ClientSSHTransportBaseCase(ServerAndClientSSHTransportBaseCase):
     """
     Base case for SSHClientTransport tests.
     """
 
-    klass: Optional[Type[transport.SSHTransportBase]] = transport.SSHClientTransport
+    klass: type[transport.SSHTransportBase] | None = transport.SSHClientTransport
 
     def verifyHostKey(self, pubKey, fingerprint):
         """
@@ -2032,6 +2436,30 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         self.proto.supportedKeyExchanges = [b"diffie-hellman-group24-sha1"]
         data = self.transport.value().replace(b"group14", b"group24")
         self.assertRaises(ConchError, self.proto.dataReceived, data)
+
+    def test_KEXINITExtensionNegotiation(self):
+        """
+        If the server sends "ext-info-s" in its key exchange algorithms,
+        then the client notes that the server supports extension
+        negotiation.  See RFC 8308, section 2.1.
+        """
+        kexInitPacket = (
+            b"\x00" * 16
+            + common.NS(b"diffie-hellman-group-exchange-sha256,ext-info-s")
+            + common.NS(b"ssh-rsa")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"aes256-ctr")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"hmac-sha1")
+            + common.NS(b"none")
+            + common.NS(b"none")
+            + common.NS(b"")
+            + common.NS(b"")
+            + b"\x00"
+            + b"\x00\x00\x00\x00"
+        )
+        self.proto.ssh_KEXINIT(kexInitPacket)
+        self.assertTrue(self.proto._peerSupportsExtensions)
 
     def begin_KEXDH_REPLY(self):
         """
@@ -2183,11 +2611,11 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(
@@ -2372,11 +2800,11 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
 
         self.proto.dataReceived(b"SSH-2.0-OpenSSH\r\n")
 
-        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        self.proto.ecPriv = ec.generate_private_key(ec.SECP256R1())
         self.proto.ecPub = self.proto.ecPriv.public_key()
 
         # Generate the private key
-        thisPriv = ec.generate_private_key(ec.SECP256R1(), default_backend())
+        thisPriv = ec.generate_private_key(ec.SECP256R1())
         # Get the public key
         thisPub = thisPriv.public_key()
         encPub = thisPub.public_bytes(

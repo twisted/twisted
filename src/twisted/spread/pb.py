@@ -31,45 +31,50 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 import random
 from hashlib import md5
 
-from zope.interface import implementer, Interface
+from zope.interface import Interface, implementer
+
+from twisted.cred.credentials import (
+    Anonymous,
+    IAnonymous,
+    ICredentials,
+    IUsernameHashedPassword,
+)
+from twisted.cred.portal import Portal
+from twisted.internet import defer, protocol
+from twisted.persisted import styles
 
 # Twisted Imports
-from twisted.python import log, failure, reflect
-from twisted.python.compat import comparable, cmp
-from twisted.internet import defer, protocol
-from twisted.cred.portal import Portal
-from twisted.cred.credentials import IAnonymous, ICredentials
-from twisted.cred.credentials import IUsernameHashedPassword, Anonymous
-from twisted.persisted import styles
+from twisted.python import failure, log, reflect
+from twisted.python.compat import cmp, comparable
 from twisted.python.components import registerAdapter
-
-from twisted.spread.interfaces import IJellyable, IUnjellyable
-from twisted.spread.jelly import jelly, unjelly, globalSecurity, _newInstance
 from twisted.spread import banana
-
-from twisted.spread.flavors import Serializable
-from twisted.spread.flavors import Referenceable, NoSuchMethod
-from twisted.spread.flavors import Root, IPBRoot
-from twisted.spread.flavors import ViewPoint
-from twisted.spread.flavors import Viewable
-from twisted.spread.flavors import Copyable
-from twisted.spread.flavors import Jellyable
-from twisted.spread.flavors import Cacheable
-from twisted.spread.flavors import RemoteCopy
-from twisted.spread.flavors import RemoteCache
-from twisted.spread.flavors import RemoteCacheObserver
-from twisted.spread.flavors import copyTags
-
-from twisted.spread.flavors import setUnjellyableForClass
-from twisted.spread.flavors import setUnjellyableFactoryForClass
-from twisted.spread.flavors import setUnjellyableForClassTree
 
 # These three are backwards compatibility aliases for the previous three.
 # Ultimately they should be deprecated. -exarkun
-from twisted.spread.flavors import setCopierForClass
-from twisted.spread.flavors import setFactoryForClass
-from twisted.spread.flavors import setCopierForClassTree
-
+from twisted.spread.flavors import (
+    Cacheable,
+    Copyable,
+    IPBRoot,
+    Jellyable,
+    NoSuchMethod,
+    Referenceable,
+    RemoteCache,
+    RemoteCacheObserver,
+    RemoteCopy,
+    Root,
+    Serializable,
+    Viewable,
+    ViewPoint,
+    copyTags,
+    setCopierForClass,
+    setCopierForClassTree,
+    setFactoryForClass,
+    setUnjellyableFactoryForClass,
+    setUnjellyableForClass,
+    setUnjellyableForClassTree,
+)
+from twisted.spread.interfaces import IJellyable, IUnjellyable
+from twisted.spread.jelly import _newInstance, globalSecurity, jelly, unjelly
 
 MAX_BROKER_REFS = 1024
 
@@ -444,7 +449,11 @@ class CopyableFailure(failure.Failure, Copyable):
         Collect state related to the exception which occurred, discarding
         state which cannot reasonably be serialized.
         """
+        # Make sure self._parents is populated:
+        _ = self.parents
+
         state = self.__dict__.copy()
+        state["parents"] = state.pop("_parents")
         state["tb"] = None
         state["frames"] = []
         state["stack"] = []
@@ -475,6 +484,10 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     @ivar traceback: The remote traceback.
     @type traceback: C{str}
     """
+
+    def setCopyableState(self, state):
+        state["_parents"] = state.pop("parents")
+        return super().setCopyableState(state)
 
     def printTraceback(self, file=None, elideFrameworkCode=0, detail="default"):
         if file is None:
@@ -507,7 +520,7 @@ setUnjellyableForClass(CopyableFailure, CopiedFailure)
 
 
 def failure2Copyable(fail, unsafeTracebacks=0):
-    f = _newInstance(CopyableFailure, fail.__dict__)
+    f = _newInstance(CopyableFailure, fail.__getstate__())
     f.unsafeTracebacks = unsafeTracebacks
     return f
 
@@ -1264,7 +1277,7 @@ def challenge():
     return crap
 
 
-class PBClientFactory(protocol.ClientFactory):
+class PBClientFactory(protocol.ClientFactory[Broker]):
     """
     Client factory for PB brokers.
 
@@ -1407,7 +1420,7 @@ class PBClientFactory(protocol.ClientFactory):
         return d
 
 
-class PBServerFactory(protocol.ServerFactory):
+class PBServerFactory(protocol.ServerFactory[Broker]):
     """
     Server factory for perspective broker.
 

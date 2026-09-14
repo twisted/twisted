@@ -5,15 +5,14 @@
 Test cases for twisted.python._shellcomp
 """
 
+from __future__ import annotations
 
 import sys
 from io import BytesIO
-from typing import List, Optional
 
+from twisted.python import _shellcomp, reflect, usage
+from twisted.python.usage import CompleteFiles, CompleteList, Completer, Completions
 from twisted.trial import unittest
-from twisted.python import _shellcomp, usage, reflect
-from twisted.python.usage import Completions, Completer, CompleteFiles
-from twisted.python.usage import CompleteList
 
 
 class ZshScriptTestMeta(type):
@@ -100,7 +99,7 @@ def test_genZshFunction(self, cmdName, optionsFQPN):
 
     # now, if it has sub commands, we have to test those too
     if hasattr(o, "subCommands"):
-        for (cmd, short, parser, doc) in o.subCommands:
+        for cmd, short, parser, doc in o.subCommands:
             try:
                 o.parseOptions([cmd, "", "--_shell-completion", "zsh:3"])
             except ImportError as e:
@@ -391,10 +390,10 @@ class ZshTests(unittest.TestCase):
             optParameters = [["param", "p", None, "A param"]]
 
             def opt_flag(self):
-                """ junk description """
+                """junk description"""
 
             def opt_param(self, param):
-                """ junk description """
+                """junk description"""
 
         opts = Options()
         argGen = _shellcomp.ZshArgumentsGenerator(opts, "ace", None)
@@ -459,7 +458,7 @@ class FighterAceOptions(usage.Options):
     Command-line options for an imaginary `Fighter Ace` game
     """
 
-    optFlags: List[List[Optional[str]]] = [
+    optFlags: list[list[str | None]] = [
         ["fokker", "f", "Select the Fokker Dr.I as your dogfighter aircraft"],
         ["albatros", "a", "Select the Albatros D-III as your dogfighter aircraft"],
         ["spad", "s", "Select the SPAD S.VII as your dogfighter aircraft"],
@@ -469,7 +468,7 @@ class FighterAceOptions(usage.Options):
         ["verbose", "v", "Verbose logging (may be specified more than once)"],
     ]
 
-    optParameters: List[List[Optional[str]]] = [
+    optParameters: list[list[str | None]] = [
         ["pilot-name", None, "What's your name, Ace?", "Manfred von Richthofen"],
         ["detail", "d", "Select the level of rendering detail (1-5)", "3"],
     ]

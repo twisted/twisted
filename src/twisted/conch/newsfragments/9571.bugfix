@@ -1,1 +1,0 @@
-t.c.ssh.filetransfer.FileTransferClient now errbacks any outstanding requests if the connection is lost before a reply is received.

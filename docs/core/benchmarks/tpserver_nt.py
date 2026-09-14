@@ -1,6 +1,8 @@
 """Non-twisted throughput server."""
 
-import socket, signal, sys
+import signal
+import socket
+import sys
 
 
 def signalhandler(*args):

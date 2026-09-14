@@ -7,25 +7,31 @@ Implementation module for the `tkconch` command.
 """
 
 
-from twisted.conch import error
-from twisted.conch.ui import tkvt100
-from twisted.conch.ssh import transport, userauth, connection, common, keys
-from twisted.conch.ssh import session, forwarding, channel
-from twisted.conch.client.default import isInKnownHosts
-from twisted.internet import reactor, defer, protocol, tksupport
-from twisted.python import usage, log
-
 import base64
 import getpass
 import os
 import signal
 import struct
 import sys
-from typing import List, Tuple
-
 import tkinter as Tkinter
 import tkinter.filedialog as tkFileDialog
 import tkinter.messagebox as tkMessageBox
+
+from twisted.conch import error
+from twisted.conch.client.default import isInKnownHosts
+from twisted.conch.ssh import (
+    channel,
+    common,
+    connection,
+    forwarding,
+    keys,
+    session,
+    transport,
+    userauth,
+)
+from twisted.conch.ui import tkvt100
+from twisted.internet import defer, protocol, reactor, tksupport
+from twisted.python import log, usage
 
 
 class TkConchMenu(Tkinter.Frame):
@@ -271,9 +277,9 @@ class GeneralOptions(usage.Options):
         ],
     )
 
-    identitys: List[str] = []
-    localForwards: List[Tuple[int, Tuple[int, int]]] = []
-    remoteForwards: List[Tuple[int, Tuple[int, int]]] = []
+    identitys: list[str] = []
+    localForwards: list[tuple[int, tuple[int, int]]] = []
+    remoteForwards: list[tuple[int, tuple[int, int]]] = []
 
     def opt_identity(self, i):
         self.identitys.append(i)
@@ -371,10 +377,10 @@ def run():
     for k, v in options.items():
         if v and hasattr(menu, k):
             getattr(menu, k).insert(Tkinter.END, v)
-    for (p, (rh, rp)) in options.localForwards:
+    for p, (rh, rp) in options.localForwards:
         menu.forwards.insert(Tkinter.END, f"L:{p}:{rh}:{rp}")
     options.localForwards = []
-    for (p, (rh, rp)) in options.remoteForwards:
+    for p, (rh, rp) in options.remoteForwards:
         menu.forwards.insert(Tkinter.END, f"R:{p}:{rh}:{rp}")
     options.remoteForwards = []
     frame = tkvt100.VT100Frame(root, callback=None)
@@ -436,7 +442,6 @@ class SSHClientTransport(transport.SSHClientTransport):
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
 
     def receiveDebug(self, alwaysDisplay, message, lang):
-        global options
         if alwaysDisplay or options["log"]:
             log.msg("Received Debug Message: %s" % message)
 
@@ -499,7 +504,7 @@ class SSHClientTransport(transport.SSHClientTransport):
 
 
 class SSHUserAuthClient(userauth.SSHUserAuthClient):
-    usedFiles: List[str] = []
+    usedFiles: list[str] = []
 
     def getPassword(self, prompt=None):
         if not prompt:
@@ -571,7 +576,6 @@ class SSHConnection(connection.SSHConnection):
 
 
 class SSHSession(channel.SSHChannel):
-
     name = b"session"
 
     def channelOpen(self, foo):

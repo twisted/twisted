@@ -13,20 +13,21 @@ demonstrated to work earlier in the file are used by those later in the file
 """
 
 
-import warnings
 import unittest as pyunit
+import warnings
 
-from twisted.python.util import FancyEqMixin
+from incremental import Version, getVersionString
+
+from twisted.internet.defer import Deferred, fail, succeed
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.failure import Failure
 from twisted.python.reflect import (
-    prefixedMethods,
     accumulateMethods,
     fullyQualifiedName,
+    prefixedMethods,
 )
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-from incremental import Version, getVersionString
-from twisted.python.failure import Failure
+from twisted.python.util import FancyEqMixin
 from twisted.trial import unittest
-from twisted.internet.defer import Deferred, fail, succeed
 
 
 class MockEquality(FancyEqMixin):
@@ -314,6 +315,19 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         self._testUnequalPair(x, y)
         self._testUnequalPair(y, z)
 
+    def test_assertEqual_plural_form(self):
+        """
+        The plural forms are still avaialble for backward compatibility.
+        """
+        self.assertIs(
+            unittest.SynchronousTestCase.assertEqual,
+            unittest.SynchronousTestCase.assertEquals,
+        )
+        self.assertIs(
+            unittest.SynchronousTestCase.assertNotEqual,
+            unittest.SynchronousTestCase.assertNotEquals,
+        )
+
     def test_assertEqualMessage(self):
         """
         When a message is passed to L{assertEqual} it is included in the error
@@ -415,7 +429,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
         with self.assertRaises(ValueError) as context:
             raise exception
 
-        self.assertIs(exception, context.exception)  # type: ignore[unreachable]
+        self.assertIs(exception, context.exception)
 
     def test_assertRaisesContextUnexpected(self):
         """
@@ -438,7 +452,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
                 "{}".format(message),
             )
         else:
-            self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
+            self.fail("Mismatched exception type should have caused test failure.")
 
     def test_assertRaisesContextNoException(self):
         """
@@ -480,7 +494,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
             if errors:
                 self.fail("; ".join(errors), f"message = {message}")
         else:
-            self.fail("Mismatched exception type should have caused test failure.")  # type: ignore[unreachable]
+            self.fail("Mismatched exception type should have caused test failure.")
 
     def test_failIfEqual_basic(self):
         x, y, z = [1], [2], [1]
@@ -1201,8 +1215,10 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
     async def noCurrentResult(self):
         await Deferred()
 
-    async def raisesException(self):
-        raise self.exception
+    async def raisesException(self, exception=None):
+        if exception is None:
+            exception = self.exception
+        raise exception
 
     def test_withoutResult(self):
         """
@@ -1230,14 +1246,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} that has the original failure
         traceback when called with a coroutine with a failure result.
         """
+        exception = Exception("Bad times")
         try:
-            self.successResultOf(self.raisesException())
+            self.successResultOf(self.raisesException(exception))
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_successResultOfWithFailureHasTraceback.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Success result expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithoutResult(self):
         """
@@ -1298,14 +1312,12 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         the L{SynchronousTestCase.failureException} message contains the
         original exception traceback.
         """
+        exception = Exception("Bad times")
         try:
-            self.failureResultOf(self.raisesException(), KeyError)
+            self.failureResultOf(self.raisesException(exception), KeyError)
         except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
-
-    test_failureResultOfWithWrongExceptionOneExpectedExceptionHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+            self.assertIn("Failure of type (builtins.KeyError) expected on", str(e))
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_failureResultOfWithWrongExceptionMultiExpectedExceptions(self):
         """
@@ -1336,14 +1348,16 @@ class ResultOfCoroutineAssertionsTests(unittest.SynchronousTestCase):
         L{SynchronousTestCase.failureException} message contains the original
         exception traceback in the error message.
         """
-        try:
-            self.failureResultOf(self.raisesException(), KeyError, IOError)
-        except self.failureException as e:
-            self.assertIn(self.failure.getTraceback(), str(e))
+        exception = Exception("Bad times")
 
-    test_failureResultOfWithWrongExceptionMultiExpectedExceptionsHasTB.todo = (  # type: ignore[attr-defined]
-        "Tracebacks aren't preserved by exceptions later wrapped in Failures"
-    )
+        try:
+            self.failureResultOf(self.raisesException(exception), KeyError, IOError)
+        except self.failureException as e:
+            self.assertIn(
+                "Failure of type (builtins.KeyError or builtins.OSError) expected on",
+                str(e),
+            )
+            self.assertIn("builtins.Exception: Bad times", str(e))
 
     def test_successResultOfWithSuccessResult(self):
         """
@@ -1503,9 +1517,7 @@ class AssertionNamesTests(unittest.SynchronousTestCase):
                 self.assertTrue(hasattr(self, name + "s"), f"{name} but no {name}s")
                 self.assertEqual(value, getattr(self, name + "s"))
             if name.endswith("Equals"):
-                self.assertTrue(
-                    hasattr(self, name[:-1]), "{} but no {}".format(name, name[:-1])
-                )
+                self.assertTrue(hasattr(self, name[:-1]), f"{name} but no {name[:-1]}")
                 self.assertEqual(value, getattr(self, name[:-1]))
 
 
@@ -1608,7 +1620,7 @@ class CallDeprecatedTests(unittest.SynchronousTestCase):
         self.assertIn("please use newMethod instead", str(exception))
 
 
-@deprecated(CallDeprecatedTests.version)
+@deprecated(Version("Twisted", 8, 0, 0))
 def oldMethod(x):
     """
     Deprecated method for testing.
@@ -1616,7 +1628,7 @@ def oldMethod(x):
     return x
 
 
-@deprecated(CallDeprecatedTests.version, replacement="newMethod")
+@deprecated(Version("Twisted", 8, 0, 0), replacement="newMethod")
 def oldMethodReplaced(x):
     """
     Another deprecated method, which has been deprecated in favor of the

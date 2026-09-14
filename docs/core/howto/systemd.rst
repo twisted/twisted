@@ -65,15 +65,15 @@ Twisted
 
 Basic Systemd Service Configuration
 -----------------------------------
-The essential configuration file for a ``systemd`` service is the `service <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_ file.
+The essential configuration file for a ``systemd`` service is the `service file <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_.
 
 Later in this tutorial, you will learn about some other types of configuration file, which are used to control when and how your service is started.
 
 But we will begin by configuring ``systemd`` to start a Twisted web server immediately on system boot.
 
-Create a systemd.service file
+Create a systemd service file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Create the `service <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_ file at ``/etc/systemd/system/www.example.com.service`` with the following content:
+Create the `service file <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_ at ``/etc/systemd/system/www.example.com.service`` with the following content:
 
 :download:`/etc/systemd/system/www.example.com.service <listings/systemd/www.example.com.static.service>`
 
@@ -190,7 +190,7 @@ Later in this tutorial you will learn how to use another special unit - the ``so
 
 Test that the service is automatically restarted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The ``Restart=always`` option in the ``systemd.service`` file ensures that ``systemd`` will restart the ``twistd`` process if and when it exits unexpectedly.
+The ``Restart=always`` option in the ``www.example.com.service`` file ensures that ``systemd`` will restart the ``twistd`` process if and when it exits unexpectedly.
 
 You can read about other ``Restart`` options in the `systemd.service man page <http://www.freedesktop.org/software/systemd/man/systemd.service.html>`_.
 
@@ -269,7 +269,12 @@ WantedBy=sockets.target
   This is
   a `special target <http://www.freedesktop.org/software/systemd/man/systemd.special.html#sockets.target>`_ used by all socket activated services. ``systemd`` will automatically bind to all such socket activation ports during boot up.
 
-You also need to modify the ``systemd.service`` file as follows:
+FileDescriptorName=my-web-port
+
+  This option names the file descriptor for the socket.
+  The name allows a specific inherited descriptor to be chosen reliably out of set of several inherited descriptors.
+
+You also need to modify the ``www.example.com.service`` file as follows:
 
 :download:`/etc/systemd/system/www.example.com.service <listings/systemd/www.example.com.socketactivated.service>`
 
@@ -282,13 +287,14 @@ ExecStart
 
   The ``domain=INET`` endpoint argument makes ``twistd`` treat the inherited file descriptor as an IPv4 socket.
 
-  The ``index=0`` endpoint argument makes ``twistd`` adopt the first file descriptor inherited from ``systemd``\ .
+  The ``name=my-web-port`` endpoint argument makes ``twistd`` adopt the file descriptor inherited from ``systemd`` named ``my-web-port``.
 
   Socket activation is also technically possible with other socket families and types, but Twisted currently only accepts IPv4 and IPv6 TCP sockets. See :ref:`limitations` below.
 
-NonBlocking
+Requires
 
-  This must be set to ``true`` to ensure that ``systemd`` passes non-blocking sockets to Twisted.
+  The service no longer knows how to bind the listening port for itself.
+  The corresponding socket unit must be started so it can pass the listening port on to the ``twistd`` process.
 
 [Install]
 
@@ -353,7 +359,7 @@ You can verify this by using systemctl to report the status of the service. eg
               Active: active (running) since Tue 2013-01-29 15:02:20 GMT; 3s ago
             Main PID: 25605 (twistd)
               CGroup: name=systemd:/system/www.example.com.service
-                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:index=0 --path .
+                      └─25605 /usr/bin/python /usr/bin/twistd --nodaemon --pidfile= web --port systemd:domain=INET:name=my-web-port --path .
 
     Jan 29 15:02:20 zorin.lan systemd[1]: Started Example Web Server.
     Jan 29 15:02:20 zorin.lan twistd[25605]: 2013-01-29 15:02:20+0000 [-] Log opened.

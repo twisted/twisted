@@ -51,53 +51,44 @@ Instance Method: s.center, where s is an instance of UserString.UserString::
     ['module', 'UserString'], 'UserString']], ['dictionary', ['data', 'd']]],
     ['dereference', 1]]
 
-The C{set} builtin and the C{sets.Set} class are serialized to the same
-thing, and unserialized to C{set} if available, else to C{sets.Set}. It means
-that there's a possibility of type switching in the serialization process. The
-solution is to always use C{set}.
-
-The same rule applies for C{frozenset} and C{sets.ImmutableSet}.
+The Python 2.x C{sets.Set} and C{sets.ImmutableSet} classes are
+serialized to the same thing as the builtin C{set} and C{frozenset}
+classes.  (This is only relevant if you are communicating with a
+version of jelly running on an older version of Python.)
 
 @author: Glyph Lefkowitz
+
 """
 
-# System Imports
-import types
-import warnings
-import decimal
-from functools import reduce
+from __future__ import annotations
+
 import copy
 import datetime
+import decimal
+import types
+import warnings
+from functools import reduce
+from typing import TYPE_CHECKING, Callable
+
 from zope.interface import implementer
 
-# Twisted Imports
-from twisted.python.compat import nativeString
-from twisted.python.reflect import namedObject, qual, namedAny
-from twisted.persisted.crefutil import NotKnown, _Tuple, _InstanceMethod
-from twisted.persisted.crefutil import _DictKeyAndValue, _Dereference
-from twisted.persisted.crefutil import _Container
-
-from twisted.spread.interfaces import IJellyable, IUnjellyable
-
-from twisted.python.deprecate import deprecatedModuleAttribute
 from incremental import Version
 
+from twisted.persisted.crefutil import (
+    NotKnown,
+    _Container,
+    _Dereference,
+    _DictKeyAndValue,
+    _InstanceMethod,
+    _Tuple,
+)
+from twisted.python.compat import nativeString
+from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.reflect import namedAny, namedObject, qual
+from twisted.spread.interfaces import IJellyable, IUnjellyable
 
-_SetTypes = [set]
-_ImmutableSetTypes = [frozenset]
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", category=DeprecationWarning)
-    try:
-        import sets as _sets
-    except ImportError:
-        # sets module is deprecated in Python 2.6, and gone in
-        # Python 3
-        _sets = None
-    else:
-        _SetTypes.append(_sets.Set)
-        _ImmutableSetTypes.append(_sets.ImmutableSet)
-
+if TYPE_CHECKING:
+    from .pb import RemoteCopy
 
 DictTypes = (dict,)
 
@@ -133,8 +124,8 @@ deprecatedModuleAttribute(
 
 # errors
 unpersistable_atom = b"unpersistable"  # u
-unjellyableRegistry = {}
-unjellyableFactoryRegistry = {}
+unjellyableRegistry: dict[str, type[object]] = {}
+unjellyableFactoryRegistry: dict[str, Callable[..., RemoteCopy]] = {}
 
 
 def _createBlank(cls):
@@ -165,7 +156,8 @@ def _newInstance(cls, state):
     instance = _createBlank(cls)
 
     def defaultSetter(state):
-        instance.__dict__ = state
+        if isinstance(state, dict):
+            instance.__dict__ = state or {}
 
     setter = getattr(instance, "__setstate__", defaultSetter)
     setter(state)
@@ -203,7 +195,6 @@ def setUnjellyableForClass(classname, unjellyable):
     overlap.  The rules are the same.
     """
 
-    global unjellyableRegistry
     classname = _maybeClass(classname)
     unjellyableRegistry[classname] = unjellyable
     globalSecurity.allowTypes(classname)
@@ -213,17 +204,16 @@ def setUnjellyableFactoryForClass(classname, copyFactory):
     """
     Set the factory to construct a remote instance of a type::
 
-      jellier.setUnjellyableFactoryForClass('module.package.Class', MyFactory)
+        jellier.setUnjellyableFactoryForClass('module.package.Class', MyFactory)
 
     Call this at the module level immediately after its class definition.
     C{copyFactory} should return an instance or subclass of
     L{RemoteCopy<pb.RemoteCopy>}.
 
-    Similar to L{setUnjellyableForClass} except it uses a factory instead
-    of creating an instance.
+    Similar to L{twisted.spread.jelly.setUnjellyableForClass} except it uses a
+    factory instead of creating an instance.
     """
 
-    global unjellyableFactoryRegistry
     classname = _maybeClass(classname)
     unjellyableFactoryRegistry[classname] = copyFactory
     globalSecurity.allowTypes(classname)
@@ -551,9 +541,9 @@ class _Jellier:
                     sxp.append(dictionary_atom)
                     for key, val in obj.items():
                         sxp.append([self.jelly(key), self.jelly(val)])
-                elif objType in _SetTypes:
+                elif objType is set:
                     sxp.extend(self._jellyIterable(set_atom, obj))
-                elif objType in _ImmutableSetTypes:
+                elif objType is frozenset:
                     sxp.extend(self._jellyIterable(frozenset_atom, obj))
                 else:
                     className = qual(obj.__class__).encode("utf-8")
@@ -889,7 +879,7 @@ class _Unjellier:
         return self._genericUnjelly(clz, rest[1])
 
     def _unjelly_unpersistable(self, rest):
-        return Unpersistable("Unpersistable data: {}".format(rest[0]))
+        return Unpersistable(f"Unpersistable data: {rest[0]}")
 
     def _unjelly_method(self, rest):
         """

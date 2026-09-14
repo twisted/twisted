@@ -13,9 +13,9 @@ if cryptography:
     from twisted.conch.ssh import forwarding
 
 from twisted.internet.address import IPv6Address
-from twisted.trial import unittest
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
-from twisted.test.proto_helpers import MemoryReactorClock, StringTransport
+from twisted.internet.testing import MemoryReactorClock, StringTransport
+from twisted.trial import unittest
 
 
 class TestSSHConnectForwardingChannel(unittest.TestCase):
@@ -26,21 +26,22 @@ class TestSSHConnectForwardingChannel(unittest.TestCase):
     if not cryptography:
         skip = "Cannot run without cryptography"
 
-    def makeTCPConnection(self, reactor):
+    def makeTCPConnection(self, reactor: MemoryReactorClock) -> None:
         """
         Fake that connection was established for first connectTCP request made
         on C{reactor}.
 
         @param reactor: Reactor on which to fake the connection.
-        @type  reactor: A reactor.
         """
         factory = reactor.tcpClients[0][2]
         connector = reactor.connectors[0]
-        protocol = factory.buildProtocol(None)
+        protocol = factory.buildProtocol(IPv6Address("TCP", "::", 4321))
+        assert protocol is not None, "connection refused by system under test"
         transport = StringTransport(peerAddress=connector.getDestination())
+        assert protocol is not None
         protocol.makeConnection(transport)
 
-    def test_channelOpenHostnameRequests(self):
+    def test_channelOpenHostnameRequests(self) -> None:
         """
         When a hostname is sent as part of forwarding requests, it
         is resolved using HostnameEndpoint's resolver.

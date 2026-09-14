@@ -32,31 +32,19 @@ As in the previous examples, we'll start with :py:class:`Site <twisted.web.serve
 
 
 
-Next, we'll add one more import. :py:class:`NoResource <twisted.web.resource.NoResource>` is one of the pre-defined error
+Next, we'll add one more import. :py:class:`notFound <twisted.web.pages.notFound>` is one of the pre-defined error
 resources provided by Twisted Web. It generates the necessary 404 response code
-and renders a simple html page telling the client there is no such resource.
-
-
-
-
+and renders a simple HTML page telling the client there is no such resource.
 
 .. code-block:: python
 
-
-    from twisted.web.resource import NoResource
-
-
-
+    from twisted.web.pages import notFound
 
 Next, we'll define a custom resource which does some dynamic URL
 dispatch. This example is going to be just like
 the :doc:`previous one <dynamic-dispatch>` , where the path segment is
 interpreted as a year; the difference is that this time we'll handle requests
 which don't conform to that pattern by returning the not found response:
-
-
-
-
 
 .. code-block:: python
 
@@ -66,7 +54,7 @@ which don't conform to that pattern by returning the not found response:
             try:
                 year = int(name)
             except ValueError:
-                return NoResource()
+                return notFound()
             else:
                 return YearPage(year)
 
@@ -88,7 +76,7 @@ complete code for this example:
     from twisted.web.server import Site
     from twisted.web.resource import Resource
     from twisted.internet import reactor, endpoints
-    from twisted.web.resource import NoResource
+    from twisted.web.pages import notFound
 
     from calendar import calendar
 
@@ -100,14 +88,14 @@ complete code for this example:
         def render_GET(self, request):
             cal = calendar(self.year)
             return (b"<!DOCTYPE html><html><head><meta charset='utf-8'>"
-                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + "</pre>")
+                    b"<title></title></head><body><pre>" + cal.encode('utf-8') + b"</pre>")
 
     class Calendar(Resource):
         def getChild(self, name, request):
             try:
                 year = int(name)
             except ValueError:
-                return NoResource()
+                return notFound()
             else:
                 return YearPage(year)
 

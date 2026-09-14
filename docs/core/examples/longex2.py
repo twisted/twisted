@@ -45,8 +45,8 @@ result is 1. In that, this example departs from doc/examples/longex.py,
 which errors out when trying to do this.
 """
 
-from twisted.protocols import basic
 from twisted.internet import defer, protocol
+from twisted.protocols import basic
 
 
 def runIterator(reactor, iterator):

@@ -11,14 +11,12 @@ See also twisted.python.shortcut.
     may safely be OR'ed into a mask for os.open.
 """
 
-
-import re
 import os
+import re
 
 from incremental import Version
 
 from twisted.python.deprecate import deprecatedModuleAttribute
-
 
 # https://docs.microsoft.com/en-us/windows/win32/debug/system-error-codes
 ERROR_FILE_NOT_FOUND = 2
@@ -37,7 +35,7 @@ class FakeWindowsError(OSError):
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "FakeWindowsError",
@@ -47,10 +45,10 @@ deprecatedModuleAttribute(
 try:
     WindowsError: OSError = WindowsError
 except NameError:
-    WindowsError = FakeWindowsError  # type: ignore[misc,assignment]
+    WindowsError = FakeWindowsError
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Catch OSError and check presence of 'winerror' attribute.",
     "twisted.python.win32",
     "WindowsError",

@@ -6,9 +6,8 @@ Tests for L{twisted.words.protocols.jabber.sasl_mechanisms}.
 """
 
 
-from twisted.trial import unittest
-
 from twisted.python.compat import networkString
+from twisted.trial import unittest
 from twisted.words.protocols.jabber import sasl_mechanisms
 
 
@@ -17,7 +16,7 @@ class PlainTests(unittest.TestCase):
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.Plain}.
     """
 
-    def test_getInitialResponse(self):
+    def test_getInitialResponse(self) -> None:
         """
         Test the initial response.
         """
@@ -30,7 +29,7 @@ class AnonymousTests(unittest.TestCase):
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.Anonymous}.
     """
 
-    def test_getInitialResponse(self):
+    def test_getInitialResponse(self) -> None:
         """
         Test the initial response to be empty.
         """
@@ -43,18 +42,18 @@ class DigestMD5Tests(unittest.TestCase):
     Tests for L{twisted.words.protocols.jabber.sasl_mechanisms.DigestMD5}.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.mechanism = sasl_mechanisms.DigestMD5(
             "xmpp", "example.org", None, "test", "secret"
         )
 
-    def test_getInitialResponse(self):
+    def test_getInitialResponse(self) -> None:
         """
         Test that no initial response is generated.
         """
         self.assertIdentical(self.mechanism.getInitialResponse(), None)
 
-    def test_getResponse(self):
+    def test_getResponse(self) -> None:
         """
         The response to a Digest-MD5 challenge includes the parameters from the
         challenge.
@@ -78,7 +77,7 @@ class DigestMD5Tests(unittest.TestCase):
             directives,
         )
 
-    def test_getResponseNonAsciiRealm(self):
+    def test_getResponseNonAsciiRealm(self) -> None:
         """
         Bytes outside the ASCII range in the challenge are nevertheless
         included in the response.
@@ -102,7 +101,7 @@ class DigestMD5Tests(unittest.TestCase):
             directives,
         )
 
-    def test_getResponseNoRealm(self):
+    def test_getResponseNoRealm(self) -> None:
         """
         The response to a challenge without a realm uses the host part of the
         JID as the realm.
@@ -111,7 +110,7 @@ class DigestMD5Tests(unittest.TestCase):
         directives = self.mechanism._parse(self.mechanism.getResponse(challenge))
         self.assertEqual(directives[b"realm"], b"example.org")
 
-    def test_getResponseNoRealmIDN(self):
+    def test_getResponseNoRealmIDN(self) -> None:
         """
         If the challenge does not include a realm and the host part of the JID
         includes bytes outside of the ASCII range, the response still includes
@@ -124,7 +123,7 @@ class DigestMD5Tests(unittest.TestCase):
         directives = self.mechanism._parse(self.mechanism.getResponse(challenge))
         self.assertEqual(directives[b"realm"], b"\xc3\xa9chec.example.org")
 
-    def test_getResponseRspauth(self):
+    def test_getResponseRspauth(self) -> None:
         """
         If the challenge just has a rspauth directive, the response is empty.
         """
@@ -132,14 +131,14 @@ class DigestMD5Tests(unittest.TestCase):
         response = self.mechanism.getResponse(challenge)
         self.assertEqual(b"", response)
 
-    def test_calculateResponse(self):
+    def test_calculateResponse(self) -> None:
         """
         The response to a Digest-MD5 challenge is computed according to RFC
         2831.
         """
         charset = "utf-8"
         nonce = b"OA6MG9tEQGm2hh"
-        nc = networkString("{:08x}".format(1))
+        nc = networkString(f"{1:08x}")
         cnonce = b"OA6MHXh6VqTrRk"
 
         username = "\u0418chris"
@@ -159,7 +158,7 @@ class DigestMD5Tests(unittest.TestCase):
         )
         self.assertEqual(response, b"7928f233258be88392424d094453c5e3")
 
-    def test_parse(self):
+    def test_parse(self) -> None:
         """
         A challenge can be parsed into a L{dict} with L{bytes} or L{list}
         values.

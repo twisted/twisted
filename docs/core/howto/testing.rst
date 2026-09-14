@@ -215,34 +215,33 @@ errors.  However, if called outside of a test method (for example, at module
 scope in a test module or a module imported by a test module) then it
 *will* raise an exception.
 
+Test parallelization
+~~~~~~~~~~~~~~~~~~~~
 
-
-
-
-Parallel test
-~~~~~~~~~~~~~
-
-
-
-In many situations, your unit tests may run faster if they are allowed to
-run in parallel, such that blocking I/O calls allow other tests to continue.
-Trial, like unittest, supports the -j parameter.  Run ``trial -j 3``
-to run 3 test runners at the same time.
-
-
-
+In many situations, your unit tests may run faster if they run in parallel,
+such that blocking I/O calls allow other tests to continue.
+Trial, unlike unittest, supports the ``-j`` parameter.
+Run ``trial -j 3`` to run 3 test runners at the same time,
+or ``trial -j auto`` to run a number of test runners based on the number of available CPUs.
 
 This requires care in your test creation.  Obviously, you need to ensure that
 your code is otherwise content to work in a parallel fashion while working within
 Twisted... and if you are using weird global variables in places, parallel tests
 might reveal this.
 
-
-
-
 However, if you have a test that fires up a schema on an external database
 in the ``setUp`` function, does some operations on it in the test, and
-then deletes that schema in the tearDown function, your tests will behave in an
+then deletes that schema in the ``tearDown`` function, your tests will behave in an
 unpredictable fashion as they tromp upon each other if they have their own
 schema.  And this won't actually indicate a real error in your code, merely a
 testing-specific race-condition.
+
+Some caveats apply in parallel mode:
+
+* Anything written to standard out or standard error,
+  such as by the ``print()`` function,
+  is captured in separate text files.
+  The console output is suppressed.
+* Trial's ``--debug`` flag doesn't work,
+  nor does the ``breakpoint()`` built-in.
+* Parallel mode doesn't work on Windows. See `GitHub Issue 10152 <https://github.com/twisted/twisted/issues/10152>`_ if you want to help with support for Windows.

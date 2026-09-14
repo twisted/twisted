@@ -6,18 +6,18 @@
 """
 IProxyParser implementation for version one of the PROXY protocol.
 """
+from __future__ import annotations
 
 from zope.interface import implementer
-from twisted.internet import address
 
+from twisted.internet import address
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError,
-    InvalidProxyHeader,
     InvalidNetworkProtocol,
+    InvalidProxyHeader,
     MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
 
 
 @implementer(_interfaces.IProxyParser)
@@ -41,10 +41,10 @@ class V1Parser:
     )
     NEWLINE = b"\r\n"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.buffer = b""
 
-    def feed(self, data):
+    def feed(self, data: bytes) -> tuple[_info.ProxyInfo, bytes] | tuple[None, None]:
         """
         Consume a chunk of data and attempt to parse it.
 
@@ -72,7 +72,7 @@ class V1Parser:
         return (info, remaining)
 
     @classmethod
-    def parse(cls, line):
+    def parse(cls, line: bytes) -> _info.ProxyInfo:
         """
         Parse a bytestring as a full PROXY protocol header line.
 
@@ -112,7 +112,6 @@ class V1Parser:
             raise InvalidNetworkProtocol()
 
         if networkProtocol == cls.UNKNOWN_PROTO:
-
             return _info.ProxyInfo(originalLine, None, None)
 
         with convertError(ValueError, MissingAddressData):
@@ -128,15 +127,14 @@ class V1Parser:
             destPort = line.split(b" ")[0]
 
         if networkProtocol == cls.TCP4_PROTO:
-
             return _info.ProxyInfo(
                 originalLine,
-                address.IPv4Address("TCP", sourceAddr, int(sourcePort)),
-                address.IPv4Address("TCP", destAddr, int(destPort)),
+                address.IPv4Address("TCP", sourceAddr.decode(), int(sourcePort)),
+                address.IPv4Address("TCP", destAddr.decode(), int(destPort)),
             )
 
         return _info.ProxyInfo(
             originalLine,
-            address.IPv6Address("TCP", sourceAddr, int(sourcePort)),
-            address.IPv6Address("TCP", destAddr, int(destPort)),
+            address.IPv6Address("TCP", sourceAddr.decode(), int(sourcePort)),
+            address.IPv6Address("TCP", destAddr.decode(), int(destPort)),
         )

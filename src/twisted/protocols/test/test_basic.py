@@ -4,23 +4,22 @@
 """
 Test cases for L{twisted.protocols.basic}.
 """
+from __future__ import annotations
 
-
-import sys
 import struct
+import sys
 from io import BytesIO
 
-from typing import List, Optional, Type
 from zope.interface.verify import verifyObject
 
+from twisted.internet import protocol, task
+from twisted.internet.interfaces import IProducer
+from twisted.internet.protocol import connectionDone
+from twisted.protocols import basic
 from twisted.python.compat import iterbytes
 from twisted.python.failure import Failure
-from twisted.trial import unittest
-from twisted.protocols import basic
-from twisted.internet import protocol, task
-from twisted.internet.protocol import connectionDone
-from twisted.internet.interfaces import IProducer
 from twisted.test import proto_helpers
+from twisted.trial import unittest
 
 
 class FlippingLineTester(basic.LineReceiver):
@@ -544,7 +543,7 @@ class TestMixin:
     MAX_LENGTH = 50
     closed = 0
 
-    def connectionLost(self, reason: Failure = connectionDone):
+    def connectionLost(self, reason: Failure = connectionDone) -> None:
         self.closed = 1
 
 
@@ -555,9 +554,8 @@ class TestNetstring(TestMixin, basic.NetstringReceiver):
 
 
 class LPTestCaseMixin:
-
-    illegalStrings: Optional[List[bytes]] = []
-    protocol: "Optional[Type[protocol.Protocol]]" = None
+    illegalStrings: list[bytes] | None = []
+    protocol: type[protocol.Protocol] | None = None
 
     def getProtocol(self):
         """
@@ -801,10 +799,10 @@ class IntNTestCaseMixin(LPTestCaseMixin):
     TestCase mixin for int-prefixed protocols.
     """
 
-    protocol: "Optional[Type[protocol.Protocol]]" = None
-    strings: Optional[List[bytes]] = None
-    illegalStrings: Optional[List[bytes]] = None
-    partialStrings: Optional[List[bytes]] = None
+    protocol: type[protocol.Protocol] | None = None
+    strings: list[bytes] | None = None
+    illegalStrings: list[bytes] | None = None
+    partialStrings: list[bytes] | None = None
 
     def test_receive(self):
         """

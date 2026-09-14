@@ -6,25 +6,23 @@
 asyncio-based reactor implementation.
 """
 
+from __future__ import annotations
 
 import errno
-
-from typing import Dict, Optional, Type
+import sys
+from asyncio import AbstractEventLoop, get_running_loop, new_event_loop, set_event_loop
 
 from zope.interface import implementer
 
-from twisted.logger import Logger
-from twisted.internet.posixbase import (
-    PosixReactorBase,
-    _NO_FILEDESC,
-    _ContinuousPolling,
-)
-from twisted.python.log import callWithLogger
-from twisted.python.runtime import seconds as runtimeSeconds
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.interfaces import IReactorFDSet
-
-from asyncio import get_event_loop, AbstractEventLoop, SelectorEventLoop
+from twisted.internet.posixbase import (
+    _NO_FILEDESC,
+    PosixReactorBase,
+    _ContinuousPolling,
+)
+from twisted.logger import Logger
+from twisted.python.log import callWithLogger
 
 
 @implementer(IReactorFDSet)
@@ -47,21 +45,30 @@ class AsyncioSelectorReactor(PosixReactorBase):
     _asyncClosed = False
     _log = Logger()
 
-    def __init__(self, eventloop: Optional[SelectorEventLoop] = None):
+    def __init__(self, eventloop: AbstractEventLoop | None = None):
         if eventloop is None:
-            _eventloop: AbstractEventLoop = get_event_loop()
+            try:
+                _eventloop: AbstractEventLoop = get_running_loop()
+            except RuntimeError:
+                _eventloop = new_event_loop()
+            set_event_loop(_eventloop)
         else:
             _eventloop = eventloop
 
         # On Python 3.8+, asyncio.get_event_loop() on
         # Windows was changed to return a ProactorEventLoop
         # unless the loop policy has been changed.
-        if not isinstance(_eventloop, SelectorEventLoop):
-            raise TypeError(f"SelectorEventLoop required, instead got: {_eventloop}")
+        if sys.platform == "win32":
+            from asyncio import ProactorEventLoop
 
-        self._asyncioEventloop: SelectorEventLoop = _eventloop
-        self._writers: Dict[Type[FileDescriptor], int] = {}
-        self._readers: Dict[Type[FileDescriptor], int] = {}
+            if isinstance(_eventloop, ProactorEventLoop):
+                raise TypeError(
+                    f"ProactorEventLoop is not supported, got: {_eventloop}"
+                )
+
+        self._asyncioEventloop: AbstractEventLoop = _eventloop
+        self._writers: dict[type[FileDescriptor], int] = {}
+        self._readers: dict[type[FileDescriptor], int] = {}
         self._continuousPolling = _ContinuousPolling(self)
 
         self._scheduledAt = None
@@ -183,7 +190,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
             raise
 
     def removeReader(self, reader):
-
         # First, see if they're trying to remove a reader that we don't have.
         if not (
             reader in self._readers.keys() or self._continuousPolling.isReading(reader)
@@ -207,7 +213,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         self._asyncioEventloop.remove_reader(fd)
 
     def removeWriter(self, writer):
-
         # First, see if they're trying to remove a writer that we don't have.
         if not (
             writer in self._writers.keys() or self._continuousPolling.isWriting(writer)
@@ -263,8 +268,6 @@ class AsyncioSelectorReactor(PosixReactorBase):
         super().crash()
         self._asyncioEventloop.stop()
 
-    seconds = staticmethod(runtimeSeconds)
-
     def _onTimer(self):
         self._scheduledAt = None
         self.runUntilCurrent()
@@ -283,15 +286,15 @@ class AsyncioSelectorReactor(PosixReactorBase):
         PosixReactorBase._moveCallLaterSooner(self, tple)
         self._reschedule()
 
-    def callLater(self, seconds, f, *args, **kwargs):
-        dc = PosixReactorBase.callLater(self, seconds, f, *args, **kwargs)
+    def callLater(self, delay, callable, *args, **kwargs):
+        dc = PosixReactorBase.callLater(self, delay, callable, *args, **kwargs)
         abs_time = self._asyncioEventloop.time() + self.timeout()
         if self._scheduledAt is None or abs_time < self._scheduledAt:
             self._reschedule()
         return dc
 
-    def callFromThread(self, f, *args, **kwargs):
-        g = lambda: self.callLater(0, f, *args, **kwargs)
+    def callFromThread(self, callable, *args, **kwargs):
+        g = lambda: self.callLater(0, callable, *args, **kwargs)
         self._asyncioEventloop.call_soon_threadsafe(g)
 
 

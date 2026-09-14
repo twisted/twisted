@@ -20,9 +20,9 @@ keys move the cursor.
 
 from twisted.application import internet, service
 from twisted.conch.insults import insults
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol
 

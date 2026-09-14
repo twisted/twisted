@@ -4,13 +4,12 @@
 
 import os
 import sys
-
 from textwrap import dedent
 
-from twisted.trial import unittest
 from twisted.persisted import sob
-from twisted.python import components
 from twisted.persisted.styles import Ephemeral
+from twisted.python import components
+from twisted.trial import unittest
 
 
 class Dummy(components.Componentized):

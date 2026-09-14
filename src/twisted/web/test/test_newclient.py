@@ -10,29 +10,38 @@ from typing import Optional
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python.failure import Failure
-from twisted.internet.interfaces import IConsumer, IPushProducer
+from twisted.internet.defer import CancelledError, Deferred, fail, succeed
 from twisted.internet.error import ConnectionDone, ConnectionLost
-from twisted.internet.defer import Deferred, succeed, fail, CancelledError
+from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.internet.protocol import Protocol
-from twisted.protocols.basic import LineReceiver
-from twisted.trial.unittest import TestCase
-from twisted.test.proto_helpers import (
+from twisted.internet.testing import (
     AccumulatingProtocol,
     EventLoggingObserver,
     StringTransport,
     StringTransportWithDisconnection,
 )
-from twisted.web._newclient import UNKNOWN_LENGTH, STATUS, HEADER, BODY, DONE
-from twisted.web._newclient import HTTPParser, HTTPClientParser
-from twisted.web._newclient import BadResponseVersion, ParseError
-from twisted.web._newclient import ChunkedEncoder
-from twisted.web._newclient import WrongBodyLength, RequestNotSent
-from twisted.web._newclient import ConnectionAborted
-from twisted.web._newclient import BadHeaders, ExcessWrite
+from twisted.logger import globalLogPublisher
+from twisted.protocols.basic import LineReceiver
+from twisted.python.failure import Failure
+from twisted.trial.unittest import TestCase
 from twisted.web._newclient import (
-    TransportProxyProducer,
+    BODY,
+    DONE,
+    HEADER,
+    STATUS,
+    UNKNOWN_LENGTH,
+    BadHeaders,
+    BadResponseVersion,
+    ChunkedEncoder,
+    ConnectionAborted,
+    ExcessWrite,
+    HTTPClientParser,
+    HTTPParser,
     LengthEnforcingConsumer,
+    ParseError,
+    RequestNotSent,
+    TransportProxyProducer,
+    WrongBodyLength,
     makeStatefulDispatcher,
 )
 from twisted.web.client import (
@@ -46,14 +55,13 @@ from twisted.web.client import (
     ResponseFailed,
     ResponseNeverReceived,
 )
-from twisted.web.http_headers import Headers
 from twisted.web.http import _DataLoss
+from twisted.web.http_headers import Headers
 from twisted.web.iweb import IBodyProducer, IResponse
 from twisted.web.test.requesthelper import (
     bytesLinearWhitespaceComponents,
     sanitizedBytes,
 )
-from twisted.logger import globalLogPublisher
 
 
 class ArbitraryException(Exception):
@@ -630,9 +638,9 @@ class HTTPClientParserTests(TestCase):
         self.assertEqual(finished, [b""])
         self.assertEqual(protocol.response.length, 0)
 
-    def test_multipleContentLengthHeaders(self):
+    def test_multipleDistinctContentLengthHeaders(self):
         """
-        If a response includes multiple I{Content-Length} headers,
+        If a response includes multiple, distinct I{Content-Length} headers,
         L{HTTPClientParser.dataReceived} raises L{ValueError} to indicate that
         the response is invalid and the transport is now unusable.
         """
@@ -646,6 +654,85 @@ class HTTPClientParserTests(TestCase):
             b"Content-Length: 1\r\n"
             b"Content-Length: 2\r\n"
             b"\r\n",
+        )
+
+    def test_multipleEqualContentLengthHeaders(self):
+        """
+        If a response includes multiple, yet equal, I{Content-Length} headers,
+        L{HTTPClientParser.dataReceived} successfully handles and passes single
+        length for body processing
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Length: 1\r\n"
+            b"Content-Length: 1\r\n"
+            b"\r\n"
+        )
+        self.assertEqual(protocol.response.length, 1)
+        self.assertEqual(protocol.state, BODY)
+
+    def test_multipleDistinctContentLengthHeaderFieldValues(self):
+        """
+        If a response includes multiple, distinct I{Content-Length} header
+        field-values, L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 2\r\n" b"\r\n",
+        )
+
+    def test_multipleEqualContentLengthHeaderFieldValues(self):
+        """
+        If a response includes multiple, equal I{Content-Length} header
+        field-values, L{HTTPClientParser.dataReceived} successfully handles and
+        passes single content-length header for body processing. Field-values
+        are considered equal by parsed decimal value.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        protocol.dataReceived(
+            b"HTTP/1.1 200 OK\r\n" b"Content-Length: 1, 001\r\n" b"\r\n"
+        )
+        self.assertEqual(protocol.response.length, 1)
+        self.assertEqual(protocol.state, BODY)
+
+    def test_contentLengthTooPositive(self):
+        """
+        If the I{Content-Length} header contains anything other than digits
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: +1\r\n\r\n",
+        )
+
+    def test_contentLengthNegative(self):
+        """
+        If the I{Content-Length} header has a negative value
+        L{HTTPClientParser.dataReceived} raises L{ValueError} to
+        indicate that the response is invalid and the transport is now unusable.
+        """
+        protocol = HTTPClientParser(Request(b"GET", b"/", _boringHeaders, None), None)
+
+        protocol.makeConnection(StringTransport())
+        self.assertRaises(
+            ValueError,
+            protocol.dataReceived,
+            b"HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\n",
         )
 
     def test_extraBytesPassedBack(self):
@@ -811,7 +898,7 @@ class HTTPClientParserTests(TestCase):
         response._bodyDataFinished = fakeBodyDataFinished
 
         protocol.connectionLost(None)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, ArbitraryException)
@@ -949,10 +1036,10 @@ class HTTPClientParserTests(TestCase):
         protocol.makeConnection(StringTransport())
         protocol.dataReceived(sample103Response)
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_format"], "Ignoring unexpected {code} response")
-        self.assertEquals(event["code"], 103)
+        self.assertEqual(event["log_format"], "Ignoring unexpected {code} response")
+        self.assertEqual(event["code"], 103)
 
 
 class SlowRequest:
@@ -1146,7 +1233,7 @@ class HTTP11ClientProtocolTests(TestCase):
         logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
 
         def check(ignore):
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             event = logObserver[0]
             self.assertIn("log_failure", event)
             self.assertEqual(
@@ -1776,7 +1863,7 @@ class HTTP11ClientProtocolTests(TestCase):
         response.deliverBody(bodyProtocol)
         bodyProtocol.closedReason.trap(ResponseDone)
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, ZeroDivisionError)
@@ -1955,11 +2042,11 @@ class RequestTests(TestCase):
 
     def test_sanitizeLinearWhitespaceInRequestHeaders(self):
         """
-        Linear whitespace in request headers is replaced with a single
-        space.
+        Linear whitespace in request header values is replaced with a
+        single space.
         """
         for component in bytesLinearWhitespaceComponents:
-            headers = Headers({component: [component], b"host": [b"example.invalid"]})
+            headers = Headers({b"x-foo": [component], b"host": [b"example.invalid"]})
             transport = StringTransport()
             Request(b"GET", b"/foo", headers, None).writeTo(transport)
             lines = transport.value().split(b"\r\n")
@@ -1968,8 +2055,7 @@ class RequestTests(TestCase):
             del lines[0], lines[-2:]
             lines.remove(b"Connection: close")
             lines.remove(b"Host: example.invalid")
-            sanitizedHeaderLine = b": ".join([sanitizedBytes, sanitizedBytes])
-            self.assertEqual(lines, [sanitizedHeaderLine])
+            self.assertEqual(lines, [b"X-Foo: " + sanitizedBytes])
 
     def test_sendChunkedRequestBody(self):
         """
@@ -2396,7 +2482,7 @@ class RequestTests(TestCase):
         request.writeTo(self.transport)
         request.stopWriting()
         self.assertEqual(len(self.flushLoggedErrors(ArbitraryException)), 1)
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
         self.assertIn("log_failure", event)
         f = event["log_failure"]

@@ -10,8 +10,8 @@ Authoritative resolvers.
 import os
 import time
 
-from twisted.names import dns, error, common
 from twisted.internet import defer
+from twisted.names import common, dns, error
 from twisted.python import failure
 from twisted.python.compat import execfile, nativeString
 from twisted.python.filepath import FilePath
@@ -237,7 +237,7 @@ class FileAuthority(common.ResolverBase):
                     self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
                 )
             ]
-            for (k, r) in self.records.items():
+            for k, r in self.records.items():
                 for rec in r:
                     if rec.ttl is not None:
                         ttl = rec.ttl
@@ -250,15 +250,6 @@ class FileAuthority(common.ResolverBase):
             results.append(results[0])
             return defer.succeed((results, (), ()))
         return defer.fail(failure.Failure(dns.DomainError(name)))
-
-    def _cbAllRecords(self, results):
-        ans, auth, add = [], [], []
-        for res in results:
-            if res[0]:
-                ans.extend(res[1][0])
-                auth.extend(res[1][1])
-                add.extend(res[1][2])
-        return ans, auth, add
 
 
 class PySourceAuthority(FileAuthority):
@@ -307,12 +298,11 @@ class BindAuthority(FileAuthority):
         Load records from C{filename}.
 
         @param filename: file to read from
-        @type filename: L{bytes}
         """
         fp = FilePath(filename)
         # Not the best way to set an origin. It can be set using $ORIGIN
         # though.
-        self.origin = nativeString(fp.basename() + b".")
+        self.origin = fp.asTextMode().basename() + "."
 
         lines = fp.getContent().splitlines(True)
         lines = self.stripComments(lines)
@@ -434,7 +424,7 @@ class BindAuthority(FileAuthority):
         @param rdata:
         @type rdata: bytes
         """
-        record = getattr(dns, "Record_{}".format(nativeString(type)), None)
+        record = getattr(dns, f"Record_{nativeString(type)}", None)
         if record:
             r = record(*rdata)
             r.ttl = ttl
@@ -444,7 +434,7 @@ class BindAuthority(FileAuthority):
                 self.soa = (domain, r)
         else:
             raise NotImplementedError(
-                "Record type {!r} not supported".format(nativeString(type))
+                f"Record type {nativeString(type)!r} not supported"
             )
 
     def parseRecordLine(self, origin, ttl, line):

@@ -1,10 +1,11 @@
 # Do everything properly
+import html
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.web import resource, server, static, xmlrpc
-import cgi
+from twisted.words.protocols import irc
 
 
 def catchError(err):
@@ -69,7 +70,7 @@ class UserStatus(resource.Resource):
 
     def render_GET(self, request):
         d = self.service.getUser(self.user)
-        d.addCallback(cgi.escape)
+        d.addCallback(html.escape)
         d.addCallback(lambda m: "<h1>%s</h1>" % self.user + "<p>%s</p>" % m)
         d.addCallback(request.write)
         d.addCallback(lambda _: request.finish())

@@ -30,9 +30,8 @@ import getopt
 import inspect
 import itertools
 from types import MethodType
-from typing import Dict, List, Set
 
-from twisted.python import reflect, util, usage
+from twisted.python import reflect, usage, util
 from twisted.python.compat import ioType
 
 
@@ -111,7 +110,7 @@ def shellComplete(config, cmdName, words, shellCompFile):
 
         if args:
             # yes, we have a subcommand. Try to find it.
-            for (cmd, short, parser, doc) in config.subCommands:
+            for cmd, short, parser, doc in config.subCommands:
                 if args[0] == cmd or args[0] == short:
                     subOptions = parser()
                     subOptions.parent = config
@@ -185,7 +184,7 @@ class ZshBuilder:
             gen.extraActions.insert(0, SubcommandAction())
             gen.write()
             self.file.write(b"local _zsh_subcmds_array\n_zsh_subcmds_array=(\n")
-            for (cmd, short, parser, desc) in self.options.subCommands:
+            for cmd, short, parser, desc in self.options.subCommands:
                 self.file.write(
                     b'"' + cmd.encode("utf-8") + b":" + desc.encode("utf-8") + b'"\n'
                 )
@@ -211,7 +210,7 @@ class ZshSubcommandBuilder(ZshBuilder):
         self.subOptions = subOptions
         ZshBuilder.__init__(self, *args)
 
-    def write(self):
+    def write(self, genSubs=True):
         """
         Generate the completion function and write it to the output file
         @return: L{None}
@@ -305,8 +304,8 @@ class ZshArgumentsGenerator:
 
         aCL = reflect.accumulateClassList
 
-        optFlags: List[List[object]] = []
-        optParams: List[List[object]] = []
+        optFlags: list[list[object]] = []
+        optParams: list[list[object]] = []
 
         aCL(options.__class__, "optFlags", optFlags)
         aCL(options.__class__, "optParameters", optParams)
@@ -468,7 +467,7 @@ class ZshArgumentsGenerator:
         strings.sort()  # need deterministic order for reliable unit-tests
         return "(%s)" % " ".join(strings)
 
-    def makeExcludesDict(self) -> Dict[str, Set[str]]:
+    def makeExcludesDict(self) -> dict[str, set[str]]:
         """
         @return: A C{dict} that maps each option name appearing in
             self.mutuallyExclusive to a set of those option names that is it
@@ -481,7 +480,7 @@ class ZshArgumentsGenerator:
             if optList[1] != None:
                 longToShort[optList[0]] = optList[1]
 
-        excludes: Dict[str, Set[str]] = {}
+        excludes: dict[str, set[str]] = {}
         for lst in self.mutuallyExclusive:
             for i, longname in enumerate(lst):
                 tmp = set(lst[:i] + lst[i + 1 :])
@@ -603,7 +602,9 @@ class ZshArgumentsGenerator:
         obj = getattr(self.options, "opt_%s" % longMangled, None)
         if obj is not None:
             descr = descrFromDoc(obj)
-            if descr is not None:
+            # On Python3.13 we have an empty string instead of None,
+            # for missing description.
+            if descr:
                 return descr
 
         return longname  # we really ought to have a good description to use
@@ -622,7 +623,7 @@ class ZshArgumentsGenerator:
         These will be defined by 'opt_foo' methods of the Options subclass
         @return: L{None}
         """
-        methodsDict: Dict[str, MethodType] = {}
+        methodsDict: dict[str, MethodType] = {}
         reflect.accumulateMethods(self.options, methodsDict, "opt_")
         methodToShort = {}
         for name in methodsDict.copy():

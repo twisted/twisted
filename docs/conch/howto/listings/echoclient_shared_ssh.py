@@ -4,18 +4,19 @@
 
 if __name__ == "__main__":
     import sys
+
     import echoclient_shared_ssh
+
     from twisted.internet.task import react
 
     react(echoclient_shared_ssh.main, sys.argv[1:])
 
-from twisted.internet.task import cooperate
-from twisted.internet.defer import Deferred, gatherResults
-from twisted.internet.protocol import Factory, Protocol
+from echoclient_ssh import ConnectionParameters
 
 from twisted.conch.endpoints import SSHCommandClientEndpoint
-
-from echoclient_ssh import ConnectionParameters
+from twisted.internet.defer import Deferred, gatherResults
+from twisted.internet.protocol import Factory, Protocol
+from twisted.internet.task import cooperate
 
 
 class PrinterProtocol(Protocol):

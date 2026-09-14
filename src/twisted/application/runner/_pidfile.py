@@ -5,11 +5,12 @@
 """
 PID file.
 """
+from __future__ import annotations
 
 import errno
 from os import getpid, kill, name as SYSTEM_NAME
 from types import TracebackType
-from typing import Optional, Type
+from typing import Any
 
 from zope.interface import Interface, implementer
 
@@ -61,7 +62,7 @@ class IPIDFile(Interface):
             for which there is no corresponding running process.
         """
 
-    def __enter__() -> "IPIDFile":
+    def __enter__() -> IPIDFile:
         """
         Enter a context using this PIDFile.
 
@@ -72,10 +73,10 @@ class IPIDFile(Interface):
         """
 
     def __exit__(
-        excType: Optional[Type[BaseException]],
-        excValue: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
+        excType: type[BaseException] | None,
+        excValue: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         """
         Exit a context using this PIDFile.
 
@@ -104,9 +105,9 @@ class PIDFile:
 
         @return: Formatted PID file contents.
         """
-        return "{}\n".format(int(pid)).encode("utf-8")
+        return f"{int(pid)}\n".encode()
 
-    def __init__(self, filePath: FilePath) -> None:
+    def __init__(self, filePath: FilePath[Any]) -> None:
         """
         @param filePath: The path to the PID file on disk.
         """
@@ -186,7 +187,7 @@ class PIDFile:
         else:
             return True
 
-    def __enter__(self) -> "PIDFile":
+    def __enter__(self) -> PIDFile:
         try:
             if self.isRunning():
                 raise AlreadyRunningError()
@@ -197,9 +198,9 @@ class PIDFile:
 
     def __exit__(
         self,
-        excType: Optional[Type[BaseException]],
-        excValue: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        excType: type[BaseException] | None,
+        excValue: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         self.remove()
         return None
@@ -241,19 +242,19 @@ class NonePIDFile:
     def isRunning(self) -> bool:
         return False
 
-    def __enter__(self) -> "NonePIDFile":
+    def __enter__(self) -> NonePIDFile:
         return self
 
     def __exit__(
         self,
-        excType: Optional[Type[BaseException]],
-        excValue: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        excType: type[BaseException] | None,
+        excValue: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         return None
 
 
-nonePIDFile = NonePIDFile()
+nonePIDFile: IPIDFile = NonePIDFile()
 
 
 class AlreadyRunningError(Exception):

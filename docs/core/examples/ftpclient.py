@@ -5,14 +5,15 @@
 """
 An example of using the FTP client
 """
-# Twisted imports
-from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
-from twisted.internet.protocol import Protocol, ClientCreator
-from twisted.python import usage
-from twisted.internet import reactor
-
 # Standard library imports
 from io import BytesIO
+
+from twisted.internet import reactor
+from twisted.internet.protocol import ClientCreator, Protocol
+
+# Twisted imports
+from twisted.protocols.ftp import FTPClient, FTPFileListProtocol
+from twisted.python import usage
 
 
 class BufferingProtocol(Protocol):
@@ -49,7 +50,7 @@ def showFiles(result, fileListProtocol):
         print(
             "    {}: {} bytes, {}".format(file["filename"], file["size"], file["date"])
         )
-    print("Total: {} files".format(len(fileListProtocol.files)))
+    print(f"Total: {len(fileListProtocol.files)} files")
 
 
 def showBuffer(result, bufferProtocol):

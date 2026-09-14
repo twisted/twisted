@@ -395,28 +395,17 @@ server does.
 Read Status from the Web
 ------------------------
 
-
-
-The web. That invention which has infiltrated homes around the
-world finally gets through to our invention. In this case we use the
-built-in Twisted web client
-via ``twisted.web.client.getPage`` , a non-blocking version of
-Python's :func:`urllib2.urlopen(URL).read <urllib2.urlopen>` .
-Like ``getProcessOutput`` it returns a Deferred which will be
-called back with a string, and can thus be used as a drop-in
-replacement.
-
-
-
+The web. That invention which has infiltrated homes around the world finally
+gets through to our invention. In this case we use the built-in Twisted web
+client via ``twisted.web.client.getPage`` , a non-blocking version of Python's
+:func:`urllib.urlopen(URL).read <urllib.request.urlopen>` .  Like
+``getProcessOutput`` it returns a Deferred which will be called back with a
+string, and can thus be used as a drop-in replacement.
 
 Thus, we have examples of three different database back-ends, none of which
 change the protocol class. In fact, we will not have to change the protocol
 again until the end of this tutorial: we have achieved, here, one truly usable
 class.
-
-
-
-
 
 :download:`finger10.py <listings/finger/finger10.py>`
 

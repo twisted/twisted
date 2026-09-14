@@ -13,21 +13,17 @@ Don't use this module directly.  Use twisted.mail.pop3 instead.
 
 import re
 from hashlib import md5
-from typing import List
 
-from twisted.python import log
-from twisted.internet import defer
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import error
-from twisted.internet import interfaces
+from twisted.internet import defer, error, interfaces
 from twisted.mail._except import (
     InsecureAuthenticationDisallowed,
+    LineTooLong,
+    ServerErrorResponse,
     TLSError,
     TLSNotSupportedError,
-    ServerErrorResponse,
-    LineTooLong,
 )
+from twisted.protocols import basic, policies
+from twisted.python import log
 
 OK = b"+OK"
 ERR = b"-ERR"
@@ -735,7 +731,7 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
             return None
         else:
             context = ssl.ClientContextFactory()
-            context.method = ssl.SSL.TLSv1_METHOD
+            context.method = ssl.SSL.TLSv1_2_METHOD
             return context
 
     def login(self, username, password):
@@ -1235,4 +1231,4 @@ class POP3Client(basic.LineOnlyReceiver, policies.TimeoutMixin):
         return self.sendShort(b"QUIT", None)
 
 
-__all__: List[str] = []
+__all__: list[str] = []

@@ -27,9 +27,17 @@ __all__ = [
 
 # all of them require pyserial at the moment, so check that first
 import serial
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD
-from serial import STOPBITS_ONE, STOPBITS_TWO
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import (
+    EIGHTBITS,
+    FIVEBITS,
+    PARITY_EVEN,
+    PARITY_NONE,
+    PARITY_ODD,
+    SEVENBITS,
+    SIXBITS,
+    STOPBITS_ONE,
+    STOPBITS_TWO,
+)
 
 from twisted.python.runtime import platform
 
@@ -89,4 +97,4 @@ class BaseSerialPort:
 if platform.isWindows():
     from twisted.internet._win32serialport import SerialPort
 else:
-    from twisted.internet._posixserialport import SerialPort  # type: ignore[misc]
+    from twisted.internet._posixserialport import SerialPort  # type: ignore[assignment]

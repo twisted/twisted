@@ -1,6 +1,7 @@
 import sys
-from twisted.web.template import XMLString, Element, renderer, flatten
+
 from twisted.internet.defer import Deferred
+from twisted.web.template import Element, XMLString, flatten, renderer
 
 sample = XMLString(
     """

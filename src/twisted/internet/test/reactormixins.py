@@ -12,25 +12,30 @@ available.  Additionally, the tests will automatically be applied to all
 available reactor implementations.
 """
 
+from __future__ import annotations
 
 __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 
 import os
 import signal
 import time
-from typing import Dict, Sequence, Optional, Type, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Callable, cast
 
 from zope.interface import Interface
 
-from twisted.trial.unittest import SynchronousTestCase, SkipTest
-from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
-from twisted.python.runtime import platform
-from twisted.python.reflect import namedAny
-from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
-
 from twisted.python import log
+from twisted.python.deprecate import _fullyQualifiedName as fullyQualifiedName
 from twisted.python.failure import Failure
+from twisted.python.reflect import namedAny
+from twisted.python.runtime import platform
+from twisted.trial.unittest import SkipTest, SynchronousTestCase
+from twisted.trial.util import DEFAULT_TIMEOUT_DURATION, acquireAttribute
 
+if TYPE_CHECKING:
+    # Only bring in this name to support the type annotation below.  We don't
+    # really want to import a reactor module this early at runtime.
+    from twisted.internet import asyncioreactor
 
 # Access private APIs.
 try:
@@ -138,9 +143,7 @@ class ReactorBuilder:
         # since no one really wants to use it on other platforms.
         _reactors.extend(
             [
-                "twisted.internet.gtk2reactor.PortableGtkReactor",
                 "twisted.internet.gireactor.PortableGIReactor",
-                "twisted.internet.gtk3reactor.PortableGtk3Reactor",
                 "twisted.internet.win32eventreactor.Win32Reactor",
                 "twisted.internet.iocpreactor.reactor.IOCPReactor",
             ]
@@ -148,14 +151,12 @@ class ReactorBuilder:
     else:
         _reactors.extend(
             [
-                "twisted.internet.glib2reactor.Glib2Reactor",
-                "twisted.internet.gtk2reactor.Gtk2Reactor",
                 "twisted.internet.gireactor.GIReactor",
-                "twisted.internet.gtk3reactor.Gtk3Reactor",
             ]
         )
 
-        _reactors.append("twisted.internet.asyncioreactor.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet.test.reactormixins.AsyncioSelectorReactor")
+        _reactors.append("twisted.internet._threadedselect.ThreadedSelectReactor")
 
         if platform.isMacOSX():
             _reactors.append("twisted.internet.cfreactor.CFReactor")
@@ -176,10 +177,11 @@ class ReactorBuilder:
                     ]
                 )
 
-    reactorFactory = None
+    reactorFactory: Callable[[], object] | None = None
+
     originalHandler = None
-    requiredInterfaces: Optional[Sequence[Type[Interface]]] = None
-    skippedReactors: Dict[str, str] = {}
+    requiredInterfaces: Sequence[type[Interface]] | None = None
+    skippedReactors: dict[str, str] = {}
 
     def setUp(self):
         """
@@ -218,7 +220,7 @@ class ReactorBuilder:
                         % (process.reapProcessHandlers,)
                     )
 
-    def unbuildReactor(self, reactor):
+    def _unbuildReactor(self, reactor):
         """
         Clean up any resources which may have been allocated for the given
         reactor by its creation or by a test which used it.
@@ -249,13 +251,19 @@ class ReactorBuilder:
         for c in calls:
             c.cancel()
 
+        # Restore the original reactor state:
+        from twisted.internet import reactor as globalReactor
+
+        globalReactor.__dict__ = reactor._originalReactorDict
+        globalReactor.__class__ = reactor._originalReactorClass
+
     def buildReactor(self):
         """
         Create and return a reactor using C{self.reactorFactory}.
         """
         try:
-            from twisted.internet.cfreactor import CFReactor
             from twisted.internet import reactor as globalReactor
+            from twisted.internet.cfreactor import CFReactor
         except ImportError:
             pass
         else:
@@ -269,7 +277,14 @@ class ReactorBuilder:
                     "under itself"
                 )
         try:
+            assert self.reactorFactory is not None
             reactor = self.reactorFactory()
+            reactor._originalReactorDict = globalReactor.__dict__
+            reactor._originalReactorClass = globalReactor.__class__
+            # Make twisted.internet.reactor point to the new reactor,
+            # temporarily; this is undone in unbuildReactor().
+            globalReactor.__dict__ = reactor.__dict__
+            globalReactor.__class__ = reactor.__class__
         except BaseException:
             # Unfortunately, not all errors which result in a reactor
             # being unusable are detectable without actually
@@ -288,7 +303,7 @@ class ReactorBuilder:
                     if not required.providedBy(reactor)
                 ]
                 if missing:
-                    self.unbuildReactor(reactor)
+                    self._unbuildReactor(reactor)
                     raise SkipTest(
                         "%s does not provide %s"
                         % (
@@ -296,7 +311,7 @@ class ReactorBuilder:
                             ",".join([fullyQualifiedName(x) for x in missing]),
                         )
                     )
-        self.addCleanup(self.unbuildReactor, reactor)
+        self.addCleanup(self._unbuildReactor, reactor)
         return reactor
 
     def getTimeout(self):
@@ -342,15 +357,13 @@ class ReactorBuilder:
 
     @classmethod
     def makeTestCaseClasses(
-        cls: Type["ReactorBuilder"],
-    ) -> Dict[str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]]:
+        cls: type[ReactorBuilder],
+    ) -> dict[str, type[ReactorBuilder] | type[SynchronousTestCase]]:
         """
         Create a L{SynchronousTestCase} subclass which mixes in C{cls} for each
         known reactor and return a dict mapping their names to them.
         """
-        classes: Dict[
-            str, Union[Type["ReactorBuilder"], Type[SynchronousTestCase]]
-        ] = {}
+        classes: dict[str, type[ReactorBuilder] | type[SynchronousTestCase]] = {}
         for reactor in cls._reactors:
             shortReactorName = reactor.split(".")[-1]
             name = (cls.__name__ + "." + shortReactorName + "Tests").replace(".", "_")
@@ -368,3 +381,38 @@ class ReactorBuilder:
             testcase.__qualname__ = ".".join(cls.__qualname__.split()[0:-1] + [name])
             classes[testcase.__name__] = testcase
         return classes
+
+
+def asyncioSelectorReactor(self: object) -> asyncioreactor.AsyncioSelectorReactor:
+    """
+    Make a new asyncio reactor associated with a new event loop.
+
+    The test suite prefers this constructor because having a new event loop
+    for each reactor provides better test isolation.  The real constructor
+    prefers to re-use (or create) a global loop because of how this interacts
+    with other asyncio-based libraries and applications (though maybe it
+    shouldn't).
+
+    @param self: The L{ReactorBuilder} subclass this is being called on.  We
+        don't use this parameter but we get called with it anyway.
+    """
+    from asyncio import get_event_loop, new_event_loop, set_event_loop
+
+    from twisted.internet import asyncioreactor
+
+    asTestCase = cast(SynchronousTestCase, self)
+    originalLoop = get_event_loop()
+    loop = new_event_loop()
+    set_event_loop(loop)
+
+    @asTestCase.addCleanup
+    def cleanUp():
+        loop.close()
+        set_event_loop(originalLoop)
+
+    return asyncioreactor.AsyncioSelectorReactor(loop)
+
+
+# Give it an alias that makes the names of the generated test classes fit the
+# pattern.
+AsyncioSelectorReactor = asyncioSelectorReactor

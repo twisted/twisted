@@ -3,18 +3,18 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import stringprep
 from encodings import idna
 from itertools import chain
-import stringprep
 
 # We require Unicode version 3.2.
 from unicodedata import ucd_3_2_0 as unicodedata
 
-from twisted.python.deprecate import deprecatedModuleAttribute
-from incremental import Version
-
 from zope.interface import Interface, implementer
 
+from incremental import Version
+
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 crippled = False
 deprecatedModuleAttribute(

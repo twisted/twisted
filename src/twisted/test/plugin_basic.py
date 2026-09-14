@@ -21,7 +21,7 @@ class TestPlugin:
     """
 
     @staticmethod
-    def test1():
+    def test1() -> None:
         pass
 
 
@@ -32,7 +32,7 @@ class AnotherTestPlugin:
     """
 
     @staticmethod
-    def test():
+    def test() -> None:
         pass
 
 
@@ -43,5 +43,5 @@ class ThirdTestPlugin:
     """
 
     @staticmethod
-    def test():
+    def test() -> None:
         pass

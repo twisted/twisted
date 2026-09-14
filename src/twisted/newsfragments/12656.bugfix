@@ -1,0 +1,1 @@
+`twistd` now exits with a non-zero status when given an unknown subcommand.

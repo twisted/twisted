@@ -1,1 +1,0 @@
-twisted.internet.defer.Deferred.fromCoroutine has been added. This is similar to the existing ensureDeferred function, but is named more consistently inside Twisted and does not pass through Deferreds.

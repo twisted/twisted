@@ -712,22 +712,12 @@ what other kinds of endpoints exist.
 Handling HTTP cookies
 ~~~~~~~~~~~~~~~~~~~~~
 
-
-    
-
 An existing agent instance can be wrapped with
-:py:class:`twisted.web.client.CookieAgent` to automatically
-store, send and track HTTP cookies. A ``CookieJar`` 
-instance, from the Python standard library module
-`cookielib <http://docs.python.org/library/cookielib.html>`_ , is
-used to store the cookie information. An example of using
-``CookieAgent`` to perform a request and display the collected
-cookies might look like this:
-
-
-    
-
-
+:py:class:`twisted.web.client.CookieAgent` to automatically store, send and
+track HTTP cookies. A ``CookieJar`` instance, from the Python standard library
+module `http.cookiejar <http://docs.python.org/library/http.cookiejar.html>`_ ,
+is used to store the cookie information. An example of using ``CookieAgent`` to
+perform a request and display the collected cookies might look like this:
 
 :download:`cookies.py <listings/client/cookies.py>`
 

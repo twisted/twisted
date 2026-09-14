@@ -5,16 +5,12 @@
 
 __all__ = ["SecondaryAuthority", "SecondaryAuthorityService"]
 
-from twisted.internet import task, defer
-from twisted.names import dns
-from twisted.names import common
-from twisted.names import client
-from twisted.names import resolve
-from twisted.names.authority import FileAuthority
-
-from twisted.python import log, failure
-from twisted.python.compat import nativeString
 from twisted.application import service
+from twisted.internet import defer, task
+from twisted.names import client, common, dns, resolve
+from twisted.names.authority import FileAuthority
+from twisted.python import failure, log
+from twisted.python.compat import nativeString
 
 
 class SecondaryAuthorityService(service.Service):

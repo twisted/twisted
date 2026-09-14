@@ -5,17 +5,20 @@
 """
 Implementation module for the `ckeygen` command.
 """
-
+from __future__ import annotations
 
 import getpass
 import os
+import platform
 import socket
 import sys
+from collections.abc import Callable
 from functools import wraps
-from imp import reload
+from importlib import reload
+from typing import Any
+
 from twisted.conch.ssh import keys
 from twisted.python import failure, filepath, log, usage
-
 
 if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
     try:
@@ -26,13 +29,13 @@ if getpass.getpass == getpass.unix_getpass:  # type: ignore[attr-defined]
         sys.modules["termios"] = None  # type: ignore[assignment]
         reload(getpass)
 
-supportedKeyTypes = dict()
+supportedKeyTypes: dict[str, Callable[[], None]] = {}
 
 
-def _keyGenerator(keyType):
-    def assignkeygenerator(keygenerator):
+def _keyGenerator(keyType: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    def assignkeygenerator(keygenerator: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(keygenerator)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             return keygenerator(*args, **kwargs)
 
         supportedKeyTypes[keyType] = wrapper
@@ -118,7 +121,7 @@ def enumrepresentation(options):
         return options
     else:
         raise keys.BadFingerPrintFormat(
-            "Unsupported fingerprint format: {}".format(options["format"])
+            f"Unsupported fingerprint format: {options['format']}"
         )
 
 
@@ -131,15 +134,12 @@ def handleError():
 
 @_keyGenerator("rsa")
 def generateRSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import rsa
 
     if not options["bits"]:
-        options["bits"] = 1024
+        options["bits"] = 2048
     keyPrimitive = rsa.generate_private_key(
-        key_size=int(options["bits"]),
-        public_exponent=65537,
-        backend=default_backend(),
+        key_size=int(options["bits"]), public_exponent=65537
     )
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
@@ -147,22 +147,17 @@ def generateRSAkey(options):
 
 @_keyGenerator("dsa")
 def generateDSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import dsa
 
     if not options["bits"]:
         options["bits"] = 1024
-    keyPrimitive = dsa.generate_private_key(
-        key_size=int(options["bits"]),
-        backend=default_backend(),
-    )
+    keyPrimitive = dsa.generate_private_key(key_size=int(options["bits"]))
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
 
 @_keyGenerator("ecdsa")
 def generateECDSAkey(options):
-    from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
 
     if not options["bits"]:
@@ -170,18 +165,14 @@ def generateECDSAkey(options):
     # OpenSSH supports only mandatory sections of RFC5656.
     # See https://www.openssh.com/txt/release-5.7
     curve = b"ecdsa-sha2-nistp" + str(options["bits"]).encode("ascii")
-    keyPrimitive = ec.generate_private_key(
-        curve=keys._curveTable[curve], backend=default_backend()
-    )
+    keyPrimitive = ec.generate_private_key(curve=keys._curveTable[curve])
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
 
 @_keyGenerator("ed25519")
 def generateEd25519key(options):
-    from cryptography.hazmat.primitives.asymmetric import ed25519
-
-    keyPrimitive = ed25519.Ed25519PrivateKey.generate()
+    keyPrimitive = keys.Ed25519PrivateKey.generate()
     key = keys.Key(keyPrimitive)
     _saveKey(key, options)
 
@@ -204,45 +195,71 @@ def _defaultPrivateKeySubtype(keyType):
         return "PEM"
 
 
-def printFingerprint(options):
-    if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename)
-    if os.path.exists(options["filename"] + ".pub"):
-        options["filename"] += ".pub"
+def _getKeyOrDefault(
+    options: dict[Any, Any],
+    inputCollector: Callable[[str], str] | None = None,
+    keyTypeName: str = "rsa",
+) -> str:
+    """
+    If C{options["filename"]} is None, prompt the user to enter a path
+    or attempt to set it to .ssh/id_rsa
+    @param options: command line options
+    @param inputCollector: dependency injection for testing
+    @param keyTypeName: key type or "rsa"
+    """
+    if inputCollector is None:
+        inputCollector = input
+    filename = options["filename"]
+    if not filename:
+        filename = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
+        if platform.system() == "Windows":
+            filename = os.path.expanduser(Rf"%HOMEPATH %\.ssh\id_{keyTypeName}")
+        filename = (
+            inputCollector("Enter file in which the key is (%s): " % filename)
+            or filename
+        )
+    return str(filename)
+
+
+def printFingerprint(options: dict[Any, Any]) -> None:
+    filename = _getKeyOrDefault(options)
+    if os.path.exists(filename + ".pub"):
+        filename += ".pub"
     options = enumrepresentation(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
         print(
             "%s %s %s"
             % (
                 key.size(),
                 key.fingerprint(options["format"]),
-                os.path.basename(options["filename"]),
+                os.path.basename(filename),
             )
         )
     except keys.BadKeyError:
         sys.exit("bad key")
+    except FileNotFoundError:
+        sys.exit(f"{filename} could not be opened, please specify a file.")
 
 
 def changePassPhrase(options):
-    if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename)
+    filename = _getKeyOrDefault(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
     except keys.EncryptedKeyError:
         # Raised if password not supplied for an encrypted key
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter old passphrase: ")
         try:
-            key = keys.Key.fromFile(options["filename"], passphrase=options["pass"])
+            key = keys.Key.fromFile(filename, passphrase=options["pass"])
         except keys.BadKeyError:
             sys.exit("Could not change passphrase: old passphrase error")
         except keys.EncryptedKeyError as e:
             sys.exit(f"Could not change passphrase: {e}")
     except keys.BadKeyError as e:
         sys.exit(f"Could not change passphrase: {e}")
+    except FileNotFoundError:
+        sys.exit(f"{filename} could not be opened, please specify a file.")
 
     if not options.get("newpass"):
         while 1:
@@ -270,22 +287,22 @@ def changePassPhrase(options):
     except (keys.EncryptedKeyError, keys.BadKeyError) as e:
         sys.exit(f"Could not change passphrase: {e}")
 
-    with open(options["filename"], "wb") as fd:
+    with open(filename, "wb") as fd:
         fd.write(newkeydata)
 
     print("Your identification has been saved with the new passphrase.")
 
 
 def displayPublicKey(options):
-    if not options["filename"]:
-        filename = os.path.expanduser("~/.ssh/id_rsa")
-        options["filename"] = input("Enter file in which the key is (%s): " % filename)
+    filename = _getKeyOrDefault(options)
     try:
-        key = keys.Key.fromFile(options["filename"])
+        key = keys.Key.fromFile(filename)
+    except FileNotFoundError:
+        sys.exit(f"{filename} could not be opened, please specify a file.")
     except keys.EncryptedKeyError:
         if not options.get("pass"):
             options["pass"] = getpass.getpass("Enter passphrase: ")
-        key = keys.Key.fromFile(options["filename"], passphrase=options["pass"])
+        key = keys.Key.fromFile(filename, passphrase=options["pass"])
     displayKey = key.public().toString("openssh").decode("ascii")
     print(displayKey)
 
@@ -299,29 +316,36 @@ def _inputSaveFile(prompt: str) -> str:
     return input(prompt)
 
 
-def _saveKey(key, options):
+def _saveKey(
+    key: keys.Key,
+    options: dict[Any, Any],
+    inputCollector: Callable[[str], str] | None = None,
+) -> None:
     """
     Persist a SSH key on local filesystem.
 
     @param key: Key which is persisted on local filesystem.
-    @type key: C{keys.Key} implementation.
 
     @param options:
-    @type options: L{dict}
+
+    @param inputCollector: Dependency injection for testing.
     """
+    if inputCollector is None:
+        inputCollector = input
     KeyTypeMapping = {"EC": "ecdsa", "Ed25519": "ed25519", "RSA": "rsa", "DSA": "dsa"}
     keyTypeName = KeyTypeMapping[key.type()]
-    if not options["filename"]:
-        defaultPath = os.path.expanduser(f"~/.ssh/id_{keyTypeName}")
+    filename = options["filename"]
+    if not filename:
+        defaultPath = _getKeyOrDefault(options, inputCollector, keyTypeName)
         newPath = _inputSaveFile(
             f"Enter file in which to save the key ({defaultPath}): "
         )
 
-        options["filename"] = newPath.strip() or defaultPath
+        filename = newPath.strip() or defaultPath
 
-    if os.path.exists(options["filename"]):
-        print("{} already exists.".format(options["filename"]))
-        yn = input("Overwrite (y/n)? ")
+    if os.path.exists(filename):
+        print(f"{filename} already exists.")
+        yn = inputCollector("Overwrite (y/n)? ")
         if yn[0].lower() != "y":
             sys.exit()
 
@@ -341,23 +365,24 @@ def _saveKey(key, options):
 
     comment = f"{getpass.getuser()}@{socket.gethostname()}"
 
-    filepath.FilePath(options["filename"]).setContent(
+    fp = filepath.FilePath(filename)
+    fp.setContent(
         key.toString(
             "openssh",
             subtype=options["private-key-subtype"],
             passphrase=options["pass"],
         )
     )
-    os.chmod(options["filename"], 33152)
+    fp.chmod(0o100600)
 
-    filepath.FilePath(options["filename"] + ".pub").setContent(
+    filepath.FilePath(filename + ".pub").setContent(
         key.public().toString("openssh", comment=comment)
     )
     options = enumrepresentation(options)
 
-    print("Your identification has been saved in {}".format(options["filename"]))
-    print("Your public key has been saved in {}.pub".format(options["filename"]))
-    print("The key fingerprint in {} is:".format(options["format"]))
+    print(f"Your identification has been saved in {filename}")
+    print(f"Your public key has been saved in {filename}.pub")
+    print(f"The key fingerprint in {options['format']} is:")
     print(key.fingerprint(options["format"]))
 
 

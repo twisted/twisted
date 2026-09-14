@@ -5,11 +5,11 @@ if __name__ == "__main__":
 
 from sys import stdout
 
-from twisted.python.log import startLogging, err
-from twisted.protocols.amp import Integer, String, Unicode, Command
-from twisted.internet import reactor
-
 from basic_client import connect
+
+from twisted.internet import reactor
+from twisted.protocols.amp import Command, Integer, String, Unicode
+from twisted.python.log import err, startLogging
 
 
 class UsernameUnavailable(Exception):

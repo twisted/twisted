@@ -8,37 +8,35 @@ POSIX implementation of local network interface enumeration.
 
 import socket
 import sys
-
-from socket import AF_INET, AF_INET6, inet_ntop
 from ctypes import (
     CDLL,
     POINTER,
     Structure,
     c_char_p,
-    c_ushort,
     c_int,
-    c_uint32,
-    c_uint8,
-    c_void_p,
     c_ubyte,
-    pointer,
+    c_uint8,
+    c_uint32,
+    c_ushort,
+    c_void_p,
     cast,
+    pointer,
 )
 from ctypes.util import find_library
-from typing import Any, List, Tuple
+from socket import AF_INET, AF_INET6, inet_ntop
+from typing import Any
 
 from twisted.python.compat import nativeString
-
 
 libc = CDLL(find_library("c") or "")
 
 if sys.platform.startswith("freebsd") or sys.platform == "darwin":
-    _sockaddrCommon: List[Tuple[str, Any]] = [
+    _sockaddrCommon: list[tuple[str, Any]] = [
         ("sin_len", c_uint8),
         ("sin_family", c_uint8),
     ]
 else:
-    _sockaddrCommon: List[Tuple[str, Any]] = [
+    _sockaddrCommon: list[tuple[str, Any]] = [
         ("sin_family", c_ushort),
     ]
 
@@ -163,7 +161,7 @@ def posixGetLinkLocalIPv6Addresses():
     IPv6 addresses available on the system, as reported by I{getifaddrs(3)}.
     """
     retList = []
-    for (interface, family, address) in _interfaces():
+    for interface, family, address in _interfaces():
         interface = nativeString(interface)
         address = nativeString(address)
         if family == socket.AF_INET6 and address.startswith("fe80:"):

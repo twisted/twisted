@@ -14,57 +14,29 @@ To do::
   Clarify some API docs (Query, etc)
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
+from __future__ import annotations
 
-from base64 import decodebytes, encodebytes
 import binascii
 import codecs
 import copy
 import email.utils
 import functools
-from itertools import chain
-from io import BytesIO
 import re
 import string
 import tempfile
 import time
-from typing import Any, List, cast
 import uuid
+from base64 import decodebytes, encodebytes
+from io import BytesIO
+from itertools import chain
+from typing import Any, cast
 
 from zope.interface import implementer
 
-from twisted.protocols import basic
-from twisted.protocols import policies
-from twisted.internet import defer
-from twisted.internet import error
-from twisted.internet.defer import maybeDeferred
-from twisted.python import log, text
-from twisted.python.compat import (
-    iterbytes,
-    nativeString,
-    networkString,
-    _matchingString,
-    _get_async_param,
-)
-from twisted.internet import interfaces
-
 from twisted.cred import credentials
 from twisted.cred.error import UnauthorizedLogin, UnhandledCredentials
-
-# Re-exported for compatibility reasons
-from twisted.mail.interfaces import (
-    IClientAuthentication,
-    INamespacePresenter,
-    IAccountIMAP as IAccount,
-    IMessageIMAPPart as IMessagePart,
-    IMessageIMAP as IMessage,
-    IMessageIMAPFile as IMessageFile,
-    ISearchableIMAPMailbox as ISearchableMailbox,
-    IMessageIMAPCopier as IMessageCopier,
-    IMailboxIMAPInfo as IMailboxInfo,
-    IMailboxIMAP as IMailbox,
-    ICloseableMailboxIMAP as ICloseableMailbox,
-    IMailboxIMAPListener as IMailboxListener,
-)
+from twisted.internet import defer, error, interfaces
+from twisted.internet.defer import maybeDeferred
 from twisted.mail._cred import (
     CramMD5ClientAuthenticator,
     LOGINAuthenticator,
@@ -73,22 +45,46 @@ from twisted.mail._cred import (
     PLAINCredentials,
 )
 from twisted.mail._except import (
-    IMAP4Exception,
     IllegalClientResponse,
-    IllegalOperation,
-    MailboxException,
-    IllegalMailboxEncoding,
-    MailboxCollision,
-    NoSuchMailbox,
-    ReadOnlyMailbox,
-    UnhandledResponse,
-    NegativeResponse,
-    NoSupportedAuthentication,
     IllegalIdentifierError,
+    IllegalMailboxEncoding,
+    IllegalOperation,
     IllegalQueryError,
+    IllegalServerResponse,
+    IMAP4Exception,
+    MailboxCollision,
+    MailboxException,
     MismatchedNesting,
     MismatchedQuoting,
-    IllegalServerResponse,
+    NegativeResponse,
+    NoSuchMailbox,
+    NoSupportedAuthentication,
+    ReadOnlyMailbox,
+    UnhandledResponse,
+)
+
+# Re-exported for compatibility reasons
+from twisted.mail.interfaces import (
+    IAccountIMAP as IAccount,
+    IClientAuthentication,
+    ICloseableMailboxIMAP as ICloseableMailbox,
+    IMailboxIMAP as IMailbox,
+    IMailboxIMAPInfo as IMailboxInfo,
+    IMailboxIMAPListener as IMailboxListener,
+    IMessageIMAP as IMessage,
+    IMessageIMAPCopier as IMessageCopier,
+    IMessageIMAPFile as IMessageFile,
+    IMessageIMAPPart as IMessagePart,
+    INamespacePresenter,
+    ISearchableIMAPMailbox as ISearchableMailbox,
+)
+from twisted.protocols import basic, policies
+from twisted.python import log, text
+from twisted.python.compat import (
+    _matchingString,
+    iterbytes,
+    nativeString,
+    networkString,
 )
 
 # locale-independent month names to use instead of strftime's
@@ -189,7 +185,7 @@ class MessageSet:
         that it will not be called out-of-order).
     """
 
-    _empty: List[Any] = []
+    _empty: list[Any] = []
     _infinity = float("inf")
 
     def __init__(self, start=_empty, end=_empty):
@@ -415,7 +411,7 @@ class MessageSet:
         return ",".join(p)
 
     def __repr__(self) -> str:
-        return "<MessageSet {}>".format(str(self))
+        return f"<MessageSet {str(self)}>"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MessageSet):
@@ -782,7 +778,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         return getattr(self, "_".join((self.state, nativeString(cmd.upper()))), None)
 
     def __doCommand(self, tag, handler, args, parseargs, line, uid):
-        for (i, arg) in enumerate(parseargs):
+        for i, arg in enumerate(parseargs):
             if callable(arg):
                 parseargs = parseargs[i + 1 :]
                 maybeDeferred(arg, self, line).addCallback(
@@ -964,7 +960,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         try:
             size = int(line[1:-1])
         except ValueError:
-            raise IllegalClientResponse("Bad literal size: {!r}".format(line[1:-1]))
+            raise IllegalClientResponse(f"Bad literal size: {line[1:-1]!r}")
 
         return self._fileLiteral(size)
 
@@ -1080,8 +1076,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def sendNegativeResponse(self, tag=None, message=b""):
         self._respond(b"NO", tag, message)
 
-    def sendUntaggedResponse(self, message, isAsync=None, **kwargs):
-        isAsync = _get_async_param(isAsync, **kwargs)
+    def sendUntaggedResponse(self, message, isAsync=None):
         if not isAsync or (self.blocked is None):
             self._respond(message, None, None)
         else:
@@ -1395,7 +1390,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     select_DELETE = auth_DELETE
 
     def do_RENAME(self, tag, oldname, newname):
-        oldname, newname = [_parseMbox(n) for n in (oldname, newname)]
+        oldname, newname = (_parseMbox(n) for n in (oldname, newname))
         if oldname.lower() == "inbox" or newname.lower() == "inbox":
             self.sendNegativeResponse(
                 tag, b"You cannot rename the inbox, or rename another mailbox to inbox."
@@ -1460,7 +1455,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         ).addErrback(self._ebListWork, tag)
 
     def _cbListWork(self, mailboxes, tag, sub, cmdName):
-        for (name, box) in mailboxes:
+        for name, box in mailboxes:
             if not sub or self.account.isSubscribed(name):
                 flags = [networkString(flag) for flag in box.getFlags()]
                 delim = box.getHierarchicalDelimiter().encode("imap4-utf-7")
@@ -1690,7 +1685,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         # result is a list of tuples (sequenceId, Message)
         lastSequenceId = result and result[-1][0]
         lastMessageId = result and result[-1][1].getUID()
-        for (i, (msgId, msg)) in list(zip(range(5), result)):
+        for i, (msgId, msg) in list(zip(range(5), result)):
             # searchFilter and singleSearchStep will mutate the query.  Dang.
             # Copy it here or else things will go poorly for subsequent
             # messages.
@@ -2211,7 +2206,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             hdrs = _formatHeaders(msg.getHeaders(True))
             _w(part.__bytes__() + b" " + _literal(hdrs))
         elif part.empty:
-            _w(part.__bytes__() + b" ")
+            _w(part.getBytes(length=msg.getSize()) + b" ")
             _f()
             if part.part:
                 return FileProducer(msg.getBodyFile()).beginProducing(self.transport)
@@ -2291,7 +2286,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbStore(self, result, tag, mbox, uid, silent):
         if result and not silent:
-            for (k, v) in result.items():
+            for k, v in result.items():
                 if uid:
                     uidstr = b" UID %d" % (mbox.getUID(k),)
                 else:
@@ -2330,7 +2325,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         addedDeferreds = []
 
         fastCopyMbox = IMessageCopier(mbox, None)
-        for (id, msg) in messages:
+        for id, msg in messages:
             if fastCopyMbox is not None:
                 d = maybeDeferred(fastCopyMbox.copy, msg)
                 addedDeferreds.append(d)
@@ -2368,7 +2363,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
     def __cbCopied(self, deferredIds, tag, mbox):
         ids = []
         failures = []
-        for (status, result) in deferredIds:
+        for status, result in deferredIds:
             if status:
                 ids.append(result)
             else:
@@ -2402,7 +2397,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             self.sendUntaggedResponse(message=b"[READ-ONLY]", isAsync=True)
 
     def flagsChanged(self, newFlags):
-        for (mId, flags) in newFlags.items():
+        for mId, flags in newFlags.items():
             encodedFlags = [networkString(flag) for flag in flags]
             msg = b"%d FETCH (FLAGS (%b))" % (mId, b" ".join(encodedFlags))
             self.sendUntaggedResponse(msg, isAsync=True)
@@ -2976,9 +2971,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         except ImportError:
             return None
         else:
-            context = ssl.ClientContextFactory()
-            context.method = ssl.SSL.TLSv1_METHOD
-            return context
+            return ssl.ClientContextFactory()
 
     def __cbLoginCaps(self, capabilities, username, password):
         # If the server advertises STARTTLS, we might want to try to switch to TLS
@@ -3430,9 +3423,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         try:
             names = b" ".join(self._statusNames[name] for name in names)
         except KeyError:
-            raise ValueError(
-                "Unknown names: {!r}".format(set(names) - set(self._statusNames))
-            )
+            raise ValueError(f"Unknown names: {set(names) - set(self._statusNames)!r}")
 
         args = b"".join([preparedMailbox, b" (", names, b")"])
         resp = (b"STATUS",)
@@ -4081,7 +4072,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         results = {}
         decodedInfo = {}
-        for (messageId, values) in info.items():
+        for messageId, values in info.items():
             structuredMap, unstructuredList = self._parseFetchPairs(values[0])
             decodedInfo.setdefault(messageId, [[]])[0].extend(unstructuredList)
             results.setdefault(messageId, {}).update(structuredMap)
@@ -4594,7 +4585,7 @@ def Or(*args):
     elif len(args) == 2:
         return "(OR %s %s)" % args
     else:
-        return "(OR {} {})".format(args[0], Or(*args[1:]))
+        return f"(OR {args[0]} {Or(*args[1:])})"
 
 
 def Not(query):
@@ -4602,13 +4593,35 @@ def Not(query):
     return f"(NOT {query})"
 
 
-def wildcardToRegexp(wildcard, delim=None):
-    wildcard = wildcard.replace("*", "(?:.*?)")
-    if delim is None:
-        wildcard = wildcard.replace("%", "(?:.*?)")
-    else:
-        wildcard = wildcard.replace("%", "(?:(?:[^%s])*?)" % re.escape(delim))
-    return re.compile(wildcard, re.I)
+def wildcardToRegexp(wildcard: str, delim: str | None = None) -> re.Pattern[str]:
+    """
+    Convert what the IMAP describes as a "mailbox name with possible wildcards"
+    into a regular expression that will match a full mailbox name.
+
+    @param wildcard: the mailbox name matching expression which may contain
+        IMAP wildcards, e.g. C{*} and C{%}.  Note that this is I{not} treated
+        as a regular expression itself, and any regex syntax will be matched
+        literally.
+
+    @param delim: the delimiter between IMAP path elements, if any.  Note that
+        this is always C{"/"} when used by Twisted's IMAP server.
+
+    @return: a L{re.Pattern} that will match IMAP mailbox names with the given
+        wildcards.
+    """
+    parts = re.split(r"([*%])", wildcard)
+    result = []
+    for p in parts:
+        if p == "*":
+            result.append("(?:.*?)")
+        elif p == "%":
+            if delim is None:
+                result.append("(?:.*?)")
+            else:
+                result.append(f"(?:(?:[^{re.escape(delim)}])*?)")
+        else:
+            result.append(re.escape(p))
+    return re.compile("".join(result), re.I)
 
 
 def splitQuoted(s):
@@ -4766,6 +4779,8 @@ def parseNestedParens(s, handleLiteral=1):
                     if end == -1:
                         raise ValueError("Malformed literal")
                     literalSize = int(s[i + 1 : end])
+                    if literalSize < 0:
+                        raise ValueError("Illegal literal size")
                     contentStack[-1].append((s[end + 3 : end + 3 + literalSize],))
                     i = end + 3 + literalSize
                 elif c == b"(" or c == b"[":
@@ -4971,11 +4986,11 @@ class MemoryAccountWithoutNamespaces:
         inferiors = self._inferiorNames(oldname)
         inferiors = [(o, o.replace(oldname, newname, 1)) for o in inferiors]
 
-        for (old, new) in inferiors:
+        for old, new in inferiors:
             if new in self.mailboxes:
                 raise MailboxCollision(new)
 
-        for (old, new) in inferiors:
+        for old, new in inferiors:
             self.mailboxes[new] = self.mailboxes[old]
             del self.mailboxes[old]
 
@@ -5575,7 +5590,7 @@ def iterateInReactor(i):
 
 
 class MessageProducer:
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    CHUNK_SIZE = 2**2**2**2
     _uuid4 = staticmethod(uuid.uuid4)
 
     def __init__(self, msg, buffer=None, scheduler=None):
@@ -5701,7 +5716,14 @@ class _FetchParser:
         def __str__(self) -> str:
             return self.__bytes__().decode("ascii")
 
-        def __bytes__(self) -> bytes:
+        def getBytes(self, length: int | None = None) -> bytes:
+            """
+            Prepare the initial command response for a Fetch BODY request.
+            Interpret the Fetch request from the client and return the
+            appropriate response based on RFC 3501.
+            This is not the body itself of the response, merely the section
+            of the first response line that describes the body part.
+            """
             base = b"BODY"
             part = b""
             separator = b""
@@ -5721,8 +5743,18 @@ class _FetchParser:
             elif self.empty:
                 base += b"[" + part + b"]"
             if self.partialBegin is not None:
-                base += b"<%d.%d>" % (self.partialBegin, self.partialLength)  # type: ignore[unreachable]
+                if length is None or length > self.partialLength:  # type: ignore[unreachable]
+                    base += b"<%d.%d>" % (self.partialBegin, self.partialLength)
+                else:
+                    # IMAP4rev1 says that if the partial length is greater than
+                    # the length of the data, the server should send the entire
+                    # data., with a "0" as the partial length
+                    # https://datatracker.ietf.org/doc/html/rfc3501#section-6.4.5
+                    base += b"<0>"
             return base
+
+        def __bytes__(self) -> bytes:
+            return self.getBytes()
 
     class BodyStructure:
         type = "bodystructure"
@@ -5870,7 +5902,7 @@ class _FetchParser:
         # "BODY [".PEEK"] [<section>] ["<" <number> "." <nz_number> ">"]
 
         l = s.lower()
-        for (name, cls) in self._simple_fetch_att:
+        for name, cls in self._simple_fetch_att:
             if l.startswith(name):
                 self.result.append(cls())
                 return len(name)
@@ -5900,7 +5932,7 @@ class _FetchParser:
         self.state.extend(("section", "part_number"))
         return 1
 
-    _partExpr = re.compile(br"(\d+(?:\.\d+)*)\.?")
+    _partExpr = re.compile(rb"(\d+(?:\.\d+)*)\.?")
 
     def state_part_number(self, s):
         m = self._partExpr.match(s)
@@ -5986,7 +6018,7 @@ class _FetchParser:
 
 
 class FileProducer:
-    CHUNK_SIZE = 2 ** 2 ** 2 ** 2
+    CHUNK_SIZE = 2**2**2**2
 
     firstWrite = True
 

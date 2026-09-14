@@ -1,1 +1,0 @@
- twisted.internet.defer.inlineCallbacks and ensureDeferred will now associate a contextvars.Context with the coroutines they run, meaning that ContextVar objects will maintain their value within the same coroutine, similarly to asyncio Tasks. This functionality requires Python 3.7+, or the contextvars PyPI backport to be installed for Python 3.5-3.6.

@@ -1,7 +1,7 @@
-from twisted.internet import protocol, reactor, defer, utils
-import pwd
 import os
+import pwd
 
+from twisted.internet import defer, protocol, reactor, utils
 
 # Yet another back-end
 

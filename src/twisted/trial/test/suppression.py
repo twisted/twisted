@@ -15,7 +15,6 @@ import warnings
 
 from twisted.trial import unittest, util
 
-
 METHOD_WARNING_MSG = "method warning message"
 CLASS_WARNING_MSG = "class warning message"
 MODULE_WARNING_MSG = "module warning message"

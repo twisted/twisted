@@ -12,7 +12,7 @@ for use in streaming XML applications.
 
 from typing import cast
 
-from zope.interface import implementer, Interface, Attribute
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.web import sux
 
@@ -34,7 +34,7 @@ G_PREFIXES = {"http://www.w3.org/XML/1998/namespace": "xml"}
 
 
 class _ListSerializer:
-    """ Internal class which serializes an Element tree into a buffer """
+    """Internal class which serializes an Element tree into a buffer"""
 
     def __init__(self, prefixes=None, prefixesInScope=None):
         self.writelist = []
@@ -127,9 +127,9 @@ class _ListSerializer:
                     write(f" xmlns:{attr_prefix}='{attr_uri}'")
                     self.prefixStack[-1].append(attr_prefix)
 
-                write(" {}:{}='{}'".format(attr_prefix, attr_name, escapeToXml(v, 1)))
+                write(f" {attr_prefix}:{attr_name}='{escapeToXml(v, 1)}'")
             else:
-                write(" {}='{}'".format(k, escapeToXml(v, 1)))
+                write(f" {k}='{escapeToXml(v, 1)}'")
 
         # Shortcut out if this is only going to return
         # the element (i.e. no children)
@@ -192,7 +192,7 @@ def generateOnlyInterface(list, int):
 
 
 def generateElementsQNamed(list, name, uri):
-    """ Filters Element items in a list with matching name and URI. """
+    """Filters Element items in a list with matching name and URI."""
     for n in list:
         if IElement.providedBy(n) and n.name == name and n.uri == uri:
             yield n
@@ -206,13 +206,13 @@ def generateElementsNamed(list, name):
 
 
 class SerializedXML(str):
-    """ Marker class for pre-serialized XML in the DOM. """
+    """Marker class for pre-serialized XML in the DOM."""
 
     pass
 
 
 class Namespace:
-    """ Convenience object for tracking namespace declarations. """
+    """Convenience object for tracking namespace declarations."""
 
     def __init__(self, uri):
         self._uri = uri
@@ -481,18 +481,18 @@ class Element:
     __str__ = __unicode__
 
     def _dqa(self, attr):
-        """ Dequalify an attribute key as needed """
+        """Dequalify an attribute key as needed"""
         if isinstance(attr, tuple) and not attr[0]:
             return attr[1]
         else:
             return attr
 
     def getAttribute(self, attribname, default=None):
-        """ Retrieve the value of attribname, if it exists """
+        """Retrieve the value of attribname, if it exists"""
         return self.attributes.get(attribname, default)
 
     def hasAttribute(self, attrib):
-        """ Determine if the specified attribute exists """
+        """Determine if the specified attribute exists"""
         return self._dqa(attrib) in self.attributes
 
     def compareAttribute(self, attrib, value):
@@ -503,25 +503,23 @@ class Element:
         return self.attributes.get(self._dqa(attrib), None) == value
 
     def swapAttributeValues(self, left, right):
-        """ Swap the values of two attribute. """
+        """Swap the values of two attribute."""
         d = self.attributes
         l = d[left]
         d[left] = d[right]
         d[right] = l
 
     def addChild(self, node):
-        """ Add a child to this Element. """
+        """Add a child to this Element."""
         if IElement.providedBy(node):
             node.parent = self
         self.children.append(node)
         return node
 
     def addContent(self, text: str) -> str:
-        """ Add some text data to this Element. """
+        """Add some text data to this Element."""
         if not isinstance(text, str):
-            raise TypeError(
-                "Expected str not {!r} ({})".format(text, type(text).__name__)
-            )
+            raise TypeError(f"Expected str not {text!r} ({type(text).__name__})")
         c = self.children
         if len(c) > 0 and isinstance(c[-1], str):
             c[-1] = c[-1] + text
@@ -547,7 +545,7 @@ class Element:
         return child
 
     def addRawXml(self, rawxmlstring):
-        """ Add a pre-serialized chunk o' XML as a child of this Element. """
+        """Add a pre-serialized chunk o' XML as a child of this Element."""
         self.children.append(SerializedXML(rawxmlstring))
 
     def addUniqueId(self):
@@ -577,7 +575,7 @@ class Element:
             return generateElementsQNamed(self.children, name, uri)
 
     def toXml(self, prefixes=None, closeElement=1, defaultUri="", prefixesInScope=None):
-        """ Serialize this Element and all children to a string. """
+        """Serialize this Element and all children to a string."""
         s = SerializerClass(prefixes=prefixes, prefixesInScope=prefixesInScope)
         s.serialize(self, closeElement=closeElement, defaultUri=defaultUri)
         return s.getValue()
@@ -590,7 +588,7 @@ class Element:
 
 
 class ParserError(Exception):
-    """ Exception thrown when a parsing error occurs """
+    """Exception thrown when a parsing error occurs"""
 
     pass
 
@@ -611,6 +609,10 @@ def elementStream():
 
 
 class SuxElementStream(sux.XMLParser):
+    # Same bounds as ExpatElementStream.
+    maxStanzaSize = 10 * 1024 * 1024
+    maxElementCount = 100000
+
     def __init__(self):
         self.connectionMade()
         self.DocumentStartEvent = None
@@ -621,12 +623,17 @@ class SuxElementStream(sux.XMLParser):
         self.documentStarted = False
         self.defaultNsStack = []
         self.prefixStack = []
+        self.elementCount = 0
+        self.stanzaSize = 0
 
     def parse(self, buffer):
+        self.stanzaSize += len(buffer)
         try:
             self.dataReceived(buffer)
         except sux.ParseError as e:
             raise ParserError(str(e))
+        if self.stanzaSize > self.maxStanzaSize:
+            raise ParserError("Maximum stanza size exceeded")
 
     def findUri(self, prefix):
         # Walk prefix stack backwards, looking for the uri
@@ -688,6 +695,9 @@ class SuxElementStream(sux.XMLParser):
 
         # Document already started
         if self.documentStarted:
+            self.elementCount += 1
+            if self.elementCount > self.maxElementCount:
+                raise ParserError("Maximum element count exceeded")
             # Starting a new packet
             if self.currElem is None:
                 self.currElem = e
@@ -772,6 +782,8 @@ class SuxElementStream(sux.XMLParser):
                 self.currElem.parent = self.rootElem
                 self.ElementEvent(self.currElem)
                 self.currElem = None
+                self.elementCount = 0
+                self.stanzaSize = 0
 
             # Anything else is just some element wrapping up
             else:
@@ -779,6 +791,11 @@ class SuxElementStream(sux.XMLParser):
 
 
 class ExpatElementStream:
+    # Per-stanza byte and element caps, reset when the stanza is emitted. Bytes
+    # are counted in parse() so the parser's internal buffering is bounded too.
+    maxStanzaSize = 10 * 1024 * 1024
+    maxElementCount = 100000
+
     def __init__(self):
         import pyexpat
 
@@ -796,12 +813,17 @@ class ExpatElementStream:
         self.defaultNsStack = [""]
         self.documentStarted = 0
         self.localPrefixes = {}
+        self.elementCount = 0
+        self.stanzaSize = 0
 
     def parse(self, buffer):
+        self.stanzaSize += len(buffer)
         try:
             self.parser.Parse(buffer)
         except self.error as e:
             raise ParserError(str(e))
+        if self.stanzaSize > self.maxStanzaSize:
+            raise ParserError("Maximum stanza size exceeded")
 
     def _onStartElement(self, name, attrs):
         # Generate a qname tuple from the provided name.  See
@@ -831,6 +853,9 @@ class ExpatElementStream:
 
         # Document already started
         if self.documentStarted == 1:
+            self.elementCount += 1
+            if self.elementCount > self.maxElementCount:
+                raise ParserError("Maximum element count exceeded")
             if self.currElem != None:
                 self.currElem.children.append(e)
                 e.parent = self.currElem
@@ -851,6 +876,8 @@ class ExpatElementStream:
         elif self.currElem.parent is None:
             self.ElementEvent(self.currElem)
             self.currElem = None
+            self.elementCount = 0
+            self.stanzaSize = 0
 
         # Anything else is just some element in the current
         # packet wrapping up

@@ -45,15 +45,16 @@ The 2nd solution is probably what will get implemented.
 """
 
 # System imports
-import time
+import socket
 import sys
+import time
 from threading import Thread
 from weakref import WeakKeyDictionary
 
 from zope.interface import implementer
 
 # Win32 imports
-from win32file import FD_READ, FD_CLOSE, FD_ACCEPT, FD_CONNECT, WSAEventSelect
+from win32file import FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_READ, WSAEventSelect
 
 try:
     # WSAEnumNetworkEvents was added in pywin32 215
@@ -66,21 +67,24 @@ except ImportError:
         category=UserWarning,
     )
 
-    def WSAEnumNetworkEvents(fd, event):
-        return {FD_READ}
+    def WSAEnumNetworkEvents(s: socket.socket, hEvent: int, /) -> dict[int, int]:
+        return {FD_READ: 0}
 
-
-from win32event import CreateEvent, MsgWaitForMultipleObjects
-from win32event import WAIT_OBJECT_0, WAIT_TIMEOUT, QS_ALLINPUT
 
 import win32gui
+from win32event import (
+    QS_ALLINPUT,
+    WAIT_OBJECT_0,
+    WAIT_TIMEOUT,
+    CreateEvent,
+    MsgWaitForMultipleObjects,
+)
 
 # Twisted imports
 from twisted.internet import posixbase
-from twisted.python import log, threadable, failure
-from twisted.internet.interfaces import IReactorFDSet
-from twisted.internet.interfaces import IReactorWin32Events
+from twisted.internet.interfaces import IReactorFDSet, IReactorWin32Events
 from twisted.internet.threads import blockingCallFromThread
+from twisted.python import failure, log, threadable
 
 
 @implementer(IReactorFDSet, IReactorWin32Events)

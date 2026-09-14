@@ -5,11 +5,7 @@
 Exceptions and errors for use in twisted.internet modules.
 """
 
-
 import socket
-
-from twisted.python import deprecate
-from incremental import Version
 
 
 class BindError(Exception):
@@ -94,7 +90,7 @@ class ConnectError(Exception):
         if self.osError:
             s = f"{s}: {self.osError}"
         if self.args[0]:
-            s = "{}: {}".format(s, self.args[0])
+            s = f"{s}: {self.args[0]}"
         s = "%s." % s
         return s
 
@@ -160,7 +156,7 @@ try:
         errno.ETIMEDOUT: TCPTimedOutError,
     }
     if hasattr(errno, "WSAECONNREFUSED"):
-        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError  # type: ignore[attr-defined]
+        errnoMapping[errno.WSAECONNREFUSED] = ConnectionRefusedError
         errnoMapping[errno.WSAENETUNREACH] = NoRouteError  # type: ignore[attr-defined]
 except ImportError:
     errnoMapping = {}
@@ -269,32 +265,6 @@ class AlreadyCancelled(ValueError):
             s = "{}: {}".format(s, " ".join(self.args))
         s = "%s." % s
         return s
-
-
-class PotentialZombieWarning(Warning):
-    """
-    Emitted when L{IReactorProcess.spawnProcess} is called in a way which may
-    result in termination of the created child process not being reported.
-
-    Deprecated in Twisted 10.0.
-    """
-
-    MESSAGE = (
-        "spawnProcess called, but the SIGCHLD handler is not "
-        "installed. This probably means you have not yet "
-        "called reactor.run, or called "
-        "reactor.run(installSignalHandler=0). You will probably "
-        "never see this process finish, and it may become a "
-        "zombie process."
-    )
-
-
-deprecate.deprecatedModuleAttribute(
-    Version("Twisted", 10, 0, 0),
-    "There is no longer any potential for zombie process.",
-    __name__,
-    "PotentialZombieWarning",
-)
 
 
 class ProcessDone(ConnectionDone):
@@ -493,7 +463,6 @@ __all__ = [
     "ConnectionFdescWentAway",
     "AlreadyCalled",
     "AlreadyCancelled",
-    "PotentialZombieWarning",
     "ProcessDone",
     "ProcessTerminated",
     "ProcessExitedAlready",

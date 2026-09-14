@@ -5,15 +5,15 @@
 Test cases for L{twisted.logger._io}.
 """
 
-import sys
-from typing import List, Optional
+from __future__ import annotations
 
-from constantly import NamedConstant
+import sys
 
 from zope.interface import implementer
 
-from twisted.trial import unittest
+from constantly import NamedConstant
 
+from twisted.trial import unittest
 from .._interfaces import ILogObserver, LogEvent
 from .._io import LoggingFile
 from .._levels import LogLevel
@@ -31,11 +31,11 @@ class TestLoggingFile(LoggingFile):
         self,
         logger: Logger,
         level: NamedConstant = LogLevel.info,
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
     ) -> None:
         super().__init__(logger=logger, level=level, encoding=encoding)
-        self.events: List[LogEvent] = []
-        self.messages: List[str] = []
+        self.events: list[LogEvent] = []
+        self.messages: list[str] = []
 
     def __call__(self, event: LogEvent) -> None:
         self.events.append(event)
@@ -67,7 +67,7 @@ class LoggingFileTests(unittest.TestCase):
         deprecatedClass = "twisted.logger._io.LoggingFile.softspace"
         self.assertEqual(
             warningsShown[0]["message"],
-            "%s was deprecated in Twisted NEXT" % (deprecatedClass),
+            "%s was deprecated in Twisted 21.2.0" % (deprecatedClass),
         )
 
     def test_readOnlyAttributes(self) -> None:
@@ -88,14 +88,15 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = LoggingFile(self.logger)
 
-        self.assertRaises(IOError, f.read)
-        self.assertRaises(IOError, f.next)
-        self.assertRaises(IOError, f.readline)
-        self.assertRaises(IOError, f.readlines)
-        self.assertRaises(IOError, f.xreadlines)
-        self.assertRaises(IOError, f.seek)
-        self.assertRaises(IOError, f.tell)
-        self.assertRaises(IOError, f.truncate)
+        self.assertRaises(OSError, f.read)
+        self.assertRaises(OSError, f.next)
+        self.assertRaises(OSError, f.readline)
+        self.assertRaises(OSError, f.readlines)
+        self.assertRaises(OSError, f.xreadlines)
+        self.assertRaises(OSError, f.seek)
+        self.assertRaises(OSError, f.tell)
+        self.assertRaises(OSError, f.truncate)
+        self.assertRaises(OSError, f.fileno)
 
     def test_level(self) -> None:
         """
@@ -154,13 +155,6 @@ class LoggingFileTests(unittest.TestCase):
         """
         f = LoggingFile(self.logger)
         f.flush()
-
-    def test_fileno(self) -> None:
-        """
-        L{LoggingFile.fileno} returns C{-1}.
-        """
-        f = LoggingFile(self.logger)
-        self.assertEqual(f.fileno(), -1)
 
     def test_isatty(self) -> None:
         """
@@ -262,7 +256,7 @@ class LoggingFileTests(unittest.TestCase):
     def observedFile(
         self,
         level: NamedConstant = LogLevel.info,
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
     ) -> TestLoggingFile:
         """
         Construct a L{LoggingFile} with a built-in observer.
@@ -278,7 +272,7 @@ class LoggingFileTests(unittest.TestCase):
         # TestLoggingFile we will create, but that takes the Logger as an
         # argument, so we'll use an array to indirectly reference the
         # TestLoggingFile.
-        loggingFiles: List[TestLoggingFile] = []
+        loggingFiles: list[TestLoggingFile] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:

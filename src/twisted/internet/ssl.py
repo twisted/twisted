@@ -53,15 +53,15 @@ APIs listed above.
     throughout the documentation.
 """
 
+from __future__ import annotations
+
+from zope.interface import implementedBy, implementer, implementer_only
 
 # System imports
 from OpenSSL import SSL
 
-from zope.interface import implementer, implementer_only, implementedBy
-
 # Twisted imports
-from twisted.internet import tcp, interfaces
-
+from twisted.internet import interfaces, tcp
 
 supported = True
 
@@ -93,7 +93,7 @@ class DefaultOpenSSLContextFactory(ContextFactory):
         self,
         privateKeyFileName,
         certificateFileName,
-        sslmethod=SSL.SSLv23_METHOD,
+        sslmethod=SSL.TLS_METHOD,
         _contextFactory=SSL.Context,
     ):
         """
@@ -142,22 +142,22 @@ class ClientContextFactory:
 
     isClient = 1
 
-    # SSLv23_METHOD allows SSLv2, SSLv3, and TLSv1.  We disable SSLv2 below,
-    # though.
-    method = SSL.SSLv23_METHOD
+    # TLS_METHOD allows negotiation of multiple TLS versions.
+    method = SSL.TLS_METHOD
 
     _contextFactory = SSL.Context
 
     def getContext(self):
         ctx = self._contextFactory(self.method)
-        # See comment in DefaultOpenSSLContextFactory about SSLv2.
-        ctx.set_options(SSL.OP_NO_SSLv2)
+        ctx.set_options(
+            SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 | SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1
+        )
         return ctx
 
 
 @implementer_only(
     interfaces.ISSLTransport,
-    *[i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport],
+    *(i for i in implementedBy(tcp.Client) if i != interfaces.ITLSTransport),
 )
 class Client(tcp.Client):
     """
@@ -180,6 +180,8 @@ class Server(tcp.Server):
     """
     I am an SSL server.
     """
+
+    server: Port
 
     def __init__(self, *args, **kwargs):
         tcp.Server.__init__(self, *args, **kwargs)
@@ -236,23 +238,23 @@ class Connector(tcp.Connector):
 
 
 from twisted.internet._sslverify import (
-    KeyPair,
-    DistinguishedName,
     DN,
     Certificate,
     CertificateRequest,
-    PrivateCertificate,
+    DistinguishedName,
+    KeyPair,
     OpenSSLAcceptableCiphers as AcceptableCiphers,
     OpenSSLCertificateOptions as CertificateOptions,
-    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
-    platformTrust,
     OpenSSLDefaultPaths,
+    OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
+    PrivateCertificate,
+    ProtocolNegotiationSupport,
+    TLSVersion,
     VerificationError,
     optionsForClientTLS,
-    ProtocolNegotiationSupport,
+    platformTrust,
     protocolNegotiationMechanisms,
     trustRootFromCertificates,
-    TLSVersion,
 )
 
 __all__ = [

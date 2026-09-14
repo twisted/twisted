@@ -6,23 +6,26 @@
 Tools for saving and loading log events in a structured format.
 """
 
-from constantly import NamedConstant
-from json import dumps, loads
-from uuid import UUID
-from typing import Any, AnyStr, Dict, IO, Iterable, Optional, Union, cast
+from __future__ import annotations
 
+from collections.abc import Iterable
+from json import dumps, loads
+from typing import IO, Any, AnyStr, cast
+from uuid import UUID
+
+from constantly import NamedConstant
+
+from twisted.python.failure import Failure
 from ._file import FileLogObserver
 from ._flatten import flattenEvent
 from ._interfaces import LogEvent
 from ._levels import LogLevel
 from ._logger import Logger
 
-from twisted.python.failure import Failure
-
 log = Logger()
 
 
-JSONDict = Dict[str, Any]
+JSONDict = dict[str, Any]
 
 
 def failureAsJSON(failure: Failure) -> JSONDict:
@@ -52,10 +55,10 @@ def failureFromJSON(failureDict: JSONDict) -> Failure:
 
     @return: L{Failure}
     """
-    f = cast(Failure, Failure.__new__(Failure))
+    f = Failure.__new__(Failure)
     typeInfo = failureDict["type"]
     failureDict["type"] = type(typeInfo["__name__"], (), typeInfo)
-    f.__dict__ = failureDict
+    f.__setstate__(failureDict)
     return f
 
 
@@ -110,7 +113,7 @@ def objectSaveHook(pythonObject: object) -> JSONDict:
         supports, a specially-formatted dictionary; otherwise, a marker
         dictionary indicating that it could not be serialized.
     """
-    for (predicate, uuid, saver, loader) in classInfo:
+    for predicate, uuid, saver, loader in classInfo:
         if predicate(pythonObject):
             result = saver(pythonObject)
             result["__class_uuid__"] = str(uuid)
@@ -133,7 +136,7 @@ def eventAsJSON(event: LogEvent) -> str:
         file.
     """
 
-    def default(unencodable: object) -> Union[JSONDict, str]:
+    def default(unencodable: object) -> JSONDict | str:
         """
         Serialize an object not otherwise serializable by L{dumps}.
 
@@ -183,13 +186,13 @@ def jsonFileLogObserver(
     @return: A file log observer.
     """
     return FileLogObserver(
-        outFile, lambda event: "{}{}\n".format(recordSeparator, eventAsJSON(event))
+        outFile, lambda event: f"{recordSeparator}{eventAsJSON(event)}\n"
     )
 
 
 def eventsFromJSONLogFile(
     inFile: IO[Any],
-    recordSeparator: Optional[str] = None,
+    recordSeparator: str | None = None,
     bufferSize: int = 4096,
 ) -> Iterable[LogEvent]:
     """
@@ -213,7 +216,7 @@ def eventsFromJSONLogFile(
         else:
             return s.encode("utf-8")
 
-    def eventFromBytearray(record: bytearray) -> Optional[LogEvent]:
+    def eventFromBytearray(record: bytearray) -> LogEvent | None:
         try:
             text = bytes(record).decode("utf-8")
         except UnicodeDecodeError:
@@ -251,7 +254,7 @@ def eventsFromJSONLogFile(
 
     else:
 
-        def eventFromRecord(record: bytearray) -> Optional[LogEvent]:
+        def eventFromRecord(record: bytearray) -> LogEvent | None:
             if record[-1] == ord("\n"):
                 return eventFromBytearray(record)
             else:

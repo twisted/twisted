@@ -6,11 +6,11 @@
 Test cases for twisted.protocols.stateful
 """
 
-from twisted.trial.unittest import TestCase
-from twisted.protocols.test import test_basic
-from twisted.protocols.stateful import StatefulProtocol
+from struct import calcsize, pack, unpack
 
-from struct import pack, unpack, calcsize
+from twisted.protocols.stateful import StatefulProtocol
+from twisted.protocols.test import test_basic
+from twisted.trial.unittest import TestCase
 
 
 class MyInt32StringReceiver(StatefulProtocol):

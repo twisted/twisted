@@ -14,28 +14,31 @@ Please do not use this module directly.
 @var _sockErrReadRefuse: list of symbolic error constants (from the C{errno}
     module) representing socket errors that indicate connection refused.
 """
-
+from __future__ import annotations
 
 # System Imports
 import socket
-import struct
 import warnings
-from typing import Optional
 
 from zope.interface import implementer
 
+from twisted.internet._multicast import MulticastMixin
+from twisted.internet.interfaces import IReactorMulticast
+from twisted.internet.protocol import AbstractDatagramProtocol
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
+    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
     from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
-    from errno import WSAEINTR, WSAEMSGSIZE, WSAETIMEDOUT  # type: ignore[attr-defined]
     from errno import (  # type: ignore[attr-defined]
         WSAECONNREFUSED,
         WSAECONNRESET,
+        WSAEINTR,
+        WSAEMSGSIZE,
         WSAENETRESET,
+        WSAENOPROTOOPT as ENOPROTOOPT,
+        WSAETIMEDOUT,
     )
-    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAENOPROTOOPT as ENOPROTOOPT  # type: ignore[attr-defined]
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
@@ -47,16 +50,14 @@ if platformType == "win32":
     EAGAIN = WSAEWOULDBLOCK
     EINTR = WSAEINTR
 else:
-    from errno import EWOULDBLOCK, EINTR, EMSGSIZE, ECONNREFUSED, EAGAIN
-    from errno import ENOPROTOOPT
+    from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOPROTOOPT, EWOULDBLOCK
 
     _sockErrReadIgnore = [EAGAIN, EINTR, EWOULDBLOCK]
     _sockErrReadRefuse = [ECONNREFUSED]
 
 # Twisted Imports
-from twisted.internet import base, defer, address
-from twisted.python import log, failure
-from twisted.internet import abstract, error, interfaces
+from twisted.internet import abstract, address, base, defer, error, interfaces
+from twisted.python import log
 
 
 @implementer(
@@ -81,11 +82,11 @@ class Port(base.BasePort):
         L{Port}).
     """
 
-    addressFamily = socket.AF_INET
-    socketType = socket.SOCK_DGRAM
+    addressFamily: socket.AddressFamily = socket.AF_INET
+    socketType: socket.SocketKind = socket.SOCK_DGRAM
     maxThroughput = 256 * 1024
 
-    _realPortNumber: Optional[int] = None
+    _realPortNumber: int | None = None
     _preexistingSocket = None
 
     def __init__(self, port, proto, interface="", maxPacketSize=8192, reactor=None):
@@ -255,22 +256,21 @@ class Port(base.BasePort):
                 except BaseException:
                     log.err()
 
-    def write(self, datagram, addr=None):
+    def write(self, datagram: bytes, addr: tuple[str, int] | None = None) -> None:
         """
         Write a datagram.
 
-        @type datagram: L{bytes}
         @param datagram: The datagram to be sent.
 
-        @type addr: L{tuple} containing L{str} as first element and L{int} as
-            second element, or L{None}
         @param addr: A tuple of (I{stringified IPv4 or IPv6 address},
             I{integer port number}); can be L{None} in connected mode.
         """
         if self._connectedAddr:
             assert addr in (None, self._connectedAddr)
             try:
-                return self.socket.send(datagram)
+                # For legacy/compatibility reasons we sometimes return an
+                # C{int} here, but this should be disregarded.
+                return self.socket.send(datagram)  # type:ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
@@ -302,7 +302,7 @@ class Port(base.BasePort):
                     addr[0], "IPv4 port write() called with IPv6 address"
                 )
             try:
-                return self.socket.sendto(datagram, addr)
+                return self.socket.sendto(datagram, addr)  # type:ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
@@ -440,62 +440,6 @@ class Port(base.BasePort):
         return bool(self.socket.getsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST))
 
 
-class MulticastMixin:
-    """
-    Implement multicast functionality.
-    """
-
-    def getOutgoingInterface(self):
-        i = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF)
-        return socket.inet_ntoa(struct.pack("@i", i))
-
-    def setOutgoingInterface(self, addr):
-        """Returns Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._setInterface)
-
-    def _setInterface(self, addr):
-        i = socket.inet_aton(addr)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, i)
-        return 1
-
-    def getLoopbackMode(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP)
-
-    def setLoopbackMode(self, mode):
-        mode = struct.pack("b", bool(mode))
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, mode)
-
-    def getTTL(self):
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
-
-    def setTTL(self, ttl):
-        ttl = struct.pack("B", ttl)
-        self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-
-    def joinGroup(self, addr, interface=""):
-        """Join a multicast group. Returns Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 1)
-
-    def _joinAddr1(self, addr, interface, join):
-        return self.reactor.resolve(interface).addCallback(self._joinAddr2, addr, join)
-
-    def _joinAddr2(self, interface, addr, join):
-        addr = socket.inet_aton(addr)
-        interface = socket.inet_aton(interface)
-        if join:
-            cmd = socket.IP_ADD_MEMBERSHIP
-        else:
-            cmd = socket.IP_DROP_MEMBERSHIP
-        try:
-            self.socket.setsockopt(socket.IPPROTO_IP, cmd, addr + interface)
-        except OSError as e:
-            return failure.Failure(error.MulticastJoinError(addr, interface, *e.args))
-
-    def leaveGroup(self, addr, interface=""):
-        """Leave multicast group, return Deferred of success."""
-        return self.reactor.resolve(addr).addCallback(self._joinAddr1, interface, 0)
-
-
 @implementer(interfaces.IMulticastTransport)
 class MulticastPort(MulticastMixin, Port):
     """
@@ -504,20 +448,24 @@ class MulticastPort(MulticastMixin, Port):
 
     def __init__(
         self,
-        port,
-        proto,
-        interface="",
-        maxPacketSize=8192,
-        reactor=None,
-        listenMultiple=False,
-    ):
+        port: int,
+        proto: AbstractDatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = 8192,
+        reactor: IReactorMulticast | None = None,
+        listenMultiple: bool = False,
+    ) -> None:
         """
         @see: L{twisted.internet.interfaces.IReactorMulticast.listenMulticast}
         """
         Port.__init__(self, port, proto, interface, maxPacketSize, reactor)
         self.listenMultiple = listenMultiple
 
-    def createInternetSocket(self):
+    def createInternetSocket(self) -> socket.socket:
+        """
+        Override L{Port.createInternetSocket} to configure the socket to honor
+        the C{listenMultiple} argument to L{IReactorMulticast.listenMulticast}.
+        """
         skt = Port.createInternetSocket(self)
         if self.listenMultiple:
             skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

@@ -6,8 +6,12 @@
 File-like object that logs.
 """
 
+from __future__ import annotations
+
 import sys
-from typing import AnyStr, Iterable, Optional
+from collections.abc import Iterable
+from io import UnsupportedOperation
+from typing import AnyStr, NoReturn
 
 from constantly import NamedConstant
 from incremental import Version
@@ -29,8 +33,9 @@ class LoggingFile:
     """
 
     _softspace = 0
+    _encoding: str
 
-    @deprecatedProperty(Version("Twisted", "NEXT", 0, 0))
+    @deprecatedProperty(Version("Twisted", 21, 2, 0))
     def softspace(self):
         return self._softspace
 
@@ -42,7 +47,7 @@ class LoggingFile:
         self,
         logger: Logger,
         level: NamedConstant = LogLevel.info,
-        encoding: Optional[str] = None,
+        encoding: str | None = None,
     ) -> None:
         """
         @param logger: the logger to log through.
@@ -123,13 +128,11 @@ class LoggingFile:
         """
         pass
 
-    def fileno(self) -> int:
+    def fileno(self) -> NoReturn:
         """
-        Returns an invalid file descriptor, since this is not backed by an FD.
-
-        @return: C{-1}
+        Raises a L{io.UnsupportedOperation} because L{LoggingFile} does not use a a file descriptor.
         """
-        return -1
+        raise UnsupportedOperation("LoggingFile has no file descriptor.")
 
     def isatty(self) -> bool:
         """

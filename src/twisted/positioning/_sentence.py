@@ -3,7 +3,6 @@
 """
 Generic sentence handling tools: hopefully reusable.
 """
-from typing import Set
 
 
 class _BaseSentence:
@@ -35,7 +34,7 @@ class _BaseSentence:
     @type ALLOWED_ATTRIBUTES: C{set} of C{str}
     """
 
-    ALLOWED_ATTRIBUTES: Set[str] = set()
+    ALLOWED_ATTRIBUTES: set[str] = set()
 
     def __init__(self, sentenceData):
         """

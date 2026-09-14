@@ -27,17 +27,17 @@ How does this thing work?
     play, the end.
 """
 
-from time import time, ctime
+from time import ctime, time
 
 from zope.interface import implementer
 
 from twisted import copyright
-from twisted.cred import portal, credentials, error as ecred
+from twisted.cred import credentials, error as ecred, portal
 from twisted.internet import defer, protocol
-from twisted.python import log, failure, reflect
+from twisted.python import failure, log, reflect
 from twisted.python.components import registerAdapter
 from twisted.spread import pb
-from twisted.words import iwords, ewords
+from twisted.words import ewords, iwords
 from twisted.words.protocols import irc
 
 
@@ -55,7 +55,7 @@ class Group:
         return failure.Failure(Exception(p, err))
 
     def _cbUserCall(self, results):
-        for (success, result) in results:
+        for success, result in results:
             if not success:
                 user, err = result.value  # XXX
                 self.remove(user, err.getErrorMessage())
@@ -705,7 +705,7 @@ class IRCUser(irc.IRC):
         @param channels: Information about the channels being sent:
             their name, the number of participants, and their topic.
         """
-        for (name, size, topic) in channels:
+        for name, size, topic in channels:
             self.sendMessage(irc.RPL_LIST, name, str(size), ":" + topic)
         self.sendMessage(irc.RPL_LISTEND, ":End of /LIST")
 
@@ -915,7 +915,6 @@ class PBMind(pb.Referenceable):
 
 @implementer(iwords.IChatClient)
 class PBMindReference(pb.RemoteReference):
-
     name = ""
 
     def receive(self, sender, recipient, message):
@@ -980,9 +979,7 @@ class PBGroup(pb.Referenceable):
 class PBGroupReference(pb.RemoteReference):
     def unjellyFor(self, unjellier, unjellyList):
         clsName, name, ref = unjellyList
-        self.name = name
-        if bytes != str and isinstance(self.name, bytes):
-            self.name = self.name.decode("utf-8")
+        self.name = name.decode("utf-8")
         return pb.RemoteReference.unjellyFor(self, unjellier, [clsName, ref])
 
     def leave(self, reason=None):

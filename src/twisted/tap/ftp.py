@@ -7,13 +7,12 @@
 I am the support module for making a ftp server with twistd.
 """
 
-from twisted.application import internet
-from twisted.cred import portal, checkers, strcred
-from twisted.protocols import ftp
-
-from twisted.python import usage, deprecate, versions
-
 import warnings
+
+from twisted.application import internet
+from twisted.cred import checkers, portal, strcred
+from twisted.protocols import ftp
+from twisted.python import deprecate, usage, versions
 
 
 class Options(usage.Options, strcred.AuthOptionMixin):

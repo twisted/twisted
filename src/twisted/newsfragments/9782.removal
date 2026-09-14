@@ -1,1 +1,0 @@
-twisted.news is now removed from the codebase. (This module was never installed on Python 3.)

@@ -1,7 +1,7 @@
 # -*- test-case-name: calculus.test.test_client_2 -*-
 
-from twisted.protocols import basic
 from twisted.internet import defer, reactor
+from twisted.protocols import basic
 
 
 class ClientTimeoutError(Exception):
@@ -9,7 +9,6 @@ class ClientTimeoutError(Exception):
 
 
 class RemoteCalculationClient(basic.LineReceiver):
-
     callLater = reactor.callLater
     timeOut = 60
 
@@ -28,7 +27,7 @@ class RemoteCalculationClient(basic.LineReceiver):
         d = defer.Deferred()
         callID = self.callLater(self.timeOut, self._cancel, d)
         self.results.append((d, callID))
-        line = f"{op} {a} {b}".encode("utf-8")
+        line = f"{op} {a} {b}".encode()
         self.sendLine(line)
         return d
 

@@ -1,7 +1,7 @@
 from zope.interface import implementer
 
-from twisted.trial.itrial import IReporter
 from twisted.plugin import IPlugin
+from twisted.trial.itrial import IReporter
 
 
 @implementer(IPlugin, IReporter)

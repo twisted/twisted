@@ -7,10 +7,9 @@ An asynchronous mapping to U{DB-API
 2.0<http://www.python.org/topics/database/DatabaseAPI-2.0.html>}.
 """
 
-import sys
 
 from twisted.internet import threads
-from twisted.python import reflect, log, compat
+from twisted.python import log, reflect
 
 
 class ConnectionLost(Exception):
@@ -227,8 +226,7 @@ class ConnectionPool:
         self.connections = {}
 
         # These are optional so import them here
-        from twisted.python import threadpool
-        from twisted.python import threadable
+        from twisted.python import threadable, threadpool
 
         self.threadID = threadable.getThreadID
         self.threadpool = threadpool.ThreadPool(self.min, self.max)
@@ -285,12 +283,11 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def runInteraction(self, interaction, *args, **kw):
         """
@@ -448,12 +445,11 @@ class ConnectionPool:
             conn.commit()
             return result
         except BaseException:
-            excType, excValue, excTraceback = sys.exc_info()
             try:
                 conn.rollback()
             except BaseException:
                 log.err(None, "Rollback failed")
-            compat.reraise(excValue, excTraceback)
+            raise
 
     def _runQuery(self, trans, *args, **kw):
         trans.execute(*args, **kw)

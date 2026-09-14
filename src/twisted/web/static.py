@@ -5,7 +5,7 @@
 """
 Static resources for L{twisted.web}.
 """
-
+from __future__ import annotations
 
 import errno
 import itertools
@@ -13,29 +13,26 @@ import mimetypes
 import os
 import time
 import warnings
-
+from collections.abc import Sequence
 from html import escape
-from typing import Any, Dict, Callable
-from zope.interface import implementer
-
-from twisted.web import server
-from twisted.web import resource
-from twisted.web import http
-from twisted.web.util import redirectTo
-
-from twisted.python.compat import nativeString, networkString
-
-from twisted.python import components, filepath, log
-from twisted.internet import abstract, interfaces
-from twisted.python.util import InsensitiveDict
-from twisted.python.runtime import platformType
-from twisted.python.url import URL
-from incremental import Version
-from twisted.python.deprecate import deprecated
-
+from typing import Any, Callable, Literal
 from urllib.parse import quote, unquote
 
-dangerousPathError = resource.NoResource("Invalid request URL.")
+from zope.interface import implementer
+
+from incremental import Version
+
+from twisted.internet import abstract, interfaces
+from twisted.python import components, filepath, log
+from twisted.python.compat import nativeString, networkString
+from twisted.python.deprecate import deprecated
+from twisted.python.runtime import platformType
+from twisted.python.url import URL
+from twisted.python.util import InsensitiveDict
+from twisted.web import http, resource, server
+from twisted.web.util import redirectTo
+
+dangerousPathError = resource._UnsafeNoResource("Invalid request URL.")
 
 
 def isDangerous(path):
@@ -169,7 +166,7 @@ def getTypeAndEncoding(filename, types, encodings, defaultType):
     return type, enc
 
 
-class File(resource.Resource, filepath.FilePath):
+class File(resource.Resource, filepath.FilePath[str]):
     """
     File is a resource that represents a plain non-interpreted file
     (although it can look for an extension like .rpy or .cgi and hand the
@@ -203,15 +200,21 @@ class File(resource.Resource, filepath.FilePath):
 
     contentEncodings = {".gz": "gzip", ".bz2": "bzip2"}
 
-    processors: Dict[str, Callable[[str, Any], Data]] = {}
+    processors: dict[str, Callable[[str, Any], Data]] = {}
 
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
+    ignoredExts: Sequence[str]
 
     type = None
 
     def __init__(
-        self, path, defaultType="text/html", ignoredExts=(), registry=None, allowExt=0
-    ):
+        self,
+        path: str,
+        defaultType: str = "text/html",
+        ignoredExts: Sequence[str] = (),
+        registry: Registry | None = None,
+        allowExt: Literal[0] = 0,
+    ) -> None:
         """
         Create a file with the given path.
 
@@ -243,7 +246,9 @@ class File(resource.Resource, filepath.FilePath):
         filepath.FilePath.__init__(self, path)
         self.defaultType = defaultType
         if ignoredExts in (0, 1) or allowExt:
-            warnings.warn("ignoredExts should receive a list, not a boolean")
+            warnings.warn(  # type:ignore[unreachable]
+                "ignoredExts should receive a list, not a boolean"
+            )
             if ignoredExts or allowExt:
                 self.ignoredExts = ["*"]
             else:
@@ -259,8 +264,8 @@ class File(resource.Resource, filepath.FilePath):
         """
         self.ignoredExts.append(ext)
 
-    childNotFound = resource.NoResource("File not found.")
-    forbidden = resource.ForbiddenResource()
+    childNotFound = resource._UnsafeNoResource("File not found.")
+    forbidden = resource._UnsafeForbiddenResource()
 
     def directoryListing(self):
         """
@@ -281,8 +286,7 @@ class File(resource.Resource, filepath.FilePath):
         If this L{File}"s path refers to a directory, return a L{File}
         referring to the file named C{path} in that directory.
 
-        If C{path} is the empty string, return a L{DirectoryLister}
-        instead.
+        If C{path} is the empty string, return a L{DirectoryLister} instead.
 
         @param path: The current path segment.
         @type path: L{bytes}
@@ -290,9 +294,9 @@ class File(resource.Resource, filepath.FilePath):
         @param request: The incoming request.
         @type request: An that provides L{twisted.web.iweb.IRequest}.
 
-        @return: A resource representing the requested file or
-            directory, or L{NoResource} if the path cannot be
-            accessed.
+        @return: A resource representing the requested file or directory, or a
+            resource returning a NOT_FOUND error to clients if the path cannot
+            be accessed.
         @rtype: An object that provides L{resource.IResource}.
         """
         if isinstance(path, bytes):
@@ -513,9 +517,7 @@ class File(resource.Resource, filepath.FilePath):
         matchingRangeFound = False
         rangeInfo = []
         contentLength = 0
-        boundary = networkString(
-            "{:x}{:x}".format(int(time.time() * 1000000), os.getpid())
-        )
+        boundary = networkString(f"{int(time.time() * 1000000):x}{os.getpid():x}")
         if self.type:
             contentType = self.type
         else:
@@ -555,9 +557,7 @@ class File(resource.Resource, filepath.FilePath):
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(
             b"content-type",
-            networkString(
-                'multipart/byteranges; boundary="{}"'.format(nativeString(boundary))
-            ),
+            networkString(f'multipart/byteranges; boundary="{nativeString(boundary)}"'),
         )
         request.setHeader(
             b"content-length", b"%d" % (contentLength + len(finalBoundary),)
@@ -880,12 +880,12 @@ def formatFileSize(size):
     """
     if size < 1024:
         return "%iB" % size
-    elif size < (1024 ** 2):
+    elif size < (1024**2):
         return "%iK" % (size / 1024)
-    elif size < (1024 ** 3):
-        return "%iM" % (size / (1024 ** 2))
+    elif size < (1024**3):
+        return "%iM" % (size / (1024**2))
     else:
-        return "%iG" % (size / (1024 ** 3))
+        return "%iG" % (size / (1024**3))
 
 
 class DirectoryLister(resource.Resource):

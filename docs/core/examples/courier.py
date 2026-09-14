@@ -19,17 +19,18 @@ sys.stderr = log.logfile
 
 # Twisted imports
 from twisted.internet import reactor, stdio
-from twisted.internet.protocol import Protocol, Factory
+from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols import basic
 
 FILTERS = "/var/lib/courier/filters"
 ALLFILTERS = "/var/lib/courier/allfilters"
 FILTERNAME = "twistedfilter"
 
-import email.parser
 import email.message
-import os, os.path
-from syslog import syslog, openlog, LOG_MAIL
+import email.parser
+import os
+import os.path
+from syslog import LOG_MAIL, openlog, syslog
 
 
 def trace_dump():

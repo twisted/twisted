@@ -4,48 +4,65 @@
 """
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
-
+from __future__ import annotations
 
 import inspect
 import sys
 import types
 import warnings
 from os.path import normcase
-from warnings import simplefilter, catch_warnings
+from typing import Callable
+from warnings import catch_warnings, simplefilter
 
 try:
     from importlib import invalidate_caches
 except ImportError:
-    invalidate_caches = None  # type: ignore[assignment,misc]
-
-from twisted.python import deprecate
-from twisted.python.deprecate import _getDeprecationWarningString
-from twisted.python.deprecate import DEPRECATION_WARNING_FORMAT
-from twisted.python.deprecate import (
-    getDeprecationWarningString,
-    deprecated,
-    _appendToDocstring,
-    _getDeprecationDocstring,
-    _fullyQualifiedName as fullyQualifiedName,
-    _mutuallyExclusiveArguments,
-    deprecatedProperty,
-    deprecatedKeywordParameter,
-    _passedArgSpec,
-    _passedSignature,
-)
+    invalidate_caches = None  # type: ignore[assignment]
 
 from incremental import Version
-from twisted.python.runtime import platform
-from twisted.python.filepath import FilePath
+from typing_extensions import ParamSpec
 
+from twisted.python import deprecate
+from twisted.python.deprecate import (
+    DEPRECATION_WARNING_FORMAT,
+    _appendToDocstring,
+    _fullyQualifiedName as fullyQualifiedName,
+    _getDeprecationDocstring,
+    _getDeprecationWarningString,
+    _mutuallyExclusiveArguments,
+    _passedSignature,
+    deprecated,
+    deprecatedKeywordParameter,
+    deprecatedProperty,
+    getDeprecationWarningString,
+)
+from twisted.python.filepath import FilePath
+from twisted.python.runtime import platform
 from twisted.python.test import deprecatedattributes
 from twisted.python.test.modules_helpers import TwistedModulesMixin
-
 from twisted.trial.unittest import SynchronousTestCase
+
+_P = ParamSpec("_P")
 
 # Note that various tests in this module require manual encoding of paths to
 # utf-8. This can be fixed once FilePath supports Unicode; see #2366, #4736,
 # #5203.
+
+
+def checkPassed(
+    func: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+) -> dict[str, object]:
+    """
+    Test an invocation of L{passed} with the given function, arguments, and
+    keyword arguments.
+
+    @param func: A function whose argspec to pass to L{_passed}.
+    @param args: The arguments which could be passed to L{func}.
+    @param kwargs: The keyword arguments which could be passed to L{func}.
+
+    @return: L{_passed}'s return value
+    """
+    return _passedSignature(inspect.signature(func), args, kwargs)
 
 
 class _MockDeprecatedAttribute:
@@ -133,9 +150,7 @@ class ModuleProxyTests(SynchronousTestCase):
         """
         proxy = self._makeProxy()
         realModule = object.__getattribute__(proxy, "_module")
-        self.assertEqual(
-            repr(proxy), "<{} module={!r}>".format(type(proxy).__name__, realModule)
-        )
+        self.assertEqual(repr(proxy), f"<{type(proxy).__name__} module={realModule!r}>")
 
 
 class DeprecatedAttributeTests(SynchronousTestCase):
@@ -267,7 +282,7 @@ deprecatedModuleAttribute(
 
         def makeSomeFiles(pathobj, dirdict):
             pathdict = {}
-            for (key, value) in dirdict.items():
+            for key, value in dirdict.items():
                 child = pathobj.child(key)
                 if isinstance(value, bytes):
                     pathdict[key] = child
@@ -307,7 +322,7 @@ deprecatedModuleAttribute(
         """
         Verification logic for L{test_deprecatedModule}.
         """
-        from package import module
+        from package import module  # type: ignore[import-not-found]
 
         self.assertEqual(FilePath(module.__file__.encode("utf-8")), modulePath)
         emitted = self.flushWarnings([self.checkOneWarning])
@@ -437,7 +452,7 @@ def callTestFunction():
         L{deprecate.warnAboutFunction} emits a C{DeprecationWarning} with the
         number of a line within the implementation of the function passed to it.
         """
-        from twisted_private_helper import module
+        from twisted_private_helper import module  # type: ignore[import-not-found]
 
         module.callTestFunction()
         warningsShown = self.flushWarnings()
@@ -504,11 +519,11 @@ def callTestFunction():
         self.package.moveTo(self.package.sibling(b"twisted_renamed_helper"))
 
         # Make sure importlib notices we've changed importable packages:
-        if invalidate_caches:
+        if invalidate_caches:  # type: ignore[truthy-function]
             invalidate_caches()
 
         # Import the newly renamed version
-        from twisted_renamed_helper import module
+        from twisted_renamed_helper import module  # type: ignore[import-not-found]
 
         self.addCleanup(sys.modules.pop, "twisted_renamed_helper")
         self.addCleanup(sys.modules.pop, module.__name__)
@@ -880,12 +895,11 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
             "something.foobar"
-            " instead.\n"
-            "    ",
+            " instead.\n",
         )
 
     def test_deprecatedReplacementWithCallable(self):
@@ -901,15 +915,13 @@ class DeprecatedDecoratorTests(SynchronousTestCase):
         self.assertEqual(
             dummy.__doc__,
             "\n"
-            "    Do nothing.\n\n"
-            "    This is used to test the deprecation decorators.\n\n"
-            "    Deprecated in Twisted 8.0.0; please use "
-            "%s.dummyReplacementMethod instead.\n"
-            "    " % (__name__,),
+            "Do nothing.\n\n"
+            "This is used to test the deprecation decorators.\n\n"
+            "Deprecated in Twisted 8.0.0; please use "
+            "{}.dummyReplacementMethod instead.\n".format(__name__),
         )
 
     def test_deprecatedKeywordParameter(self):
-
         message = (
             "The 'foo' parameter to "
             "twisted.python.test.test_deprecate."
@@ -998,43 +1010,17 @@ class AppendToDocstringTests(SynchronousTestCase):
             This is a multi-line docstring.
             """
 
-        def expectedDocstring():
-            """
-            This is a multi-line docstring.
-
-            Appended text.
-            """
-
         _appendToDocstring(multiLineDocstring, "Appended text.")
-        self.assertEqual(expectedDocstring.__doc__, multiLineDocstring.__doc__)
+        self.assertEqual(
+            "\n" "This is a multi-line docstring.\n" "\n" "Appended text.\n",
+            multiLineDocstring.__doc__,
+        )
 
 
 class MutualArgumentExclusionTests(SynchronousTestCase):
     """
     Tests for L{mutuallyExclusiveArguments}.
     """
-
-    def checkPassed(self, func, *args, **kw):
-        """
-        Test an invocation of L{passed} with the given function, arguments, and
-        keyword arguments.
-
-        @param func: A function whose argspec will be inspected.
-        @type func: A callable.
-
-        @param args: The arguments which could be passed to C{func}.
-
-        @param kw: The keyword arguments which could be passed to C{func}.
-
-        @return: L{_passedSignature} or L{_passedArgSpec}'s return value
-        @rtype: L{dict}
-        """
-        if getattr(inspect, "signature", None):
-            # Python 3
-            return _passedSignature(inspect.signature(func), args, kw)
-        else:
-            # Python 2
-            return _passedArgSpec(inspect.getargspec(func), args, kw)
 
     def test_passed_simplePositional(self):
         """
@@ -1045,7 +1031,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2), dict(a=1, b=2))
+        self.assertEqual(checkPassed(func, 1, 2), dict(a=1, b=2))
 
     def test_passed_tooManyArgs(self):
         """
@@ -1056,7 +1042,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, 2, 3)
+        self.assertRaises(TypeError, checkPassed, func, 1, 2, 3)
 
     def test_passed_doublePassKeyword(self):
         """
@@ -1067,7 +1053,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, a=2)
+        self.assertRaises(TypeError, checkPassed, func, 1, a=2)
 
     def test_passed_unspecifiedKeyword(self):
         """
@@ -1078,7 +1064,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a):
             pass
 
-        self.assertRaises(TypeError, self.checkPassed, func, 1, z=2)
+        self.assertRaises(TypeError, checkPassed, func, 1, z=2)
 
     def test_passed_star(self):
         """
@@ -1089,7 +1075,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, *b):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2, 3), dict(a=1, b=(2, 3)))
+        self.assertEqual(checkPassed(func, 1, 2, 3), dict(a=1, b=(2, 3)))
 
     def test_passed_starStar(self):
         """
@@ -1101,7 +1087,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
             pass
 
         self.assertEqual(
-            self.checkPassed(func, 1, x=2, y=3, z=4), dict(a=1, b=dict(x=2, y=3, z=4))
+            checkPassed(func, 1, x=2, y=3, z=4), dict(a=1, b=dict(x=2, y=3, z=4))
         )
 
     def test_passed_noDefaultValues(self):
@@ -1113,7 +1099,7 @@ class MutualArgumentExclusionTests(SynchronousTestCase):
         def func(a, b, c=1, d=2, e=3):
             pass
 
-        self.assertEqual(self.checkPassed(func, 1, 2, e=7), dict(a=1, b=2, e=7))
+        self.assertEqual(checkPassed(func, 1, 2, e=7), dict(a=1, b=2, e=7))
 
     def test_mutualExclusionPrimeDirective(self):
         """
@@ -1174,23 +1160,6 @@ class KeywordOnlyTests(SynchronousTestCase):
     Keyword only arguments (PEP 3102).
     """
 
-    def checkPassed(self, func, *args, **kw):
-        """
-        Test an invocation of L{passed} with the given function, arguments, and
-        keyword arguments.
-
-        @param func: A function whose argspec to pass to L{_passed}.
-        @type func: A callable.
-
-        @param args: The arguments which could be passed to L{func}.
-
-        @param kw: The keyword arguments which could be passed to L{func}.
-
-        @return: L{_passed}'s return value
-        @rtype: L{dict}
-        """
-        return _passedSignature(inspect.signature(func), args, kw)
-
     def test_passedKeywordOnly(self):
         """
         Keyword only arguments follow varargs.
@@ -1208,12 +1177,12 @@ class KeywordOnlyTests(SynchronousTestCase):
             b has a default value.
             """
 
-        self.assertEqual(self.checkPassed(func1, 1, 2, 3), dict(a=(1, 2, 3), b=True))
+        self.assertEqual(checkPassed(func1, 1, 2, 3), dict(a=(1, 2, 3), b=True))
         self.assertEqual(
-            self.checkPassed(func1, 1, 2, 3, b=False), dict(a=(1, 2, 3), b=False)
+            checkPassed(func1, 1, 2, 3, b=False), dict(a=(1, 2, 3), b=False)
         )
         self.assertEqual(
-            self.checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
+            checkPassed(func2, 1, 2, b=False, c=1, d=2, e=3),
             dict(a=(1, 2), b=False, c=1, d=2, e=3),
         )
-        self.assertRaises(TypeError, self.checkPassed, func2, 1, 2, b=False, c=1, d=2)
+        self.assertRaises(TypeError, checkPassed, func2, 1, 2, b=False, c=1, d=2)

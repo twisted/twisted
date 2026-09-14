@@ -8,24 +8,25 @@ Support for Linux ethernet and IP tunnel devices.
 @see: U{https://en.wikipedia.org/wiki/TUN/TAP}
 """
 
-import os
-import fcntl
 import errno
+import fcntl
+import os
+import platform
 import struct
 import warnings
-from typing import Tuple
-
 from collections import namedtuple
-from constantly import Flags, FlagConstant
+
 from zope.interface import Attribute, Interface, implementer
 
-from twisted.python.util import FancyEqMixin, FancyStrMixin
+from constantly import FlagConstant, Flags
 from incremental import Version
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.deprecate import deprecated
-from twisted.python import log
-from twisted.internet import abstract, error, task, interfaces, defer
+
+from twisted.internet import abstract, defer, error, interfaces, task
 from twisted.pair import ethernet, raw
+from twisted.python import log
+from twisted.python.deprecate import deprecated
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import FancyEqMixin, FancyStrMixin
 
 __all__ = [
     "TunnelFlags",
@@ -35,8 +36,17 @@ __all__ = [
 
 
 _IFNAMSIZ = 16
-_TUNSETIFF = 0x400454CA
-_TUNGETIFF = 0x800454D2
+if (
+    platform.machine() == "parisc"
+    or platform.machine().startswith("ppc")
+    or platform.machine().startswith("sparc")
+):  # pragma: no coverage
+    # We don't have CI for parisc, hence no coverage is expected.
+    _TUNSETIFF = 0x800454CA
+    _TUNGETIFF = 0x400454D2
+else:
+    _TUNSETIFF = 0x400454CA
+    _TUNGETIFF = 0x800454D2
 _TUN_KO_PATH = b"/dev/net/tun"
 
 
@@ -246,7 +256,7 @@ class TuntapPort(abstract.FileDescriptor):
         self.logstr = f"{logPrefix} ({self._mode.name})"
 
     def __repr__(self) -> str:
-        args: Tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
+        args: tuple[str, ...] = (fullyQualifiedName(self.protocol.__class__),)
         if self.connected:
             args = args + ("",)
         else:

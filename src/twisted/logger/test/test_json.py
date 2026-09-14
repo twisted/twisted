@@ -5,18 +5,18 @@
 Tests for L{twisted.logger._json}.
 """
 
-from io import StringIO, BytesIO
-from typing import Any, IO, List, Optional, Sequence, cast
-from unittest import skipIf
+from __future__ import annotations
+
+from collections.abc import Sequence
+from io import BytesIO, StringIO
+from typing import IO, Any, cast
 
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
 
-from twisted.python.compat import _PYPY
 from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
-
 from .._flatten import extractField
 from .._format import formatEvent
 from .._global import globalLogPublisher
@@ -24,8 +24,8 @@ from .._interfaces import ILogObserver, LogEvent
 from .._json import (
     eventAsJSON,
     eventFromJSON,
-    jsonFileLogObserver,
     eventsFromJSONLogFile,
+    jsonFileLogObserver,
     log as jsonLog,
 )
 from .._levels import LogLevel
@@ -102,7 +102,6 @@ class SaveLoadTests(TestCase):
             {"\u1234": "\u4321", "3": {"unpersistable": True}},
         )
 
-    @skipIf(_PYPY, "https://bitbucket.org/pypy/pypy/issues/3052/")
     def test_saveBytes(self) -> None:
         """
         Any L{bytes} objects will be saved as if they are latin-1 so they can
@@ -162,7 +161,7 @@ class SaveLoadTests(TestCase):
         Round-tripping a failure through L{eventAsJSON} preserves its class and
         structure.
         """
-        events: List[LogEvent] = []
+        events: list[LogEvent] = []
         log = Logger(observer=cast(ILogObserver, events.append))
         try:
             1 / 0
@@ -251,7 +250,7 @@ class FileLogObserverTests(TestCase):
         """
         io = StringIO()
         publisher = LogPublisher()
-        logged: List[LogEvent] = []
+        logged: list[LogEvent] = []
         publisher.addObserver(cast(ILogObserver, logged.append))
         publisher.addObserver(jsonFileLogObserver(io))
         logger = Logger(observer=publisher)
@@ -284,7 +283,7 @@ class LogFileReaderTests(TestCase):
     """
 
     def setUp(self) -> None:
-        self.errorEvents: List[LogEvent] = []
+        self.errorEvents: list[LogEvent] = []
 
         @implementer(ILogObserver)
         def observer(event: LogEvent) -> None:
@@ -301,7 +300,7 @@ class LogFileReaderTests(TestCase):
     def _readEvents(
         self,
         inFile: IO[Any],
-        recordSeparator: Optional[str] = None,
+        recordSeparator: str | None = None,
         bufferSize: int = 4096,
     ) -> None:
         """

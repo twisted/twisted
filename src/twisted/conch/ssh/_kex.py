@@ -6,12 +6,31 @@
 SSH key exchange handling.
 """
 
+from __future__ import annotations
 
 from hashlib import sha1, sha256, sha384, sha512
+from typing import TYPE_CHECKING, Protocol
 
-from zope.interface import Attribute, implementer, Interface
+from zope.interface import Attribute, Interface, implementer
 
 from twisted.conch import error
+
+if TYPE_CHECKING:
+    # NB: Not a real attribute at runtime.
+    from hashlib import _Hash
+
+try:
+    import cryptography.hazmat.primitives.hpke  # noqa: F401
+except ImportError:
+    # Most probably we have cryptography older than 48.0
+    cryptographyHasMLKEM = False
+else:
+    cryptographyHasMLKEM = True
+
+
+class _HashFactory(Protocol):
+    def __call__(self, data: bytes = ...) -> _Hash:
+        ...
 
 
 class _IKexAlgorithm(Interface):
@@ -19,13 +38,13 @@ class _IKexAlgorithm(Interface):
     An L{_IKexAlgorithm} describes a key exchange algorithm.
     """
 
-    preference = Attribute(
+    preference: int = Attribute(
         "An L{int} giving the preference of the algorithm when negotiating "
         "key exchange. Algorithms with lower precedence values are more "
         "preferred."
     )
 
-    hashProcessor = Attribute(
+    hashProcessor: _HashFactory = Attribute(
         "A callable hash algorithm constructor (e.g. C{hashlib.sha256}) "
         "suitable for use with this key exchange algorithm."
     )
@@ -56,6 +75,21 @@ class _IEllipticCurveExchangeKexAlgorithm(_IKexAlgorithm):
     """
 
 
+class _IPQHybridKexAlgorithm(_IKexAlgorithm):
+    """
+    An L{_IPQHybridKexAlgorithm} describes a PQ/T Hybrid key exchange algorithm.
+    """
+
+    # These variables don't comply with Twisted naming convention.
+    # The names are kept to match the RFC.
+    c_pk1_length = Attribute(
+        "An L{int} giving the classical component public key length in bytes."
+    )
+    c_pk2_length = Attribute(
+        "An L{int} giving the PQ component public key length in bytes."
+    )
+
+
 class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     """
     An L{_IGroupExchangeKexAlgorithm} describes a key exchange algorithm
@@ -64,6 +98,18 @@ class _IGroupExchangeKexAlgorithm(_IKexAlgorithm):
     A prime / generator group should be chosen at run time based on the
     requested size. See RFC 4419.
     """
+
+
+@implementer(_IPQHybridKexAlgorithm)
+class _MLKEM768X25519SHA256:
+    """
+    PQ/T Hybrid Key Exchange using ML-KEM-768 and X25519 with SHA256.
+    """
+
+    preference = 1
+    hashProcessor = sha256
+    c_pk1_length = 32
+    c_pk2_length = 1184
 
 
 @implementer(_IEllipticCurveExchangeKexAlgorithm)
@@ -92,6 +138,12 @@ class _ECDH256:
     """
     Elliptic Curve Key Exchange with SHA-256 as HASH. Defined in
     RFC 5656.
+
+    Note that C{ecdh-sha2-nistp256} takes priority over nistp384 or nistp512.
+    This is the same priority from OpenSSH.
+
+    C{ecdh-sha2-nistp256} is considered preety good cryptography.
+    If you need something better consider using C{curve25519-sha256}.
     """
 
     preference = 3
@@ -169,7 +221,8 @@ class _DHGroup14SHA1:
 
 
 # Which ECDH hash function to use is dependent on the size.
-_kexAlgorithms = {
+_kexAlgorithms: dict[bytes, _IKexAlgorithm] = {
+    b"mlkem768x25519-sha256": _MLKEM768X25519SHA256(),
     b"curve25519-sha256": _Curve25519SHA256(),
     b"curve25519-sha256@libssh.org": _Curve25519SHA256LibSSH(),
     b"diffie-hellman-group-exchange-sha256": _DHGroupExchangeSHA256(),
@@ -181,7 +234,7 @@ _kexAlgorithms = {
 }
 
 
-def getKex(kexAlgorithm):
+def getKex(kexAlgorithm: bytes) -> _IKexAlgorithm:
     """
     Get a description of a named key exchange algorithm.
 
@@ -195,53 +248,87 @@ def getKex(kexAlgorithm):
     @raises ConchError: if the key exchange algorithm is not found.
     """
     if kexAlgorithm not in _kexAlgorithms:
-        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm}")
+        raise error.ConchError(f"Unsupported key exchange algorithm: {kexAlgorithm!r}")
     return _kexAlgorithms[kexAlgorithm]
 
 
-def isEllipticCurve(kexAlgorithm):
+def isEllipticCurve(kexAlgorithm: bytes) -> bool:
     """
     Returns C{True} if C{kexAlgorithm} is an elliptic curve.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: C{str}
 
-    @return: C{True} if C{kexAlgorithm} is an elliptic curve,
-        otherwise C{False}.
-    @rtype: C{bool}
+    @return: C{True} if C{kexAlgorithm} is an elliptic curve, otherwise
+        C{False}.
     """
     return _IEllipticCurveExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-def isFixedGroup(kexAlgorithm):
+def isFixedGroup(kexAlgorithm: bytes) -> bool:
     """
     Returns C{True} if C{kexAlgorithm} has a fixed prime / generator group.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{bytes}
 
     @return: C{True} if C{kexAlgorithm} has a fixed prime / generator group,
         otherwise C{False}.
-    @rtype: L{bool}
     """
     return _IFixedGroupKexAlgorithm.providedBy(getKex(kexAlgorithm))
 
 
-def getHashProcessor(kexAlgorithm):
+def isPQHybrid(kexAlgorithm: bytes) -> bool:
+    """
+    Returns C{True} if C{kexAlgorithm} is a PQ/T Hybrid algorithm.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: C{True} if C{kexAlgorithm} is a PQ/T Hybrid algorithm,
+        otherwise C{False}.
+    """
+    return _IPQHybridKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
+
+def isDynamicPrimesGroup(kexAlgorithm: bytes) -> bool:
+    """
+    Returns C{True} if C{kexAlgorithm} uses group exchange with dynamic primes.
+
+    Dynamic primes are designed to allow changing their values during the lifetime of the process.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: C{True} if C{kexAlgorithm} uses group exchange, otherwise
+        C{False}.
+    """
+    return _IGroupExchangeKexAlgorithm.providedBy(getKex(kexAlgorithm))
+
+
+def getPQHybridKex(kexAlgorithm: bytes) -> _IPQHybridKexAlgorithm:
+    """
+    Get a description of a named PQ/T Hybrid key exchange algorithm.
+
+    @param kexAlgorithm: The key exchange algorithm name.
+
+    @return: A description of the PQ/T Hybrid key exchange algorithm.
+
+    @raises ConchError: if the key exchange algorithm is not found or is not
+        a PQ/T Hybrid algorithm.
+    """
+    return _IPQHybridKexAlgorithm(getKex(kexAlgorithm))
+
+
+def getHashProcessor(kexAlgorithm: bytes) -> _HashFactory:
     """
     Get the hash algorithm callable to use in key exchange.
 
     @param kexAlgorithm: The key exchange algorithm name.
-    @type kexAlgorithm: L{bytes}
 
     @return: A callable hash algorithm constructor (e.g. C{hashlib.sha256}).
-    @rtype: C{callable}
     """
     kex = getKex(kexAlgorithm)
     return kex.hashProcessor
 
 
-def getDHGeneratorAndPrime(kexAlgorithm):
+def getDHGeneratorAndPrime(kexAlgorithm: bytes) -> tuple[int, int]:
     """
     Get the generator and the prime to use in key exchange.
 
@@ -251,20 +338,20 @@ def getDHGeneratorAndPrime(kexAlgorithm):
     @return: A L{tuple} containing L{int} generator and L{int} prime.
     @rtype: L{tuple}
     """
-    kex = getKex(kexAlgorithm)
+    kex = _IFixedGroupKexAlgorithm(getKex(kexAlgorithm))
     return kex.generator, kex.prime
 
 
-def getSupportedKeyExchanges():
+def getSupportedKeyExchanges() -> list[bytes]:
     """
     Get a list of supported key exchange algorithm names in order of
     preference.
 
     @return: A C{list} of supported key exchange algorithm names.
-    @rtype: C{list} of L{bytes}
     """
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.asymmetric import ec
+
     from twisted.conch.ssh.keys import _curveTable
 
     backend = default_backend()
@@ -277,6 +364,10 @@ def getSupportedKeyExchanges():
             )
         elif keyAlgorithm.startswith(b"curve25519-sha256"):
             supported = backend.x25519_supported()
+        elif keyAlgorithm == b"mlkem768x25519-sha256":
+            # If we support mklem we most probably also support x25519
+            # so just keep it simple.
+            supported = cryptographyHasMLKEM
         else:
             supported = True
         if not supported:

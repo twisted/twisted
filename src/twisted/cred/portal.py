@@ -6,13 +6,31 @@
 """
 The point of integration of application and authentication.
 """
+from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import Callable
 
-from twisted.internet import defer
-from twisted.internet.defer import maybeDeferred
-from twisted.python import failure, reflect
+from zope.interface import Interface, providedBy
+
 from twisted.cred import error
-from zope.interface import providedBy, Interface
+from twisted.cred.checkers import ICredentialsChecker
+from twisted.cred.credentials import ICredentials
+from twisted.internet import defer
+from twisted.internet.defer import Deferred, maybeDeferred
+from twisted.python import failure, reflect
+
+# To say 'we need an Interface object', we have to say Type[Interface];
+# although zope.interface has no type/instance distinctions within the
+# implementation of Interface itself (subclassing it actually instantiates it),
+# since mypy-zope treats Interface objects *as* types, this is how you have to
+# treat it.
+_InterfaceItself = type[Interface]
+
+# This is the result shape for both IRealm.requestAvatar and Portal.login,
+# although the former is optionally allowed to return synchronously and the
+# latter must be Deferred.
+_requestResult = tuple[_InterfaceItself, object, Callable[[], None]]
 
 
 class IRealm(Interface):
@@ -21,7 +39,9 @@ class IRealm(Interface):
     authentication system.
     """
 
-    def requestAvatar(avatarId, mind, *interfaces):
+    def requestAvatar(
+        avatarId: bytes | tuple[()], mind: object, *interfaces: _InterfaceItself
+    ) -> Deferred[_requestResult] | _requestResult:
         """
         Return avatar which provides one of the given interfaces.
 
@@ -56,7 +76,11 @@ class Portal:
     in the realm object and in the credentials checker objects.
     """
 
-    def __init__(self, realm, checkers=()):
+    checkers: dict[type[Interface], ICredentialsChecker]
+
+    def __init__(
+        self, realm: IRealm, checkers: Iterable[ICredentialsChecker] = ()
+    ) -> None:
         """
         Create a Portal to a L{IRealm}.
         """
@@ -65,19 +89,23 @@ class Portal:
         for checker in checkers:
             self.registerChecker(checker)
 
-    def listCredentialsInterfaces(self):
+    def listCredentialsInterfaces(self) -> list[type[Interface]]:
         """
         Return list of credentials interfaces that can be used to login.
         """
         return list(self.checkers.keys())
 
-    def registerChecker(self, checker, *credentialInterfaces):
+    def registerChecker(
+        self, checker: ICredentialsChecker, *credentialInterfaces: type[Interface]
+    ) -> None:
         if not credentialInterfaces:
             credentialInterfaces = checker.credentialInterfaces
         for credentialInterface in credentialInterfaces:
             self.checkers[credentialInterface] = checker
 
-    def login(self, credentials, mind, *interfaces):
+    def login(
+        self, credentials: ICredentials, mind: object, *interfaces: type[Interface]
+    ) -> Deferred[_requestResult]:
         """
         @param credentials: an implementor of
             L{twisted.cred.credentials.ICredentials}

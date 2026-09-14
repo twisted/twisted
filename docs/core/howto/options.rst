@@ -92,8 +92,6 @@ option was seen, 0 otherwise. Here is an example for usage:
 .. code-block:: python
 
     
-    from __future__ import print_function
-    
     class Options(usage.Options):
     
         optFlags = [

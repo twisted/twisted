@@ -6,38 +6,31 @@
 Command line options for C{twist}.
 """
 
-from sys import stdout, stderr
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping, Sequence
+from sys import stderr, stdout
 from textwrap import dedent
-import typing
-from typing import (
-    Callable,
-    Iterable,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import Callable, NoReturn, cast
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
-    LogLevel,
     InvalidLogLevelError,
-    textFileLogObserver,
+    LogLevel,
     jsonFileLogObserver,
+    textFileLogObserver,
 )
 from twisted.plugin import getPlugins
 from twisted.python.usage import Options, UsageError
-
-from ..reactors import installReactor, NoSuchReactor, getReactorTypes
-from ..runner._exit import exit, ExitStatus
+from ..reactors import NoSuchReactor, getReactorTypes, installReactor
+from ..runner._exit import ExitStatus, exit
 from ..service import IServiceMaker
 
 openFile = open
 
 
-def _update_doc(opt: Callable[["TwistOptions", str], None], **kwargs: str) -> None:
+def _update_doc(opt: Callable[[TwistOptions, str], None], **kwargs: str) -> None:
     """
     Update the docstring of a method that implements an option.
     The string is dedented and the given keyword arguments are substituted.
@@ -59,11 +52,15 @@ class TwistOptions(Options):
         self["reactorName"] = self.defaultReactorName
         self["logLevel"] = self.defaultLogLevel
         self["logFile"] = stdout
+        # An empty long description is explicitly set here as otherwise
+        # when executing from distributed trial twisted.python.usage will
+        # pull the description from `__main__` which is another entry point.
+        self.longdesc = ""
 
     def getSynopsis(self) -> str:
-        return "{} plugin [plugin_options]".format(Options.getSynopsis(self))
+        return f"{Options.getSynopsis(self)} plugin [plugin_options]"
 
-    def opt_version(self) -> "typing.NoReturn":
+    def opt_version(self) -> NoReturn:
         """
         Print version and exit.
         """
@@ -98,7 +95,7 @@ class TwistOptions(Options):
 
             return cast(IReactorCore, reactor)
         else:
-            return cast(IReactorCore, installReactor(name))
+            return installReactor(name)
 
     def opt_log_level(self, levelName: str) -> None:
         """
@@ -171,7 +168,7 @@ class TwistOptions(Options):
                 self["fileLogObserverFactory"] = jsonFileLogObserver
                 self["logFormat"] = "json"
 
-    def parseOptions(self, options: Optional[Sequence[str]] = None) -> None:
+    def parseOptions(self, options: Sequence[str] | None = None) -> None:
         self.selectDefaultLogObserver()
 
         Options.parseOptions(self, options=options)
@@ -192,7 +189,7 @@ class TwistOptions(Options):
     @property
     def subCommands(
         self,
-    ) -> Iterable[Tuple[str, None, Callable[[IServiceMaker], Options], str]]:
+    ) -> Iterable[tuple[str, None, Callable[[IServiceMaker], Options], str]]:
         plugins = self.plugins
         for name in sorted(plugins):
             plugin = plugins[name]

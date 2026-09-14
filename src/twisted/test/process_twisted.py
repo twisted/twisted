@@ -14,10 +14,10 @@ sys.path.insert(0, os.curdir)
 # end of preamble
 
 
-from twisted.python import log
 from zope.interface import implementer
-from twisted.internet import interfaces
 
+from twisted.internet import interfaces
+from twisted.python import log
 
 log.startLogging(sys.stderr)
 
@@ -46,4 +46,4 @@ class Echo(protocol.Protocol):
 
 
 stdio.StandardIO(Echo())
-reactor.run()  # type: ignore[attr-defined]
+reactor.run()

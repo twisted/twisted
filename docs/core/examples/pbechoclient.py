@@ -2,11 +2,11 @@
 # See LICENSE for details.
 
 
+from pbecho import DefinedError
+
+from twisted.cred.credentials import UsernamePassword
 from twisted.internet import reactor
 from twisted.spread import pb
-from twisted.cred.credentials import UsernamePassword
-
-from pbecho import DefinedError
 
 
 def success(message):

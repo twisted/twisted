@@ -8,15 +8,17 @@ Generic positioning base classes.
 """
 
 
+from collections.abc import Sequence
 from functools import partial
 from operator import attrgetter
+from typing import ClassVar
+
 from zope.interface import implementer
-from constantly import Names, NamedConstant
-from typing import ClassVar, Sequence
 
-from twisted.python.util import FancyEqMixin
+from constantly import NamedConstant, Names
+
 from twisted.positioning import ipositioning
-
+from twisted.python.util import FancyEqMixin
 
 MPS_PER_KNOT = 0.5144444444444444
 MPS_PER_KPH = 0.27777777777777777
@@ -655,7 +657,7 @@ class PositionError(FancyEqMixin):
             if x is None:
                 return
 
-        delta = abs(self.pdop - (self.hdop ** 2 + self.vdop ** 2) ** 0.5)
+        delta = abs(self.pdop - (self.hdop**2 + self.vdop**2) ** 0.5)
         if delta > self._ALLOWABLE_TRESHOLD:
             raise ValueError(
                 "invalid combination of dilutions of precision: "
@@ -666,15 +668,15 @@ class PositionError(FancyEqMixin):
     _DOP_EXPRESSIONS = {
         "pdop": [
             lambda self: float(self._pdop),
-            lambda self: (self._hdop ** 2 + self._vdop ** 2) ** 0.5,
+            lambda self: (self._hdop**2 + self._vdop**2) ** 0.5,
         ],
         "hdop": [
             lambda self: float(self._hdop),
-            lambda self: (self._pdop ** 2 - self._vdop ** 2) ** 0.5,
+            lambda self: (self._pdop**2 - self._vdop**2) ** 0.5,
         ],
         "vdop": [
             lambda self: float(self._vdop),
-            lambda self: (self._pdop ** 2 - self._hdop ** 2) ** 0.5,
+            lambda self: (self._pdop**2 - self._hdop**2) ** 0.5,
         ],
     }
 

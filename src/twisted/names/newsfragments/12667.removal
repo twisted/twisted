@@ -1,0 +1,1 @@
+`twisted.names.dns.Message` no longer has the class attributes `queries`, `answers`, `add`, or `ns`.

@@ -32,7 +32,9 @@ Here is a simple example:
 .. literalinclude:: listings/udp/basic_example.py
 
 As you can see, the protocol is registered with the reactor.
-This means it may be persisted if it's added to an application, and thus it has :py:meth:`startProtocol <twisted.internet.protocol.AbstractDatagramProtocol.startProtocol>` and :py:meth:`stopProtocol <twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol>` methods that will get called when the protocol is connected and disconnected from a UDP socket.
+When a datagram protocol is connected to its first UDP port via ``listenUDP``, and before it begins receiving traffic, its :py:meth:`startProtocol <twisted.internet.protocol.AbstractDatagramProtocol.startProtocol>` method will be called; when it is disconnected from its last UDP port and will no longer receive traffic, its :py:meth:`stopProtocol <twisted.internet.protocol.AbstractDatagramProtocol.stopProtocol>` will be called.
+These are analagous to the :py:meth:`startFactory <twisted.internet.protocol.Factory.startFactory>` and :py:meth:`stopFactory <twisted.internet.protocol.Factory.stopFactory>` for stream-based transports, since a datagram transport such as UDP does not have a native notion of a “listening port” separate from a “connection”, there is no factory, only the protocol.
+You may override these methods to do any protocol-specific setup and teardown.
 
 The protocol's ``transport`` attribute will implement the :py:class:`twisted.internet.interfaces.IUDPTransport` interface.
 Notice that ``addr`` argument to ``self.transport.write`` should be a tuple with IP address and port number. First element of tuple must be ip address and not a hostname. If you only have the hostname use ``reactor.resolve()`` to resolve the address (see :py:meth:`twisted.internet.interfaces.IReactorCore.resolve`).
@@ -103,16 +105,25 @@ Multicast UDP
 
 Multicast allows a process to contact multiple hosts with a single packet, without knowing the specific IP address of any of the hosts.
 This is in contrast to normal, or unicast, UDP, where each datagram has a single IP as its destination.
-Multicast datagrams are sent to special multicast group addresses (in the IPv4 range 224.0.0.0 to 239.255.255.255), along with a corresponding port.
+Multicast datagrams are sent to special multicast group addresses. In the IPv4 range ``224.0.0.0`` to ``239.255.255.255``; and in the IPv6 range ``ff0::``.  Many of these addresses have special meanings, and it is beyond the scope of this documentation to discuss them all, `but Wikipedia has a good summary <https://en.wikipedia.org/wiki/Multicast_address>`_ , along with a corresponding port.
 In order to receive multicast datagrams, you must join that specific group address.
-However, any UDP socket can send to multicast addresses. Here is a simple server example:
+However, any UDP socket can send to multicast addresses.
+
+To demonstrate both IPv6 and IPv4 connectivity, let's define a bit of common configuration between our server and our client.
+The relevant bits of configuration are an ``interface`` for sending traffic, a ``group`` to send to and receive from, and a ``port`` number to use.
+
+:download:`MulticastCommon.py <listings/udp/MulticastCommon.py>`
+
+.. literalinclude:: listings/udp/MulticastCommon.py
+
+Here is a simple server example, using that configuration:
 
 :download:`MulticastServer.py <listings/udp/MulticastServer.py>`
 
 .. literalinclude:: listings/udp/MulticastServer.py
 
 As with UDP, with multicast there is no server/client differentiation at the protocol level.
-Our server example is very simple and closely resembles a normal :py:meth:`listenUDP <twisted.internet.interfaces.IReactorUDP.listenUDP>` protocol implementation.
+Our server example is very simple and closely resembles a unicast :py:meth:`listenUDP <twisted.internet.interfaces.IReactorUDP.listenUDP>` protocol implementation.
 The main difference is that instead of ``listenUDP``, :py:meth:`listenMulticast <twisted.internet.interfaces.IReactorMulticast.listenMulticast>` is called with the port number.
 The server calls :py:meth:`joinGroup <twisted.internet.interfaces.IMulticastTransport.joinGroup>` to join a multicast group.
 A ``DatagramProtocol`` that is listening with multicast and has joined a group can receive multicast datagrams, but also unicast datagrams sent directly to its address.

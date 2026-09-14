@@ -7,34 +7,39 @@ Things likely to be used by writers of unit tests.
 
 Maintainer: Jonathan Lange
 """
-
+from __future__ import annotations
 
 import inspect
 import os
 import sys
 import tempfile
 import types
+import unittest as pyunit
 import warnings
+from collections.abc import Coroutine, Generator, Iterable
 from dis import findlinestarts as _findlinestarts
-from typing import Optional, Tuple
+from typing import Any, Callable, NoReturn, TypeVar
 
+# Python 2.7 and higher has skip support built-in
+from unittest import SkipTest
+
+from attrs import frozen
+from typing_extensions import ParamSpec
+
+from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python import failure, log, monkey
-from twisted.python.reflect import fullyQualifiedName
-from twisted.python.util import runWithWarningsSuppressed
 from twisted.python.deprecate import (
     DEPRECATION_WARNING_FORMAT,
     getDeprecationWarningString,
     getVersionString,
     warnAboutFunction,
 )
-from twisted.internet.defer import ensureDeferred
-
+from twisted.python.reflect import fullyQualifiedName
+from twisted.python.util import runWithWarningsSuppressed
 from twisted.trial import itrial, util
 
-import unittest as pyunit
-
-# Python 2.7 and higher has skip support built-in
-from unittest import SkipTest
+_P = ParamSpec("_P")
+T = TypeVar("T")
 
 
 class FailTest(AssertionError):
@@ -43,6 +48,7 @@ class FailTest(AssertionError):
     """
 
 
+@frozen
 class Todo:
     """
     Internal object used to mark a L{TestCase} as 'todo'. Tests marked 'todo'
@@ -50,19 +56,17 @@ class Todo:
     they do not fail the suite and the errors are reported in a separate
     category. If todo'd tests succeed, Trial L{TestResult}s will report an
     unexpected success.
+
+    @ivar reason: A string explaining why the test is marked 'todo'
+
+    @ivar errors: An iterable of exception types that the test is expected to
+        raise. If one of these errors is raised by the test, it will be
+        trapped. Raising any other kind of error will fail the test.  If
+        L{None} then all errors will be trapped.
     """
 
-    def __init__(self, reason, errors=None):
-        """
-        @param reason: A string explaining why the test is marked 'todo'
-
-        @param errors: An iterable of exception types that the test is
-        expected to raise. If one of these errors is raised by the test, it
-        will be trapped. Raising any other kind of error will fail the test.
-        If L{None} is passed, then all errors will be trapped.
-        """
-        self.reason = reason
-        self.errors = errors
+    reason: str
+    errors: Iterable[type[BaseException]] | None = None
 
     def __repr__(self) -> str:
         return f"<Todo reason={self.reason!r} errors={self.errors!r}>"
@@ -81,7 +85,9 @@ class Todo:
         return False
 
 
-def makeTodo(value):
+def makeTodo(
+    value: (str | tuple[type[BaseException] | Iterable[type[BaseException]], str])
+) -> Todo:
     """
     Return a L{Todo} object built from C{value}.
 
@@ -98,11 +104,11 @@ def makeTodo(value):
         return Todo(reason=value)
     if isinstance(value, tuple):
         errors, reason = value
-        try:
-            errors = list(errors)
-        except TypeError:
-            errors = [errors]
-        return Todo(reason=reason, errors=errors)
+        if isinstance(errors, type):
+            iterableErrors: Iterable[type[BaseException]] = [errors]
+        else:
+            iterableErrors = errors
+        return Todo(reason=reason, errors=iterableErrors)
 
 
 class _Warning:
@@ -351,7 +357,7 @@ class _Assertions(pyunit.TestCase):
     callbacks.
     """
 
-    def fail(self, msg=None):
+    def fail(self, msg: object | None = None) -> NoReturn:
         """
         Absolutely fail the test.  Do not pass go, do not collect $200.
 
@@ -409,10 +415,13 @@ class _Assertions(pyunit.TestCase):
 
         return context._handle(lambda: f(*args, **kwargs))
 
-    # unittest.TestCase.assertRaises() is defined with 4 arguments
-    # but we define it with 5 arguments.  So we need to tell mypy
-    # to ignore the following assignment to failUnlessRaises
-    failUnlessRaises = assertRaises  # type: ignore[assignment]
+    # The type-ignore below is present to address the evolving incompatible
+    # signature between assertRaises and failUnlessRaises in the stdlib.
+    # Depending on which version of Python you are developing with you might
+    # get a spurious error here *or not* which is why there's also the
+    # unused-ignore ignore here; in upstream unittest this method is now
+    # entirely removed, since Python 3.12, so there's nothing to conflict with.
+    failUnlessRaises = assertRaises  # type:ignore[assignment,unused-ignore]
 
     def assertEqual(self, first, second, msg=None):
         """
@@ -424,9 +433,10 @@ class _Assertions(pyunit.TestCase):
         super().assertEqual(first, second, msg)
         return first
 
+    # We keep all these aliases for backward compatibility.
+    assertEquals = assertEqual
     failUnlessEqual = assertEqual
     failUnlessEquals = assertEqual
-    assertEquals = assertEqual
 
     def assertIs(self, first, second, msg=None):
         """
@@ -471,6 +481,7 @@ class _Assertions(pyunit.TestCase):
             raise self.failureException(msg or f"{first!r} == {second!r}")
         return first
 
+    # We keep all these aliases for backward compatibility.
     assertNotEquals = assertNotEqual
     failIfEquals = assertNotEqual
     failIfEqual = assertNotEqual
@@ -664,18 +675,30 @@ class _Assertions(pyunit.TestCase):
 
     failIfIsInstance = assertNotIsInstance
 
-    def successResultOf(self, deferred):
+    def successResultOf(
+        self,
+        deferred: (
+            Coroutine[Deferred[T], Any, T]
+            | Generator[Deferred[T], Any, T]
+            | Deferred[T]
+        ),
+    ) -> T:
         """
         Return the current success result of C{deferred} or raise
         C{self.failureException}.
 
-        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} which
-            has a success result.  This means
+        @param deferred: A L{Deferred<twisted.internet.defer.Deferred>} or
+            I{coroutine} which has a success result.
+
+            For a L{Deferred<twisted.internet.defer.Deferred>} this means
             L{Deferred.callback<twisted.internet.defer.Deferred.callback>} or
             L{Deferred.errback<twisted.internet.defer.Deferred.errback>} has
             been called on it and it has reached the end of its callback chain
-            and the last callback or errback returned a non-L{failure.Failure}.
-        @type deferred: L{Deferred<twisted.internet.defer.Deferred>}
+            and the last callback or errback returned a
+            non-L{failure.Failure}.
+
+            For a I{coroutine} this means all awaited values have a success
+            result.
 
         @raise SynchronousTestCase.failureException: If the
             L{Deferred<twisted.internet.defer.Deferred>} has no result or has a
@@ -684,17 +707,17 @@ class _Assertions(pyunit.TestCase):
         @return: The result of C{deferred}.
         """
         deferred = ensureDeferred(deferred)
-        result = []
-        deferred.addBoth(result.append)
+        results: list[T | failure.Failure] = []
+        deferred.addBoth(results.append)
 
-        if not result:
+        if not results:
             self.fail(
                 "Success result expected on {!r}, found no result instead".format(
                     deferred
                 )
             )
 
-        result = result[0]
+        result = results[0]
 
         if isinstance(result, failure.Failure):
             self.fail(
@@ -703,7 +726,6 @@ class _Assertions(pyunit.TestCase):
                     deferred, result.getTraceback()
                 )
             )
-
         return result
 
     def failureResultOf(self, deferred, *expectedExceptionTypes):
@@ -929,6 +951,7 @@ class SynchronousTestCase(_Assertions):
     """
 
     failureException = FailTest
+    skip: str | None
 
     def __init__(self, methodName="runTest"):
         super().__init__(methodName)
@@ -961,7 +984,7 @@ class SynchronousTestCase(_Assertions):
             return self._testMethodName
         return desc
 
-    def getSkip(self) -> Tuple[bool, Optional[str]]:
+    def getSkip(self) -> tuple[bool, str | None]:
         """
         Return the skip reason set on this test, if any is set. Checks on the
         instance first, then the class, then the module, then packages. As
@@ -1043,7 +1066,11 @@ class SynchronousTestCase(_Assertions):
 
         result.stopTest(self)
 
-    def addCleanup(self, f, *args, **kwargs):
+    # f should be a positional only argument but that is a breaking change
+    # see https://github.com/twisted/twisted/issues/11967
+    def addCleanup(  # type: ignore[override]
+        self, f: Callable[_P, object], *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
         """
         Add the given function to a list of functions to be called after the
         test has run, but before C{tearDown}.
@@ -1154,9 +1181,14 @@ class SynchronousTestCase(_Assertions):
 
                     if filename != os.path.normcase(aWarning.filename):
                         continue
+
+                    # In Python 3.13 line numbers returned by findlinestarts
+                    # can be None for bytecode that does not map to source
+                    # lines.
                     lineNumbers = [
                         lineNumber
                         for _, lineNumber in _findlinestarts(aFunction.__code__)
+                        if lineNumber is not None
                     ]
                     if not (min(lineNumbers) <= aWarning.lineno <= max(lineNumbers)):
                         continue
@@ -1204,7 +1236,7 @@ class SynchronousTestCase(_Assertions):
             please-use-something-else message that is standard for Twisted
             deprecations according to the given version and replacement.
 
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         fqpn = moduleName + "." + name
         module = sys.modules[moduleName]
@@ -1220,7 +1252,7 @@ class SynchronousTestCase(_Assertions):
         }
         if message is not None:
             expectedWarning = expectedWarning + ": " + message
-        self.assert_(
+        self.assertTrue(
             observedWarning.startswith(expectedWarning),
             f"Expected {observedWarning!r} to start with {expectedWarning!r}",
         )
@@ -1300,7 +1332,11 @@ class SynchronousTestCase(_Assertions):
         )
         if not os.path.exists(base):
             os.makedirs(base)
-        dirname = tempfile.mkdtemp("", "", base)
+        # With 3.11 or older mkdtemp returns a relative path.
+        # With newer it is absolute.
+        # Here we make sure we always handle a relative path.
+        # See https://github.com/python/cpython/issues/51574
+        dirname = os.path.relpath(tempfile.mkdtemp("", "", base))
         return os.path.join(dirname, "temp")
 
     def _getSuppress(self):

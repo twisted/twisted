@@ -21,12 +21,12 @@ Stanzas.
 @var Reset: Token to signal that the XML stream has been reset.
 @type Reset: Basic object.
 """
-
+from __future__ import annotations
 
 from binascii import hexlify
 from hashlib import sha1
 from sys import intern
-from typing import Optional, Tuple
+
 from zope.interface import directlyProvides, implementer
 
 from twisted.internet import defer, protocol
@@ -34,10 +34,12 @@ from twisted.internet.error import ConnectionLost
 from twisted.python import failure, log, randbytes
 from twisted.words.protocols.jabber import error, ijabber, jid
 from twisted.words.xish import domish, xmlstream
-from twisted.words.xish.xmlstream import STREAM_CONNECTED_EVENT
-from twisted.words.xish.xmlstream import STREAM_START_EVENT
-from twisted.words.xish.xmlstream import STREAM_END_EVENT
-from twisted.words.xish.xmlstream import STREAM_ERROR_EVENT
+from twisted.words.xish.xmlstream import (
+    STREAM_CONNECTED_EVENT,
+    STREAM_END_EVENT,
+    STREAM_ERROR_EVENT,
+    STREAM_START_EVENT,
+)
 
 try:
     from twisted.internet import ssl as _ssl
@@ -163,7 +165,7 @@ class ConnectAuthenticator(Authenticator):
     Authenticator for initiating entities.
     """
 
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     def __init__(self, otherHost):
         self.otherHost = otherHost
@@ -259,7 +261,7 @@ class ListenAuthenticator(Authenticator):
     Authenticator for receiving entities.
     """
 
-    namespace: Optional[str] = None
+    namespace: str | None = None
 
     def associateWithStream(self, xmlstream):
         """
@@ -315,7 +317,7 @@ class BaseFeatureInitiatingInitializer:
     @type required: C{bool}
     """
 
-    feature: Optional[Tuple[str, str]] = None
+    feature: tuple[str, str] | None = None
 
     def __init__(self, xs, required=False):
         self.xmlstream = xs
@@ -675,7 +677,9 @@ class XmlStreamFactory(xmlstream.XmlStreamFactory):
         self.authenticator = authenticator
 
 
-class XmlStreamServerFactory(xmlstream.BootstrapMixin, protocol.ServerFactory):
+class XmlStreamServerFactory(
+    xmlstream.BootstrapMixin, protocol.ServerFactory[XmlStream]
+):
     """
     Factory for Jabber XmlStream objects as a server.
 
@@ -685,8 +689,7 @@ class XmlStreamServerFactory(xmlstream.BootstrapMixin, protocol.ServerFactory):
                                 with the XmlStream.
     """
 
-    # Type is wrong.  See: https://twistedmatrix.com/trac/ticket/10007#ticket
-    protocol = XmlStream  # type: ignore[assignment]
+    protocol = XmlStream
 
     def __init__(self, authenticatorFactory):
         xmlstream.BootstrapMixin.__init__(self)

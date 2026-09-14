@@ -5,12 +5,13 @@
 Tests for POSIX-based L{IReactorProcess} implementations.
 """
 
+from __future__ import annotations
 
 import errno
 import os
 import sys
-from unittest import skipIf
 
+platformSkip: str | None
 try:
     import fcntl
 except ImportError:
@@ -18,7 +19,7 @@ except ImportError:
 else:
     from twisted.internet import process
 
-    platformSkip = ""
+    platformSkip = None
 
 from twisted.trial.unittest import TestCase
 
@@ -64,7 +65,6 @@ class FakeResourceModule:
         return [123, 456]
 
 
-@skipIf(platformSkip, platformSkip)
 class FDDetectorTests(TestCase):
     """
     Tests for _FDDetector class in twisted.internet.process, which detects
@@ -79,6 +79,8 @@ class FDDetectorTests(TestCase):
     @ivar procfs: A flag indicating whether the filesystem fake will indicate
         that /proc/<pid>/fd exists.
     """
+
+    skip = platformSkip
 
     devfs = False
     accurateDevFDResults = False
@@ -278,11 +280,12 @@ class FDDetectorTests(TestCase):
         )
 
 
-@skipIf(platformSkip, platformSkip)
 class FileDescriptorTests(TestCase):
     """
     Tests for L{twisted.internet.process._listOpenFDs}
     """
+
+    skip = platformSkip
 
     def test_openFDs(self):
         """
@@ -324,9 +327,8 @@ class FileDescriptorTests(TestCase):
         # to catch that internal descriptor and make the assertion about a
         # different closed file descriptor.
 
-        # This gets allocated a file descriptor larger than f's, since nothing
-        # has been closed since we opened f.
-        fd = os.dup(f.fileno())
+        # Ask for the duplicate to be allocated above the original descriptor
+        fd = fcntl.fcntl(f.fileno(), fcntl.F_DUPFD, f.fileno() + 1)
 
         # But sanity check that; if it fails the test is invalid.
         self.assertTrue(

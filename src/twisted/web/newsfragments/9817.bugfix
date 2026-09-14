@@ -1,1 +1,0 @@
-Ensure that all calls to connectionLost use a Failure instance in the HTTP 2 code.

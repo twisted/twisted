@@ -26,31 +26,20 @@ import inspect
 import os
 import platform
 import socket
-import sys
 import urllib.parse as urllib_parse
-import warnings
 from collections.abc import Sequence
 from functools import reduce
 from html import escape
 from http import cookiejar as cookielib
-from io import IOBase
-from io import StringIO as NativeStringIO
-from io import TextIOBase
+from io import IOBase, StringIO as NativeStringIO, TextIOBase
 from sys import intern
-from types import MethodType as _MethodType
+from types import FrameType, MethodType as _MethodType
 from typing import Any, AnyStr, cast
-from urllib.parse import quote as urlquote
-from urllib.parse import unquote as urlunquote
+from urllib.parse import quote as urlquote, unquote as urlunquote
 
 from incremental import Version
 
 from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
-
-
-if sys.version_info >= (3, 7, 0):
-    _PY37PLUS = True
-else:
-    _PY37PLUS = False
 
 if platform.python_implementation() == "PyPy":
     _PYPY = True
@@ -59,7 +48,7 @@ else:
 
 FileType = IOBase
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for io.IOBase",
     __name__,
     "FileType",
@@ -67,7 +56,7 @@ deprecatedModuleAttribute(
 
 frozenset = frozenset
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for frozenset builtin type",
     __name__,
     "frozenset",
@@ -75,7 +64,7 @@ deprecatedModuleAttribute(
 
 InstanceType = object
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Old-style classes don't exist in Python 3",
     __name__,
     "InstanceType",
@@ -83,7 +72,7 @@ deprecatedModuleAttribute(
 
 izip = zip
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for zip() builtin",
     __name__,
     "izip",
@@ -91,7 +80,7 @@ deprecatedModuleAttribute(
 
 long = int
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for int builtin type",
     __name__,
     "long",
@@ -99,7 +88,7 @@ deprecatedModuleAttribute(
 
 range = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "range",
@@ -107,7 +96,7 @@ deprecatedModuleAttribute(
 
 raw_input = input
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for input() builtin",
     __name__,
     "raw_input",
@@ -115,7 +104,7 @@ deprecatedModuleAttribute(
 
 set = set
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for set builtin type",
     __name__,
     "set",
@@ -123,7 +112,7 @@ deprecatedModuleAttribute(
 
 StringType = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "StringType",
@@ -131,7 +120,7 @@ deprecatedModuleAttribute(
 
 unichr = chr
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for chr() builtin",
     __name__,
     "unichr",
@@ -139,7 +128,7 @@ deprecatedModuleAttribute(
 
 unicode = str
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for str builtin type",
     __name__,
     "unicode",
@@ -147,14 +136,14 @@ deprecatedModuleAttribute(
 
 xrange = range
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Obsolete alias for range() builtin",
     __name__,
     "xrange",
 )
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.items()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.items()")
 def iteritems(d):
     """
     Return an iterable of the items of C{d}.
@@ -165,7 +154,7 @@ def iteritems(d):
     return d.items()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="d.values()")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="d.values()")
 def itervalues(d):
     """
     Return an iterable of the values of C{d}.
@@ -176,7 +165,7 @@ def itervalues(d):
     return d.values()
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="list(d.items())")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="list(d.items())")
 def items(d):
     """
     Return a list of the items of C{d}.
@@ -187,22 +176,21 @@ def items(d):
     return list(d.items())
 
 
-def currentframe(n=0):
+def currentframe(n: int = 0) -> FrameType:
     """
     In Python 3, L{inspect.currentframe} does not take a stack-level argument.
     Restore that functionality from Python 2 so we don't have to re-implement
     the C{f_back}-walking loop in places where it's called.
 
     @param n: The number of stack levels above the caller to walk.
-    @type n: L{int}
 
     @return: a frame, n levels up the stack from the caller.
-    @rtype: L{types.FrameType}
     """
     f = inspect.currentframe()
     for x in range(n + 1):
         assert f is not None
         f = f.f_back
+    assert f is not None
     return f
 
 
@@ -225,14 +213,16 @@ def execfile(filename, globals, locals=None):
     exec(code, globals, locals)
 
 
-def cmp(a, b):
+# type note: Can't find a Comparable type, despite
+# https://github.com/python/typing/issues/59
+def cmp(a: object, b: object) -> int:
     """
     Compare two objects.
 
     Returns a negative number if C{a < b}, zero if they are equal, and a
     positive number if C{a > b}.
     """
-    if a < b:
+    if a < b:  # type: ignore[operator]
         return -1
     elif a == b:
         return 0
@@ -251,37 +241,37 @@ def comparable(klass):
     def __eq__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c == 0
 
     def __ne__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c != 0
 
     def __lt__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c < 0
 
     def __le__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c <= 0
 
     def __gt__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c > 0
 
     def __ge__(self: Any, other: object) -> bool:
         c = cast(bool, self.__cmp__(other))
         if c is NotImplemented:
-            return c
+            return NotImplemented
         return c >= 0
 
     klass.__lt__ = __lt__
@@ -386,7 +376,7 @@ def _matchingString(constantString, inputString):
 
 
 @deprecated(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     replacement="raise exception.with_traceback(traceback)",
 )
 def reraise(exception, traceback):
@@ -417,7 +407,7 @@ def iterbytes(originalBytes):
         yield originalBytes[i : i + 1]
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="b'%d'")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="b'%d'")
 def intToBytes(i: int) -> bytes:
     """
     Convert the given integer into C{bytes}, as ASCII-encoded Arab numeral.
@@ -430,16 +420,16 @@ def intToBytes(i: int) -> bytes:
 
 def lazyByteSlice(object, offset=0, size=None):
     """
-    Return a copy of the given bytes-like object.
+    Return a memory view of the given bytes-like object.
 
-    If an offset is given, the copy starts at that offset. If a size is
-    given, the copy will only be of that length.
+    If an offset is given, the view starts at that offset. If a size is
+    given, the view will only be of that length.
 
-    @param object: C{bytes} to be copied.
+    @param object: C{bytes} to be sliced.
 
-    @param offset: C{int}, starting index of copy.
+    @param offset: C{int}, starting index of view.
 
-    @param size: Optional, if an C{int} is given limit the length of copy
+    @param size: Optional, if an C{int} is given limit the length of the view
         to this size.
     """
     view = memoryview(object)
@@ -471,7 +461,7 @@ def networkString(s: str) -> bytes:
     return s.encode("ascii")
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.environb")
+@deprecated(Version("Twisted", 21, 2, 0), replacement="os.environb")
 def bytesEnviron():
     """
     Return a L{dict} of L{os.environ} where all text-strings are encoded into
@@ -480,8 +470,8 @@ def bytesEnviron():
     This function is POSIX only; environment variables are always text strings
     on Windows.
     """
-    encodekey = os.environ.encodekey  # type: ignore[attr-defined]
-    encodevalue = os.environ.encodevalue  # type: ignore[attr-defined]
+    encodekey = os.environ.encodekey
+    encodevalue = os.environ.encodevalue
 
     return {encodekey(x): encodevalue(y) for x, y in os.environ.items()}
 
@@ -500,49 +490,19 @@ def _constructMethod(cls, name, self):
     @type self: any object
 
     @return: a bound method
-    @rtype: L{types.MethodType}
+    @rtype: L{_MethodType}
     """
     func = cls.__dict__[name]
     return _MethodType(func, self)
 
 
-def _get_async_param(isAsync=None, **kwargs):
-    """
-    Provide a backwards-compatible way to get async param value that does not
-    cause a syntax error under Python 3.7.
-
-    @param isAsync: isAsync param value (should default to None)
-    @type isAsync: L{bool}
-
-    @param kwargs: keyword arguments of the caller (only async is allowed)
-    @type kwargs: L{dict}
-
-    @raise TypeError: Both isAsync and async specified.
-
-    @return: Final isAsync param value
-    @rtype: L{bool}
-    """
-    if "async" in kwargs:
-        warnings.warn(
-            "'async' keyword argument is deprecated, please use isAsync",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-    if isAsync is None and "async" in kwargs:
-        isAsync = kwargs.pop("async")
-    if kwargs:
-        raise TypeError
-    return bool(isAsync)
-
-
 def _pypy3BlockingHack():
     """
-    Work around U{this pypy bug
-    <https://bitbucket.org/pypy/pypy/issues/3051/socketfromfd-sets-sockets-to-blocking-on>}
+    Work around U{https://foss.heptapod.net/pypy/pypy/-/issues/3051}
     by replacing C{socket.fromfd} with a more conservative version.
     """
     try:
-        from fcntl import fcntl, F_GETFL, F_SETFL
+        from fcntl import F_GETFL, F_SETFL, fcntl
     except ImportError:
         return
     if not _PYPY:
@@ -566,57 +526,57 @@ _pypy3BlockingHack()
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use functools.reduce() directly",
     __name__,
     "reduce",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use io.StringIO directly",
     __name__,
     "NativeStringIO",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Import urllib.parse directly",
     __name__,
     "urllib_parse",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use html.escape directly", __name__, "escape"
+    Version("Twisted", 21, 2, 0), "Use html.escape directly", __name__, "escape"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.quote() directly",
     __name__,
     "urlquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use urllib.parse.unquote() directly",
     __name__,
     "urlunquote",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use http.cookiejar directly",
     __name__,
     "cookielib",
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0), "Use sys.intern() directly", __name__, "intern"
+    Version("Twisted", 21, 2, 0), "Use sys.intern() directly", __name__, "intern"
 )
 
 deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
+    Version("Twisted", 21, 2, 0),
     "Use collections.abc.Sequence directly",
     __name__,
     "Sequence",
@@ -655,6 +615,5 @@ __all__ = [
     "intern",
     "unichr",
     "raw_input",
-    "_get_async_param",
     "Sequence",
 ]

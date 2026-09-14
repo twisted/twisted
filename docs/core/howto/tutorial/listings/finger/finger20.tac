@@ -1,12 +1,12 @@
 # Do everything properly, and componentize
+from zope.interface import Interface, implementer
+
 from twisted.application import internet, service, strports
-from twisted.internet import protocol, reactor, defer, endpoints
-from twisted.words.protocols import irc
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 from twisted.python import components
 from twisted.web import resource, server, static, xmlrpc
-from zope.interface import Interface, implementer
-import cgi
+from twisted.words.protocols import irc
 
 
 class IFingerService(Interface):
@@ -58,7 +58,6 @@ class IFingerFactory(Interface):
 
 @implementer(IFingerFactory)
 class FingerFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerProtocol
 
     def __init__(self, service):
@@ -97,7 +96,6 @@ class IFingerSetterFactory(Interface):
 
 @implementer(IFingerSetterFactory)
 class FingerSetterFactoryFromService(protocol.ServerFactory):
-
     protocol = FingerSetterProtocol
 
     def __init__(self, service):
@@ -145,7 +143,6 @@ class IIRCClientFactory(Interface):
 
 @implementer(IIRCClientFactory)
 class IRCClientFactoryFromService(protocol.ClientFactory):
-
     protocol = IRCReplyBot
     nickname = None
 

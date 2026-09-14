@@ -10,23 +10,24 @@ End users shouldn't use this module directly - use the reactor APIs instead.
 Maintainer: Itamar Shtull-Trauring
 """
 
+from __future__ import annotations
 
 import os
-import stat
 import socket
+import stat
 import struct
-from errno import EINTR, EMSGSIZE, EAGAIN, EWOULDBLOCK, ECONNREFUSED, ENOBUFS
-from typing import Optional, Type
-from zope.interface import implementer, implementer_only, implementedBy
+from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
+from typing import Any
 
-from twisted.internet import main, base, tcp, udp, error, interfaces
-from twisted.internet import protocol, address
+from zope.interface import implementedBy, implementer, implementer_only
+
+from twisted.internet import address, base, error, interfaces, main, protocol, tcp, udp
 from twisted.internet.abstract import FileDescriptor
-from twisted.python import lockfile, log, reflect, failure
+from twisted.internet.interfaces import IProtocolFactory
+from twisted.python import failure, lockfile, log, reflect
+from twisted.python.compat import lazyByteSlice
 from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.util import untilConcludes
-from twisted.python.compat import lazyByteSlice
-
 
 try:
     from twisted.python import sendmsg as _sendmsg
@@ -67,7 +68,7 @@ class _SendmsgMixin:
         registered producer, if there is one.
     """
 
-    _writeSomeDataBase: Optional[Type[FileDescriptor]] = None
+    _writeSomeDataBase: type[FileDescriptor] | None = None
     _fileDescriptorBufferSize = 64
 
     def __init__(self):
@@ -241,7 +242,6 @@ else:
 
 @implementer(interfaces.IUNIXTransport)
 class Server(_SendmsgMixin, tcp.Server):
-
     _writeSomeDataBase = tcp.Server
 
     def __init__(self, sock, protocol, client, server, sessionno, reactor):
@@ -296,6 +296,21 @@ class Server(_SendmsgMixin, tcp.Server):
     def getPeer(self):
         return address.UNIXAddress(self.hostname or None)
 
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Server} inherits from L{twisted.internet.tcp.Server} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
+
 
 def _inFilesystemNamespace(path):
     """
@@ -327,9 +342,19 @@ class Port(_UNIXPort, tcp.Port):
     transport = Server
     lockFile = None
 
+    # LSP violation where UNIX ports have filenames but TCP ports have
+    # integers.
+    port: bytes  # type:ignore[assignment]
+
     def __init__(
-        self, fileName, factory, backlog=50, mode=0o666, reactor=None, wantPID=0
-    ):
+        self,
+        fileName: bytes,
+        factory: IProtocolFactory,
+        backlog: int = 50,
+        mode: int = 0o666,
+        reactor: Any = None,
+        wantPID: int = 0,
+    ) -> None:
         tcp.Port.__init__(
             self, self._buildAddr(fileName).name, factory, backlog, reactor=reactor
         )
@@ -469,6 +494,21 @@ class Client(_SendmsgMixin, tcp.BaseClient):
     def getHost(self):
         return address.UNIXAddress(None)
 
+    def getTcpNoDelay(self):
+        """
+        FIXME:https://github.com/twisted/twisted/issues/12369
+
+        L{twisted.internet.unix.Client} inherits from L{twisted.internet.tcp.Client} which has
+        this method implemented for TCP. For Unix socket, this is just a NOOP to avoid
+        errors for the code that calls TCP specicific methods thinking that the Unix transport
+        is a TCP transport.
+        """
+        return False
+
+    def setTcpNoDelay(self, enabled):
+        # This is not supported on UNIX sockets and therefore silently ignored.
+        pass
+
 
 class Connector(base.BaseConnector):
     def __init__(self, address, factory, timeout, reactor, checkPID):
@@ -508,7 +548,7 @@ class DatagramPort(_UNIXPort, udp.Port):
             return f"<{protocolName} (not listening)>"
 
     def _bindSocket(self):
-        log.msg("{} starting on {}".format(self.protocol.__class__, repr(self.port)))
+        log.msg(f"{self.protocol.__class__} starting on {repr(self.port)}")
         try:
             skt = self.createInternetSocket()  # XXX: haha misnamed method
             if self.port:

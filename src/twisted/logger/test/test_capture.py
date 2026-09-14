@@ -7,7 +7,6 @@ Test cases for L{twisted.logger._capture}.
 
 from twisted.logger import Logger, LogLevel
 from twisted.trial.unittest import TestCase
-
 from .._capture import capturedLogs
 
 

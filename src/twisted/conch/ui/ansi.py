@@ -23,7 +23,7 @@ class ColorText:
 
     # The colors to use
     COLORS = ("b", "r", "g", "y", "l", "m", "c", "w")
-    BOLD_COLORS = tuple([x.upper() for x in COLORS])
+    BOLD_COLORS = tuple(x.upper() for x in COLORS)
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(len(COLORS))
 
     # Color names

@@ -8,12 +8,13 @@ with a mapping to the corresponding phrases.
 
 
 import string
+
 from twisted.trial import unittest
 from twisted.web import _responses
 
 
 class ResponseTests(unittest.TestCase):
-    def test_constants(self):
+    def test_constants(self) -> None:
         """
         All constants besides C{RESPONSES} defined in L{_response} are
         integers and are keys in C{RESPONSES}.

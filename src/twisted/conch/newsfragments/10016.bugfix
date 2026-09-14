@@ -1,1 +1,0 @@
-twisted.conch.ssh.session.SSHSession now accepts environment variables also for multiplexed SSH session.

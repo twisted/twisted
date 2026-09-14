@@ -11,7 +11,7 @@ Telnet to the server once you start it by typing in:
 > telnet localhost 5823
 """
 
-from twisted.internet import reactor, protocol
+from twisted.internet import protocol, reactor
 
 
 class FakeTelnet(protocol.Protocol):

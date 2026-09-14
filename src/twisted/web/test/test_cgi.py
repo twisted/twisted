@@ -5,19 +5,19 @@
 Tests for L{twisted.web.twcgi}.
 """
 
-import sys
-import os
 import json
+import os
+import sys
 from io import BytesIO
 
-from twisted.trial import unittest
-from twisted.internet import address, reactor, interfaces, error
+from twisted.internet import address, error, reactor
 from twisted.internet.error import ConnectionLost
-from twisted.python import util, failure, log
-from twisted.web.http import NOT_FOUND, INTERNAL_SERVER_ERROR
-from twisted.web import client, http, twcgi, server, resource, http_headers
+from twisted.python import failure, log, util
+from twisted.trial import unittest
+from twisted.web import client, http, http_headers, resource, server, twcgi
+from twisted.web.http import INTERNAL_SERVER_ERROR, NOT_FOUND
 from twisted.web.test._util import _render
-from twisted.web.test.requesthelper import DummyRequest, DummyChannel
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
 
 DUMMY_CGI = """\
 print("Header: OK")
@@ -87,9 +87,8 @@ print(json.dumps(vals))
 """
 
 URL_PARAMETER_CGI = """\
-import cgi
-fs = cgi.FieldStorage()
-param = fs.getvalue("param")
+import os
+param = str(os.environ['QUERY_STRING'])
 print("Header: OK")
 print("")
 print(param)
@@ -115,7 +114,7 @@ class _StartServerAndTearDownMixin:
 
     def writeCGI(self, source):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(source)
         return cgiFilename
 
@@ -124,9 +123,6 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
     """
     Tests for L{twcgi.FilteredScript}.
     """
-
-    if not interfaces.IReactorProcess.providedBy(reactor):
-        skip = "CGI tests require a functional reactor.spawnProcess()"
 
     def test_CGI(self):
         cgiFilename = self.writeCGI(DUMMY_CGI)
@@ -265,7 +261,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadEmptyInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -286,7 +282,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -311,7 +307,7 @@ class CGITests(_StartServerAndTearDownMixin, unittest.TestCase):
 
     def test_ReadAllInput(self):
         cgiFilename = os.path.abspath(self.mktemp())
-        with open(cgiFilename, "wt") as cgiFile:
+        with open(cgiFilename, "w") as cgiFile:
             cgiFile.write(READALLINPUT_CGI)
 
         portnum = self.startServer(cgiFilename)
@@ -376,8 +372,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         """
         cgiFilename = self.writeCGI(URL_PARAMETER_CGI)
         portnum = self.startServer(cgiFilename)
-        url = "http://localhost:%d/cgi?param=1234" % (portnum,)
-        url = url.encode("ascii")
+        url = b"http://localhost:%d/cgi?param=1234" % (portnum,)
         agent = client.Agent(reactor)
         d = agent.request(b"GET", url)
         d.addCallback(client.readBody)
@@ -385,7 +380,7 @@ class CGIScriptTests(_StartServerAndTearDownMixin, unittest.TestCase):
         return d
 
     def _test_urlParameters_1(self, res):
-        expected = f"1234{os.linesep}"
+        expected = f"param=1234{os.linesep}"
         expected = expected.encode("ascii")
         self.assertEqual(res, expected)
 

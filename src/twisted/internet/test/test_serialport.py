@@ -5,10 +5,10 @@
 Tests for L{twisted.internet.serialport}.
 """
 
-from twisted.trial import unittest
-from twisted.python.failure import Failure
-from twisted.internet.protocol import Protocol
 from twisted.internet.error import ConnectionDone
+from twisted.internet.protocol import Protocol
+from twisted.python.failure import Failure
+from twisted.trial import unittest
 
 try:
     from twisted.internet import serialport as _serialport
@@ -45,6 +45,7 @@ class SerialPortTests(unittest.TestCase):
         C{connectionMade} and C{connectionLost} are called on the protocol by
         the C{SerialPort}.
         """
+
         # Serial port that doesn't actually connect to anything:
         class DummySerialPort(serialport.SerialPort):
             _serialFactory = DoNothing

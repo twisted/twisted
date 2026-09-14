@@ -12,23 +12,21 @@ from io import BytesIO
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.python import reflect, failure
-from twisted.python.filepath import FilePath
-from twisted.trial import unittest
-from twisted.internet import reactor, interfaces
+from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.task import Clock
-from twisted.web import server, resource
-from twisted.web import iweb, http, error
-
-from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from twisted.internet.testing import EventLoggingObserver, StringTransport
+from twisted.logger import LogLevel, globalLogPublisher
+from twisted.python import failure, reflect
+from twisted.python.compat import iterbytes
+from twisted.python.filepath import FilePath
+from twisted.trial import unittest
+from twisted.web import error, http, iweb, resource, server
+from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET, Request, Site
 from twisted.web.static import Data
-from twisted.logger import globalLogPublisher, LogLevel
-from twisted.test.proto_helpers import EventLoggingObserver
-
-from ._util import (
-    assertIsFilesystemTemporary,
-)
+from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from ._util import assertIsFilesystemTemporary
 
 
 class ResourceTests(unittest.TestCase):
@@ -214,17 +212,29 @@ class SessionTests(unittest.TestCase):
         """
         self.clock = Clock()
         self.uid = b"unique"
-        self.site = server.Site(resource.Resource())
-        self.session = server.Session(self.site, self.uid, self.clock)
+        self.site = server.Site(resource.Resource(), reactor=self.clock)
+        self.session = server.Session(self.site, self.uid)
         self.site.sessions[self.uid] = self.session
 
     def test_defaultReactor(self):
         """
-        If not value is passed to L{server.Session.__init__}, the global
-        reactor is used.
+        If no value is passed to L{server.Session.__init__}, the reactor
+        associated with the site is used.
         """
-        session = server.Session(server.Site(resource.Resource()), b"123")
-        self.assertIdentical(session._reactor, reactor)
+        site = server.Site(resource.Resource(), reactor=Clock())
+        session = server.Session(site, b"123")
+        self.assertIdentical(session._reactor, site.reactor)
+
+    def test_explicitReactor(self):
+        """
+        L{Session} accepts the reactor to use as a parameter.
+        """
+        site = server.Site(resource.Resource())
+        otherReactor = Clock()
+
+        session = server.Session(site, b"123", reactor=otherReactor)
+
+        self.assertIdentical(session._reactor, otherReactor)
 
     def test_startCheckingExpiration(self):
         """
@@ -601,12 +611,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -629,12 +639,12 @@ class RequestTests(unittest.TestCase):
 
         self.assertNotIn(b"Oh no!", request.transport.written.getvalue())
         self.assertIn(b"Processing Failed", request.transport.written.getvalue())
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
 
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
 
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
@@ -659,7 +669,7 @@ class RequestTests(unittest.TestCase):
         event = logObserver[0]
         f = event["log_failure"]
         self.assertIsInstance(f.value, Exception)
-        self.assertEquals(f.getErrorMessage(), "Oh no!")
+        self.assertEqual(f.getErrorMessage(), "Oh no!")
         # Since we didn't "handle" the exception, flush it to prevent a test
         # failure
         self.assertEqual(1, len(self.flushLoggedErrors()))
@@ -761,7 +771,7 @@ class RequestTests(unittest.TestCase):
         request = server.Request(d, 1)
         request.site = site
         request.sitepath = []
-        mySession = server.Session(b"special-id", site)
+        mySession = server.Session(site, b"special-id")
         site.sessions[mySession.uid] = mySession
         request.received_cookies[b"TWISTED_SESSION"] = mySession.uid
         self.assertIs(request.getSession(), mySession)
@@ -945,6 +955,28 @@ class RequestTests(unittest.TestCase):
         request.gotLength(12345)
         self.assertEqual([12345], lengths)
         self.assertIs(contentFile, request.content)
+
+    def test_parsePOSTFormSubmissionSetFromSite(self) -> None:
+        """
+        C{Request._parsePOSTFormSubmission} is set to match C{Site._parsePOSTFormSubmission}.
+        """
+        site = server.Site(resource.Resource())
+        self.assertEqual(site._parsePOSTFormSubmission, True)
+        channel = DummyChannel()
+        channel.site = site
+
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
+
+        site = server.Site(resource.Resource(), parsePOSTFormSubmission=False)
+        self.assertEqual(site._parsePOSTFormSubmission, False)
+        channel.site = site
+        request = server.Request(channel)
+        self.assertEqual(request._parsePOSTFormSubmission, False)
+
+        # Can also set it directly:
+        request = server.Request(channel, parsePOSTFormSubmission=True)
+        self.assertEqual(request._parsePOSTFormSubmission, True)
 
 
 class GzipEncoderTests(unittest.TestCase):
@@ -1146,9 +1178,10 @@ class NewRenderResource(resource.Resource):
 
 
 @implementer(resource.IResource)
-class HeadlessResource:
+class HeadlessWriter:
     """
-    A resource that implements GET but not HEAD.
+    A resource that implements GET but not HEAD, and
+    calls C{request.write()} when rendering GET.
     """
 
     allowedMethods = [b"GET"]
@@ -1164,21 +1197,46 @@ class HeadlessResource:
         return server.NOT_DONE_YET
 
     def isLeaf(self):
-        """
         # IResource.isLeaf
-        """
         raise NotImplementedError()
 
     def getChildWithDefault(self, name, request):
-        """
         # IResource.getChildWithDefault
-        """
         raise NotImplementedError()
 
     def putChild(self, path, child):
-        """
         # IResource.putChild
+        raise NotImplementedError()
+
+
+@implementer(resource.IResource)
+class HeadlessReturner:
+    """
+    A resource that implements GET but not HEAD, and
+    returns C{bytes} when rendering GET.
+    """
+
+    allowedMethods = [b"GET"]
+
+    def render(self, request):
         """
+        Leave the request open for future writes.
+        """
+        self.request = request
+        if request.method not in self.allowedMethods:
+            raise error.UnsupportedMethod(self.allowedMethods)
+        return b"some data"
+
+    def isLeaf(self):
+        # IResource.isLeaf
+        raise NotImplementedError()
+
+    def getChildWithDefault(self, name, request):
+        # IResource.getChildWithDefault
+        raise NotImplementedError()
+
+    def putChild(self, path, child):
+        # IResource.putChild
         raise NotImplementedError()
 
 
@@ -1231,7 +1289,7 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 405)
         self.assertTrue(req.responseHeaders.hasHeader(b"allow"))
         raw_header = req.responseHeaders.getRawHeaders(b"allow")[0]
-        allowed = sorted([h.strip() for h in raw_header.split(b",")])
+        allowed = sorted(h.strip() for h in raw_header.split(b","))
         self.assertEqual([b"GET", b"HEAD", b"HEH"], allowed)
 
     def testImplicitHead(self):
@@ -1242,25 +1300,48 @@ class NewRenderTests(unittest.TestCase):
         self.assertEqual(req.code, 200)
         self.assertEqual(-1, req.transport.written.getvalue().find(b"hi hi"))
 
-        self.assertEquals(1, len(logObserver))
+        self.assertEqual(1, len(logObserver))
         event = logObserver[0]
-        self.assertEquals(event["log_level"], LogLevel.info)
+        self.assertEqual(event["log_level"], LogLevel.info)
 
-    def test_unsupportedHead(self):
+    def test_unsupportedHeadWrite(self):
+        """
+        HEAD requests against resource that only claim support for GET
+        should not include a body in the response. When the resource
+        returns C{NOT_DONE_YET} a cryptic message is logged and no
+        Content-Length header is synthesized.
+        """
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+
+        resource = HeadlessWriter()
+        req = self._getReq(resource)
+        req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
+        headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
+        self.assertEqual(req.code, 200)
+        self.assertEqual(body, b"")
+        self.assertNotIn(b"Content-Length:", headers)
+        [faking, cryptic] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
+        self.assertIn("it got away from me", cryptic["log_format"])
+
+    def test_unsupportedHeadReturn(self):
         """
         HEAD requests against resource that only claim support for GET
         should not include a body in the response.
         """
-        logObserver = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
+        logs = EventLoggingObserver.createWithCleanup(self, globalLogPublisher)
 
-        resource = HeadlessResource()
+        resource = HeadlessReturner()
         req = self._getReq(resource)
         req.requestReceived(b"HEAD", b"/newrender", b"HTTP/1.0")
         headers, body = req.transport.written.getvalue().split(b"\r\n\r\n")
+
         self.assertEqual(req.code, 200)
         self.assertEqual(body, b"")
-
-        self.assertEquals(2, len(logObserver))
+        self.assertIn(b"Content-Length:", headers)
+        [faking] = logs
+        self.assertIn("Using GET to fake a HEAD request", faking["log_format"])
 
     def test_noBytesResult(self):
         """
@@ -1772,53 +1853,6 @@ class LogEscapingTests(unittest.TestCase):
         )
 
 
-class ServerAttributesTests(unittest.TestCase):
-    """
-    Tests that deprecated twisted.web.server attributes raise the appropriate
-    deprecation warnings when used.
-    """
-
-    def test_deprecatedAttributeDateTimeString(self):
-        """
-        twisted.web.server.date_time_string should not be used; instead use
-        twisted.web.http.datetimeToString directly
-        """
-        server.date_time_string
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedAttributeDateTimeString]
-        )
-
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            (
-                "twisted.web.server.date_time_string was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.datetimeToString instead"
-            ),
-        )
-
-    def test_deprecatedAttributeStringDateTime(self):
-        """
-        twisted.web.server.string_date_time should not be used; instead use
-        twisted.web.http.stringToDatetime directly
-        """
-        server.string_date_time
-        warnings = self.flushWarnings(
-            offendingFunctions=[self.test_deprecatedAttributeStringDateTime]
-        )
-
-        self.assertEqual(len(warnings), 1)
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            (
-                "twisted.web.server.string_date_time was deprecated in Twisted "
-                "12.1.0: Please use twisted.web.http.stringToDatetime instead"
-            ),
-        )
-
-
 class ExplicitHTTPFactoryReactor(unittest.TestCase):
     """
     L{http.HTTPFactory} accepts explicit reactor selection.
@@ -1827,11 +1861,11 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
     def test_explicitReactor(self):
         """
         L{http.HTTPFactory.__init__} accepts a reactor argument which is set on
-        L{http.HTTPFactory._reactor}.
+        L{http.HTTPFactory.reactor}.
         """
         reactor = "I am a reactor!"
         factory = http.HTTPFactory(reactor=reactor)
-        self.assertIs(factory._reactor, reactor)
+        self.assertIs(factory.reactor, reactor)
 
     def test_defaultReactor(self):
         """
@@ -1841,4 +1875,79 @@ class ExplicitHTTPFactoryReactor(unittest.TestCase):
         from twisted.internet import reactor
 
         factory = http.HTTPFactory()
-        self.assertIs(factory._reactor, reactor)
+        self.assertIs(factory.reactor, reactor)
+
+
+class QueueResource(Resource):
+    """
+    Add all requests to an internal queue,
+    without responding to the requests.
+    You can access the requests from the queue and handle their response.
+    """
+
+    isLeaf = True
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.dispatchedRequests: list[Request] = []
+
+    def render_GET(self, request: Request) -> int:
+        self.dispatchedRequests.append(request)
+        return NOT_DONE_YET
+
+
+class TestRFC9112Section932(unittest.TestCase):
+    """
+    Verify that HTTP/1.1 request ordering is preserved.
+    """
+
+    def test_multipleRequestsInOneSegment(self) -> None:
+        """
+        Twisted MUST NOT respond to a second HTTP/1.1 request while the first
+        is still pending.
+        """
+        qr = QueueResource()
+        site = Site(qr)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        proto.dataReceived(
+            b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+            b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
+        )
+        # The TCP data contains 2 requests,
+        # but only 1 request was dispatched,
+        # as the first request was not yet finalized.
+        self.assertEqual(len(qr.dispatchedRequests), 1)
+        # The first request is finalized and the
+        # second request is dispatched right away.
+        qr.dispatchedRequests[0].finish()
+        self.assertEqual(len(qr.dispatchedRequests), 2)
+
+    def test_multipleRequestsInDifferentSegments(self) -> None:
+        """
+        Twisted MUST NOT respond to a second HTTP/1.1 request while the first
+        is still pending, even if the second request is received in a separate
+        TCP package.
+        """
+        qr = QueueResource()
+        site = Site(qr)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        raw_data = (
+            b"GET /first HTTP/1.1\r\nHost: a\r\n\r\n"
+            b"GET /second HTTP/1.1\r\nHost: a\r\n\r\n"
+        )
+        # Just go byte by byte for the extreme case in which each byte is
+        # received in a separate TCP package.
+        for chunk in iterbytes(raw_data):
+            proto.dataReceived(chunk)
+        # The TCP data contains 2 requests,
+        # but only 1 request was dispatched,
+        # as the first request was not yet finalized.
+        self.assertEqual(len(qr.dispatchedRequests), 1)
+        # The first request is finalized and the
+        # second request is dispatched right away.
+        qr.dispatchedRequests[0].finish()
+        self.assertEqual(len(qr.dispatchedRequests), 2)

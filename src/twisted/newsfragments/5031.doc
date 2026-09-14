@@ -1,0 +1,1 @@
+The “Writing Servers” and “UDP Networking” documentation pages have been updated to remove obsolete references to persisting the reactor (a feature gone from Twisted for several decades now), and to better explain the factory and protocol setup and teardown lifecycle.

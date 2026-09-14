@@ -12,9 +12,9 @@ Maintainer: Paul Swartz
 
 import struct
 
-from twisted.conch.ssh.common import NS, getNS, getMP
 from twisted.conch.error import ConchError, MissingKeyStoreError
 from twisted.conch.ssh import keys
+from twisted.conch.ssh.common import NS, getMP, getNS
 from twisted.internet import defer, protocol
 
 

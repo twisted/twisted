@@ -24,8 +24,9 @@ def installReactor(reactor):
     @param reactor: An object that provides one or more IReactor* interfaces.
     """
     # this stuff should be common to all reactors.
-    import twisted.internet
     import sys
+
+    import twisted.internet
 
     if "twisted.internet.reactor" in sys.modules:
         raise error.ReactorAlreadyInstalledError("reactor already installed")

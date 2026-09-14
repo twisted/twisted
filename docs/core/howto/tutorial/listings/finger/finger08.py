@@ -1,7 +1,7 @@
 # Read username, output from non-empty factory, drop connections
 # Use deferreds, to minimize synchronicity assumptions
 
-from twisted.internet import protocol, reactor, defer, endpoints
+from twisted.internet import defer, endpoints, protocol, reactor
 from twisted.protocols import basic
 
 

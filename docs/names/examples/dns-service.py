@@ -19,8 +19,8 @@ DOMAINNAME: the domain name for which this record is valid.
 
 import sys
 
-from twisted.names import client, error
 from twisted.internet.task import react
+from twisted.names import client, error
 from twisted.python import usage
 
 

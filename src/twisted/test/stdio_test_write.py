@@ -11,7 +11,7 @@ ITransport.write() works for process transports.
 
 import sys
 
-from twisted.internet import stdio, protocol
+from twisted.internet import protocol, stdio
 from twisted.python import reflect
 
 
@@ -31,4 +31,4 @@ if __name__ == "__main__":
     from twisted.internet import reactor
 
     stdio.StandardIO(WriteChild())
-    reactor.run()  # type: ignore[attr-defined]
+    reactor.run()

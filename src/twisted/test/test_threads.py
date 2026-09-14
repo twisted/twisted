@@ -10,12 +10,11 @@ Test methods in twisted.internet.threads and reactor thread APIs.
 import os
 import sys
 import time
-
 from unittest import skipIf
-from twisted.trial.unittest import TestCase
 
-from twisted.internet import reactor, defer, interfaces, threads, protocol, error
-from twisted.python import failure, threadable, log, threadpool
+from twisted.internet import defer, error, interfaces, protocol, reactor, threads
+from twisted.python import failure, log, threadable, threadpool
+from twisted.trial.unittest import TestCase
 
 try:
     import threading
@@ -65,7 +64,8 @@ class ReactorThreadsTests(TestCase):
 
             reactor.callInThread(threadedFunc)
             waiter.wait(120)
-            if not waiter.isSet():
+            if not waiter.is_set():  # pragma: no cover
+                # This is not expected in normal test runs.
                 self.fail("Timed out waiting for event.")
             else:
                 self.assertEqual(result, [False])
@@ -116,7 +116,8 @@ class ReactorThreadsTests(TestCase):
 
             reactor.callInThread(threadedFunction)
             waiter.wait(120)
-            if not waiter.isSet():
+            if not waiter.is_set():  # pragma: no cover
+                # This is not expected in normal test runs.
                 self.fail("Timed out waiting for event")
             if self.failure is not None:
                 return defer.fail(self.failure)
@@ -145,7 +146,8 @@ class ReactorThreadsTests(TestCase):
             return threads.deferToThread(waiter.wait, self.getTimeout())
 
         def cb2(ign):
-            if not waiter.isSet():
+            if not waiter.is_set():  # pragma: no cover
+                # This is not expected in normal test runs.
                 self.fail("Timed out waiting for event")
             return results, errors
 

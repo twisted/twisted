@@ -5,11 +5,11 @@ authentication.
 
 import sys
 
+from twisted.internet import reactor
+from twisted.internet.defer import Deferred
+from twisted.internet.ssl import optionsForClientTLS
 from twisted.mail.smtp import ESMTPSenderFactory
 from twisted.python.usage import Options, UsageError
-from twisted.internet.ssl import optionsForClientTLS
-from twisted.internet.defer import Deferred
-from twisted.internet import reactor
 
 
 def sendmail(

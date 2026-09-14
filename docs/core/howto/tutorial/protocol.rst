@@ -242,7 +242,7 @@ function, ``getIRCbot`` , which returns
 a ``ClientFactory`` .  This factory in turn will
 instantiate the ``IRCReplyBot`` protocol.  The IRCBot is
 configured in the last line to connect
-to ``irc.freenode.org`` with a nickname
+to ``irc.libera.chat`` with a nickname
 of ``fingerbot`` .
 
 

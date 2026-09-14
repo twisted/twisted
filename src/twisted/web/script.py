@@ -12,10 +12,9 @@ import traceback
 from io import StringIO
 
 from twisted import copyright
-from twisted.python.filepath import _coerceToFilesystemEncoding
 from twisted.python.compat import execfile, networkString
-from twisted.web import http, server, static, resource, util
-
+from twisted.python.filepath import _coerceToFilesystemEncoding
+from twisted.web import http, resource, server, static, util
 
 rpyNoResource = """<p>You forgot to assign to the variable "resource" in your script. For example:</p>
 <pre>
@@ -50,7 +49,7 @@ class CacheScanner:
         self.doCache = 1
 
 
-noRsrc = resource.ErrorPage(500, "Whoops! Internal Error", rpyNoResource)
+noRsrc = resource._UnsafeErrorPage(500, "Whoops! Internal Error", rpyNoResource)
 
 
 def ResourceScript(path, registry):
@@ -82,7 +81,9 @@ def ResourceTemplate(path, registry):
 
     glob = {
         "__file__": _coerceToFilesystemEncoding("", path),
-        "resource": resource.ErrorPage(500, "Whoops! Internal Error", rpyNoResource),
+        "resource": resource._UnsafeErrorPage(
+            500, "Whoops! Internal Error", rpyNoResource
+        ),
         "registry": registry,
     }
 
@@ -134,10 +135,10 @@ class ResourceScriptDirectory(resource.Resource):
             return ResourceScriptDirectory(fn, self.registry)
         if os.path.exists(fn):
             return ResourceScript(fn, self.registry)
-        return resource.NoResource()
+        return resource._UnsafeNoResource()
 
     def render(self, request):
-        return resource.NoResource().render(request)
+        return resource._UnsafeNoResource().render(request)
 
 
 class PythonScript(resource.Resource):
@@ -179,7 +180,9 @@ class PythonScript(resource.Resource):
         except OSError as e:
             if e.errno == 2:  # file not found
                 request.setResponseCode(http.NOT_FOUND)
-                request.write(resource.NoResource("File not found.").render(request))
+                request.write(
+                    resource._UnsafeNoResource("File not found.").render(request)
+                )
         except BaseException:
             io = StringIO()
             traceback.print_exc(file=io)

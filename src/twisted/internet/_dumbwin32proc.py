@@ -3,12 +3,16 @@
 # See LICENSE for details.
 
 """
-http://isometri.cc/strips/gates_in_the_head
+Windows Process Management, used with reactor.spawnProcess
 """
 
 
 import os
 import sys
+
+from zope.interface import implementer
+
+import pywintypes
 
 # Win32 imports
 import win32api
@@ -18,19 +22,12 @@ import win32file
 import win32pipe
 import win32process
 import win32security
+from typing_extensions import override
 
-import pywintypes
-
-from zope.interface import implementer
-from twisted.internet.interfaces import IProcessTransport, IConsumer, IProducer
-
-from twisted.python.win32 import quoteArguments
-
-from twisted.internet import error
-
-from twisted.internet import _pollingfile
+from twisted.internet import _pollingfile, error
 from twisted.internet._baseprocess import BaseProcess
-
+from twisted.internet.interfaces import IConsumer, IProcessTransport, IProducer
+from twisted.python.win32 import quoteArguments
 
 # Security attributes for pipes
 PIPE_ATTRS_INHERITABLE = win32security.SECURITY_ATTRIBUTES()
@@ -267,7 +264,8 @@ class Process(_pollingfile._PollingTimer, BaseProcess):
         if signalID in ("INT", "TERM", "KILL"):
             win32process.TerminateProcess(self.hProcess, 1)
 
-    def _getReason(self, status):
+    @override
+    def _getReason(self, status: int) -> BaseException:
         if status == 0:
             return error.ProcessDone(status)
         return error.ProcessTerminated(status)

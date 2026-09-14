@@ -10,15 +10,16 @@ I{AF_INET} is in L{twisted.internet.test.test_tcp}, since that case should
 behave exactly the same as L{IReactorTCP.listenTCP}.
 """
 
-import errno, socket
+import errno
+import socket
 
 from zope.interface import verify
 
-from twisted.python.log import err
-from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.error import UnsupportedAddressFamily
+from twisted.internet.interfaces import IReactorSocket
 from twisted.internet.protocol import DatagramProtocol, ServerFactory
 from twisted.internet.test.reactormixins import ReactorBuilder, needsRunningReactor
+from twisted.python.log import err
 from twisted.python.runtime import platform
 
 
@@ -99,7 +100,7 @@ class AdoptStreamPortErrorsTestsBuilder(ReactorBuilder):
         port.listen(1)
         self.addCleanup(port.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,
@@ -176,7 +177,7 @@ class AdoptStreamConnectionErrorsTestsBuilder(ReactorBuilder):
         connection = socket.socket()
         self.addCleanup(connection.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,
@@ -229,7 +230,7 @@ class AdoptDatagramPortErrorsTestsBuilder(ReactorBuilder):
         port = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(port.close)
 
-        arbitrary = 2 ** 16 + 7
+        arbitrary = 2**16 + 7
 
         self.assertRaises(
             UnsupportedAddressFamily,

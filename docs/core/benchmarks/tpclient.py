@@ -1,7 +1,9 @@
 """Throughput test."""
 
-import time, sys
-from twisted.internet import reactor, protocol
+import sys
+import time
+
+from twisted.internet import protocol, reactor
 from twisted.python import log
 
 TIMES = 10000

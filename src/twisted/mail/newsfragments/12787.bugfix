@@ -1,0 +1,1 @@
+twisted.mail.imap4 no longer allows clients to specify arbitrary regexes.

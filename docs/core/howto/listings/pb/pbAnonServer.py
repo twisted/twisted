@@ -18,11 +18,14 @@ from sys import stdout
 
 from zope.interface import implementer
 
-from twisted.python.log import startLogging
-from twisted.cred.checkers import ANONYMOUS, AllowAnonymousAccess
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.checkers import (
+    ANONYMOUS,
+    AllowAnonymousAccess,
+    InMemoryUsernamePasswordDatabaseDontUse,
+)
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor
+from twisted.python.log import startLogging
 from twisted.spread.pb import Avatar, IPerspective, PBServerFactory
 
 

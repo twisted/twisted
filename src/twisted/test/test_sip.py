@@ -6,7 +6,7 @@
 Session Initialization Protocol tests.
 """
 
-from twisted.cred import portal, checkers
+from twisted.cred import checkers, portal
 from twisted.internet import defer, reactor
 from twisted.protocols import sip
 from twisted.trial import unittest
@@ -17,7 +17,6 @@ except BaseException:
     AsyncioSelectorReactor = None  # type: ignore[assignment,misc]
 
 from zope.interface import implementer
-
 
 # request, prefixed by random CRLFs
 request1 = (

@@ -9,9 +9,9 @@ Demonstrate sending mail via SMTP.
 import sys
 from email.mime.text import MIMEText
 
-from twisted.python import log
-from twisted.mail.smtp import sendmail
 from twisted.internet import reactor
+from twisted.mail.smtp import sendmail
+from twisted.python import log
 
 
 def send(message, subject, sender, recipients, host):

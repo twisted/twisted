@@ -1,12 +1,14 @@
 # -*- test-case-name: twisted.python.test.test_util -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
-
+from __future__ import annotations
 
 import errno
 import os
 import sys
 import warnings
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
+from typing import Any, AnyStr, ClassVar, ParamSpec, TypeVar
 
 try:
     import grp as _grp
@@ -19,7 +21,7 @@ else:
     pwd = _pwd
 
 try:
-    from os import setgroups as _setgroups, getgroups as _getgroups
+    from os import getgroups as _getgroups, setgroups as _setgroups
 except ImportError:
     setgroups = None
     getgroups = None
@@ -27,22 +29,12 @@ else:
     setgroups = _setgroups
     getgroups = _getgroups
 
-from typing import (
-    Callable,
-    ClassVar,
-    Mapping,
-    MutableMapping,
-    Sequence,
-    Union,
-    Tuple,
-    cast,
-)
-
-from incremental import Version
-from twisted.python.deprecate import deprecatedModuleAttribute
-
 # For backwards compatibility, some things import this, so just link it
 from collections import OrderedDict
+
+from incremental import Version
+
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 deprecatedModuleAttribute(
     Version("Twisted", 15, 5, 0),
@@ -51,8 +43,11 @@ deprecatedModuleAttribute(
     "OrderedDict",
 )
 
+_T = TypeVar("_T")
+_P = ParamSpec("_P")
 
-class InsensitiveDict(MutableMapping):
+
+class InsensitiveDict(MutableMapping[str, _T]):
     """
     Dictionary, that has case-insensitive keys.
 
@@ -178,7 +173,7 @@ class InsensitiveDict(MutableMapping):
             yield v[1]
 
     def iteritems(self):
-        for (k, v) in self.data.values():
+        for k, v in self.data.values():
             yield self._doPreserve(k), v
 
     _notFound = object()
@@ -186,7 +181,7 @@ class InsensitiveDict(MutableMapping):
     def pop(self, key, default=_notFound):
         """
         @see: L{dict.pop}
-        @since: Twisted NEXT
+        @since: Twisted 21.2.0
         """
         try:
             return self.data.pop(self._lowerOrReturn(key))[1]
@@ -283,7 +278,9 @@ def addPluginDir():
     sys.path.extend(getPluginDirs())
 
 
-def sibpath(path, sibling):
+def sibpath(
+    path: os.PathLike[AnyStr] | AnyStr, sibling: os.PathLike[AnyStr] | AnyStr
+) -> AnyStr:
     """
     Return the path to a sibling of a file in the filesystem.
 
@@ -386,7 +383,7 @@ def makeStatBar(width, maxPosition, doneChar="=", undoneChar="-", currentChar=">
         assert len(last) == 1, "Don't mess with the last parameter."
         done = int(aValue * position)
         toDo = width - done - 2
-        result = "[{}{}{}]".format(doneChar * done, currentChar, undoneChar * toDo)
+        result = f"[{doneChar * done}{currentChar}{undoneChar * toDo}]"
         if force:
             last[0] = result
             return result
@@ -424,7 +421,7 @@ def spewer(frame, s, ignored):
             k = reflect.qual(se.__class__)
         else:
             k = reflect.qual(type(se))
-        print("method {} of {} at {}".format(frame.f_code.co_name, k, id(se)))
+        print(f"method {frame.f_code.co_name} of {k} at {id(se)}")
     else:
         print(
             "function %s in %s, line %s"
@@ -552,7 +549,6 @@ class IntervalDifferential:
 
 class _IntervalDifferentialIterator:
     def __init__(self, i, d):
-
         self.intervals = [[e, e, n] for (e, n) in zip(i, range(len(i)))]
         self.default = d
         self.last = 0
@@ -610,7 +606,7 @@ class FancyStrMixin:
 
     # Override in subclasses:
     showAttributes: Sequence[
-        Union[str, Tuple[str, str, str], Tuple[str, Callable]]
+        str | tuple[str, str, str] | tuple[str, Callable[[Any], str]]
     ] = ()
 
     def __str__(self) -> str:
@@ -620,12 +616,10 @@ class FancyStrMixin:
         #   https://github.com/python/mypy/issues/9171
         for attr in self.showAttributes:
             if isinstance(attr, str):
-                r.append(" {}={!r}".format(attr, getattr(self, attr)))
+                r.append(f" {attr}={getattr(self, attr)!r}")
             elif len(attr) == 2:
-                attr = cast(Tuple[str, Callable], attr)
-                r.append((" {}=".format(attr[0])) + attr[1](getattr(self, attr[0])))
+                r.append((f" {attr[0]}=") + attr[1](getattr(self, attr[0])))
             else:
-                attr = cast(Tuple[str, str, str], attr)
                 r.append((" %s=" + attr[2]) % (attr[1], getattr(self, attr[0])))
         r.append(">")
         return "".join(r)
@@ -656,7 +650,7 @@ class FancyEqMixin:
     def __ne__(self, other: object) -> bool:
         result = self.__eq__(other)
         if result is NotImplemented:
-            return result
+            return NotImplemented
         return not result
 
 
@@ -677,7 +671,6 @@ if _initgroups is None:
 
         Underlying platform support require to manipulate groups is missing.
         """
-
 
 else:
 
@@ -747,7 +740,7 @@ def switchUID(uid, gid, euid=False):
             setuid(uid)
 
 
-def untilConcludes(f, *a, **kw):
+def untilConcludes(f: Callable[_P, _T], *a: _P.args, **kw: _P.kwargs) -> _T:
     """
     Call C{f} with the given arguments, handling C{EINTR} by retrying.
 
@@ -935,8 +928,9 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
     Unlike L{twisted.internet.utils.runWithWarningsSuppressed}, it has no
     special support for L{twisted.internet.defer.Deferred}.
 
-    @param suppressedWarnings: A list of arguments to pass to filterwarnings.
-        Must be a sequence of 2-tuples (args, kwargs).
+    @param suppressedWarnings: A list of arguments to pass to
+        L{warnings.filterwarnings}.  Must be a sequence of 2-tuples (args,
+        kwargs).
 
     @param f: A callable.
 

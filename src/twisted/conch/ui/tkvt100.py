@@ -8,9 +8,10 @@
 Maintainer: Paul Swartz
 """
 
+import string
 import tkinter as Tkinter
 import tkinter.font as tkFont
-import string
+
 from . import ansi
 
 ttyFont = None  # tkFont.Font(family = 'Courier', size = 10)

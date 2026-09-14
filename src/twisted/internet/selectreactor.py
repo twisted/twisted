@@ -5,19 +5,23 @@
 """
 Select reactor
 """
+from __future__ import annotations
 
-
-from time import sleep
 import select
 import sys
-from errno import EINTR, EBADF
-
-from typing import Type
+from errno import EBADF, EINTR
+from time import sleep
+from typing import Callable, TypeVar
 
 from zope.interface import implementer
 
-from twisted.internet.interfaces import IReactorFDSet
 from twisted.internet import posixbase
+from twisted.internet.interfaces import (
+    IFileDescriptor,
+    IReactorFDSet,
+    IReadDescriptor,
+    IWriteDescriptor,
+)
 from twisted.python import log
 from twisted.python.runtime import platformType
 
@@ -49,9 +53,39 @@ else:
 try:
     from twisted.internet.win32eventreactor import _ThreadedWin32EventsMixin
 except ImportError:
-    _extraBase: Type[object] = object
+    _extraBase: type[object] = object
 else:
     _extraBase = _ThreadedWin32EventsMixin
+
+_T = TypeVar("_T", bound=IFileDescriptor)
+
+
+def _onePreen(
+    toPreen: list[_T],
+    preenInto: set[_T],
+    disconnect: Callable[[_T, Exception, bool], None],
+) -> None:
+    preenInto.clear()
+    for selectable in toPreen:
+        try:
+            select.select([selectable], [selectable], [selectable], 0)
+        except Exception as e:
+            log.msg("bad descriptor %s" % selectable)
+            disconnect(selectable, e, False)
+        else:
+            preenInto.add(selectable)
+
+
+def _preenDescriptors(
+    reads: set[IReadDescriptor],
+    writes: set[IWriteDescriptor],
+    disconnect: Callable[[IReadDescriptor | IWriteDescriptor, Exception, bool], None],
+) -> None:
+    log.msg("Malformed file descriptor found.  Preening lists.")
+    readers: list[IReadDescriptor] = list(reads)
+    writers: list[IWriteDescriptor] = list(writes)
+    _onePreen(readers, reads, disconnect)
+    _onePreen(writers, writes, disconnect)
 
 
 @implementer(IReactorFDSet)
@@ -66,29 +100,16 @@ class SelectReactor(posixbase.PosixReactorBase, _extraBase):  # type: ignore[mis
         checked for writability.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize file descriptor tracking dictionaries and the base class.
         """
-        self._reads = set()
-        self._writes = set()
+        self._reads: set[IReadDescriptor] = set()
+        self._writes: set[IWriteDescriptor] = set()
         posixbase.PosixReactorBase.__init__(self)
 
-    def _preenDescriptors(self):
-        log.msg("Malformed file descriptor found.  Preening lists.")
-        readers = list(self._reads)
-        writers = list(self._writes)
-        self._reads.clear()
-        self._writes.clear()
-        for selSet, selList in ((self._reads, readers), (self._writes, writers)):
-            for selectable in selList:
-                try:
-                    select.select([selectable], [selectable], [selectable], 0)
-                except Exception as e:
-                    log.msg("bad descriptor %s" % selectable)
-                    self._disconnectSelectable(selectable, e, False)
-                else:
-                    selSet.add(selectable)
+    def _preenDescriptors(self) -> None:
+        _preenDescriptors(self._reads, self._writes, self._disconnectSelectable)
 
     def doSelect(self, timeout):
         """

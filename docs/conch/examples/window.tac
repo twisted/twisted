@@ -26,14 +26,14 @@ telnet server is required; for the ssh server, "username" is the username and
 """
 
 
-import string, random
+import random
+import string
 
 from twisted.application import internet, service
-
 from twisted.conch.insults import insults, window
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.ssh import keys
-from twisted.conch.telnet import TelnetTransport, TelnetBootstrapProtocol
+from twisted.conch.telnet import TelnetBootstrapProtocol, TelnetTransport
 from twisted.cred import checkers, portal
 from twisted.internet import protocol, reactor, task
 from twisted.python import log

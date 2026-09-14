@@ -22,22 +22,20 @@ __all__ = [
 
 
 from collections.abc import Sequence
-from typing import cast
+from typing import Optional, Union, cast
 
 from twisted.python.compat import nativeString
 from twisted.web._responses import RESPONSES
 
 
-def _codeToMessage(code):
+def _codeToMessage(code: Union[int, bytes]) -> Optional[bytes]:
     """
     Returns the response message corresponding to an HTTP code, or None
     if the code is unknown or unrecognized.
 
-    @type code: L{bytes}
-    @param code: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
+    @param code: HTTP status code, for example C{http.NOT_FOUND}.
 
     @return: A string message or none
-    @rtype: L{bytes}
     """
     try:
         return RESPONSES.get(int(code))
@@ -49,17 +47,23 @@ class Error(Exception):
     """
     A basic HTTP error.
 
-    @type status: L{bytes}
     @ivar status: Refers to an HTTP status code, for example C{http.NOT_FOUND}.
 
-    @type message: L{bytes}
     @param message: A short error message, for example "NOT FOUND".
 
-    @type response: L{bytes}
     @ivar response: A complete HTML document for an error page.
     """
 
-    def __init__(self, code, message=None, response=None):
+    status: bytes
+    message: Optional[bytes]
+    response: Optional[bytes]
+
+    def __init__(
+        self,
+        code: Union[int, bytes],
+        message: Optional[bytes] = None,
+        response: Optional[bytes] = None,
+    ) -> None:
         """
         Initializes a basic exception.
 
@@ -70,11 +74,12 @@ class Error(Exception):
             instead.
 
         @type message: L{bytes}
-        @param message: A short error message, for example "NOT FOUND".
+        @param message: A short error message, for example C{b"NOT FOUND"}.
 
         @type response: L{bytes}
         @param response: A complete HTML document for an error page.
         """
+
         message = message or _codeToMessage(code)
 
         Exception.__init__(self, code, message, response)
@@ -84,24 +89,38 @@ class Error(Exception):
             # downloadPage gives a bytes, Agent gives an int, and it worked by
             # accident previously, so just make it keep working.
             code = b"%d" % (code,)
+        elif len(code) != 3 or not code.isdigit():
+            # Status codes must be 3 digits. See
+            # https://httpwg.org/specs/rfc9110.html#status.code.extensibility
+            raise ValueError(f"Not a valid HTTP status code: {code!r}")
 
         self.status = code
         self.message = message
         self.response = response
 
     def __str__(self) -> str:
-        return nativeString(self.status + b" " + self.message)
+        s = self.status
+        if self.message:
+            s += b" " + self.message
+        return nativeString(s)
 
 
 class PageRedirect(Error):
     """
     A request resulted in an HTTP redirect.
 
-    @type location: L{bytes}
     @ivar location: The location of the redirect which was not followed.
     """
 
-    def __init__(self, code, message=None, response=None, location=None):
+    location: Optional[bytes]
+
+    def __init__(
+        self,
+        code: Union[int, bytes],
+        message: Optional[bytes] = None,
+        response: Optional[bytes] = None,
+        location: Optional[bytes] = None,
+    ) -> None:
         """
         Initializes a page redirect exception.
 
@@ -111,7 +130,7 @@ class PageRedirect(Error):
             descriptive string that is used instead.
 
         @type message: L{bytes}
-        @param message: A short error message, for example "NOT FOUND".
+        @param message: A short error message, for example C{b"NOT FOUND"}.
 
         @type response: L{bytes}
         @param response: A complete HTML document for an error page.
@@ -131,27 +150,30 @@ class InfiniteRedirection(Error):
     """
     HTTP redirection is occurring endlessly.
 
-    @type location: L{bytes}
     @ivar location: The first URL in the series of redirections which was
         not followed.
     """
 
-    def __init__(self, code, message=None, response=None, location=None):
+    location: Optional[bytes]
+
+    def __init__(
+        self,
+        code: Union[int, bytes],
+        message: Optional[bytes] = None,
+        response: Optional[bytes] = None,
+        location: Optional[bytes] = None,
+    ) -> None:
         """
         Initializes an infinite redirection exception.
 
-        @type code: L{bytes}
         @param code: Refers to an HTTP status code, for example
             C{http.NOT_FOUND}. If no C{message} is given, C{code} is mapped to a
             descriptive string that is used instead.
 
-        @type message: L{bytes}
-        @param message: A short error message, for example "NOT FOUND".
+        @param message: A short error message, for example C{b"NOT FOUND"}.
 
-        @type response: L{bytes}
         @param response: A complete HTML document for an error page.
 
-        @type location: L{bytes}
         @param location: The location response-header field value. It is an
             absolute URI used to redirect the receiver to a location other than
             the Request-URI so the request can be completed.
@@ -174,7 +196,10 @@ class RedirectWithNoLocation(Error):
     @since: 11.1
     """
 
-    def __init__(self, code, message, uri):
+    message: bytes
+    uri: bytes
+
+    def __init__(self, code: Union[bytes, int], message: bytes, uri: bytes) -> None:
         """
         Initializes a page redirect exception when no location is given.
 

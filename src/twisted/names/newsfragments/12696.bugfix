@@ -1,0 +1,3 @@
+`twisted.names.dns.DNSDatagramProtocol.query` now discards query responses that
+come from hosts other than the one the query was issued to, preventing other
+hosts from injecting invalid DNS responses.

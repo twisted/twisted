@@ -6,14 +6,15 @@
 Implementation of the SOCKSv4 protocol.
 """
 
+import socket
+import string
+
 # python imports
 import struct
-import string
-import socket
 import time
 
 # twisted imports
-from twisted.internet import reactor, protocol, defer
+from twisted.internet import defer, protocol, reactor
 from twisted.python import log
 
 
@@ -132,7 +133,7 @@ class SOCKSv4(protocol.Protocol):
         @param version: The SOCKS protocol version number.
 
         @type code: L{int}
-        @param code: The comand code. 1 means establish a TCP/IP stream
+        @param code: The command code. 1 means establish a TCP/IP stream
             connection, and 2 means establish a TCP/IP port binding.
 
         @type port: L{int}

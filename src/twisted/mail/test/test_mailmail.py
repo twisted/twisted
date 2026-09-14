@@ -14,12 +14,12 @@ from unittest import skipIf
 
 from twisted.copyright import version
 from twisted.internet.defer import Deferred
+from twisted.internet.testing import MemoryReactor
 from twisted.mail import smtp
 from twisted.mail.scripts import mailmail
 from twisted.mail.scripts.mailmail import parseOptions
 from twisted.python.failure import Failure
 from twisted.python.runtime import platformType
-from twisted.test.proto_helpers import MemoryReactor
 from twisted.trial.unittest import TestCase
 
 
@@ -39,7 +39,7 @@ class OptionsTests(TestCase):
         """
         self.out = StringIO()
         # Override the mailmail logger, so we capture stderr output
-        from twisted.logger import textFileLogObserver, Logger
+        from twisted.logger import Logger, textFileLogObserver
 
         logObserver = textFileLogObserver(self.out)
         self.patch(mailmail, "_log", Logger(observer=logObserver))

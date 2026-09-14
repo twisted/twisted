@@ -6,7 +6,6 @@ Helpers for URI and method injection tests.
 
 import string
 
-
 UNPRINTABLE_ASCII = frozenset(range(0, 128)) - frozenset(
     bytearray(string.printable, "ascii")
 )
@@ -31,8 +30,6 @@ class MethodInjectionTestsMixin:
         synchronously raise a L{ValueError} if either is invalid.
 
         @param method: the method (e.g. C{GET\x00})
-
-        @param uri: the URI
 
         @type method:
         """

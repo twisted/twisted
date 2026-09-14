@@ -1,6 +1,6 @@
 # Read username, output from factory interfacing to OS, drop connections
 
-from twisted.internet import protocol, reactor, defer, utils, endpoints
+from twisted.internet import defer, endpoints, protocol, reactor, utils
 from twisted.protocols import basic
 
 

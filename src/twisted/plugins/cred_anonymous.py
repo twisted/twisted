@@ -12,9 +12,8 @@ from zope.interface import implementer
 
 from twisted import plugin
 from twisted.cred.checkers import AllowAnonymousAccess
-from twisted.cred.strcred import ICheckerFactory
 from twisted.cred.credentials import IAnonymous
-
+from twisted.cred.strcred import ICheckerFactory
 
 anonymousCheckerFactoryHelp = """
 This allows anonymous authentication for servers that support it.

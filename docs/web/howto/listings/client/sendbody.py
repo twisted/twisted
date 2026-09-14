@@ -1,8 +1,8 @@
+from bytesprod import BytesProducer
+
 from twisted.internet import reactor
 from twisted.web.client import Agent
 from twisted.web.http_headers import Headers
-
-from bytesprod import BytesProducer
 
 agent = Agent(reactor)
 body = BytesProducer(b"hello, world")

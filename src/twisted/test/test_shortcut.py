@@ -11,6 +11,7 @@ from twisted.trial import unittest
 skipReason = None
 try:
     from win32com.shell import shell
+
     from twisted.python import shortcut
 except ImportError:
     skipReason = "Only runs on Windows with win32com"
@@ -22,7 +23,7 @@ if sys.version_info[0:2] >= (3, 7):
 class ShortcutTests(unittest.TestCase):
     skip = skipReason
 
-    def test_create(self):
+    def test_create(self) -> None:
         """
         Create a simple shortcut.
         """
@@ -36,7 +37,7 @@ class ShortcutTests(unittest.TestCase):
         scPath = sc.GetPath(shell.SLGP_RAWPATH)[0]
         self.assertEqual(scPath[-len(baseFileName) :].lower(), baseFileName.lower())
 
-    def test_createPythonShortcut(self):
+    def test_createPythonShortcut(self) -> None:
         """
         Create a shortcut to the Python executable,
         and set some values.

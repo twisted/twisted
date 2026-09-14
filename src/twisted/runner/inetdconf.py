@@ -195,7 +195,7 @@ class ServicesConf(SimpleConfFile):
             port = int(port)
         except BaseException:
             raise InvalidServicesConfError(
-                "Invalid port/protocol: {}".format(repr(portAndProtocol))
+                f"Invalid port/protocol: {repr(portAndProtocol)}"
             )
 
         self.services[(name, protocol)] = port

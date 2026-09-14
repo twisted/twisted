@@ -8,9 +8,9 @@ HTML rendering of Python source.
 
 import keyword
 import tokenize
-from . import reflect
 from html import escape
-from typing import List
+
+from . import reflect
 
 
 class TokenPrinter:
@@ -73,11 +73,11 @@ class HTMLWriter:
     tokens as HTML spans.
     """
 
-    noSpan: List[str] = []
+    noSpan: list[str] = []
 
     def __init__(self, writer):
         self.writer = writer
-        noSpan: List[str] = []
+        noSpan: list[str] = []
         reflect.accumulateClassList(self.__class__, "noSpan", noSpan)
         self.noSpan = noSpan
 

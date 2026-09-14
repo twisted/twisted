@@ -12,8 +12,7 @@ $ python minchat.py
 """
 
 
-from twisted.words.im import basechat, baseaccount, ircsupport
-
+from twisted.words.im import baseaccount, basechat, ircsupport
 
 # A list of account objects. We might as well create them at runtime, this is
 # supposed to be a Minimalist Implementation, after all.
@@ -40,7 +39,6 @@ class AccountManager(baseaccount.AccountManager):
     """
 
     def __init__(self):
-
         self.chatui = MinChat()
 
         if len(accounts) == 0:
@@ -124,11 +122,9 @@ class MinChat(basechat.ChatUI):
     """
 
     def getGroupConversation(self, group, Class=MinGroupConversation, stayHidden=0):
-
         return basechat.ChatUI.getGroupConversation(self, group, Class, stayHidden)
 
     def getConversation(self, person, Class=MinConversation, stayHidden=0):
-
         return basechat.ChatUI.getConversation(self, person, Class, stayHidden)
 
 

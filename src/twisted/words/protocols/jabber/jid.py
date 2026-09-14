@@ -11,12 +11,12 @@ parse string representations into them with proper checking for illegal
 characters, case folding and canonicalisation through
 L{stringprep<twisted.words.protocols.jabber.xmpp_stringprep>}.
 """
+from __future__ import annotations
 
-from typing import Dict
 from twisted.words.protocols.jabber.xmpp_stringprep import (
+    nameprep,
     nodeprep,
     resourceprep,
-    nameprep,
 )
 
 
@@ -26,7 +26,7 @@ class InvalidFormat(Exception):
     """
 
 
-def parse(jidstring):
+def parse(jidstring: str) -> tuple[str | None, str, str | None]:
     """
     Parse given JID string into its respective parts and apply stringprep.
 
@@ -73,7 +73,9 @@ def parse(jidstring):
     return prep(user, host, resource)
 
 
-def prep(user, host, resource):
+def prep(
+    user: str | None, host: str, resource: str | None
+) -> tuple[str | None, str, str | None]:
     """
     Perform stringprep on all JID fragments.
 
@@ -114,7 +116,7 @@ def prep(user, host, resource):
     return (user, host, resource)
 
 
-__internJIDs: Dict[str, "JID"] = {}
+__internJIDs: dict[str, JID] = {}
 
 
 def internJID(jidstring):
@@ -140,16 +142,19 @@ class JID:
     dictionaries.
     """
 
-    def __init__(self, str=None, tuple=None):
-        if not (str or tuple):
-            raise RuntimeError(
-                "You must provide a value for either 'str' or " "'tuple' arguments."
-            )
-
+    def __init__(
+        self,
+        str: str | None = None,
+        tuple: tuple[str | None, str, str | None] | None = None,
+    ):
         if str:
             user, host, res = parse(str)
-        else:
+        elif tuple:
             user, host, res = prep(*tuple)
+        else:
+            raise RuntimeError(
+                "You must provide a value for either 'str' or 'tuple' arguments."
+            )
 
         self.user = user
         self.host = host

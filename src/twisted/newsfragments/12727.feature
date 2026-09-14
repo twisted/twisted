@@ -1,0 +1,1 @@
+`twisted.internet.defer.Deferred.__iter__`, used when awaiting a `Deferred`, is now about 2-3% faster.

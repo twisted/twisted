@@ -7,8 +7,8 @@
 Utility functions for dealing with POSIX file descriptors.
 """
 
-import os
 import errno
+import os
 
 try:
     import fcntl as _fcntl
@@ -18,7 +18,7 @@ else:
     fcntl = _fcntl
 
 # twisted imports
-from twisted.internet.main import CONNECTION_LOST, CONNECTION_DONE
+from twisted.internet.main import CONNECTION_DONE, CONNECTION_LOST
 
 
 def setNonBlocking(fd):

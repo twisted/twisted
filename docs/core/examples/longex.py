@@ -3,9 +3,9 @@
 This is also a simple demonstration of twisted.protocols.basic.LineReceiver.
 """
 
-from twisted.protocols import basic
 from twisted.internet import reactor
 from twisted.internet.protocol import ServerFactory
+from twisted.protocols import basic
 
 
 class LongMultiplicationProtocol(basic.LineReceiver):
@@ -60,8 +60,9 @@ class LongMultiplicationFactory(ServerFactory):
 
 
 if __name__ == "__main__":
-    from twisted.python import log
     import sys
+
+    from twisted.python import log
 
     log.startLogging(sys.stdout)
     reactor.listenTCP(1234, LongMultiplicationFactory())

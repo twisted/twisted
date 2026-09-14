@@ -7,28 +7,32 @@ Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
 
-from twisted.python.compat import nativeString, networkString
+import datetime
 from io import BytesIO, StringIO
 from unittest import skipIf
 
-import datetime
-
-from twisted.trial import unittest
-from twisted.web import xmlrpc
-from twisted.web.xmlrpc import XMLRPC, payloadTemplate, addIntrospection
-from twisted.web.xmlrpc import QueryFactory, withRequest, xmlrpclib
-from twisted.web import server, client, http, static
-from twisted.internet import reactor, defer
+from twisted.internet import defer, reactor
 from twisted.internet.error import ConnectionDone
-from twisted.python import failure
-from twisted.python.reflect import namedModule
-from twisted.test.proto_helpers import MemoryReactor, EventLoggingObserver
-from twisted.web.test.test_web import DummyRequest
+from twisted.internet.testing import EventLoggingObserver, MemoryReactor
 from twisted.logger import (
-    globalLogPublisher,
     FilteringLogObserver,
-    LogLevelFilterPredicate,
     LogLevel,
+    LogLevelFilterPredicate,
+    globalLogPublisher,
+)
+from twisted.python import failure
+from twisted.python.compat import nativeString, networkString
+from twisted.python.reflect import namedModule
+from twisted.trial import unittest
+from twisted.web import client, http, server, static, xmlrpc
+from twisted.web.test.test_web import DummyRequest
+from twisted.web.xmlrpc import (
+    XMLRPC,
+    QueryFactory,
+    addIntrospection,
+    payloadTemplate,
+    withRequest,
+    xmlrpclib,
 )
 
 try:
@@ -96,7 +100,6 @@ class TestValueError(ValueError):
 
 
 class Test(XMLRPC):
-
     # If you add xmlrpc_ methods to this class, go change test_listMethods
     # below.
 
@@ -397,7 +400,7 @@ class XMLRPCTests(unittest.TestCase):
                 self.assertEqual(
                     factory.headers[b"content-type"], b"text/xml; charset=utf-8"
                 )
-            self.assertEquals(2, len(logObserver))
+            self.assertEqual(2, len(logObserver))
             f1 = logObserver[0]["log_failure"].value
             f2 = logObserver[1]["log_failure"].value
 
@@ -461,7 +464,6 @@ class XMLRPCTests(unittest.TestCase):
         return d
 
     def test_datetimeRoundtrip(self):
-
         """
         If an L{xmlrpclib.DateTime} is passed as an argument to an XML-RPC
         call and then returned by the server unmodified, the result should
@@ -500,7 +502,7 @@ class XMLRPCTests(unittest.TestCase):
 
         def cbFailed(ignored):
             # The fakeDumps exception should have been logged.
-            self.assertEquals(1, len(logObserver))
+            self.assertEqual(1, len(logObserver))
             self.assertIsInstance(logObserver[0]["log_failure"].value, RuntimeError)
             self.assertEqual(len(self.flushLoggedErrors(RuntimeError)), 1)
 

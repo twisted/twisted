@@ -14,11 +14,9 @@ import incremental
 
 from twisted.application import service, strports
 from twisted.internet import interfaces, reactor
-from twisted.python import usage, reflect, threadpool, deprecate
+from twisted.python import deprecate, reflect, threadpool, usage
 from twisted.spread import pb
-from twisted.web import distrib
-from twisted.web import resource, server, static, script, demo, wsgi
-from twisted.web import twcgi
+from twisted.web import demo, distrib, resource, script, server, static, twcgi, wsgi
 
 
 class Options(usage.Options):

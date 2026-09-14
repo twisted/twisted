@@ -13,11 +13,11 @@ import sys
 import warnings
 from unittest import skipIf
 
-from twisted.python.runtime import platform
-from twisted.trial.unittest import SynchronousTestCase, TestCase
-from twisted.internet import error, reactor, utils, interfaces
+from twisted.internet import error, interfaces, reactor, utils
 from twisted.internet.defer import Deferred
+from twisted.python.runtime import platform
 from twisted.python.test.test_util import SuppressedWarningsTests
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 
 class ProcessUtilsTests(TestCase):
@@ -39,7 +39,7 @@ class ProcessUtilsTests(TestCase):
         path to it.
         """
         script = self.mktemp()
-        with open(script, "wt") as scriptFile:
+        with open(script, "w") as scriptFile:
             scriptFile.write(os.linesep.join(sourceLines) + os.linesep)
         return os.path.abspath(script)
 

@@ -6,8 +6,6 @@
 Logging utilities.
 """
 
-from typing import List
-
 from ._interfaces import LogTrace
 from ._logger import Logger
 
@@ -26,12 +24,12 @@ def formatTrace(trace: LogTrace) -> str:
 
     def formatWithName(obj: object) -> str:
         if hasattr(obj, "name"):
-            return f"{obj} ({obj.name})"  # type: ignore[attr-defined]
+            return f"{obj} ({obj.name})"
         else:
             return f"{obj}"
 
     result = []
-    lineage: List[Logger] = []
+    lineage: list[Logger] = []
 
     for parent, child in trace:
         if not lineage or lineage[-1] is not parent:
@@ -41,11 +39,11 @@ def formatTrace(trace: LogTrace) -> str:
 
             else:
                 if not lineage:
-                    result.append("{}\n".format(formatWithName(parent)))
+                    result.append(f"{formatWithName(parent)}\n")
 
                 lineage.append(parent)
 
         result.append("  " * len(lineage))
-        result.append("-> {}\n".format(formatWithName(child)))
+        result.append(f"-> {formatWithName(child)}\n")
 
     return "".join(result)

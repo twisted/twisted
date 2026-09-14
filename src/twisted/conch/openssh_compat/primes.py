@@ -10,18 +10,18 @@ Maintainer: Paul Swartz
 """
 
 
-def parseModuliFile(filename):
+def parseModuliFile(filename: str) -> dict[int, list[tuple[int, int]]]:
     with open(filename) as f:
         lines = f.readlines()
-    primes = {}
+    primes: dict[int, list[tuple[int, int]]] = {}
     for l in lines:
         l = l.strip()
         if not l or l[0] == "#":
             continue
-        tim, typ, tst, tri, size, gen, mod = l.split()
-        size = int(size) + 1
-        gen = int(gen)
-        mod = int(mod, 16)
+        tim, typ, tst, tri, sizestr, genstr, modstr = l.split()
+        size = int(sizestr) + 1
+        gen = int(genstr)
+        mod = int(modstr, 16)
         if size not in primes:
             primes[size] = []
         primes[size].append((gen, mod))

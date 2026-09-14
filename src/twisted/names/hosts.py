@@ -7,14 +7,12 @@ hosts(5) support.
 """
 
 
-from twisted.python.compat import nativeString
-from twisted.names import dns
-from twisted.python import failure
-from twisted.python.filepath import FilePath
 from twisted.internet import defer
 from twisted.internet.abstract import isIPAddress, isIPv6Address
-
-from twisted.names import common
+from twisted.names import common, dns
+from twisted.python import failure
+from twisted.python.compat import nativeString
+from twisted.python.filepath import FilePath
 
 
 def searchFileForAll(hostsFile, name):
@@ -93,13 +91,9 @@ class Resolver(common.ResolverBase):
         addresses in the hosts file.
         """
         return tuple(
-            [
-                dns.RRHeader(
-                    name, dns.A, dns.IN, self.ttl, dns.Record_A(addr, self.ttl)
-                )
-                for addr in searchFileForAll(FilePath(self.file), name)
-                if isIPAddress(addr)
-            ]
+            dns.RRHeader(name, dns.A, dns.IN, self.ttl, dns.Record_A(addr, self.ttl))
+            for addr in searchFileForAll(FilePath(self.file), name)
+            if isIPAddress(addr)
         )
 
     def _aaaaRecords(self, name):
@@ -108,13 +102,11 @@ class Resolver(common.ResolverBase):
         addresses in the hosts file.
         """
         return tuple(
-            [
-                dns.RRHeader(
-                    name, dns.AAAA, dns.IN, self.ttl, dns.Record_AAAA(addr, self.ttl)
-                )
-                for addr in searchFileForAll(FilePath(self.file), name)
-                if isIPv6Address(addr)
-            ]
+            dns.RRHeader(
+                name, dns.AAAA, dns.IN, self.ttl, dns.Record_AAAA(addr, self.ttl)
+            )
+            for addr in searchFileForAll(FilePath(self.file), name)
+            if isIPv6Address(addr)
         )
 
     def _respond(self, name, records):

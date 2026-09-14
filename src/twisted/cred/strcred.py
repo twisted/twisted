@@ -13,12 +13,12 @@ Examples:
  - memory:admin:asdf:user:lkj
  - unix
 """
-
+from __future__ import annotations
 
 import sys
-from typing import Optional, Sequence, Type
+from collections.abc import Sequence
 
-from zope.interface import Interface, Attribute
+from zope.interface import Attribute, Interface
 
 from twisted.plugin import getPlugins
 from twisted.python import usage
@@ -142,7 +142,7 @@ class AuthOptionMixin:
         will send all help-related output. Default: L{sys.stdout}
     """
 
-    supportedInterfaces: Optional[Sequence[Type[Interface]]] = None
+    supportedInterfaces: Sequence[type[Interface]] | None = None
     authOutput = sys.stdout
 
     def supportsInterface(self, interface):

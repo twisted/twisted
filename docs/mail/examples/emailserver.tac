@@ -10,13 +10,11 @@ A toy email server.
 
 from zope.interface import implementer
 
+from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
+from twisted.cred.portal import IRealm, Portal
 from twisted.internet import defer
 from twisted.mail import smtp
 from twisted.mail.imap4 import LOGINCredentials, PLAINCredentials
-
-from twisted.cred.checkers import InMemoryUsernamePasswordDatabaseDontUse
-from twisted.cred.portal import IRealm
-from twisted.cred.portal import Portal
 
 
 @implementer(smtp.IMessageDelivery)
@@ -64,7 +62,7 @@ class ConsoleSMTPFactory(smtp.SMTPFactory):
     def buildProtocol(self, addr):
         p = smtp.SMTPFactory.buildProtocol(self, addr)
         p.delivery = self.delivery
-        p.challengers = {"LOGIN": LOGINCredentials, "PLAIN": PLAINCredentials}
+        p.challengers = {b"LOGIN": LOGINCredentials, b"PLAIN": PLAINCredentials}
         return p
 
 
@@ -77,8 +75,7 @@ class SimpleRealm:
 
 
 def main():
-    from twisted.application import internet
-    from twisted.application import service
+    from twisted.application import internet, service
 
     portal = Portal(SimpleRealm())
     checker = InMemoryUsernamePasswordDatabaseDontUse()

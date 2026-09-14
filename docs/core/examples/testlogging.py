@@ -8,10 +8,11 @@ Message should only be printed second time around.
 """
 
 
-from twisted.python import log
-from twisted.internet import reactor
+import sys
+import warnings
 
-import sys, warnings
+from twisted.internet import reactor
+from twisted.python import log
 
 
 def test(i):

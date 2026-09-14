@@ -11,8 +11,8 @@ Usage:
 import sys
 
 from twisted.internet import reactor
-from twisted.web.client import getPage
 from twisted.python.util import println
+from twisted.web.client import getPage
 
 url = sys.argv[1].encode("ascii")
 getPage(url).addCallbacks(

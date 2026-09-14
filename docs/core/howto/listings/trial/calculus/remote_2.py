@@ -1,9 +1,10 @@
 # -*- test-case-name: calculus.test.test_remote_1 -*-
 
-from twisted.protocols import basic
-from twisted.internet import protocol
-from twisted.python import log
 from calculus.base_3 import Calculation
+
+from twisted.internet import protocol
+from twisted.protocols import basic
+from twisted.python import log
 
 
 class CalculationProxy:
@@ -39,9 +40,10 @@ class RemoteCalculationFactory(protocol.Factory):
 
 
 def main():
+    import sys
+
     from twisted.internet import reactor
     from twisted.python import log
-    import sys
 
     log.startLogging(sys.stdout)
     reactor.listenTCP(0, RemoteCalculationFactory())

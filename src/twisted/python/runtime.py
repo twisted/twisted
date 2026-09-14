@@ -2,12 +2,19 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+from __future__ import annotations
 
+__all__ = [
+    "seconds",
+    "shortPythonVersion",
+    "Platform",
+    "platform",
+    "platformType",
+]
 import os
 import sys
-import time
-from typing import Callable, Dict, Optional
 import warnings
+from time import time as seconds
 
 
 def shortPythonVersion() -> str:
@@ -26,27 +33,18 @@ knownPlatforms = {
 }
 
 
-_timeFunctions: Dict[Optional[str], Callable] = {
-    #'win32': time.clock,
-    "win32": time.time,
-}
-
-
 class Platform:
     """
     Gives us information about the platform we're running on.
     """
 
-    type: Optional[str] = knownPlatforms.get(os.name)
-    seconds = staticmethod(_timeFunctions.get(type, time.time))
+    type: str | None = knownPlatforms.get(os.name)
+    seconds = staticmethod(seconds)
     _platform = sys.platform
 
-    def __init__(
-        self, name: Optional[str] = None, platform: Optional[str] = None
-    ) -> None:
+    def __init__(self, name: str | None = None, platform: str | None = None) -> None:
         if name is not None:
             self.type = knownPlatforms.get(name)
-            self.seconds = _timeFunctions.get(self.type, time.time)
         if platform is not None:
             self._platform = platform
 
@@ -58,7 +56,7 @@ class Platform:
         """
         return self.type != None
 
-    def getType(self) -> Optional[str]:
+    def getType(self) -> str | None:
         """
         Get platform type.
 
@@ -203,4 +201,3 @@ class Platform:
 
 platform = Platform()
 platformType = platform.getType()
-seconds = platform.seconds

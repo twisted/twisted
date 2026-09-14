@@ -1,1 +1,0 @@
-xmlrpc's Proxy class now verifies HTTPS certificates against the system bundle.

@@ -8,48 +8,40 @@ reactor implementations.
 
 
 from collections import defaultdict
-
 from socket import (
-    getaddrinfo,
-    gaierror,
-    EAI_NONAME,
     AF_INET,
     AF_INET6,
     AF_UNSPEC,
-    SOCK_STREAM,
-    SOCK_DGRAM,
+    EAI_NONAME,
     IPPROTO_TCP,
+    SOCK_DGRAM,
+    SOCK_STREAM,
+    gaierror,
+    getaddrinfo,
 )
-from threading import local, Lock
+from threading import Lock, local
 
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
-from twisted.internet.interfaces import (
-    IResolutionReceiver,
-    IResolverSimple,
-    IReactorPluggableNameResolver,
-    IHostnameResolver,
-)
-
-from twisted.trial.unittest import SynchronousTestCase as UnitTest
-
-from twisted.python.threadpool import ThreadPool
-from twisted._threads import createMemoryWorker, Team, LockWorker
-
-from twisted.internet.address import IPv4Address, IPv6Address
+from twisted._threads import LockWorker, Team, createMemoryWorker
 from twisted.internet._resolver import (
+    ComplexResolverSimplifier,
     GAIResolver,
     SimpleResolverComplexifier,
-    ComplexResolverSimplifier,
 )
-
+from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.base import PluggableResolverMixin, ReactorBase
 from twisted.internet.defer import Deferred
 from twisted.internet.error import DNSLookupError
-from twisted.internet.base import (
-    PluggableResolverMixin,
-    ReactorBase,
+from twisted.internet.interfaces import (
+    IHostnameResolver,
+    IReactorPluggableNameResolver,
+    IResolutionReceiver,
+    IResolverSimple,
 )
+from twisted.python.threadpool import ThreadPool
+from twisted.trial.unittest import SynchronousTestCase as UnitTest
 
 
 class DeterministicThreadPool(ThreadPool):

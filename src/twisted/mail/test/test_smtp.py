@@ -4,46 +4,43 @@
 """
 Test cases for twisted.mail.smtp module.
 """
+from __future__ import annotations
 
-
-import inspect
 import base64
+import inspect
 import re
-
 from io import BytesIO
-from unittest import skipIf
-from typing import Any, List, Optional, Type, Tuple
+from typing import Any, cast
 
-from zope.interface import implementer, directlyProvides
+from zope.interface import directlyProvides, implementer
 
-from twisted.python.util import LineLog
-from twisted.trial.unittest import TestCase
-from twisted.protocols import basic, loopback
-from twisted.internet import defer, protocol, reactor, interfaces
-from twisted.internet import address, error, task
-from twisted.test.proto_helpers import MemoryReactor, StringTransport
-
-from twisted import cred
-import twisted.cred.error
-import twisted.cred.portal
 import twisted.cred.checkers
 import twisted.cred.credentials
-
-from twisted.cred.portal import IRealm, Portal
-from twisted.cred.checkers import ICredentialsChecker, AllowAnonymousAccess
+import twisted.cred.error
+import twisted.cred.portal
+from twisted import cred
+from twisted.cred.checkers import AllowAnonymousAccess, ICredentialsChecker
 from twisted.cred.credentials import IAnonymous
 from twisted.cred.error import UnauthorizedLogin
-
+from twisted.cred.portal import IRealm, Portal
+from twisted.internet import address, defer, error, interfaces, protocol, reactor, task
+from twisted.internet.address import IPv4Address
+from twisted.internet.protocol import Factory, ServerFactory
+from twisted.internet.testing import MemoryReactor, StringTransport
 from twisted.mail import smtp
 from twisted.mail._cred import LOGINCredentials
+from twisted.protocols import basic, loopback
+from twisted.python.util import LineLog
+from twisted.trial.unittest import TestCase
 
-
+sslSkip: str | None
 try:
+    from twisted.internet.ssl import optionsForClientTLS
     from twisted.test.ssl_helpers import ClientTLSContext, ServerTLSContext
 except ImportError:
     sslSkip = "OpenSSL not present"
 else:
-    sslSkip = ""
+    sslSkip = None
 
 
 if not interfaces.IReactorSSL.providedBy(reactor):
@@ -91,7 +88,7 @@ class DummyMessage:
 
     def lineReceived(self, line):
         # Throw away the generated Received: header
-        if not re.match(br"Received: From yyy.com \(\[.*\]\) by localhost;", line):
+        if not re.match(rb"Received: From yyy.com \(\[.*\]\) by localhost;", line):
             self.buffer.append(line)
 
     def eomReceived(self):
@@ -171,7 +168,6 @@ class LoopbackMixin:
 
 
 class FakeSMTPServer(basic.LineReceiver):
-
     clientData = [
         b"220 hello",
         b"250 nice to meet you",
@@ -361,8 +357,8 @@ class DummyESMTP(DummyProto, smtp.ESMTP):
 
 
 class AnotherTestCase:
-    serverClass: Optional[Type[protocol.Protocol]] = None
-    clientClass: Optional[Type[smtp.SMTPClient]] = None
+    serverClass: type[protocol.Protocol] | None = None
+    clientClass: type[smtp.SMTPClient] | None = None
 
     messages = [
         (
@@ -408,7 +404,7 @@ To: foo
         ),
     ]
 
-    data: List[Tuple[bytes, bytes, Any, Any]] = [
+    data: list[tuple[bytes, bytes, Any, Any]] = [
         (b"", b"220.*\r\n$", None, None),
         (b"HELO foo.com\r\n", b"250.*\r\n$", None, None),
         (b"RSET\r\n", b"250.*\r\n$", None, None),
@@ -442,7 +438,7 @@ To: foo
 
         a.factory = fooFactory()
         a.makeConnection(transport)
-        for (send, expect, msg, msgexpect) in self.data:
+        for send, expect, msg, msgexpect in self.data:
             if send:
                 a.dataReceived(send)
             data = transport.value()
@@ -607,7 +603,7 @@ class SMTPHelperTests(TestCase):
             [smtp.Address(b""), b"<>"],
         ]
 
-        for (c, e) in cases:
+        for c, e in cases:
             self.assertEqual(smtp.quoteaddr(c), e)
 
     def testUser(self):
@@ -622,7 +618,7 @@ class SMTPHelperTests(TestCase):
             ("e=mc2@example.com", b"e+3Dmc2@example.com"),
         ]
 
-        for (case, expected) in cases:
+        for case, expected in cases:
             self.assertEqual(smtp.xtext_encode(case), (expected, len(case)))
             self.assertEqual(case.encode("xtext"), expected)
             self.assertEqual(smtp.xtext_decode(expected), (case, len(expected)))
@@ -659,8 +655,9 @@ class NoticeTLSClient(MyESMTPClient):
         self.tls = True
 
 
-@skipIf(sslSkip, sslSkip)
 class TLSTests(TestCase, LoopbackMixin):
+    skip = sslSkip
+
     def testTLS(self):
         clientCTX = ClientTLSContext()
         serverCTX = ServerTLSContext()
@@ -673,6 +670,52 @@ class TLSTests(TestCase, LoopbackMixin):
             self.assertEqual(server.startedTLS, True)
 
         return self.loopback(server, client).addCallback(check)
+
+    def test_ESMTPSenderFactory_TLSError(self) -> defer.Deferred[Any]:
+        """
+        Attempting to connect to an ESMTP server which presents an invalid certificate
+        will trigger a failure that contains information that the failure was caused by
+        the certificate validation.
+        """
+        # set up a dummy ESMTP server which will present a self-signed cert after
+        # STARTTLS
+        buildServerProtocol = lambda: DummyESMTP(contextFactory=ServerTLSContext())
+        serverFactory = Factory.forProtocol(buildServerProtocol)
+        serverPort = reactor.listenTCP(
+            0, cast(ServerFactory, serverFactory), interface="127.0.0.1"
+        )
+        self.addCleanup(serverPort.stopListening)
+
+        # build a client, which won't accept the certificate presented by the dummy
+        # server.
+        sentDeferred: defer.Deferred[Any] = defer.Deferred()
+        clientFactory = smtp.ESMTPSenderFactory(
+            "username",
+            "password",
+            "source@address",
+            "recipient@address",
+            BytesIO(b"message"),
+            sentDeferred,
+            retries=0,
+            requireAuthentication=False,
+            contextFactory=optionsForClientTLS("testdomain"),
+        )
+
+        # connect the two together
+        serverPortAddress = serverPort.getHost()
+        assert isinstance(serverPortAddress, IPv4Address)
+        connector = reactor.connectTCP(
+            serverPortAddress.host, serverPortAddress.port, clientFactory
+        )
+        self.addCleanup(connector.disconnect)
+
+        def checkVerifyFailedMessage(e: smtp.SMTPConnectError) -> None:
+            # check that the SMTPConnectError has a message relating to the TLS error
+            self.assertIn("VerificationError", str(e))
+
+        return self.assertFailure(sentDeferred, smtp.SMTPConnectError).addCallback(
+            checkVerifyFailedMessage
+        )
 
 
 class EmptyLineTests(TestCase):
@@ -1601,11 +1644,12 @@ class ESMTPDowngradeTestCase(TestCase):
         self.assertEqual(b"HELO testuser\r\n", transport.value())
 
 
-@skipIf(sslSkip, sslSkip)
 class SSLTestCase(TestCase):
     """
     Tests for the TLS negotiation done by L{smtp.ESMTPClient}.
     """
+
+    skip = sslSkip
 
     SERVER_GREETING = b"220 localhost NO UCE NO UBE NO RELAY PROBES ESMTP\r\n"
     EHLO_RESPONSE = b"250-localhost Hello 127.0.0.1, nice to meet you\r\n"
@@ -1775,7 +1819,8 @@ class SendmailTests(TestCase):
         The default C{reactor} parameter of L{twisted.mail.smtp.sendmail} is
         L{twisted.internet.reactor}.
         """
-        args, varArgs, keywords, defaults = inspect.getargspec(smtp.sendmail)
+        fullSpec = inspect.getfullargspec(smtp.sendmail)
+        defaults = fullSpec[3]
         self.assertEqual(reactor, defaults[2])
 
     def _honorsESMTPArguments(self, username, password):

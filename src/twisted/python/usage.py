@@ -11,16 +11,17 @@ For information on how to use it, see
 U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
+from __future__ import annotations
 
+import getopt
 
 # System Imports
 import inspect
 import os
 import sys
-import getopt
-from os import path
 import textwrap
-from typing import Optional, cast
+from os import path
+from typing import Any, cast
 
 # Sibling Imports
 from twisted.python import reflect, util
@@ -62,7 +63,7 @@ class CoerceParameter:
         self.options.opts[parameterName] = value
 
 
-class Options(dict):
+class Options(dict[str, Any]):
     """
     An option list parser class
 
@@ -149,9 +150,9 @@ class Options(dict):
     or doc/core/howto/options.xhtml in your Twisted directory.
     """
 
-    subCommand: Optional[str] = None
-    defaultSubCommand: Optional[str] = None
-    parent: "Optional[Options]" = None
+    subCommand: str | None = None
+    defaultSubCommand: str | None = None
+    parent: Options | None = None
     completionData = None
     _shellCompFile = sys.stdout  # file to use if shell completion is requested
 
@@ -260,7 +261,7 @@ class Options(dict):
             if not args:
                 args = [self.defaultSubCommand]
             sub, rest = args[0], args[1:]
-            for (cmd, short, parser, doc) in self.subCommands:
+            for cmd, short, parser, doc in self.subCommands:
                 if sub == cmd or sub == short:
                     self.subCommand = cmd
                     self.subOptions = parser()
@@ -476,7 +477,7 @@ class Options(dict):
             )
         return synopsis
 
-    def getUsage(self, width: Optional[int] = None) -> str:
+    def getUsage(self, width: int | None = None) -> str:
         # If subOptions exists by now, then there was probably an error while
         # parsing its options.
         if hasattr(self, "subOptions"):
@@ -487,7 +488,7 @@ class Options(dict):
 
         if hasattr(self, "subCommands"):
             cmdDicts = []
-            for (cmd, short, parser, desc) in self.subCommands:  # type: ignore[attr-defined]
+            for cmd, short, parser, desc in self.subCommands:
                 cmdDicts.append(
                     {
                         "long": cmd,
@@ -568,7 +569,7 @@ class Completer:
     subclasses for specific completion functionality.
     """
 
-    _descr: Optional[str] = None
+    _descr: str | None = None
 
     def __init__(self, descr=None, repeat=False):
         """
@@ -614,7 +615,7 @@ class Completer:
             C{twisted.python.usage._ZSH}
         """
         if shellType == _ZSH:
-            return "{}:{}:".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -704,7 +705,7 @@ class CompleteUsernames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_users".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_users"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -717,7 +718,7 @@ class CompleteGroups(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_groups".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_groups"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -728,7 +729,7 @@ class CompleteHostnames(Completer):
 
     def _shellCode(self, optName, shellType):
         if shellType == _ZSH:
-            return "{}:{}:_hosts".format(self._repeatFlag, self._description(optName))
+            return f"{self._repeatFlag}:{self._description(optName)}:_hosts"
         raise NotImplementedError(f"Unknown shellType {shellType!r}")
 
 
@@ -960,7 +961,7 @@ def docMakeChunks(optList, width=80):
         else:
             column2_l = [""]
 
-        optLines.append("{}{}\n".format(column1, column2_l.pop(0)))
+        optLines.append(f"{column1}{column2_l.pop(0)}\n")
 
         for line in column2_l:
             optLines.append(f"{colFiller1}{line}\n")

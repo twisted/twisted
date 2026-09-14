@@ -1,9 +1,8 @@
-from twisted.mail.smtp import sendmail
 from twisted.internet.task import react
+from twisted.mail.smtp import sendmail
 
 
 def main(reactor):
-
     d = sendmail(
         "smtp.gmail.com",
         "alice@gmail.com",

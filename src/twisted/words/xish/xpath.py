@@ -312,7 +312,7 @@ class XPathQuery:
             return result
 
 
-__internedQueries = {}
+__internedQueries: dict[str, XPathQuery] = {}
 
 
 def internQuery(queryString):

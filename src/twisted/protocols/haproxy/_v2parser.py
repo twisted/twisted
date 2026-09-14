@@ -6,24 +6,25 @@
 """
 IProxyParser implementation for version two of the PROXY protocol.
 """
+from __future__ import annotations
 
 import binascii
 import struct
-
-from constantly import Values, ValueConstant
+from typing import Callable, Literal
 
 from zope.interface import implementer
+
+from constantly import ValueConstant, Values
+
 from twisted.internet import address
 from twisted.python import compat
-
+from . import _info, _interfaces
 from ._exceptions import (
-    convertError,
-    InvalidProxyHeader,
     InvalidNetworkProtocol,
+    InvalidProxyHeader,
     MissingAddressData,
+    convertError,
 )
-from . import _info
-from . import _interfaces
 
 
 class NetFamily(Values):
@@ -76,10 +77,10 @@ class V2Parser:
         50: "!108s108s",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.buffer = b""
 
-    def feed(self, data):
+    def feed(self, data: bytes) -> tuple[_info.ProxyInfo, bytes] | tuple[None, None]:
         """
         Consume a chunk of data and attempt to parse it.
 
@@ -108,7 +109,7 @@ class V2Parser:
         return (info, remaining)
 
     @staticmethod
-    def _bytesToIPv4(bytestring):
+    def _bytesToIPv4(bytestring: bytes) -> bytes:
         """
         Convert packed 32-bit IPv4 address bytes into a dotted-quad ASCII bytes
         representation of that address.
@@ -124,7 +125,7 @@ class V2Parser:
         )
 
     @staticmethod
-    def _bytesToIPv6(bytestring):
+    def _bytesToIPv6(bytestring: bytes) -> bytes:
         """
         Convert packed 128-bit IPv6 address bytes into a colon-separated ASCII
         bytes representation of that address.
@@ -137,12 +138,12 @@ class V2Parser:
         """
         hexString = binascii.b2a_hex(bytestring)
         return b":".join(
-            ("{:x}".format(int(hexString[b : b + 4], 16))).encode("ascii")
+            (f"{int(hexString[b : b + 4], 16):x}").encode("ascii")
             for b in range(0, 32, 4)
         )
 
     @classmethod
-    def parse(cls, line):
+    def parse(cls, line: bytes) -> _info.ProxyInfo:
         """
         Parse a bytestring as a full PROXY protocol header.
 
@@ -192,11 +193,13 @@ class V2Parser:
                 address.UNIXAddress(dest.rstrip(b"\x00")),
             )
 
-        addrType = "TCP"
+        addrType: Literal["TCP"] | Literal["UDP"] = "TCP"
         if netproto is NetProtocol.DGRAM:
             addrType = "UDP"
-        addrCls = address.IPv4Address
-        addrParser = cls._bytesToIPv4
+        addrCls: (
+            type[address.IPv4Address] | type[address.IPv6Address]
+        ) = address.IPv4Address
+        addrParser: Callable[[bytes], bytes] = cls._bytesToIPv4
         if family is NetFamily.INET6:
             addrCls = address.IPv6Address
             addrParser = cls._bytesToIPv6
@@ -207,6 +210,6 @@ class V2Parser:
 
         return _info.ProxyInfo(
             line,
-            addrCls(addrType, addrParser(source), sPort),
-            addrCls(addrType, addrParser(dest), dPort),
+            addrCls(addrType, addrParser(source).decode(), sPort),
+            addrCls(addrType, addrParser(dest).decode(), dPort),
         )

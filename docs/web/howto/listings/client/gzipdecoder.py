@@ -1,7 +1,7 @@
-from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
+from twisted.python import log
 from twisted.web.client import Agent, ContentDecoderAgent, GzipDecoder
 
 

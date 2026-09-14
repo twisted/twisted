@@ -14,14 +14,14 @@ class ChatUITests(unittest.TestCase):
     Tests for the L{basechat.ChatUI} chat client.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.ui = basechat.ChatUI()
         self.account = basesupport.AbstractAccount(
             "fooAccount", False, "foo", "password", "host", "port"
         )
         self.person = basesupport.AbstractPerson("foo", self.account)
 
-    def test_contactChangedNickNoKey(self):
+    def test_contactChangedNickNoKey(self) -> None:
         """
         L{basechat.ChatUI.contactChangedNick} on an
         L{twisted.words.im.interfaces.IPerson} who doesn't have an account
@@ -34,7 +34,7 @@ class ChatUITests(unittest.TestCase):
         self.assertEqual(self.person.name, "foo")
         self.assertEqual(self.person.account, self.account)
 
-    def test_contactChangedNickNoConversation(self):
+    def test_contactChangedNickNoConversation(self) -> None:
         """
         L{basechat.ChatUI.contactChangedNick} changes the name for an
         L{twisted.words.im.interfaces.IPerson}.
@@ -48,7 +48,7 @@ class ChatUITests(unittest.TestCase):
         self.assertEqual(self.person.name, "bar")
         self.assertEqual(self.person.account, self.account)
 
-    def test_contactChangedNickHasConversation(self):
+    def test_contactChangedNickHasConversation(self) -> None:
         """
         If an L{twisted.words.im.interfaces.IPerson} is in a
         L{basechat.Conversation}, L{basechat.ChatUI.contactChangedNick} causes a

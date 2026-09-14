@@ -6,28 +6,27 @@
 Twisted application runner.
 """
 
-from sys import stderr
-from signal import SIGTERM
+from collections.abc import Mapping
 from os import kill
-from typing import Any, TextIO, Callable, Mapping
+from signal import SIGTERM
+from sys import stderr
+from typing import Any, Callable, TextIO
 
-from attr import attrib, attrs, Factory
-
+from attr import Factory, attrib, attrs
 from constantly import NamedConstant
 
 from twisted.internet.interfaces import IReactorCore
 from twisted.logger import (
-    globalLogBeginner,
-    textFileLogObserver,
     FileLogObserver,
     FilteringLogObserver,
-    LogLevelFilterPredicate,
-    LogLevel,
     Logger,
+    LogLevel,
+    LogLevelFilterPredicate,
+    globalLogBeginner,
+    textFileLogObserver,
 )
-
-from ._exit import exit, ExitStatus
-from ._pidfile import nonePIDFile, AlreadyRunningError, InvalidPIDFileError, IPIDFile
+from ._exit import ExitStatus, exit
+from ._pidfile import AlreadyRunningError, InvalidPIDFileError, IPIDFile, nonePIDFile
 
 
 @attrs(frozen=True)

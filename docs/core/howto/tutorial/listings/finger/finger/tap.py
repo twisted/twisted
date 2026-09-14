@@ -1,12 +1,12 @@
 # finger/tap.py
+import finger
+
 from twisted.application import internet, service
 from twisted.internet import interfaces
 from twisted.python import usage
-import finger
 
 
 class Options(usage.Options):
-
     optParameters = [
         ["file", "f", "/etc/users"],
         ["templates", "t", "/usr/share/finger/templates"],

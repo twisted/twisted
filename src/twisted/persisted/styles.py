@@ -11,13 +11,12 @@ import copyreg as copy_reg
 import inspect
 import pickle
 import types
-from typing import Dict
-from twisted.python.compat import _PYPY
-from twisted.python import log, reflect
 from io import StringIO as _cStringIO
 
+from twisted.python import log, reflect
+from twisted.python.compat import _PYPY
 
-oldModules: Dict[str, types.ModuleType] = {}
+oldModules: dict[str, types.ModuleType] = {}
 
 
 _UniversalPicklingError = pickle.PicklingError
@@ -241,8 +240,8 @@ class Ephemeral:
         self.__class__ = Ephemeral
 
 
-versionedsToUpgrade: Dict[int, "Versioned"] = {}
-upgraded = {}
+versionedsToUpgrade: dict[int, "Versioned"] = {}
+upgraded: dict[int, int] = {}
 
 
 def doUpgrade():
@@ -321,7 +320,7 @@ class Versioned:
                         del dct[slot]
             if "persistenceVersion" in base.__dict__:
                 dct[
-                    "{}.persistenceVersion".format(reflect.qual(base))
+                    f"{reflect.qual(base)}.persistenceVersion"
                 ] = base.persistenceVersion
         return dct
 
@@ -334,7 +333,6 @@ class Versioned:
         bases.append(self.__class__)  # don't forget me!!
         # first let's look for old-skool versioned's
         if "persistenceVersion" in self.__dict__:
-
             # Hacky heuristic: if more than one class subclasses Versioned,
             # we'll assume that the higher version number wins for the older
             # class, so we'll consider the attribute the version of the older

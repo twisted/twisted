@@ -36,8 +36,8 @@ datagram on its standard out.
 from sys import stdout
 
 from twisted.internet import protocol
-from twisted.internet.task import react
 from twisted.internet.defer import Deferred
+from twisted.internet.task import react
 from twisted.pair.ethernet import EthernetProtocol
 from twisted.pair.ip import IPProtocol
 from twisted.pair.rawudp import RawUDPProtocol

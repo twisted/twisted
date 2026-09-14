@@ -8,13 +8,15 @@ Asynchronous local terminal input handling
 @author: Jp Calderone
 """
 
-import os, tty, sys, termios
-
-from twisted.internet import reactor, stdio, protocol, defer
-from twisted.python import failure, reflect, log
+import os
+import sys
+import termios
+import tty
 
 from twisted.conch.insults.insults import ServerProtocol
 from twisted.conch.manhole import ColoredManhole
+from twisted.internet import defer, protocol, reactor, stdio
+from twisted.python import failure, log, reflect
 
 
 class UnexpectedOutputError(Exception):

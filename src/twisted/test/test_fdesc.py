@@ -5,8 +5,9 @@
 Tests for L{twisted.internet.fdesc}.
 """
 
-import os, sys
 import errno
+import os
+import sys
 
 try:
     import fcntl

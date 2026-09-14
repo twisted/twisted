@@ -8,9 +8,10 @@ Creation of  Windows shortcuts.
 Requires win32all.
 """
 
-from win32com.shell import shell
-import pythoncom
 import os
+
+import pythoncom
+from win32com.shell import shell
 
 
 def open(filename):
@@ -69,7 +70,7 @@ class Shortcut:
         """
         Read a shortcut file from disk.
         """
-        self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(
+        self._base.QueryInterface(pythoncom.IID_IPersistFile).Load(  # type: ignore[attr-defined]
             os.path.abspath(filename)
         )
 
@@ -79,7 +80,7 @@ class Shortcut:
 
         The file should be named something.lnk.
         """
-        self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(
+        self._base.QueryInterface(pythoncom.IID_IPersistFile).Save(  # type: ignore[attr-defined]
             os.path.abspath(filename), 0
         )
 

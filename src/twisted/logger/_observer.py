@@ -6,14 +6,15 @@
 Basic log observers.
 """
 
-from typing import Callable, Optional
+from __future__ import annotations
+
+from typing import Callable
 
 from zope.interface import implementer
 
 from twisted.python.failure import Failure
 from ._interfaces import ILogObserver, LogEvent
 from ._logger import Logger
-
 
 OBSERVER_DISABLED = (
     "Temporarily disabling observer {observer} due to exception: {log_failure}"
@@ -60,7 +61,7 @@ class LogPublisher:
         Forward events to contained observers.
         """
         if "log_trace" not in event:
-            trace: Optional[Callable[[ILogObserver], None]] = None
+            trace: Callable[[ILogObserver], None] | None = None
 
         else:
 
@@ -101,7 +102,7 @@ class LogPublisher:
         @return: A L{Logger} without the given observer.
         """
         errorPublisher = LogPublisher(
-            *[obs for obs in self._observers if obs is not observer]
+            *(obs for obs in self._observers if obs is not observer)
         )
         return Logger(observer=errorPublisher)
 

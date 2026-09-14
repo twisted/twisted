@@ -10,18 +10,21 @@ Plugin system for Twisted.
 @author: Glyph Lefkowitz
 """
 
+from __future__ import annotations
 
 import os
+import pickle
 import sys
+import types
+from collections.abc import Iterable
+from typing import TypeVar
 
 from zope.interface import Interface, providedBy
 
-import pickle
-
-from twisted.python.components import getAdapterFactory
-from twisted.python.reflect import namedAny
 from twisted.python import log
+from twisted.python.components import getAdapterFactory
 from twisted.python.modules import getModule
+from twisted.python.reflect import namedAny
 
 
 class IPlugin(Interface):
@@ -185,7 +188,18 @@ def getCache(module):
     return allCachesCombined
 
 
-def getPlugins(interface, package=None):
+def _pluginsPackage() -> types.ModuleType:
+    import twisted.plugins as package
+
+    return package
+
+
+_TInterface = TypeVar("_TInterface", bound=Interface)
+
+
+def getPlugins(
+    interface: type[_TInterface], package: types.ModuleType | None = None
+) -> Iterable[_TInterface]:
     """
     Retrieve all plugins implementing the given interface beneath the given module.
 
@@ -198,7 +212,7 @@ def getPlugins(interface, package=None):
     @return: An iterator of plugins.
     """
     if package is None:
-        import twisted.plugins as package
+        package = _pluginsPackage()
     allDropins = getCache(package)
     for key, dropin in allDropins.items():
         for plugin in dropin.plugins:

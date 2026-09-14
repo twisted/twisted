@@ -5,18 +5,19 @@
 Test cases for L{twisted.logger._format}.
 """
 
-from itertools import count
+from __future__ import annotations
+
 import json
-from typing import Any, Callable, Optional
+from itertools import count
+from typing import Any, Callable
 
 try:
     from time import tzset
 except ImportError:
-    tzset = None  # type: ignore[assignment, misc]
+    tzset = None  # type: ignore[assignment]
 
 from twisted.trial import unittest
-
-from .._flatten import flattenEvent, extractField, KeyFlattener, aFormatter
+from .._flatten import KeyFlattener, aFormatter, extractField, flattenEvent
 from .._format import formatEvent
 from .._interfaces import LogEvent
 
@@ -181,7 +182,7 @@ class FlatFormattingTests(unittest.TestCase):
         )
 
     def _test_formatFlatEvent_fieldNamesSame(
-        self, event: Optional[LogEvent] = None
+        self, event: LogEvent | None = None
     ) -> LogEvent:
         """
         The same format field used twice in one event is rendered twice.

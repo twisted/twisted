@@ -4,13 +4,13 @@
 """
 Test cases for L{twisted.logger._format}.
 """
+from __future__ import annotations
 
+import logging as py_logging
+import sys
 from inspect import getsourcefile
 from io import BytesIO, TextIOWrapper
-import logging as py_logging
 from logging import Formatter, LogRecord, StreamHandler, getLogger
-import sys
-from typing import List, Optional, Tuple
 
 from zope.interface.exceptions import BrokenMethodImplementation
 from zope.interface.verify import verifyObject
@@ -18,13 +18,12 @@ from zope.interface.verify import verifyObject
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
 from twisted.trial import unittest
-
 from .._interfaces import ILogObserver, LogEvent
 from .._levels import LogLevel
 from .._stdlib import STDLibLogObserver
 
 
-def nextLine() -> Tuple[Optional[str], int]:
+def nextLine() -> tuple[str | None, int]:
     """
     Retrive the file name and line number immediately after where this function
     is called.
@@ -99,7 +98,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.addCleanup(logger.close)
         return logger
 
-    def logEvent(self, *events: LogEvent) -> Tuple[List[LogRecord], str]:
+    def logEvent(self, *events: LogEvent) -> tuple[list[LogRecord], str]:
         """
         Send one or more events to Python's logging module, and capture the
         emitted L{LogRecord}s and output stream as a string.
@@ -258,7 +257,7 @@ class STDLibLogObserverTests(unittest.TestCase):
         self.assertIn("ZeroDivisionError", output)
 
 
-def handlerAndBytesIO() -> Tuple[StreamHandler, BytesIO]:
+def handlerAndBytesIO() -> tuple[StreamHandler[TextIOWrapper[BytesIO]], BytesIO]:
     """
     Construct a 2-tuple of C{(StreamHandler, BytesIO)} for testing interaction
     with the 'logging' module.
@@ -284,7 +283,7 @@ class BufferedHandler(py_logging.Handler):
         Initialize this L{BufferedHandler}.
         """
         py_logging.Handler.__init__(self)
-        self.records: List[LogRecord] = []
+        self.records: list[LogRecord] = []
 
     def emit(self, record: LogRecord) -> None:
         """

@@ -15,13 +15,13 @@ import sys
 from pprint import pprint
 
 from twisted import version
-from twisted.python import log
-from twisted.internet.defer import Deferred
 from twisted.internet import reactor
+from twisted.internet.defer import Deferred
 from twisted.internet.protocol import Protocol
-from twisted.web.iweb import UNKNOWN_LENGTH
-from twisted.web.http_headers import Headers
+from twisted.python import log
 from twisted.web.client import Agent, ResponseDone
+from twisted.web.http_headers import Headers
+from twisted.web.iweb import UNKNOWN_LENGTH
 
 
 class WriteToStdout(Protocol):
