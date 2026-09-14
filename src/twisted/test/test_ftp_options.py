@@ -74,3 +74,10 @@ class FTPOptionsTests(TestCase):
         return checker.requestAvatarId(correct).addCallback(
             lambda username: self.assertEqual(username, correct.username)
         )
+
+    def test_passivePortRange(self) -> None:
+        """
+        The C{--passive-port-range} option is parsed as expected when provided.
+        """
+        self.options.parseOptions(["--passive-port-range=30000:31000"])
+        self.assertEqual(self.options["passivePortRange"], range(30000, 31001))
