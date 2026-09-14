@@ -1,0 +1,1 @@
+twisted.names.server.DNSServerFactory now sets the TC (truncation) bit and drops whole resource records, rather than serving a partial RRSet, when a UDP response does not fit within the 512 octet limit, so resolvers know to retry over TCP (RFC 1035 section 4.1.1, RFC 2181 section 9).

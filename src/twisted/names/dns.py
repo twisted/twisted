@@ -2753,17 +2753,42 @@ class Message(tputil.FancyEqMixin):
         body_tmp = BytesIO()
         for query in self.queries:
             query.encode(body_tmp, compDict)
-        for record in self.answers:
-            record.encode(body_tmp, compDict)
-        for record in self.authority:
-            record.encode(body_tmp, compDict)
-        for record in self.additional:
-            record.encode(body_tmp, compDict)
-        body = body_tmp.getvalue()
-        size = len(body) + self.headerSize
-        if self.maxSize and size > self.maxSize:
+
+        # Encode the resource record sections one record at a time so that, if
+        # the message has a maxSize and a record does not fit, the message can
+        # be truncated on a record boundary rather than in the middle of a
+        # record.  RFC 1035 section 4.1.1 says the TC bit indicates that the
+        # message was truncated due to length, and RFC 2181 section 9 forbids
+        # storing or relying on a partial RRSet, so a partial record must never
+        # be served as if it were complete.  When a record is dropped the TC
+        # bit is set and the section counts written into the header reflect
+        # only the records that were actually included.
+        counts: list[int] = []
+        truncated = False
+        for records in (self.answers, self.authority, self.additional):
+            included = 0
+            if not truncated:
+                for record in records:
+                    mark = body_tmp.tell()
+                    record.encode(body_tmp, compDict)
+                    if (
+                        self.maxSize
+                        and body_tmp.tell() + self.headerSize > self.maxSize
+                    ):
+                        # This record overflows the permitted size.  Roll the
+                        # buffer back so no partial record is emitted, flag
+                        # truncation, and stop adding records.
+                        body_tmp.seek(mark)
+                        body_tmp.truncate()
+                        truncated = True
+                        break
+                    included += 1
+            counts.append(included)
+
+        if truncated:
             self.trunc = 1
-            body = body[: self.maxSize - self.headerSize]
+
+        body = body_tmp.getvalue()
         byte3 = (
             ((self.answer & 1) << 7)
             | ((self.opCode & 0xF) << 3)
@@ -2785,9 +2810,9 @@ class Message(tputil.FancyEqMixin):
                 byte3,
                 byte4,
                 len(self.queries),
-                len(self.answers),
-                len(self.authority),
-                len(self.additional),
+                counts[0],
+                counts[1],
+                counts[2],
             )
         )
         strio.write(body)

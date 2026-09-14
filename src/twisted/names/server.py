@@ -23,6 +23,11 @@ from twisted.internet import protocol
 from twisted.names import dns, resolve
 from twisted.python import log
 
+# The conventional maximum size, in octets, of a DNS message carried over UDP
+# without EDNS0.  See RFC 1035 section 4.2.1.  Responses larger than this are
+# truncated and have the TC bit set so the client retries over TCP.
+_UDP_MAX_RESPONSE_SIZE = 512
+
 
 class DNSServerFactory(protocol.ServerFactory):
     """
@@ -166,6 +171,17 @@ class DNSServerFactory(protocol.ServerFactory):
         if address is None:
             protocol.writeMessage(message)
         else:
+            # This is a datagram (UDP) reply.  dns.Message.decode sets
+            # maxSize=0 on the request, which _responseFromMessage copies onto
+            # the response, so without this the response would never be
+            # truncated and an oversized answer would be sent without the TC
+            # bit set (see #12604).  Bound the datagram response to the
+            # conventional 512 octet limit so that dns.Message.encode drops
+            # whole records and sets the TC bit, prompting a TCP retry.  Any
+            # explicit larger maxSize (for example one negotiated via EDNS0) is
+            # left untouched.
+            if not message.maxSize:
+                message.maxSize = _UDP_MAX_RESPONSE_SIZE
             protocol.writeMessage(message, address)
 
         self._verboseLog(
