@@ -113,7 +113,7 @@ from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
-from typing import AnyStr, Callable, Protocol as TypingProtocol
+from typing import AnyStr, BinaryIO, Callable, Protocol as TypingProtocol
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -911,9 +911,9 @@ class Request:
     sentLength = 0  # content-length of response, or total bytes sent via chunking
     etag = None
     lastModified = None
-    args = None
+    args: dict[bytes, list[bytes]] | None = None
     path: bytes = None  # type:ignore[assignment]
-    content = None
+    content: BinaryIO | None = None
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
