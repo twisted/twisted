@@ -982,7 +982,7 @@ class _StandardEndpointFactory:
         @type connectTimeout: L{float} or L{None}
 
         @param bindAddress: The local address for client sockets to bind to.
-        @type bindAddress: L{bytes} or L{None}
+        @type bindAddress: L{Binding} or L{tuple} or L{bytes} or L{None}
         """
         self._reactor = reactor
         self._policyForHTTPS = contextFactory
@@ -1067,7 +1067,7 @@ class Agent(_AgentBase):
         @type connectTimeout: L{float}
 
         @param bindAddress: The local address for client sockets to bind to.
-        @type bindAddress: L{bytes}
+        @type bindAddress: L{Binding} or L{tuple} or L{bytes} or L{None}
 
         @param pool: An L{HTTPConnectionPool} instance, or L{None}, in which
             case a non-persistent L{HTTPConnectionPool} instance will be

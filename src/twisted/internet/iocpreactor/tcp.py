@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from zope.interface import classImplements, implementer
 
 from twisted.internet import address, defer, error, interfaces, main
-from twisted.internet.abstract import _LogOwner, isIPv6Address
+from twisted.internet.abstract import _LogOwner
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.interfaces import IProtocol
 from twisted.internet.iocpreactor import abstract, iocpsupport as _iocp
@@ -33,9 +33,12 @@ from twisted.internet.tcp import (
     _AbortingMixin,
     _BaseBaseClient,
     _BaseTCPClient,
+    _Binding,
+    _constructTCPPort,
     _getsockname,
     _resolveIPv6,
     _SocketCloser,
+    makeBinding,
 )
 from twisted.python import failure, log, reflect
 
@@ -265,7 +268,15 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
     def __init__(self, host, port, bindAddress, connector, reactor):
         # ConnectEx documentation says socket _has_ to be bound
         if bindAddress is None:
-            bindAddress = ("", 0)
+            bindAddress = makeBinding("", 0)
+        elif isinstance(bindAddress, tuple):
+            bindAddress = makeBinding(*bindAddress)
+        else:
+            assert isinstance(
+                bindAddress, _Binding
+            ), "bindAddress must be None, 2-tuple or Binding"
+        # bindAddress is a Binding, str, tuple or None .. so must be a
+        # Binding here if none of the above "if" checks hit
         self.reactor = reactor  # createInternetSocket needs this
         _BaseTCPClient.__init__(self, host, port, bindAddress, connector, reactor)
 
@@ -419,6 +430,7 @@ class Port(_SocketCloser, _LogOwner):
     socketType = socket.SOCK_STREAM
     _addressType = address.IPv4Address
     sessionno = 0
+    factory = None
 
     # Actual port number being listened on, only set to a non-None
     # value when we are actually listening.
@@ -431,14 +443,8 @@ class Port(_SocketCloser, _LogOwner):
     _type = "TCP"
 
     def __init__(self, port, factory, backlog=50, interface="", reactor=None):
-        self.port = port
-        self.factory = factory
-        self.backlog = backlog
-        self.interface = interface
         self.reactor = reactor
-        if isIPv6Address(interface):
-            self.addressFamily = socket.AF_INET6
-            self._addressType = address.IPv6Address
+        _constructTCPPort(self, port, factory, backlog, interface)
 
     def __repr__(self) -> str:
         if self._realPortNumber is not None:

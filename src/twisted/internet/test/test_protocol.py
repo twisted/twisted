@@ -26,6 +26,7 @@ from twisted.internet.protocol import (
     Protocol,
     ProtocolToConsumerAdapter,
 )
+from twisted.internet.tcp import makeBinding
 from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python.failure import Failure
@@ -72,7 +73,7 @@ class ClientCreatorTests(TestCase):
             self.assertEqual(host, "example.com")
             self.assertEqual(port, 1234)
             self.assertEqual(timeout, 4321)
-            self.assertEqual(bindAddress, ("1.2.3.4", 9876))
+            self.assertEqual(bindAddress, makeBinding("1.2.3.4", 9876))
             return factory
 
         self._basicConnectTest(check)
