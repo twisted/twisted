@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Iterable
-from typing import AnyStr
+from io import UnsupportedOperation
+from typing import AnyStr, NoReturn
 
 from constantly import NamedConstant
 from incremental import Version
@@ -127,13 +128,11 @@ class LoggingFile:
         """
         pass
 
-    def fileno(self) -> int:
+    def fileno(self) -> NoReturn:
         """
-        Returns an invalid file descriptor, since this is not backed by an FD.
-
-        @return: C{-1}
+        Raises a L{io.UnsupportedOperation} because L{LoggingFile} does not use a a file descriptor.
         """
-        return -1
+        raise UnsupportedOperation("LoggingFile has no file descriptor.")
 
     def isatty(self) -> bool:
         """

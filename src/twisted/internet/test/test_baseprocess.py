@@ -7,7 +7,8 @@ functionality that is useful in all platforms supporting L{IReactorProcess}.
 """
 
 from twisted.internet._baseprocess import BaseProcess
-from twisted.python.deprecate import getWarningMethod, setWarningMethod
+from twisted.internet.protocol import ProcessProtocol
+from twisted.python.failure import Failure
 from twisted.trial.unittest import TestCase
 
 
@@ -18,58 +19,46 @@ class BaseProcessTests(TestCase):
     implementations.
     """
 
-    def test_callProcessExited(self):
+    def test_callProcessExitedWithoutProtocol(self) -> None:
+        """
+        L{BaseProcess._callProcessExited} does nothing when there is no
+        process protocol.
+        """
+        process = BaseProcess(None)
+        process._callProcessExited(RuntimeError("fake reason"))
+
+        # When there is no protocol, there should be no Exception logged
+        self.assertEqual(self.flushLoggedErrors(), [])
+
+    def test_callProcessExited(self) -> None:
         """
         L{BaseProcess._callProcessExited} calls the C{processExited} method of
         its C{proto} attribute and passes it a L{Failure} wrapping the given
         exception.
         """
 
-        class FakeProto:
-            reason = None
+        class FakeProto(ProcessProtocol):
+            reason: Failure
 
-            def processExited(self, reason):
+            def processExited(self, reason: Failure) -> None:
                 self.reason = reason
 
         reason = RuntimeError("fake reason")
-        process = BaseProcess(FakeProto())
+        proto = FakeProto()
+        process = BaseProcess(proto)
         process._callProcessExited(reason)
-        process.proto.reason.trap(RuntimeError)
-        self.assertIs(reason, process.proto.reason.value)
+        proto.reason.trap(RuntimeError)
+        self.assertIs(reason, proto.reason.value)
 
-    def test_callProcessExitedMissing(self):
+    def test_maybeCallProcessEndedWithoutStatus(self) -> None:
         """
-        L{BaseProcess._callProcessExited} emits a L{DeprecationWarning} if the
-        object referred to by its C{proto} attribute has no C{processExited}
-        method.
+        L{BaseProcess.maybeCallProcessEnded} retains the process protocol until
+        an exit status is available.
         """
+        proto = ProcessProtocol()
+        process = BaseProcess(proto)
 
-        class FakeProto:
-            pass
+        process.maybeCallProcessEnded()
 
-        reason = object()
-        process = BaseProcess(FakeProto())
-
-        self.addCleanup(setWarningMethod, getWarningMethod())
-        warnings = []
-
-        def collect(message, category, stacklevel):
-            warnings.append((message, category, stacklevel))
-
-        setWarningMethod(collect)
-
-        process._callProcessExited(reason)
-
-        [(message, category, stacklevel)] = warnings
-        self.assertEqual(
-            message,
-            "Since Twisted 8.2, IProcessProtocol.processExited is required.  "
-            "%s.%s must implement it." % (FakeProto.__module__, FakeProto.__name__),
-        )
-        self.assertIs(category, DeprecationWarning)
-        # The stacklevel doesn't really make sense for this kind of
-        # deprecation.  Requiring it to be 0 will at least avoid pointing to
-        # any part of Twisted or a random part of the application's code, which
-        # I think would be more misleading than having it point inside the
-        # warning system itself. -exarkun
-        self.assertEqual(stacklevel, 0)
+        # Protocol remains unchanged
+        self.assertIs(process.proto, proto)

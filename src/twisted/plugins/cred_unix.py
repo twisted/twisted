@@ -31,7 +31,7 @@ def verifyCryptedPassword(crypted, pw):
     @rtype: L{bool}
     """
     try:
-        import crypt
+        import crypt  # type: ignore[import-not-found]
     except ImportError:
         crypt = None
 
@@ -137,7 +137,7 @@ class UNIXChecker:
                 return checked
 
         try:
-            import spwd
+            import spwd  # type: ignore[import-not-found]
         except ImportError:
             spwd = None
 

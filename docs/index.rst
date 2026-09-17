@@ -21,6 +21,7 @@ Welcome to the Twisted documentation!
    :caption: Quick links
 
    security
+   development/ai-policy
    community
    GitHub <https://github.com/twisted/twisted>
    PyPI <https://pypi.org/project/twisted>

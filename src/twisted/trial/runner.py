@@ -293,6 +293,7 @@ class TestHolder:
     is concerned, this looks exactly like a unit test.
     """
 
+    skip: str | None = None
     failureException = None
 
     def __init__(self, description):

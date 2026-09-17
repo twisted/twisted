@@ -442,7 +442,6 @@ class SSHClientTransport(transport.SSHClientTransport):
         transport.SSHClientTransport.sendDisconnect(self, code, reason)
 
     def receiveDebug(self, alwaysDisplay, message, lang):
-        global options
         if alwaysDisplay or options["log"]:
             log.msg("Received Debug Message: %s" % message)
 

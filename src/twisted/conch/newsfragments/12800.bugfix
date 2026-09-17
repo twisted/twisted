@@ -1,0 +1,3 @@
+To comply with RFC 4254 Section-6.5, twisted.conch.ssh.session.SSHSession will
+now enforce that only one "shell", "exec", or "subsystem" command will succeed
+per channel.
