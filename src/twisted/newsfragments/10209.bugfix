@@ -1,0 +1,1 @@
+twisted.protocols.ftp.FTP.ftp_PASS() now constructs twisted.cred.credentials.UsernamePassword using bytes instead of str. twisted.cred.credentials.IUsernamePassword expects username and password to be bytes. Passing a str caused checker twisted.cred.checkers.FilePasswordDB to consistently fail to authenticate.

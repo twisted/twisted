@@ -146,7 +146,7 @@ class FTPServerTestCase(TestCase):
         users_checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
         self.username = "test-user"
         self.password = "test-password"
-        users_checker.addUser(self.username, self.password)
+        users_checker.addUser(self.username.encode(), self.password.encode())
         p.registerChecker(users_checker, credentials.IUsernamePassword)
 
         self.factory = ftp.FTPFactory(portal=p, userAnonymous=self.userAnonymous)
