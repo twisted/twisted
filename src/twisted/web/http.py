@@ -1221,7 +1221,7 @@ class Request:
         Indicate that all response data has been written to this L{Request}.
         """
         if self._disconnected:
-            raise RuntimeError(
+            raise ConnectionLostError(
                 "Request.finish called on a request after its connection was lost; "
                 "use Request.notifyFinish to keep track of this."
             )
@@ -1791,6 +1791,13 @@ class PotentialDataLoss(Exception):
     I{Transfer-Encoding} in the response because in this case the end of the
     response is indicated by the connection being closed, an event which may
     also be due to a transient network problem or other error.
+    """
+
+
+class ConnectionLostError(RuntimeError):
+    """
+    L{ConnectionLostError} may be raised by Request.finish when called on a request
+    after its connection was lost
     """
 
 
