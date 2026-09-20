@@ -1,0 +1,1 @@
+reactor.listenUDP now accepts link-local IPv6 adressess. It is possible to bind a instance of twisted.internet.protocol.DatagramProtocol to a socket with only IPv6 link-local address.
