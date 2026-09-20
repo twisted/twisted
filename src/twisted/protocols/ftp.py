@@ -31,8 +31,10 @@ from twisted.protocols import basic, policies
 from twisted.python import failure, filepath, log
 
 # constants
-# response codes
+_LINESEP_BYTES = os.linesep.encode()
+_CRLF_BYTES = b"\r\n"
 
+# response codes
 RESTART_MARKER_REPLY = "100"
 SERVICE_READY_IN_N_MINUTES = "120"
 DATA_CNX_ALREADY_OPEN_START_XFR = "125"
@@ -700,7 +702,7 @@ class ASCIIConsumerWrapper:
             self.write = cons.write
 
     def write(self, bytes):
-        return self.cons.write(bytes.replace(os.linesep, "\r\n"))
+        return self.cons.write(bytes.replace(_LINESEP_BYTES, _CRLF_BYTES))
 
 
 @implementer(interfaces.IConsumer)
