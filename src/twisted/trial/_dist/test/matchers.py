@@ -156,7 +156,7 @@ class IsSequenceOf(BaseMatcher[Sequence[T]]):
         description.append_text(", ")
 
 
-def isFailure(**properties: Matcher[object]) -> Matcher[object]:
+def isFailure(**properties: Matcher[Sequence[object]]) -> Matcher[object]:
     """
     Match an instance of L{Failure} with matching attributes.
     """

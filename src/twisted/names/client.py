@@ -19,12 +19,12 @@ from __future__ import annotations
 
 import errno
 import os
-import warnings
 
 from zope.interface import moduleProvides
 
 from twisted.internet import defer, error, interfaces, protocol
 from twisted.internet.abstract import isIPv6Address
+from twisted.internet.base import ThreadedResolver
 from twisted.internet.interfaces import IDelayedCall
 from twisted.names import cache, common, dns, hosts as hostsModule, resolve, root
 from twisted.python import failure, log
@@ -514,23 +514,6 @@ class AXFRController:
                 self.deferred = None
 
 
-from twisted.internet.base import ThreadedResolver as _ThreadedResolverImpl
-
-
-class ThreadedResolver(_ThreadedResolverImpl):
-    def __init__(self, reactor=None):
-        if reactor is None:
-            from twisted.internet import reactor
-        _ThreadedResolverImpl.__init__(self, reactor)
-        warnings.warn(
-            "twisted.names.client.ThreadedResolver is deprecated since "
-            "Twisted 9.0, use twisted.internet.base.ThreadedResolver "
-            "instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-
-
 class DNSClientFactory(protocol.ClientFactory):
     def __init__(self, controller, timeout=10):
         self.controller = controller
@@ -605,7 +588,7 @@ def createResolver(servers=None, resolvconf=None, hosts=None):
             hosts = r"c:\windows\hosts"
         from twisted.internet import reactor
 
-        bootstrap = _ThreadedResolverImpl(reactor)
+        bootstrap = ThreadedResolver(reactor)
         hostResolver = hostsModule.Resolver(hosts)
         theResolver = root.bootstrap(bootstrap, resolverFactory=Resolver)
 

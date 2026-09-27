@@ -8,7 +8,7 @@ Tests for implementations of L{IReactorWin32Events}.
 try:
     import win32event
 except ImportError:
-    win32event = None
+    win32event = None  # type: ignore[assignment]
 
 from zope.interface.verify import verifyObject
 

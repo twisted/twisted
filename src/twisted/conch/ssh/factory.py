@@ -5,8 +5,6 @@
 A Factory for SSH servers.
 
 See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
-
-Maintainer: Paul Swartz
 """
 from __future__ import annotations
 
@@ -80,7 +78,7 @@ class SSHFactory(protocol.Factory[Any]):
             t.supportedKeyExchanges = [
                 kexAlgorithm
                 for kexAlgorithm in t.supportedKeyExchanges
-                if _kex.isFixedGroup(kexAlgorithm) or _kex.isEllipticCurve(kexAlgorithm)
+                if not _kex.isDynamicPrimesGroup(kexAlgorithm)
             ]
         return t
 

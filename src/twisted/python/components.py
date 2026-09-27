@@ -56,7 +56,6 @@ def registerAdapter(adapterFactory, origInterface, *interfaceClasses):
     """
     self = globalRegistry
     assert interfaceClasses, "You need to pass an Interface"
-    global ALLOW_DUPLICATES
 
     # deal with class->interface adapters:
     if not isinstance(origInterface, interface.InterfaceClass):

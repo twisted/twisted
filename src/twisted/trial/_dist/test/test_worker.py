@@ -223,7 +223,7 @@ class LocalWorkerAMPTests(TestCase):
             isFailure(
                 type=equal_to(Exception),
                 value=equal_to(WorkerException("pyunit error")),
-                frames=has_item(similarFrame("test_error", "pyunitcases.py")),  # type: ignore[arg-type]
+                frames=has_item(similarFrame("test_error", "pyunitcases.py")),
             ),
         )
 

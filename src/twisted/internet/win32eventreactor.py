@@ -44,9 +44,9 @@ Or:
 The 2nd solution is probably what will get implemented.
 """
 
-import sys
-
 # System imports
+import socket
+import sys
 import time
 from threading import Thread
 from weakref import WeakKeyDictionary
@@ -67,11 +67,11 @@ except ImportError:
         category=UserWarning,
     )
 
-    def WSAEnumNetworkEvents(fd, event):
-        return {FD_READ}
+    def WSAEnumNetworkEvents(s: socket.socket, hEvent: int, /) -> dict[int, int]:
+        return {FD_READ: 0}
 
 
-import win32gui  # type: ignore[import-untyped]
+import win32gui
 from win32event import (
     QS_ALLINPUT,
     WAIT_OBJECT_0,

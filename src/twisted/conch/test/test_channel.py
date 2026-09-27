@@ -4,6 +4,7 @@
 """
 Test ssh/channel.py.
 """
+
 from __future__ import annotations
 
 from unittest import skipIf
@@ -13,6 +14,7 @@ from zope.interface.verify import verifyObject
 try:
     from twisted.conch.ssh import channel
     from twisted.conch.ssh.address import SSHTransportAddress
+    from twisted.conch.ssh.connection import SSHConnection
     from twisted.conch.ssh.service import SSHService
     from twisted.conch.ssh.transport import SSHServerTransport
     from twisted.internet import interfaces
@@ -23,10 +25,11 @@ try:
 except ImportError:
     skipTest = "Conch SSH not supported."
     SSHService = object  # type: ignore[assignment,misc]
+    SSHConnection = object  # type: ignore[assignment,misc]
 from twisted.trial.unittest import TestCase
 
 
-class MockConnection(SSHService):
+class MockConnection(SSHConnection):
     """
     A mock for twisted.conch.ssh.connection.SSHConnection.  Record the data
     that channels send, and when they try to close the connection.
@@ -138,7 +141,8 @@ class ChannelTests(TestCase):
         self.assertIsNone(c.data)
         self.assertIsNone(c.avatar)
 
-        c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)
+        # Just testing argument order with garbage values; types ignored.
+        c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)  # type:ignore[arg-type]
         self.assertEqual(c2.localWindowSize, 1)
         self.assertEqual(c2.localWindowLeft, 1)
         self.assertEqual(c2.localMaxPacket, 2)
@@ -343,6 +347,7 @@ class ChannelTests(TestCase):
         transport's C{getPeer} method returns.
         """
         peer = IPv4Address("TCP", "192.168.0.1", 54321)
+        assert self.channel.conn is not None, "should already be set"
         connectSSHTransport(service=self.channel.conn, peerAddress=peer)
 
         self.assertEqual(SSHTransportAddress(peer), self.channel.getPeer())
@@ -353,6 +358,7 @@ class ChannelTests(TestCase):
         transport's C{getHost} method returns.
         """
         host = IPv4Address("TCP", "127.0.0.1", 12345)
+        assert self.channel.conn is not None, "should already be set"
         connectSSHTransport(service=self.channel.conn, hostAddress=host)
 
         self.assertEqual(SSHTransportAddress(host), self.channel.getHost())

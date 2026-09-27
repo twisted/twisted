@@ -13,7 +13,8 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, BinaryIO, cast
+from io import UnsupportedOperation
+from typing import Any, BinaryIO, NoReturn, cast
 
 from zope.interface import Interface
 
@@ -610,8 +611,8 @@ class StdioOnnaStick:
     def close(self):
         pass
 
-    def fileno(self):
-        return -1
+    def fileno(self) -> NoReturn:
+        raise UnsupportedOperation("StdioOnnaStick has no file descriptor.")
 
     def flush(self):
         pass

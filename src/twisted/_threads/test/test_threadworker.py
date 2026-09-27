@@ -280,9 +280,11 @@ class LockWorkerTests(SynchronousTestCase):
             phase1complete = True
 
         def phase2() -> None:
-            nonlocal phase2complete, phase2acquired, lock
+            nonlocal phase2complete, phase2acquired
             phase2complete = True
-            phase2acquired = lock.acquired
+            # pyflakes thinks that lock does not exists,
+            # since we remove it later.
+            phase2acquired = lock.acquired  # noqa: F821
 
         worker.do(phase1)
         self.assertEqual(phase1complete, True)

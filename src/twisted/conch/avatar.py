@@ -1,13 +1,21 @@
 # -*- test-case-name: twisted.conch.test.test_conch -*-
 
 
+from typing import Protocol as TypingProtocol
+
 from zope.interface import implementer
 
 from twisted.conch.error import ConchError
 from twisted.conch.interfaces import IConchUser
 from twisted.conch.ssh.connection import OPEN_UNKNOWN_CHANNEL_TYPE
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
+
+
+class SubsystemFactory(TypingProtocol):
+    def __call__(self, data: bytes, avatar: IConchUser) -> Protocol:
+        ...
 
 
 @implementer(IConchUser)
@@ -16,7 +24,7 @@ class ConchUser:
 
     def __init__(self):
         self.channelLookup = {}
-        self.subsystemLookup = {}
+        self.subsystemLookup: dict[bytes, SubsystemFactory] = {}
 
     @property
     def conn(self):
@@ -38,13 +46,13 @@ class ConchUser:
                 avatar=self,
             )
 
-    def lookupSubsystem(self, subsystem, data):
+    def lookupSubsystem(self, subsystem: bytes, data: bytes) -> Protocol | None:
         self._log.debug(
             "Subsystem lookup: {subsystem!r}", subsystem=self.subsystemLookup
         )
         klass = self.subsystemLookup.get(subsystem, None)
         if not klass:
-            return False
+            return None
         return klass(data, avatar=self)
 
     def gotGlobalRequest(self, requestType, data):

@@ -407,6 +407,7 @@ class HTTP2TestHelpers:
     _getRequestHeaders: Headers = ()
     _postRequestHeaders: Headers = ()
 
+    skip: str | None = None
     if skipH2:
         skip = skipH2
 

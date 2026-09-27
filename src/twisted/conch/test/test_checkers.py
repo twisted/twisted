@@ -14,7 +14,7 @@ from io import BytesIO
 
 cryptSkip: str | None
 try:
-    import crypt
+    import crypt  # type: ignore[import-not-found]
 except ImportError:
     cryptSkip = "cannot run without crypt module"
 else:

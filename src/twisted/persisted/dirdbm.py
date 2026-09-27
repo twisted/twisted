@@ -19,7 +19,6 @@ created by the DirDBM itself!
 from __future__ import annotations
 
 import base64
-import glob
 import os
 import pickle
 from collections.abc import Iterable, Mapping
@@ -55,15 +54,15 @@ class DirDBM:
             # but before renaming the replacement entry.
             #
             # NOTE: '.' is NOT in the base64 alphabet!
-            for f in glob.glob(self._dnamePath.child("*.new").path):
-                os.remove(f)
-            replacements = glob.glob(self._dnamePath.child("*.rpl").path)
+            for f in self._dnamePath.globChildren("*.new"):
+                os.remove(f.path)
+            replacements = self._dnamePath.globChildren("*.rpl")
             for f in replacements:
-                old = f[:-4]
+                old = f.path[:-4]
                 if os.path.exists(old):
-                    os.remove(f)
+                    os.remove(f.path)
                 else:
-                    os.rename(f, old)
+                    os.rename(f.path, old)
 
     def _encode(self, k: bytes) -> bytes:
         """
