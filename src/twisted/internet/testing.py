@@ -41,9 +41,11 @@ from twisted.internet.interfaces import (
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
+    IReadDescriptor,
     IResolutionReceiver,
     ITransport,
     IUDPTransport,
+    IWriteDescriptor,
 )
 from twisted.internet.protocol import ClientFactory
 from twisted.internet.task import Clock
@@ -826,13 +828,15 @@ class MemoryReactor:
         """
         return list(self.writers)
 
-    def removeAll(self):
+    def removeAll(self) -> list[IReadDescriptor | IWriteDescriptor]:
         """
         Fake L{IReactorFDSet.removeAll} which removed all readers and writers
         from the local sets.
         """
+        removed = list(self.readers | self.writers)
         self.readers.clear()
         self.writers.clear()
+        return removed
 
 
 for iface in implementedBy(MemoryReactor):
