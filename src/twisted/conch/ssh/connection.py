@@ -72,7 +72,7 @@ class SSHConnection(service.SSHService):
         # Indicate failure to any channels that were in the process of
         # opening but not yet open.
         while self.channels:
-            (_, channel) = self.channels.popitem()
+            _, channel = self.channels.popitem()
             channel.openFailed(twisted.internet.error.ConnectionLost())
         # Errback any unfinished global requests.
         self._cleanupGlobalDeferreds()
@@ -192,7 +192,7 @@ class SSHConnection(service.SSHService):
         Find the channel using the local channel number and notify its
         channelOpen method.
         """
-        (localChannel, remoteChannel, windowSize, maxPacket) = struct.unpack(
+        localChannel, remoteChannel, windowSize, maxPacket = struct.unpack(
             ">4L", packet[:16]
         )
         specificData = packet[16:]

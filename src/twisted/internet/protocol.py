@@ -8,6 +8,7 @@ Standard implementations of Twisted protocol-related interfaces.
 Start here if you are looking to write a new protocol implementation for
 Twisted.  The Protocol class contains some introductory material.
 """
+
 from __future__ import annotations
 
 import random
@@ -37,24 +38,18 @@ R = TypeVar("R", bound="Factory")
 @implementer(interfaces.IProtocol)
 class _ProtoWithFactory(TypingProtocol):
     @property
-    def factory(self) -> Factory[Self]:
-        ...
+    def factory(self) -> Factory[Self]: ...
 
     @factory.setter
-    def factory(self, value: Any) -> None:
-        ...
+    def factory(self, value: Any) -> None: ...
 
-    def dataReceived(self, data: bytes) -> None:
-        ...
+    def dataReceived(self, data: bytes) -> None: ...
 
-    def connectionLost(self, reason: Failure) -> None:
-        ...
+    def connectionLost(self, reason: Failure) -> None: ...
 
-    def makeConnection(self, transport: ITransport) -> None:
-        ...
+    def makeConnection(self, transport: ITransport) -> None: ...
 
-    def connectionMade(self) -> None:
-        ...
+    def connectionMade(self) -> None: ...
 
 
 @implementer(interfaces.IProtocolFactory, interfaces.ILoggingContext)
@@ -94,7 +89,7 @@ class Factory(Generic[P]):
         """
         factory = cls(*args, **kwargs)
         factory.protocol = protocol
-        return factory  # type:ignore[return-value]
+        return factory  # type: ignore[return-value]
 
     def logPrefix(self):
         """

@@ -7,6 +7,7 @@
 """
 Support for bounce message generation.
 """
+
 import email.utils
 import os
 import time
@@ -68,9 +69,7 @@ def generateBounce(message, failedFrom, failedTo, transcript="", encoding="utf-8
         transcript = """\
 I'm sorry, the following address has permanent errors: {failedTo}.
 I've given up, and I will not retry the message again.
-""".format(
-            failedTo=failedTo
-        )
+""".format(failedTo=failedTo)
 
     failedAddress = email.utils.parseaddr(failedTo)[1]
     data = {

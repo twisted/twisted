@@ -8,7 +8,6 @@ clients and servers to forward arbitrary TCP data across the connection.
 Maintainer: Paul Swartz
 """
 
-
 import struct
 
 from twisted.conch.ssh import channel, common
@@ -200,8 +199,8 @@ def packOpen_direct_tcpip(destination, source):
     @type source: L{tuple}
     @param source: A tuple of the (host, port) of the source host.
     """
-    (connHost, connPort) = destination
-    (origHost, origPort) = source
+    connHost, connPort = destination
+    origHost, origPort = source
     if isinstance(connHost, str):
         connHost = connHost.encode("utf-8")
     if isinstance(origHost, str):
@@ -237,7 +236,7 @@ def packGlobal_tcpip_forward(peer):
     @param peer: A tuple of the (host, port) .
     @type peer: L{tuple}
     """
-    (host, port) = peer
+    host, port = peer
     return common.NS(host) + struct.pack(">L", port)
 
 

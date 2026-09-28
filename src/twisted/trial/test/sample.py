@@ -3,7 +3,6 @@ functionality. Do NOT change the number of tests in this module.  Do NOT change
 the names the tests in this module.
 """
 
-
 import unittest as pyunit
 
 from twisted.python.util import mergeFunctionMetadata

@@ -5,7 +5,6 @@
 Test cases for the L{twisted.python.reflect} module.
 """
 
-
 import os
 import weakref
 from collections import deque

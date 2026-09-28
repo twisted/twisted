@@ -17,7 +17,6 @@ Test running processes.
     platforms and native L{str} keys/values on Windows.
 """
 
-
 import errno
 import gc
 import gzip

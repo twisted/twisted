@@ -10,7 +10,6 @@ In general, this module should not be used, other than by reactor authors
 who need to use the 'installReactor' method.
 """
 
-
 from twisted.internet import error
 
 CONNECTION_DONE = error.ConnectionDone("Connection done")

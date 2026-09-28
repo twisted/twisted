@@ -7,6 +7,7 @@ A library for performing interesting tasks with DOM objects.
 
 This module is now deprecated.
 """
+
 import warnings
 from io import StringIO
 

@@ -6,7 +6,6 @@
 Common functionality used within the implementation of various workers.
 """
 
-
 from ._ithreads import AlreadyQuit
 
 

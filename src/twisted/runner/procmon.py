@@ -5,6 +5,7 @@
 """
 Support for starting, monitoring, and restarting child process.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -84,10 +85,10 @@ class LineLogger(basic.LineReceiver):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    tag = None  # type:ignore[assignment]
-    stream = None  # type:ignore[assignment]
+    tag = None  # type: ignore[assignment]
+    stream = None  # type: ignore[assignment]
     delimiter = b"\n"
-    service = None  # type:ignore[assignment]
+    service = None  # type: ignore[assignment]
 
     def lineReceived(self, line: bytes) -> None:
         try:
@@ -106,8 +107,8 @@ class LoggingProtocol(protocol.ProcessProtocol):
 
     # These really ought to be set by a constructor, but the legacy API is a
     # no-argument constructor.
-    service = None  # type:ignore[assignment]
-    name = None  # type:ignore[assignment]
+    service = None  # type: ignore[assignment]
+    name = None  # type: ignore[assignment]
 
     def connectionMade(self) -> None:
         self._output = LineLogger()

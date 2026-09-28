@@ -5,7 +5,6 @@
 Test running processes with the APIs in L{twisted.internet.utils}.
 """
 
-
 import os
 import signal
 import stat

@@ -5,7 +5,6 @@
 Used by L{twisted.test.test_process}.
 """
 
-
 from sys import argv, stdout
 
 if __name__ == "__main__":

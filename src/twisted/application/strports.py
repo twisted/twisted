@@ -8,6 +8,7 @@ Construct listening port services from a simple string description.
 @see: L{twisted.internet.endpoints.serverFromString}
 @see: L{twisted.internet.endpoints.clientFromString}
 """
+
 from __future__ import annotations
 
 from typing import cast

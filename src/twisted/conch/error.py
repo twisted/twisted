@@ -7,7 +7,6 @@ An error to represent bad things happening in Conch.
 Maintainer: Paul Swartz
 """
 
-
 from twisted.cred.error import UnauthorizedLogin
 
 

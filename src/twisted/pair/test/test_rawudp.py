@@ -17,9 +17,9 @@ class MyProtocol(protocol.DatagramProtocol):
         self,
         data: bytes,
         # https://github.com/twisted/twisted/issues/12699
-        peer: tuple[bytes, int],  # type:ignore[override]
+        peer: tuple[bytes, int],  # type: ignore[override]
     ) -> None:
-        (host, port) = peer
+        host, port = peer
         assert self.expecting, "Got a packet when not expecting anymore."
         expectData, expectHost, expectPort = self.expecting.pop(0)
 

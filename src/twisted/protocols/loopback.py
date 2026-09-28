@@ -6,7 +6,6 @@
 Testing support for protocols -- loopback between client and server.
 """
 
-
 # system imports
 import tempfile
 
