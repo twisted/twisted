@@ -4,6 +4,7 @@
 """
 Hypothesis strategies for values related to L{twisted.python}.
 """
+
 from typing import Literal
 
 from hypothesis.strategies import SearchStrategy, characters, text

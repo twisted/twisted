@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.conch.scripts.ckeygen}.
 """
+
 from __future__ import annotations
 
 import getpass

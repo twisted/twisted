@@ -6,7 +6,6 @@
 Windows Process Management, used with reactor.spawnProcess
 """
 
-
 import os
 import sys
 

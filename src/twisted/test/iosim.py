@@ -5,6 +5,7 @@
 """
 Utilities and helpers for simulating a network
 """
+
 from __future__ import annotations
 
 import itertools
@@ -498,7 +499,7 @@ def _factoriesShouldConnect(clientInfo, serverInfo):
         clientTimeout,
         clientBindAddress,
     ) = clientInfo
-    (serverPort, serverFactory, serverBacklog, serverInterface) = serverInfo
+    serverPort, serverFactory, serverBacklog, serverInterface = serverInfo
     if serverPort == clientPort:
         return clientFactory, serverFactory
     else:

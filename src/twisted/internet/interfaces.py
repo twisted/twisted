@@ -6,6 +6,7 @@ Interface documentation.
 
 Maintainer: Itamar Shtull-Trauring
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -124,11 +125,9 @@ class IHostResolution(Interface):
     @since: Twisted 17.1.0
     """
 
-    name = Attribute(
-        """
+    name = Attribute("""
         L{unicode}; the name of the host being resolved.
-        """
-    )
+        """)
 
     def cancel() -> None:
         """
@@ -1505,12 +1504,10 @@ class IReactorPluggableNameResolver(Interface):
     set to a user-supplied object.
     """
 
-    nameResolver: IHostnameResolver = Attribute(
-        """
+    nameResolver: IHostnameResolver = Attribute("""
         Read-only attribute; the resolver installed with L{installResolver}.
         An L{IHostnameResolver}.
-        """
-    )
+        """)
 
     def installNameResolver(resolver: IHostnameResolver) -> IHostnameResolver:
         """
@@ -2366,8 +2363,7 @@ class INegotiated(ISSLTransport):
     be used inside the encrypted tunnel.
     """
 
-    negotiatedProtocol: bytes | None = Attribute(
-        """
+    negotiatedProtocol: bytes | None = Attribute("""
         The protocol selected to be spoken using ALPN.  If the remote peer does
         not support ALPN, or ALPN is not available via local TLS libraries,
         C{negotiatedProtocol} will be L{None}.  Otherwise,
@@ -2375,8 +2371,7 @@ class INegotiated(ISSLTransport):
         C{bytes}.  Until the TLS handshake has completed, this property may
         incorrectly return L{None}: wait until data has been received before
         trusting it.  See U{https://github.com/twisted/twisted/issues/6024}.
-        """
-    )
+        """)
 
 
 class ICipher(Interface):
@@ -2700,14 +2695,12 @@ class IStreamServerEndpointStringParser(Interface):
     L{endpoints.serverFromString} in much the same way.
     """
 
-    prefix = Attribute(
-        """
+    prefix = Attribute("""
         A C{str}, the description prefix to respond to.  For example, an
         L{IStreamServerEndpointStringParser} plugin which had C{"foo"} for its
         C{prefix} attribute would be called for endpoint descriptions like
         C{"foo:bar:baz"} or C{"foo:"}.
-        """
-    )
+        """)
 
     def parseStreamServer(
         reactor: IReactorCore, *args: object, **kwargs: object
@@ -2739,14 +2732,12 @@ class IStreamClientEndpointStringParserWithReactor(Interface):
     prefix attribute.
     """
 
-    prefix = Attribute(
-        """
+    prefix = Attribute("""
         L{bytes}, the description prefix to respond to.  For example, an
         L{IStreamClientEndpointStringParserWithReactor} plugin which had
         C{b"foo"} for its C{prefix} attribute would be called for endpoint
         descriptions like C{b"foo:bar:baz"} or C{b"foo:"}.
-        """
-    )
+        """)
 
     def parseStreamClient(
         reactor: IReactorCore, *args: object, **kwargs: object
@@ -2779,9 +2770,7 @@ class _ISupportsExitSignalCapturing(Interface):
     the _exitSignal attribute.
     """
 
-    _exitSignal = Attribute(
-        """
+    _exitSignal = Attribute("""
         C{int} or C{None}, the integer exit signal delivered to the
         application, or None if no signal was delivered.
-        """
-    )
+        """)

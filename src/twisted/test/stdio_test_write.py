@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_write} to test that
 ITransport.write() works for process transports.
 """
 
-
 import sys
 
 from twisted.internet import protocol, stdio

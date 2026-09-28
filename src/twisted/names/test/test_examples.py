@@ -5,7 +5,6 @@
 Tests for L{twisted.names} example scripts.
 """
 
-
 import os
 import sys
 from io import StringIO

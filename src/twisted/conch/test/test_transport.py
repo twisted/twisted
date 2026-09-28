@@ -499,7 +499,7 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         skip = dependencySkip
 
     _A_KEXINIT_MESSAGE = (
-        b"\xAA" * 16
+        b"\xaa" * 16
         + common.NS(b"diffie-hellman-group14-sha1")
         + common.NS(b"ssh-rsa")
         + common.NS(b"aes256-ctr")
@@ -1148,13 +1148,9 @@ class BaseSSHTransportTests(BaseSSHTransportBaseCase, TransportTestCase):
         """
         proto = MockTransportBase()
         proto.makeConnection(proto_helpers.StringTransport())
-        data = (
-            b"""here's some stuff beforehand
+        data = b"""here's some stuff beforehand
 here's some other stuff
-"""
-            + proto.ourVersionString
-            + b"\r\n"
-        )
+""" + proto.ourVersionString + b"\r\n"
         [proto.dataReceived(c) for c in iterbytes(data)]
         self.assertTrue(proto.gotVersion)
         self.assertEqual(proto.otherVersionString, proto.ourVersionString)
@@ -1775,7 +1771,7 @@ class ServerSSHTransportTests(ServerSSHTransportBaseCase, TransportTestCase):
         we raise an UnsupportedAlgorithm error.
         """
         kexmsg = (
-            b"\xAA" * 16
+            b"\xaa" * 16
             + common.NS(b"ecdh-sha2-nistp256")
             + common.NS(b"ssh-rsa")
             + common.NS(b"aes256-ctr")
@@ -2495,7 +2491,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that the KEXDH_REPLY message verifies the server.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEXDH_REPLY()
 
         def _cbTestKEXDH_REPLY(value):
             self.assertIsNone(value)
@@ -2580,7 +2576,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         """
         Test that KEXDH_REPLY disconnects if the signature is bad.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEXDH_REPLY()
 
         d = self.proto.ssh_KEX_DH_GEX_GROUP(packetStart + common.NS(b"bad signature"))
         return d.addCallback(
@@ -2592,7 +2588,7 @@ class ClientSSHTransportTests(ClientSSHTransportBaseCase, TransportTestCase):
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
         """
         kexmsg = (
-            b"\xAA" * 16
+            b"\xaa" * 16
             + common.NS(b"ecdh-sha2-nistp256")
             + common.NS(b"ssh-rsa")
             + common.NS(b"aes256-ctr")
@@ -2754,7 +2750,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         Test that the KEX_DH_GEX_REPLY message results in a verified
         server.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEX_DH_GEX_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEX_DH_GEX_REPLY()
 
         def _cbTestKEX_DH_GEX_REPLY(value):
             self.assertIsNone(value)
@@ -2769,7 +2765,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         """
         Test that KEX_DH_GEX_REPLY disconnects if the signature is bad.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEX_DH_GEX_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEX_DH_GEX_REPLY()
 
         d = self.proto.ssh_KEX_DH_GEX_REPLY(packetStart + common.NS(b"bad signature"))
         return d.addCallback(
@@ -2781,7 +2777,7 @@ class ClientSSHTransportDHGroupExchangeBaseCase(ClientSSHTransportBaseCase):
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
         """
         kexmsg = (
-            b"\xAA" * 16
+            b"\xaa" * 16
             + common.NS(b"ecdh-sha2-nistp256")
             + common.NS(b"ssh-rsa")
             + common.NS(b"aes256-ctr")
@@ -2906,7 +2902,7 @@ class ClientSSHTransportECDHBaseCase(ClientSSHTransportBaseCase):
         """
         Test that the KEXDH_REPLY message completes the key exchange.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEXDH_REPLY()
 
         def _cbTestKEXDH_REPLY(value):
             self.assertIsNone(value)
@@ -2921,7 +2917,7 @@ class ClientSSHTransportECDHBaseCase(ClientSSHTransportBaseCase):
         """
         Test that KEX_ECDH_REPLY disconnects if the signature is bad.
         """
-        (exchangeHash, signature, packetStart) = self.begin_KEXDH_REPLY()
+        exchangeHash, signature, packetStart = self.begin_KEXDH_REPLY()
 
         d = self.proto.ssh_KEX_DH_GEX_GROUP(packetStart + common.NS(b"bad signature"))
         return d.addCallback(
@@ -3147,7 +3143,7 @@ class SSHCiphersTests(TestCase):
                 b"what do ya want for nothing?",
                 b"750c783e6ab0b503eaa86e310a5db738",
             ),
-            (b"\xAA" * 16, b"\xDD" * 50, b"56be34521d144c88dbb8c733f0e8b3f6"),
+            (b"\xaa" * 16, b"\xdd" * 50, b"56be34521d144c88dbb8c733f0e8b3f6"),
         ]
 
         for key, data, mac in vectors:

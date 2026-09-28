@@ -12,7 +12,6 @@ demonstrated to work earlier in the file are used by those later in the file
 (even though the runner will probably not run the tests in this order).
 """
 
-
 import unittest as pyunit
 import warnings
 

@@ -8,9 +8,9 @@ try:
     import msvcrt
 
     # These attributes only exist on Windows.
-    msvcrt.setmode(  # type:ignore[attr-defined]
+    msvcrt.setmode(  # type: ignore[attr-defined]
         sys.stdout.fileno(),
-        os.O_BINARY,  # type:ignore[attr-defined]
+        os.O_BINARY,  # type: ignore[attr-defined]
     )
 except ImportError:
     pass

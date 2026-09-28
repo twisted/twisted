@@ -9,7 +9,6 @@ Depending on a specific application's needs, some other reactor may in
 fact be better.
 """
 
-
 __all__ = ["install"]
 
 from twisted.python.runtime import platform

@@ -5,6 +5,7 @@
 """
 Some fairly inadequate testcases for Twisted XML support.
 """
+
 from __future__ import annotations
 
 from importlib import reload

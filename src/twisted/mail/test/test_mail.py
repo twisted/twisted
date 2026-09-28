@@ -4,6 +4,7 @@
 """
 Tests for large portions of L{twisted.mail}.
 """
+
 from __future__ import annotations
 
 import email.message
@@ -1901,9 +1902,7 @@ class AliasTests(TestCase):
         domains = {"": object()}
         result = mail.alias.loadAliasFile(
             domains,
-            fp=io.BytesIO(
-                textwrap.dedent(
-                    """\
+            fp=io.BytesIO(textwrap.dedent("""\
                     # Here's a comment
                        # woop another one
                     testuser:                   address1,address2, address3,
@@ -1911,9 +1910,7 @@ class AliasTests(TestCase):
 
                     usertwo:thisaddress,thataddress, lastaddress
                     lastuser:       :/includable, /filename, |/program, address
-                    """
-                ).encode()
-            ),
+                    """).encode()),
         )
 
         self.assertEqual(len(result), 3)
@@ -2159,14 +2156,12 @@ class ProcessAliasTests(TestCase):
         script is called, and that the input is correctly transferred to it.
         """
         sh = FilePath(self.mktemp())
-        sh.setContent(
-            """\
+        sh.setContent("""\
 #!/bin/sh
 rm -f process.alias.out
 while read i; do
     echo $i >> process.alias.out
-done"""
-        )
+done""")
         os.chmod(sh.path, 0o700)
         a = mail.alias.ProcessAlias(sh.path, None, None)
         m = a.createMessageReceiver()

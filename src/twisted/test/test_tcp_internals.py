@@ -5,7 +5,6 @@
 Whitebox tests for TCP APIs.
 """
 
-
 import errno
 import os
 import socket
