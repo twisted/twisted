@@ -18,6 +18,7 @@ import copy
 import inspect
 import linecache
 import sys
+import traceback as _stdlib_traceback
 from functools import partial
 from inspect import getmro
 from io import StringIO
@@ -87,6 +88,58 @@ def format_frames(frames, write, detail="default"):
 
 # Unused, here for backwards compatibility.
 EXCEPTION_CAUGHT_HERE = "--- <exception caught here> ---"
+
+# Match the strings the standard library uses so that the chained-exception
+# preamble reads exactly the way ``traceback.print_exception`` prints it.
+_CAUSE_MESSAGE = (
+    "\nThe above exception was the direct cause " "of the following exception:\n\n"
+)
+_CONTEXT_MESSAGE = (
+    "\nDuring handling of the above exception, " "another exception occurred:\n\n"
+)
+
+
+def _iterExceptionChain(exc):
+    """
+    Walk the C{__cause__} / C{__context__} chain of C{exc}.
+
+    Applies the same precedence rules the standard library's
+    ``traceback.print_exception`` uses: an explicit C{__cause__}
+    (C{raise ... from ...}) takes precedence over the implicit C{__context__},
+    and C{__context__} is suppressed when C{__suppress_context__} is true
+    (which is what C{raise ... from ...} sets).  Reference cycles are broken.
+
+    @param exc: The exception whose chain to walk.  Typically the
+        exception at the tail of the chain (the one that would be raised).
+
+    @return: A list of C{(chained_exception, is_cause)} pairs ordered from
+        the oldest ancestor to the direct parent of C{exc}, so callers can
+        emit them in the same order the standard library does (oldest first,
+        current exception last).  For each pair, C{is_cause} is C{True} when
+        C{chained_exception} became a parent through C{__cause__} and
+        C{False} when it did so through C{__context__}.
+    """
+    seen = {id(exc)}
+    chain = []
+    current = exc
+    while True:
+        cause = getattr(current, "__cause__", None)
+        if cause is not None:
+            nxt, isCause = cause, True
+        elif not getattr(current, "__suppress_context__", False):
+            ctx = getattr(current, "__context__", None)
+            if ctx is None:
+                break
+            nxt, isCause = ctx, False
+        else:
+            break
+        if id(nxt) in seen:
+            break
+        seen.add(id(nxt))
+        chain.append((nxt, isCause))
+        current = nxt
+    chain.reverse()
+    return chain
 
 
 class NoCurrentExceptionError(Exception):
@@ -606,6 +659,26 @@ class Failure(BaseException):
             formatDetail = "verbose-vars-not-captured"
         else:
             formatDetail = detail
+
+        # Emit any Python-level chained exceptions (``__cause__`` /
+        # ``__context__``) that led to ``self.value``, in the same order and
+        # with the same separator lines the standard library uses.  This runs
+        # for the ``default`` and ``verbose`` detail levels; ``brief`` is a
+        # single line by design and stays compact.  Chained exceptions have
+        # real tracebacks of their own, so ``traceback.format_exception`` on
+        # each one gives the most faithful rendering; ``chain=False`` keeps
+        # us in control of the walk so cycles and ``__suppress_context__``
+        # are handled here.
+        if detail != "brief" and isinstance(self.value, BaseException):
+            for chainedExc, isCause in _iterExceptionChain(self.value):
+                for line in _stdlib_traceback.format_exception(
+                    type(chainedExc),
+                    chainedExc,
+                    getattr(chainedExc, "__traceback__", None),
+                    chain=False,
+                ):
+                    w(line)
+                w(_CAUSE_MESSAGE if isCause else _CONTEXT_MESSAGE)
 
         # Preamble
         if detail == "verbose":

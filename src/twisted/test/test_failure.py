@@ -4,6 +4,7 @@
 """
 Test cases for the L{twisted.python.failure} module.
 """
+
 from __future__ import annotations
 
 import linecache
@@ -361,6 +362,196 @@ class FailureTests(SynchronousTestCase):
         the stack after C{cleanFailure} has been called.
         """
         self.assertDetailedTraceback(captureVars=True, cleanFailure=True)
+
+    def test_printTracebackChainedCause(self) -> None:
+        """
+        L{printTraceback} prints the C{__cause__} chain of C{self.value}
+        before the current traceback, using the same separator line the
+        standard library uses for C{raise ... from ...}.
+        """
+        try:
+            try:
+                1 / 0
+            except ZeroDivisionError as inner:
+                raise RuntimeError("outer") from inner
+        except RuntimeError:
+            f = failure.Failure()
+        out = StringIO()
+        f.printTraceback(out)
+        text = out.getvalue()
+
+        # The chained exception appears (with its own type header and value)
+        # ahead of the outer failure.
+        self.assertIn("ZeroDivisionError: division by zero", text)
+        self.assertLess(
+            text.index("ZeroDivisionError: division by zero"),
+            text.index("RuntimeError"),
+        )
+        # The standard-library "direct cause" separator is used.
+        self.assertIn(
+            "The above exception was the direct cause " "of the following exception:",
+            text,
+        )
+        # The implicit-context separator must NOT appear, since the chain
+        # here is purely a __cause__ chain.
+        self.assertNotIn(
+            "During handling of the above exception, " "another exception occurred:",
+            text,
+        )
+
+    def test_printTracebackChainedContext(self) -> None:
+        """
+        L{printTraceback} prints the C{__context__} chain of C{self.value}
+        (the exception that was being handled when a new one was raised)
+        with the standard library's implicit-chain separator.
+        """
+        try:
+            try:
+                1 / 0
+            except ZeroDivisionError:
+                raise RuntimeError("outer")
+        except RuntimeError:
+            f = failure.Failure()
+        out = StringIO()
+        f.printTraceback(out)
+        text = out.getvalue()
+
+        self.assertIn("ZeroDivisionError: division by zero", text)
+        self.assertLess(
+            text.index("ZeroDivisionError: division by zero"),
+            text.index("RuntimeError"),
+        )
+        self.assertIn(
+            "During handling of the above exception, " "another exception occurred:",
+            text,
+        )
+        # The explicit "direct cause" separator must NOT appear.
+        self.assertNotIn(
+            "The above exception was the direct cause " "of the following exception:",
+            text,
+        )
+
+    def test_printTracebackChainedSuppressed(self) -> None:
+        """
+        C{raise ... from None} sets C{__suppress_context__}; L{printTraceback}
+        must respect the suppression and not emit the C{__context__} that is
+        still attached to the exception.
+        """
+        try:
+            try:
+                1 / 0
+            except ZeroDivisionError:
+                raise RuntimeError("outer") from None
+        except RuntimeError:
+            f = failure.Failure()
+        text = f.getTraceback()
+
+        # The suppressed context is not shown.
+        self.assertNotIn("ZeroDivisionError", text)
+        self.assertNotIn(
+            "During handling of the above exception, " "another exception occurred:",
+            text,
+        )
+        self.assertNotIn(
+            "The above exception was the direct cause " "of the following exception:",
+            text,
+        )
+
+    def test_printTracebackChainedCycle(self) -> None:
+        """
+        A cycle in the C{__cause__}/C{__context__} chain must not cause
+        L{printTraceback} to loop or exhaust memory.
+        """
+        first = RuntimeError("first")
+        second = RuntimeError("second")
+        first.__cause__ = second
+        second.__cause__ = first  # cycle
+        f = failure.Failure(first)
+        text = f.getTraceback()
+
+        # Each exception in the cycle is printed at most once, so a single
+        # instance of the separator line appears.
+        self.assertEqual(
+            text.count(
+                "The above exception was the direct cause "
+                "of the following exception:"
+            ),
+            1,
+        )
+
+    def test_printTracebackChainedNonException(self) -> None:
+        """
+        When C{self.value} is not a L{BaseException} (L{Failure} allows
+        arbitrary objects), L{printTraceback} does not attempt to walk a
+        chain and emits no separator lines.
+        """
+        f = failure.Failure("not an exception", exc_type=RuntimeError)
+        text = f.getTraceback()
+
+        self.assertNotIn(
+            "The above exception was the direct cause " "of the following exception:",
+            text,
+        )
+        self.assertNotIn(
+            "During handling of the above exception, " "another exception occurred:",
+            text,
+        )
+
+    def test_printBriefTracebackOmitsChain(self) -> None:
+        """
+        The C{brief} detail level is intentionally single-line; the chained
+        exception preamble is omitted so callers who rely on the compact
+        format keep getting one line per L{Failure}.
+        """
+        try:
+            try:
+                1 / 0
+            except ZeroDivisionError as inner:
+                raise RuntimeError("outer") from inner
+        except RuntimeError:
+            f = failure.Failure()
+        text = f.getBriefTraceback()
+
+        self.assertNotIn(
+            "The above exception was the direct cause " "of the following exception:",
+            text,
+        )
+        self.assertNotIn("ZeroDivisionError", text)
+
+    def test_iterExceptionChain(self) -> None:
+        """
+        L{failure._iterExceptionChain} yields ancestors of an exception
+        oldest-first, follows C{__cause__} before C{__context__}, honors
+        C{__suppress_context__}, and breaks cycles.
+        """
+        # Plain exception with no chain.
+        self.assertEqual(failure._iterExceptionChain(RuntimeError()), [])
+
+        # __cause__ takes precedence over __context__ (and also sets
+        # __suppress_context__, which is what "raise ... from ..." does).
+        try:
+            try:
+                1 / 0
+            except ZeroDivisionError:
+                raise RuntimeError("outer") from ValueError("cause")
+        except RuntimeError as outer:
+            chain = failure._iterExceptionChain(outer)
+
+        self.assertEqual(len(chain), 1)
+        only, isCause = chain[0]
+        self.assertIsInstance(only, ValueError)
+        self.assertTrue(isCause)
+
+        # Cycles are broken, and each ancestor appears at most once.
+        first = RuntimeError("first")
+        second = RuntimeError("second")
+        first.__context__ = second
+        second.__context__ = first
+        chain = failure._iterExceptionChain(first)
+        self.assertEqual(len(chain), 1)
+        only, isCause = chain[0]
+        self.assertIs(only, second)
+        self.assertFalse(isCause)
 
     def test_invalidFormatFramesDetail(self) -> None:
         """

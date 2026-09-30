@@ -1,0 +1,1 @@
+twisted.python.failure.Failure.printTraceback now prints the chain of exceptions attached via ``__cause__`` / ``__context__`` before the current traceback, matching the standard library's output for ``raise X from Y`` and implicit exception chaining.
