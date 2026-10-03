@@ -1892,7 +1892,7 @@ class Command(metaclass=_CommandMeta):
         Parse a mapping of serialized arguments using this
         L{Command}'s argument schema.
 
-        @param box: A mapping of argument names to the seralized forms
+        @param box: A mapping of argument names to the serialized forms
         of those arguments.
         @param protocol: The L{AMP} protocol.
 

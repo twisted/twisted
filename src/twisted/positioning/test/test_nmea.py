@@ -725,7 +725,7 @@ class CoordinateFixerTests(FixerTestMixin, TestCase):
 
     def test_badHemisphereSign(self) -> None:
         """
-        NMEA coordinate repesentation parsing fails predictably
+        NMEA coordinate representation parsing fails predictably
         when you pass nonexistent coordinate types (not latitude or
         longitude).
         """

@@ -77,7 +77,7 @@ class AnotherArbitraryException(Exception):
     """
 
 
-# A re-usable Headers instance for tests which don't really care what headers
+# A reusable Headers instance for tests which don't really care what headers
 # they're sending.
 _boringHeaders = Headers({b"host": [b"example.com"]})
 
@@ -313,7 +313,7 @@ class _HTTPParserTests:
             b"content-length",
             b"connection",
             b"keep-alive",
-            b"te",
+            b"te",  # codespell:ignore
             b"trailers",
             b"transfer-encoding",
             b"upgrade",
@@ -1508,14 +1508,12 @@ class HTTP11ClientProtocolTests(TestCase):
         requestDeferred = self.protocol.request(
             Request(b"GET", b"/", _boringHeaders, None)
         )
-        self.protocol.dataReceived(b"unparseable garbage goes here\r\n")
+        self.protocol.dataReceived(b"unparsable garbage goes here\r\n")
         d = assertResponseFailed(self, requestDeferred, [ParseError])
 
         def cbFailed(exc):
             self.assertTrue(self.transport.disconnecting)
-            self.assertEqual(
-                exc.reasons[0].value.data, b"unparseable garbage goes here"
-            )
+            self.assertEqual(exc.reasons[0].value.data, b"unparsable garbage goes here")
 
             # Now do what StringTransport doesn't do but a real transport would
             # have, call connectionLost on the HTTP11ClientProtocol.  Nothing

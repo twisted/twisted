@@ -2239,12 +2239,12 @@ class WriteSequenceTestsMixin:
 
             def dataReceived(data):
                 log.msg("data received: %r" % data)
-                self.assertEqual(data, b"Some sequence splitted")
+                self.assertEqual(data, b"Some sequence split")
                 client.transport.loseConnection()
 
             server.dataReceived = dataReceived
 
-            client.transport.writeSequence([b"Some ", b"sequence ", b"splitted"])
+            client.transport.writeSequence([b"Some ", b"sequence ", b"split"])
 
         reactor = self.buildReactor()
         d = self.getConnectedClientAndServer(reactor, "127.0.0.1", socket.AF_INET)

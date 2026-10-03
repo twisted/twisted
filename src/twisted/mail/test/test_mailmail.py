@@ -169,7 +169,7 @@ class OptionsTests(TestCase):
     def test_overrideFromFlagByFromHeader(self):
         """
         The I{-F} flag specifies the From: value.  However, I{-F} flag is
-        overriden by the value of From: in the e-mail header.
+        overridden by the value of From: in the e-mail header.
         """
         stdin = StringIO(
             "To: Curly <invaliduser4@example.com>\n"

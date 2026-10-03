@@ -183,7 +183,7 @@ class LocalWorkerAMP(AMP):
         @param errorClass: The class name of the C{error} class.
 
         @param frames: A flat list of strings representing the information need
-            to approximatively rebuild C{Failure} frames.
+            to approximately rebuild C{Failure} frames.
 
         @return: A L{Failure} instance with enough information about a test
            error.

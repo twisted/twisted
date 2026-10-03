@@ -83,8 +83,16 @@ This will trigger a full build including the API docs:
     firefox docs/_build/index.html
 
 
+Spell checking
+--------------
+
+We use the `codespell <https://github.com/codespell-project/codespell>`_ tool to check for common spelling mistakes.
+It can generate false positives.
+Add any false positives to the ignore inside the ``pyproject.toml`` via the ``[tool.codespell] ignore-words-list`` option.
+
+
 Committing and pre-commit hooks
---------------------------------
+-------------------------------
 
 When submitting a PR, create a GitHub issue first, and prefix the name of the for the PR branch with the associated GitHub issue number, so that we can easily cross-reference them.
 For example, use `1234-some-brach-name` as the name of the branch working to fix issue `1234`.

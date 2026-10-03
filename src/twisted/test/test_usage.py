@@ -239,7 +239,7 @@ class HolyQuestOptions(usage.Options):
 
 class SubCommandOptions(usage.Options):
     optFlags = [
-        ("europian-swallow", None, "set default swallow type to Europian"),
+        ("europian-swallow", None, "set default swallow type to European"),
     ]
     subCommands = [
         ("inquisition", "inquest", InquisitionOptions, "Perform an inquisition"),

@@ -1915,7 +1915,7 @@ class HostnameEndpointFallbackNameResolutionTests(unittest.TestCase):
     def test_fallbackNameResolution(self):
         """
         L{_fallbackNameResolution} returns a L{Deferred} that fires
-        with the resoution of the the host and request port.
+        with the resolution of the the host and request port.
         """
         from twisted.internet import reactor
 

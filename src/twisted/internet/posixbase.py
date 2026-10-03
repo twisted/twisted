@@ -126,7 +126,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
 
     _childWaker = None
 
-    # Callable that creates a waker, overrideable so that subclasses can
+    # Callable that creates a waker, overridable so that subclasses can
     # substitute their own implementation:
     def _wakerFactory(self) -> _IWaker:
         return _Waker()

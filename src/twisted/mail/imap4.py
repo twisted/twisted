@@ -119,7 +119,7 @@ def _swapAllPairs(of, that, ifIs):
     @param ifIs: An object whose identity will be compared to members
         of each pair in C{of}
 
-    @return: A L{list} of 2-L{tuple}s with all occurences of C{ifIs}
+    @return: A L{list} of 2-L{tuple}s with all occurrences of C{ifIs}
         replaced with C{that}
     """
     return [
@@ -2809,7 +2809,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
     def __cbNoop(self, result):
         # Conceivable, this is elidable.
-        # It is, afterall, a no-op.
+        # It is, after all, a no-op.
         (lines, tagline) = result
         return lines
 
@@ -5558,7 +5558,7 @@ def subparts(m):
 
 def iterateInReactor(i):
     """
-    Consume an interator at most a single iteration per reactor iteration.
+    Consume an iterator at most a single iteration per reactor iteration.
 
     If the iterator produces a Deferred, the next iteration will not occur
     until the Deferred fires, otherwise the next iteration will be taken
