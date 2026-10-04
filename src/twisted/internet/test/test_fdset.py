@@ -8,15 +8,20 @@ Tests for implementations of L{IReactorFDSet}.
 import os
 import socket
 import traceback
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from unittest import skipIf
 
 from zope.interface import implementer
 
 from twisted.internet.abstract import FileDescriptor
+from twisted.internet.defer import Deferred
+from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor
 from twisted.internet.tcp import EINPROGRESS, EWOULDBLOCK
 from twisted.internet.test.reactormixins import ReactorBuilder
+from twisted.logger import capturedLogs
+from twisted.python.failure import Failure
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest, SynchronousTestCase
 
@@ -420,3 +425,84 @@ class RemovingDescriptor:
 
 
 globals().update(ReactorFDSetTestsBuilder.makeTestCaseClasses())
+
+
+class EPollStyleLossDetector(ReactorBuilder, PretendTestCase):
+    _reactors = ["twisted.internet.epollreactor.EPollReactor"]
+
+    def test_lostFileDescriptorEpoll(self) -> None:
+        """
+        Epoll cannot detect file descriptors in the same style as
+        C{test_lostFileDescriptor} above, because it can't notice when the
+        return value of C{.fileno()} changes, because it doesn't call it on
+        every iteration of its loop.  However, closed file descriptors I{will}
+        be detectable when they get re-used.
+        """
+        reactor = self.buildReactor()
+        client, server = socketpair()
+        client2, server2 = socketpair()
+        for skt in client, server, client2, server2:
+            self.addCleanup(skt.close)
+
+        @dataclass(eq=False, order=False)
+        class Replaced(FileDescriptor):
+            fno: int
+            rdr: socket.socket
+            d: Deferred[object] = field(default_factory=Deferred)
+            readd: Deferred[bytes] = field(default_factory=Deferred)
+
+            def __post_init__(self) -> None:
+                super().__init__()
+
+            def writeSomeData(self, data: bytes) -> int:
+                return 0
+
+            def doRead(self) -> None:
+                self.readd.callback(self.rdr.recv(1024))
+
+            def fileno(self) -> int:
+                return self.fno
+
+            def connectionLost(self, reason: Failure | None = None) -> None:
+                self.d.errback(reason)
+
+        a = Replaced(client.fileno(), client)
+        b = Replaced(a.fno, client2)
+        exc = None
+
+        def main() -> None:
+            reactor.addWriter(a)
+            client.close()
+            os.dup2(client2.fileno(), a.fno)
+            with capturedLogs() as l:
+                reactor.addReader(b)
+            self.assertEqual(len(l), 1)
+            self.assertIs(l[0]["old"], a)
+            self.assertIs(l[0]["new"], b)
+
+            async def complete() -> None:
+                try:
+                    with self.assertRaises(ConnectionLost):
+                        await a.d
+                    self.assertNoResult(b.d)
+                    server2.send(b"hello")
+                    # new file descriptor can receive data
+                    result = await b.readd
+                    self.assertEqual(result, b"hello")
+                    reactor.stop()
+                    with self.assertRaises(ConnectionLost):
+                        await b.d
+                except BaseException as be:
+                    nonlocal exc
+                    exc = be
+                    reactor.stop()
+
+            Deferred.fromCoroutine(complete())
+
+        reactor.callWhenRunning(main)
+        self.runReactor(reactor)
+        if exc is not None:
+            self.fail(exc)
+
+
+globals().update(EPollStyleLossDetector.makeTestCaseClasses())

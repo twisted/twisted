@@ -17,8 +17,11 @@ import select
 from zope.interface import implementer
 
 from twisted.internet import posixbase
-from twisted.internet.interfaces import IReactorFDSet
+from twisted.internet.interfaces import IReactorFDSet, IReadDescriptor, IWriteDescriptor
+from twisted.internet.main import CONNECTION_LOST
+from twisted.logger import Logger
 from twisted.python import log
+from twisted.python.failure import Failure
 
 try:
     # This is to keep mypy from complaining
@@ -32,6 +35,8 @@ try:
     EPOLLOUT = getattr(select, "EPOLLOUT")
 except AttributeError as e:
     raise ImportError(e)
+
+_log = Logger()
 
 
 @implementer(IReactorFDSet)
@@ -83,7 +88,15 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
         self._continuousPolling = posixbase._ContinuousPolling(self)
         posixbase.PosixReactorBase.__init__(self)
 
-    def _add(self, xer, primary, other, selectables, event, antievent):
+    def _add(
+        self,
+        xer: IReadDescriptor | IWriteDescriptor,
+        primary: set[int],
+        other: set[int],
+        selectables: dict[int, IReadDescriptor | IWriteDescriptor],
+        event: int,
+        antievent: int,
+    ) -> None:
         """
         Private method for adding a descriptor from the event loop.
 
@@ -100,7 +113,22 @@ class EPollReactor(posixbase.PosixReactorBase, posixbase._PollLikeMixin):
             # this method in this file.
             if fd in other:
                 flags |= antievent
-                self._poller.modify(fd, flags)
+                try:
+                    self._poller.modify(fd, flags)
+                except FileNotFoundError:
+                    # already unregistered!
+                    it = selectables.pop(fd)
+                    assert (
+                        it is not xer
+                    ), "re-registering the same file descriptor after auto-removal somehow"
+                    _log.error(
+                        "invalid closed fd ({fd}) in epoll for {old} being replaced by {new}",
+                        old=it,
+                        new=xer,
+                        fd=fd,
+                    )
+                    it.connectionLost(Failure(CONNECTION_LOST))
+                    self._poller.register(fd, flags)
             else:
                 self._poller.register(fd, flags)
 
