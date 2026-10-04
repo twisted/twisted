@@ -58,7 +58,7 @@ jobs:
     # We can't use `env.*` in the job name, only in the steps.
     name: ${{ matrix.python-version }}-${{ matrix.job-name || 'default-tests' }}
     # We have Ubuntu as the base for running agains multiple Python versions.
-    runs-on: "${{ matrix.runs-on || 'ubuntu-24.04' }}"
+    runs-on: "${{ matrix.runs-on || 'ubuntu-26.04' }}"
     timeout-minutes: 10
     env:
       # By default we run all tests with all deps with coverage.
@@ -121,6 +121,8 @@ jobs:
           - python-version: '3.10.4'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
+            # Python 3.10.4 is not available on Ubuntu 26.04
+            runs-on: 'ubuntu-24.04'
 
           # The `lowdeps-nodeps-noipv6` job tests the lowest-version dependency
           # footprint for Twisted; all the lowest versions, nothing but the
@@ -143,6 +145,8 @@ jobs:
           - python-version: '3.10'
             tox-env: 'lowdeps-alldeps-withcov-posix'
             job-name: 'lowdeps-alldeps'
+            # Conch test fail when run on Ubuntu 26.04
+            runs-on: 'ubuntu-24.04'
 
           # Just Python 3.10 with default settings.
           - python-version: '3.10'
@@ -401,6 +405,7 @@ jobs:
 
 
   benchmarks:
+    # Ubuntu 26.04 is not yet supported: https://github.com/CodSpeedHQ/codspeed/issues/544
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -464,7 +469,7 @@ jobs:
 
 
   static-checks:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     env:
       TOX_PARALLEL_NO_SPINNER: 1
@@ -500,7 +505,7 @@ jobs:
   # The actual docs are built and published via Read The Docs.
   apidocs:
     name: API docs build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
@@ -523,7 +528,7 @@ jobs:
 
   narrativedocs:
     name: Narrative docs build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v6
@@ -551,7 +556,7 @@ jobs:
   # The files are published only when a tag is created using the next job, release-publish
   release-build:
     name: Build and check release, then upload artifact
-    runs-on: 'ubuntu-24.04'
+    runs-on: 'ubuntu-26.04'
     steps:
     - uses: actions/checkout@v6
 
