@@ -230,14 +230,14 @@ jobs:
           # Future Python 3.15 work in progress.
           # These tests might have various exceptions and
           # we will remove the exceptions as support is added.
-          - python-version: '3.15.0-beta.1'
+          - python-version: '3.15.0-rc.2'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-linux'
             # The arguments can be removed once trial tests are fixed.
             # https://github.com/twisted/twisted/issues/12645
             trial-target: '-- twisted.application twisted.conch twisted.cred twisted.enterprise twisted.internet twisted.logger twisted.mail twisted.names twisted.pair twisted.persisted twisted.protocols twisted.python twisted.runner twisted.scripts twisted.spread twisted.test twisted.web twisted.words'
 
-          - python-version: '3.15.0-beta.1'
+          - python-version: '3.15.0-rc.2'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-macos'
             runs-on: 'macos-15'
