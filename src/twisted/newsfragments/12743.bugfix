@@ -1,0 +1,5 @@
+Fixes #12743.
+
+`MemoryReactor.removeAll` now returns the removed readers and writers, matching
+the `IReactorFDSet.removeAll` interface. The return type is annotated so that
+`mypy` will flag any future change that breaks the contract.

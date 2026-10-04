@@ -17,6 +17,7 @@ from twisted.internet.interfaces import (
     IConsumer,
     IListeningPort,
     IPushProducer,
+    IReactorFDSet,
     IReactorSSL,
     IReactorTCP,
     IReactorUNIX,
@@ -304,6 +305,27 @@ class ReactorTests(TestCase):
 
         reactor.removeWriter(writer)
 
+        self.assertEqual(reactor.getWriters(), [])
+
+    def test_removeAll(self) -> None:
+        """
+        L{MemoryReactor.removeAll} removes all readers and writers and returns
+        them as a list.
+        """
+        reader = object()
+        writer = object()
+        reactor: IReactorFDSet = MemoryReactor()
+
+        # We are using object()s here as a simple identity placeholder, so we
+        # ask the type checker to not care about that.  If a more correct type
+        # is required this test should be fixed.
+        reactor.addReader(reader)  # type: ignore[arg-type]
+        reactor.addWriter(writer)  # type: ignore[arg-type]
+
+        removed = reactor.removeAll()
+
+        self.assertCountEqual(removed, [reader, writer])
+        self.assertEqual(reactor.getReaders(), [])
         self.assertEqual(reactor.getWriters(), [])
 
     def test_call_when_running(self) -> None:
