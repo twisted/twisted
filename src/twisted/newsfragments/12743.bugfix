@@ -1,0 +1,1 @@
+twisted.internet.testing.MemoryReactor.removeAll() now returns what was removed to comply with IReactorFDSet.removeAll()

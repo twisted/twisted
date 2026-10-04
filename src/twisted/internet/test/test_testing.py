@@ -306,6 +306,23 @@ class ReactorTests(TestCase):
 
         self.assertEqual(reactor.getWriters(), [])
 
+    def test_removeAll(self) -> None:
+        """
+        Removed readers and writers are returned and no longer registered.
+        """
+        reader = object()
+        writer = object()
+        reactor = MemoryReactor()
+
+        reactor.addReader(reader)
+        reactor.addWriter(writer)
+
+        result = reactor.removeAll()
+
+        self.assertCountEqual(result, [reader, writer])
+        self.assertEqual(reactor.getReaders(), [])
+        self.assertEqual(reactor.getWriters(), [])
+
     def test_call_when_running(self) -> None:
         """
         L{MemoryReactor.callWhenRunning} calls the given callable when the
