@@ -473,6 +473,7 @@ jobs:
     timeout-minutes: 10
     env:
       TOX_PARALLEL_NO_SPINNER: 1
+      FORCE_COLOR: 1
 
     steps:
     - uses: actions/checkout@v6
