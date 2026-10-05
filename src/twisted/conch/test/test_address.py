@@ -4,6 +4,7 @@
 """
 Tests for L{SSHTransportAddrress} in ssh/address.py
 """
+
 from __future__ import annotations
 
 from twisted.conch.ssh.address import SSHTransportAddress

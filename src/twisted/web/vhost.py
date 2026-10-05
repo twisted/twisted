@@ -6,7 +6,6 @@
 I am a virtual hosts implementation.
 """
 
-
 # Twisted Imports
 from twisted.python import roots
 from twisted.web import pages, resource
@@ -117,7 +116,6 @@ class _HostResource(resource.Resource):
 
 
 class VHostMonsterResource(resource.Resource):
-
     """
     Use this to be able to record the hostname and method (http vs. https)
     in the URL without disturbing your web site. If you put this resource

@@ -5,7 +5,6 @@
 Tests for L{twisted.pair.tuntap}.
 """
 
-
 import os
 import socket
 import struct
@@ -699,7 +698,6 @@ class RealDeviceWithProtocolInformationTests(
 class RealDeviceWithoutProtocolInformationTests(
     RealDeviceTestsMixin, TunnelDeviceTestsMixin, SynchronousTestCase
 ):
-
     """
     Run various tap-type tunnel unit tests, with "protocol information" (PI)
     turned off, against a real I/O system.

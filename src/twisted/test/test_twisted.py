@@ -6,7 +6,6 @@ Tests for miscellaneous behaviors of the top-level L{twisted} package (ie, for
 the code in C{twisted/__init__.py}.
 """
 
-
 import sys
 from types import ModuleType
 

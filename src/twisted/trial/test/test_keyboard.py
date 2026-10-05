@@ -4,6 +4,7 @@
 """
 Tests for interrupting tests with Control-C.
 """
+
 from __future__ import annotations
 
 from io import StringIO

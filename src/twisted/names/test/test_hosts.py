@@ -4,6 +4,7 @@
 """
 Tests for the I{hosts(5)}-based resolver, L{twisted.names.hosts}.
 """
+
 from __future__ import annotations
 
 from typing import Protocol
@@ -25,8 +26,7 @@ from twisted.trial.unittest import SynchronousTestCase
 
 
 class _SupportsMktemp(Protocol):
-    def mktemp(self) -> str:
-        ...
+    def mktemp(self) -> str: ...
 
 
 class GoodTempPathMixin:
@@ -152,8 +152,7 @@ class HostsTests(SynchronousTestCase, GoodTempPathMixin):
 
     def setUp(self) -> None:
         f = self.path()
-        f.setContent(
-            b"""
+        f.setContent(b"""
 1.1.1.1    EXAMPLE EXAMPLE.EXAMPLETHING
 ::2        mixed
 1.1.1.2    MIXED
@@ -167,8 +166,7 @@ malformed
 # malformed
 1.1.1.5    malformed
 ::5        malformed
-"""
-        )
+""")
         self.ttl = 4200
         self.resolver = Resolver(f.path, self.ttl)
 

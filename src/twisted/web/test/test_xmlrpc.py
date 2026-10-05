@@ -6,7 +6,6 @@
 Tests for  XML-RPC support in L{twisted.web.xmlrpc}.
 """
 
-
 import datetime
 from io import BytesIO, StringIO
 from unittest import skipIf

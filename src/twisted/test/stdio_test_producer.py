@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_producer} to test
 that process transports implement IProducer properly.
 """
 
-
 import sys
 
 from twisted.internet import protocol, stdio

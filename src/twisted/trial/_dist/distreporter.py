@@ -10,6 +10,7 @@ test is over.
 
 @since: 12.3
 """
+
 from __future__ import annotations
 
 from types import TracebackType

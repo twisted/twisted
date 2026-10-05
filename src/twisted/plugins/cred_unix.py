@@ -7,7 +7,6 @@
 Cred plugin for UNIX user accounts.
 """
 
-
 from zope.interface import implementer
 
 from twisted import plugin

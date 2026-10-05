@@ -193,7 +193,7 @@ class LockWorkerTests(SynchronousTestCase):
         lock = FakeLock()
         self.assertRaises(ThreadError, lock.release)
         lock.acquire()
-        noResult = lock.release()  # type:ignore[func-returns-value]
+        noResult = lock.release()  # type: ignore[func-returns-value]
         self.assertIs(None, noResult)
         self.assertRaises(ThreadError, lock.release)
 

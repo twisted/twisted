@@ -5,7 +5,6 @@
 Test cases for L{twisted.mail.pop3} module.
 """
 
-
 import base64
 import hmac
 import itertools
@@ -315,9 +314,7 @@ Subject: urgent\015
 Someone set up us the bomb!\015
 .\015
 +OK \015
-""" % (
-        len(message),
-    )
+""" % (len(message),)
 
     def setUp(self):
         """

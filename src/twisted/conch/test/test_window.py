@@ -1,6 +1,7 @@
 """
 Tests for the insults windowing module, L{twisted.conch.insults.window}.
 """
+
 from __future__ import annotations
 
 from typing import Callable

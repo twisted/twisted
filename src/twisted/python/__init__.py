@@ -5,7 +5,6 @@
 Twisted Python: Utilities and Enhancements for Python.
 """
 
-
 from .deprecate import deprecatedModuleAttribute
 from .versions import Version
 

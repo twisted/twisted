@@ -647,12 +647,10 @@ class AuthorizedKeyFileReaderTests(TestCase):
         L{checkers.readAuthorizedKeyFile} ignores leading whitespace in
         lines, as well as empty lines
         """
-        fileobj = BytesIO(
-            b"""
+        fileobj = BytesIO(b"""
                            # ignore
                            not ignored
-                           """
-        )
+                           """)
         result = checkers.readAuthorizedKeyFile(fileobj, parseKey=lambda x: x)
         self.assertEqual([b"not ignored"], list(result))
 

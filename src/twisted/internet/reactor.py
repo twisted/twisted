@@ -92,7 +92,6 @@ reactors.
 @see: L{IReactorDaemonize<twisted.internet.interfaces.IReactorDaemonize>}
 """
 
-
 import sys
 
 del sys.modules["twisted.internet.reactor"]

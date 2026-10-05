@@ -4,6 +4,7 @@
 """
 Tests for loading tests by name.
 """
+
 from __future__ import annotations
 
 import os

@@ -6,6 +6,7 @@ A Factory for SSH servers.
 
 See also L{twisted.conch.openssh_compat.factory} for OpenSSH compatibility.
 """
+
 from __future__ import annotations
 
 import random

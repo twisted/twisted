@@ -6,7 +6,6 @@
 Implementation module for the I{mailmail} command.
 """
 
-
 import email.utils
 import getpass
 import os

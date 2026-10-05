@@ -6,7 +6,6 @@
 Windows constants for IOCP
 """
 
-
 # this stuff should really be gotten from Windows headers via pyrex, but it
 # probably is not going to change
 

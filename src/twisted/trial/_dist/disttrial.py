@@ -8,6 +8,7 @@ responsible for coordinating all of trial's behavior at the highest level.
 
 @since: 12.3
 """
+
 from __future__ import annotations
 
 import os

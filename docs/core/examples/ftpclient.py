@@ -5,6 +5,7 @@
 """
 An example of using the FTP client
 """
+
 # Standard library imports
 from io import BytesIO
 

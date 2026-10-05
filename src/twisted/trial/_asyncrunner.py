@@ -5,6 +5,7 @@
 """
 Infrastructure for test running and suites.
 """
+
 from __future__ import annotations
 
 import doctest

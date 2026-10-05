@@ -45,7 +45,7 @@ def _maybeGlobalReactor(maybeReactor: Optional[T]) -> T:
     if maybeReactor is None:
         from twisted.internet import reactor
 
-        return reactor  # type:ignore[return-value]
+        return reactor  # type: ignore[return-value]
     else:
         return maybeReactor
 
@@ -300,7 +300,7 @@ def makeMachine() -> Callable[[_Core], _Client]:
         # but this is not expressible via zope.interface, so we have to cast
         # https://github.com/Shoobx/mypy-zope/issues/95
         connectingProxy: Deferred[_ReconnectingProtocolProxy]
-        connectingProxy = connecting  # type:ignore[assignment]
+        connectingProxy = connecting  # type: ignore[assignment]
         (
             connectingProxy.addCallback(prepare)
             .addCallback(c._connectionMade)
