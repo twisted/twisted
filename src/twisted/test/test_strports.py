@@ -5,7 +5,6 @@
 Tests for L{twisted.application.strports}.
 """
 
-
 from twisted.application import internet, strports
 from twisted.internet.endpoints import TCP4ServerEndpoint
 from twisted.internet.protocol import Factory

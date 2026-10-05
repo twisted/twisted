@@ -6,7 +6,6 @@
 These protocols are either provided by inetd, or are not provided at all.
 """
 
-
 import struct
 import time
 

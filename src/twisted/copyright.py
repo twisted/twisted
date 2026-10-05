@@ -5,7 +5,6 @@
 Copyright information for Twisted.
 """
 
-
 __all__ = ["copyright", "disclaimer", "longversion", "version"]
 
 from twisted import __version__ as version, version as _longversion

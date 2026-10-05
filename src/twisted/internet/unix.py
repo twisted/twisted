@@ -344,7 +344,7 @@ class Port(_UNIXPort, tcp.Port):
 
     # LSP violation where UNIX ports have filenames but TCP ports have
     # integers.
-    port: bytes  # type:ignore[assignment]
+    port: bytes  # type: ignore[assignment]
 
     def __init__(
         self,

@@ -4,6 +4,7 @@
 """
 Test cases covering L{twisted.python.zippath}.
 """
+
 from __future__ import annotations
 
 import os
@@ -39,8 +40,8 @@ class ZipFilePathTests(AbstractFilePathTests):
     and L{ZipArchive}.
     """
 
-    path: ZipArchive[bytes]  # type:ignore[assignment]
-    root: ZipArchive[bytes]  # type:ignore[assignment]
+    path: ZipArchive[bytes]  # type: ignore[assignment]
+    root: ZipArchive[bytes]  # type: ignore[assignment]
 
     def setUp(self) -> None:
         AbstractFilePathTests.setUp(self)

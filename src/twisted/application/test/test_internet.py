@@ -9,7 +9,6 @@ Tests for (new code in) L{twisted.application.internet}.
     one attempt.
 """
 
-
 import pickle
 
 from zope.interface import implementer

@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.internet.default}.
 """
+
 from __future__ import annotations
 
 import select

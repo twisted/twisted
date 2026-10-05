@@ -6,7 +6,6 @@ Tests for L{twisted.cred._digest} and the associated bits in
 L{twisted.cred.credentials}.
 """
 
-
 import base64
 from binascii import hexlify
 from hashlib import md5, sha1

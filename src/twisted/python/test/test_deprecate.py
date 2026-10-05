@@ -4,6 +4,7 @@
 """
 Tests for Twisted's deprecation framework, L{twisted.python.deprecate}.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -375,8 +376,7 @@ class WarnAboutFunctionTests(SynchronousTestCase):
         self.package = FilePath(self.mktemp()).child("twisted_private_helper")
         self.package.makedirs()
         self.package.child("__init__.py").setContent(b"")
-        self.package.child("module.py").setContent(
-            b"""
+        self.package.child("module.py").setContent(b"""
 "A module string"
 
 from twisted.python import deprecate
@@ -390,10 +390,8 @@ def callTestFunction():
     b = testFunction()
     if b == 3:
         deprecate.warnAboutFunction(testFunction, "A Warning String")
-"""
-        )
-        self.package.child("pep626.py").setContent(
-            b"""
+""")
+        self.package.child("pep626.py").setContent(b"""
 "A module string"
 
 from twisted.python import deprecate
@@ -413,8 +411,7 @@ def callTestFunction():
     b = testFunction()
     if b is None:
         deprecate.warnAboutFunction(testFunction, "A Warning String")
-"""
-        )
+""")
         # Python 3 doesn't accept bytes in sys.path:
         packagePath = self.package.parent().path
         sys.path.insert(0, packagePath)

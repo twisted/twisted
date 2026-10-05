@@ -6,7 +6,6 @@
 Cryptographically secure random implementation, with fallback on normal random.
 """
 
-
 import os
 import random
 import warnings

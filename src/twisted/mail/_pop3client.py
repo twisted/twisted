@@ -61,7 +61,7 @@ class _ListSetter:
         index in the list at which the value should be placed.  The value is
         is an L{object} to put in the list.
         """
-        (item, value) = itemAndValue
+        item, value = itemAndValue
         diff = item - len(self.L) + 1
         if diff > 0:
             self.L.extend([None] * diff)

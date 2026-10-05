@@ -2,6 +2,7 @@
 Tests L{twisted.internet.test.reactormixins}, the reactor-testing support
 module.
 """
+
 from typing import NoReturn
 
 from hamcrest import assert_that, equal_to, has_length

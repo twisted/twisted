@@ -7,7 +7,6 @@ Resource traversal integration with L{twisted.cred} to allow for
 authentication and authorization of HTTP requests.
 """
 
-
 from twisted.web._auth.basic import BasicCredentialFactory
 from twisted.web._auth.digest import DigestCredentialFactory
 

@@ -7,6 +7,7 @@ Basic credential checkers
 
 @var ANONYMOUS: An empty tuple used to represent the anonymous avatar ID.
 """
+
 from __future__ import annotations
 
 import os

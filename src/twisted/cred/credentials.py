@@ -7,6 +7,7 @@ This module defines L{ICredentials}, an interface for objects that represent
 authentication credentials to provide, and also includes a number of useful
 implementations of that interface.
 """
+
 from __future__ import annotations
 
 import base64
@@ -67,7 +68,7 @@ class IUsernameHashedPassword(ICredentials):
 
     if not TYPE_CHECKING:  # pragma: no branch
 
-        def __init__(self) -> None:  # type:ignore
+        def __init__(self) -> None:  # type: ignore
             """
             IUsernameHashedPassword does not have any particular requirement
             upon its constructor.
@@ -77,11 +78,9 @@ class IUsernameHashedPassword(ICredentials):
 
         del __init__
 
-    username: bytes = Attribute(
-        """
+    username: bytes = Attribute("""
         The username associated with these credentials.
-        """
-    )
+        """)
 
     def checkPassword(password):
         """

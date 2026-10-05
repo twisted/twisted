@@ -9,7 +9,6 @@ Serial port support for Windows.
 Requires PySerial and pywin32.
 """
 
-
 import win32event
 import win32file
 

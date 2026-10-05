@@ -7,6 +7,7 @@ Resource limiting policies.
 
 @seealso: See also L{twisted.protocols.htb} for rate limiting.
 """
+
 from __future__ import annotations
 
 # system imports
@@ -125,7 +126,7 @@ class WrappingFactory(ClientFactory[WP]):
     Wraps a factory and its protocols, and keeps track of them.
     """
 
-    protocol: Callable[..., WP] = ProtocolWrapper  # type:ignore[assignment]
+    protocol: Callable[..., WP] = ProtocolWrapper  # type: ignore[assignment]
 
     def __init__(self, wrappedFactory):
         self.wrappedFactory = wrappedFactory

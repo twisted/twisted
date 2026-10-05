@@ -5,7 +5,6 @@
 Tests for L{twisted.internet._newtls}.
 """
 
-
 from twisted.internet import interfaces
 from twisted.internet.test.connectionmixins import (
     ConnectableProtocol,

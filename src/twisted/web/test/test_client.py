@@ -4,6 +4,7 @@
 """
 Tests for various parts of L{twisted.web}.
 """
+
 from __future__ import annotations
 
 from zope.interface import implementer, verify
@@ -15,7 +16,6 @@ from twisted.web import client
 
 @implementer(interfaces.IStreamClientEndpoint)
 class DummyEndPoint:
-
     """An endpoint that does not connect anywhere"""
 
     def __init__(self, someString: str) -> None:

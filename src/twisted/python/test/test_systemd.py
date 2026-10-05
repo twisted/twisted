@@ -5,7 +5,6 @@
 Tests for L{twisted.python.systemd}.
 """
 
-
 import os
 from collections.abc import Mapping, Sequence
 

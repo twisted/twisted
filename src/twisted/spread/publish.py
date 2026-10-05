@@ -10,7 +10,6 @@ Maintainer: Glyph Lefkowitz
 Future Plans: None known.
 """
 
-
 import time
 
 from twisted.internet import defer
