@@ -14,7 +14,8 @@ import os
 import socket
 import struct
 import sys
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol as TypingProtocol
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol as TypingProtocol
 
 from zope.interface import Interface, implementer
 
