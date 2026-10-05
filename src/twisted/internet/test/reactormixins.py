@@ -19,8 +19,8 @@ __all__ = ["TestTimeoutError", "ReactorBuilder", "needsRunningReactor"]
 import os
 import signal
 import time
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, cast
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, cast
 
 from zope.interface import Interface
 

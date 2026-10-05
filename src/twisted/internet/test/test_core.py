@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import signal
 import time
+from collections.abc import Callable
 from types import FrameType
-from typing import Callable, cast
+from typing import cast
 
 from twisted.internet.abstract import FileDescriptor
 from twisted.internet.defer import Deferred
