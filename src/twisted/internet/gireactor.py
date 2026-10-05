@@ -21,8 +21,6 @@ On Python 3, pygobject v3.4 or later is required.
 """
 
 
-from typing import Union
-
 from gi.repository import GLib
 
 from twisted.internet import _glibbase
@@ -100,14 +98,14 @@ class PortableGIReactor(_glibbase.GlibReactorBase):
         """
 
 
-def install(useGtk: bool = False) -> Union[GIReactor, PortableGIReactor]:
+def install(useGtk: bool = False) -> GIReactor | PortableGIReactor:
     """
     Configure the twisted mainloop to be run inside the glib mainloop.
 
     @param useGtk: A hint that the Gtk GUI will or will not be used.  Currently
         does not modify any behavior.
     """
-    reactor: Union[GIReactor, PortableGIReactor]
+    reactor: GIReactor | PortableGIReactor
     if runtime.platform.getType() == "posix":
         reactor = GIReactor(useGtk=useGtk)
     else:

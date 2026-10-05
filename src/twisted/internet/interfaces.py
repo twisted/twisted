@@ -8,8 +8,8 @@ Maintainer: Itamar Shtull-Trauring
 """
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, AnyStr, Callable
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, AnyStr
 
 from zope.interface import Attribute, Interface
 

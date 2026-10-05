@@ -38,14 +38,13 @@ import errno
 import os
 import signal
 import socket
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from types import FrameType
-from typing import Callable, Optional, Protocol
+from typing import Protocol, TypeAlias
 
 from zope.interface import Attribute, Interface, implementer
 
 from attrs import define, frozen
-from typing_extensions import TypeAlias
 
 from twisted.internet.interfaces import IReadDescriptor
 from twisted.python import failure, log, util
@@ -54,7 +53,7 @@ from twisted.python.runtime import platformType
 if platformType == "posix":
     from . import fdesc, process
 
-SignalHandler: TypeAlias = Callable[[int, Optional[FrameType]], None]
+SignalHandler: TypeAlias = Callable[[int, FrameType | None], None]
 
 
 def installHandler(fd: int) -> int:

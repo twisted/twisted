@@ -13,7 +13,8 @@ or glib2reactor or gtk2reactor for applications using legacy static bindings.
 
 
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from zope.interface import implementer
 
