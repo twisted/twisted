@@ -12,11 +12,11 @@ import builtins
 import socket  # needed only for sync-dns
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from heapq import heapify, heappop, heappush
 from traceback import format_stack
 from types import FrameType
-from typing import TYPE_CHECKING, Any, Callable, NewType, cast
+from typing import TYPE_CHECKING, Any, NewType, cast
 
 from zope.interface import classImplements, implementer
 
