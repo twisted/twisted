@@ -102,7 +102,7 @@ elif not TYPE_CHECKING:  # pragma: no branch
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import abstract, address, base, defer, error, fdesc, main
+from twisted.internet import abstract, address, base, defer, error, main
 from twisted.internet.error import CannotListenError
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import deferLater
@@ -569,7 +569,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         """
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
-        fdesc._setCloseOnExec(s.fileno())
         return s
 
     def doConnect(self):
@@ -1438,8 +1437,6 @@ class Port(base.BasePort, _SocketCloser):
                 )
 
                 for accepted, (skt, addr) in enumerate(clients, 1):
-                    fdesc._setCloseOnExec(skt.fileno())
-
                     if len(addr) == 4:
                         # IPv6, make sure we get the scopeID if it
                         # exists
