@@ -136,6 +136,26 @@ class NoopProtocol:
         """
 
 
+class CapturingProtocol:
+    """
+    A partial fake protocol whose L{writeMessage} records the message and
+    address it was called with.
+    """
+
+    def __init__(self):
+        self.messages = []
+
+    def writeMessage(self, message, address=None):
+        """
+        Record the message and address.
+
+        @param message: The message that would have been sent.
+        @param address: The destination address or L{None} for a stream
+            protocol.
+        """
+        self.messages.append((message, address))
+
+
 class RaisingResolver:
     """
     A partial fake L{IResolver} whose methods raise an exception containing the
@@ -1083,6 +1103,102 @@ class DNSServerFactoryTests(unittest.TestCase):
         args, kwargs = e.args
         self.assertEqual(args, (m,))
         self.assertEqual(kwargs, {})
+
+    def _oversizedResponse(self) -> dns.Message:
+        """
+        Build a response L{dns.Message} carrying a TXT RRSet that does not fit
+        within a 512 octet UDP message, with C{maxSize} set to C{0} as
+        L{server.DNSServerFactory._responseFromMessage} would leave it.
+
+        @return: The response message.
+        """
+        name = b"big-txt.example.com"
+        message = dns.Message(id=1, answer=1, auth=True)
+        message.maxSize = 0
+        message.timeReceived = 0
+        message.queries = [dns.Query(name, dns.TXT)]
+        message.answers = [
+            dns.RRHeader(
+                name=name,
+                type=dns.TXT,
+                ttl=500,
+                payload=dns.Record_TXT(b"a" * 100, ttl=500),
+            )
+            for _ in range(8)
+        ]
+        return message
+
+    def test_sendReplyDatagramTruncatesOversizedResponse(self):
+        """
+        When L{server.DNSServerFactory.sendReply} sends an oversized response
+        over a datagram (UDP) protocol, it bounds the response to the 512 octet
+        UDP limit so that L{dns.Message.encode} sets the TC bit and the client
+        is told to retry over TCP.  See #12604.
+        """
+        message = self._oversizedResponse()
+        protocol = CapturingProtocol()
+        factory = server.DNSServerFactory()
+
+        factory.sendReply(protocol, message, ("192.0.2.1", 53))
+
+        sent, address = protocol.messages[0]
+        self.assertEqual(address, ("192.0.2.1", 53))
+        self.assertEqual(sent.maxSize, server._UDP_MAX_RESPONSE_SIZE)
+
+        wire = sent.toStr()
+        self.assertLessEqual(len(wire), server._UDP_MAX_RESPONSE_SIZE)
+
+        decoded = dns.Message()
+        decoded.fromStr(wire)
+        self.assertTrue(decoded.trunc, "TC bit was not set on the datagram reply.")
+        self.assertLess(len(decoded.answers), 8)
+
+    def test_sendReplyStreamDoesNotTruncate(self):
+        """
+        L{server.DNSServerFactory.sendReply} does not impose the UDP size limit
+        on stream (TCP) replies, where the whole RRSet must be returned without
+        truncation.
+        """
+        message = self._oversizedResponse()
+        protocol = CapturingProtocol()
+        factory = server.DNSServerFactory()
+
+        factory.sendReply(protocol, message, None)
+
+        sent, address = protocol.messages[0]
+        self.assertIsNone(address)
+        self.assertEqual(sent.maxSize, 0)
+
+        decoded = dns.Message()
+        decoded.fromStr(sent.toStr())
+        self.assertFalse(decoded.trunc)
+        self.assertEqual(len(decoded.answers), 8)
+
+    def test_sendReplyDatagramKeepsSmallResponseIntact(self):
+        """
+        A datagram response that already fits within the UDP size limit is sent
+        without the TC bit and with all of its records intact.
+        """
+        name = b"host.example.com"
+        message = dns.Message(id=1, answer=1, auth=True)
+        message.maxSize = 0
+        message.timeReceived = 0
+        message.queries = [dns.Query(name, dns.A)]
+        message.answers = [
+            dns.RRHeader(
+                name=name, type=dns.A, ttl=500, payload=dns.Record_A("192.0.2.1")
+            )
+        ]
+        protocol = CapturingProtocol()
+        factory = server.DNSServerFactory()
+
+        factory.sendReply(protocol, message, ("192.0.2.1", 53))
+
+        sent, _ = protocol.messages[0]
+        decoded = dns.Message()
+        decoded.fromStr(sent.toStr())
+        self.assertFalse(decoded.trunc)
+        self.assertEqual(len(decoded.answers), 1)
 
     def test_sendReplyLoggingNoAnswers(self):
         """
