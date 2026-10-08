@@ -99,7 +99,7 @@ class _LikeGetAddrInfo(Protocol):
         type: int = 0,
         proto: int = 0,
         flags: int = 0,
-    ) -> list[
+    ) -> Sequence[
         tuple[
             AddressFamily,
             SocketKind,
