@@ -11,7 +11,8 @@ Twisted.  The Protocol class contains some introductory material.
 from __future__ import annotations
 
 import random
-from typing import Any, Callable, Generic, Protocol as TypingProtocol
+from collections.abc import Callable
+from typing import Any, Generic, Protocol as TypingProtocol
 
 from zope.interface import implementer
 

@@ -6,8 +6,8 @@ Tests for L{twisted.internet.base}.
 """
 
 import socket
+from collections.abc import Callable
 from queue import Queue
-from typing import Callable
 from unittest import skipIf
 
 from zope.interface import implementer

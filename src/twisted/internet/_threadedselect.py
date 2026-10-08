@@ -48,10 +48,11 @@ would be the ExitMainLoop method of the wxApp instance with wxPython.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from errno import EBADF, EINTR
 from queue import Empty, Queue
 from threading import Thread
-from typing import Any, Callable
+from typing import Any
 
 from zope.interface import implementer
 

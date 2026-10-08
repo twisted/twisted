@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import warnings
 from binascii import hexlify
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import lru_cache
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from zope.interface import Interface, implementer
 

@@ -7,7 +7,7 @@ Tests for implementations of L{IReactorUNIX}.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from hashlib import md5
 from os import close, fstat, stat, unlink, urandom
 from pprint import pformat
@@ -15,7 +15,7 @@ from socket import AF_INET, SOCK_STREAM, SOL_SOCKET, socket
 from stat import S_IMODE
 from struct import pack
 from tempfile import mkstemp, mktemp
-from typing import Any, Callable
+from typing import Any
 from unittest import skipIf
 
 try:
