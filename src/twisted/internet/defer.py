@@ -1079,7 +1079,7 @@ class Deferred(Awaitable[_SelfResultT]):
                         #    instead, but we don't want to do that attribute
                         #    lookup in this hot code path, so we ignore the mypy
                         #    complaint here.
-                        current.result = callback(  # type: ignore[misc]
+                        current.result = callback(  # type: ignore[operator]
                             current.result, *args, **kwargs
                         )
 
