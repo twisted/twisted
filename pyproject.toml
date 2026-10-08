@@ -76,7 +76,7 @@ dev = [
     # When updating pyflakes, also update .pre-commit-config.yaml
     "pyflakes ~= 3.4",
     "python-subunit ~= 1.4",
-    "coverage ~= 7.15",
+    "coverage ~= 7.16",
     "towncrier ~= 25.8",
 ]
 
