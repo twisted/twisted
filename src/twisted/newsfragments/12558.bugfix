@@ -1,0 +1,1 @@
+twisted.cred.checkers.FilePasswordDB.getUser now accepts a native string username in addition to bytes, encoding it as ASCII before comparing against the bytes read from the password file.
