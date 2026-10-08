@@ -1,0 +1,1 @@
+twisted.web's HTTP/2 server now limits the rate at which a remote peer may reset streams, mitigating the HTTP/2 Rapid Reset denial-of-service attack (CVE-2023-44487).
