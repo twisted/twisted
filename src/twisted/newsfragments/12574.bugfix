@@ -1,0 +1,1 @@
+L{twisted.web.http.Request.args} and L{twisted.web.http.Request.content} now have PEP 484 type annotations, fixing the type-as-None inference reported in #12574.
