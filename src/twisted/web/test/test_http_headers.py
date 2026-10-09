@@ -34,7 +34,7 @@ class NameEncoderTests(SynchronousTestCase):
         self.assertEqual(_nameEncoder.encode(b"dnt"), b"DNT")
         self.assertEqual(_nameEncoder.encode(b"etag"), b"ETag")
         self.assertEqual(_nameEncoder.encode(b"p3p"), b"P3P")
-        self.assertEqual(_nameEncoder.encode(b"te"), b"TE")
+        self.assertEqual(_nameEncoder.encode(b"te"), b"TE")  # codespell:ignore
         self.assertEqual(_nameEncoder.encode(b"www-authenticate"), b"WWW-Authenticate")
         self.assertEqual(_nameEncoder.encode(b"WWW-authenticate"), b"WWW-Authenticate")
         self.assertEqual(_nameEncoder.encode(b"Www-Authenticate"), b"WWW-Authenticate")
@@ -51,7 +51,7 @@ class NameEncoderTests(SynchronousTestCase):
         self.assertEqual(_nameEncoder.encode("dnt"), b"DNT")
         self.assertEqual(_nameEncoder.encode("etag"), b"ETag")
         self.assertEqual(_nameEncoder.encode("p3p"), b"P3P")
-        self.assertEqual(_nameEncoder.encode("te"), b"TE")
+        self.assertEqual(_nameEncoder.encode("te"), b"TE")  # codespell:ignore
         self.assertEqual(_nameEncoder.encode("www-authenticate"), b"WWW-Authenticate")
         self.assertEqual(_nameEncoder.encode("WWW-authenticate"), b"WWW-Authenticate")
         self.assertEqual(_nameEncoder.encode("Www-Authenticate"), b"WWW-Authenticate")
@@ -656,7 +656,7 @@ class UnicodeHeadersTests(TestCase):
         # Add a header to the copy
         i.addRawHeader("Test", b"baz")
 
-        # Verify that the orignal does not have it
+        # Verify that the original does not have it
         self.assertEqual(h.getRawHeaders("test"), ["foo\u2603", "bar"])
         self.assertEqual(h.getRawHeaders(b"test"), [b"foo\xe2\x98\x83", b"bar"])
 

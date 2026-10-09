@@ -317,7 +317,7 @@ class SynchronousAssertionsTests(unittest.SynchronousTestCase):
 
     def test_assertEqual_plural_form(self):
         """
-        The plural forms are still avaialble for backward compatibility.
+        The plural forms are still available for backward compatibility.
         """
         self.assertIs(
             unittest.SynchronousTestCase.assertEqual,

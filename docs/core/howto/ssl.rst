@@ -124,7 +124,7 @@ It *also* uses the same echo example client as the TCP echo client.
 Whenever you have a protocol that listens on plain-text TCP it is easy to run it over TLS instead.
 It specifies that it only wants to talk to a host named ``"example.com"``, and that it trusts the certificate authority in ``"public.pem"`` to say who ``"example.com"`` is.
 Note that the host you are connecting to --- localhost --- and the host whose identity you are verifying --- example.com --- can differ.
-In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is proably running on localhost.
+In this case, our example ``server.pem`` certificate identifies a host named "example.com", but your server is probably running on localhost.
 
 In a realistic client, it's very important that you pass the same "hostname"  your connection API (in this case, :py:class:`SSL4ClientEndpoint <twisted.internet.endpoints.SSL4ClientEndpoint>`) and :py:func:`optionsForClientTLS <twisted.internet.ssl.optionsForClientTLS>`.
 In this case we're using "``localhost``" as the host to connect to because you're probably running this example on your own computer and "``example.com``" because that's the value hard-coded in the dummy certificate distributed along with Twisted's example code.

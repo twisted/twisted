@@ -426,7 +426,7 @@ class Port(_SocketCloser, _LogOwner):
 
     # A string describing the connections which will be created by this port.
     # Normally this is C{"TCP"}, since this is a TCP port, but when the TLS
-    # implementation re-uses this class it overrides the value with C{"TLS"}.
+    # implementation reuses this class it overrides the value with C{"TLS"}.
     # Only used for logging.
     _type = "TCP"
 

@@ -296,7 +296,7 @@ class IElement(Interface):
         """
         Adds a node as child of this element.
 
-        The C{node} will be added to the list of childs of this element, and
+        The C{node} will be added to the list of children of this element, and
         will have this element set as its parent when C{node} provides
         L{IElement}. If C{node} is a L{str} and the current last child is
         character data (L{str}), the text from C{node} is appended to the

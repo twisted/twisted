@@ -1383,7 +1383,7 @@ class ExistingConnectionTests(TestCase, SSHCommandClientEndpointTestsMixin):
     def assertClientTransportState(self, client, immediateClose):
         """
         Assert that the transport for the given protocol is still connected.
-        L{SSHCommandClientEndpoint.existingConnection} re-uses an SSH connected
+        L{SSHCommandClientEndpoint.existingConnection} reuses an SSH connected
         created by some other code, so other code is responsible for cleaning
         it up.
         """

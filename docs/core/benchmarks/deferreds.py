@@ -156,7 +156,7 @@ instantiateAddCallbacksAfterResult = benchmarkNFunc(20, ns)(
 def pauseUnpause(n):
     """
     Adds the given number of callbacks/errbacks/both to a deferred while it is
-    paused, and unpauses it, trigerring the processing of the value through the
+    paused, and unpauses it, triggering the processing of the value through the
     callbacks.
     """
     d = defer.Deferred()

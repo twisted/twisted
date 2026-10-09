@@ -195,7 +195,7 @@ class ArrowsTests(TestCase):
     def test_delete(self):
         """
         When L{HistoricRecvLine} receives a DELETE keystroke, it
-        delets the character immediately after the cursor.
+        deletes the character immediately after the cursor.
         """
         kR = lambda ch: self.p.keystrokeReceived(ch, None)
 
@@ -677,7 +677,7 @@ class RecvlineLoopbackMixin:
 
     def testInsert(self):
         return self._trivialTest(
-            b"third ine" + left * 3 + b"l\ndone",
+            b"third ine" + left * 3 + b"l\ndone",  # codespell:ignore
             [b">>> third line", b"third line", b">>> done"],
         )
 

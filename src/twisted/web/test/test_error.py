@@ -274,7 +274,7 @@ class FlattenerErrorTests(unittest.TestCase):
 
     def makeFlattenerError(self, roots: list[object] = []) -> error.FlattenerError:
         try:
-            raise RuntimeError("oh noes")
+            raise RuntimeError("oh no")
         except Exception as e:
             tb = traceback.extract_tb(sys.exc_info()[2])
             return error.FlattenerError(e, roots, tb)
@@ -313,8 +313,8 @@ class FlattenerErrorTests(unittest.TestCase):
                 "  R\\(a\\)\n"
                 "  R\\(b\\)\n"
                 '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
-                '    raise RuntimeError\\("oh noes"\\)\n'
-                "RuntimeError: oh noes\n$",
+                '    raise RuntimeError\\("oh no"\\)\n'
+                "RuntimeError: oh no\n$",
                 repr(e),
                 re.M | re.S,
             ),
@@ -331,8 +331,8 @@ class FlattenerErrorTests(unittest.TestCase):
             re.match(
                 "Exception while flattening:\n"
                 '  File "[^"]*", line [0-9]*, in makeFlattenerError\n'
-                '    raise RuntimeError\\("oh noes"\\)\n'
-                "RuntimeError: oh noes\n$",
+                '    raise RuntimeError\\("oh no"\\)\n'
+                "RuntimeError: oh no\n$",
                 repr(e),
                 re.M | re.S,
             ),
@@ -344,10 +344,10 @@ class FlattenerErrorTests(unittest.TestCase):
         The representation of a L{FlattenerError} initialized without roots but
         with a traceback contains a formatted traceback but no roots.
         """
-        e = error.FlattenerError(RuntimeError("oh noes"), [], None)
+        e = error.FlattenerError(RuntimeError("oh no"), [], None)
         self.assertTrue(
             re.match(
-                "Exception while flattening:\n" "RuntimeError: oh noes\n$",
+                "Exception while flattening:\n" "RuntimeError: oh no\n$",
                 repr(e),
                 re.M | re.S,
             ),

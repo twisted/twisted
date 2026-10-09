@@ -148,7 +148,7 @@ class RecordingClientProtocol(protocol.Protocol):
 class ImmediatelyDisconnectingProtocol(protocol.Protocol):
     """
     A protocol that disconnect immediately on connection. It fires the
-    C{connectionDisconnected} deferred of its factory on connetion lost.
+    C{connectionDisconnected} deferred of its factory on connection lost.
     """
 
     def handshakeCompleted(self):

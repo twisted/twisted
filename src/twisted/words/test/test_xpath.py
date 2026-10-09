@@ -113,7 +113,7 @@ class XPathTests(unittest.TestCase):
 
     def test_locationAllChilds(self) -> None:
         """
-        Test finding childs of foo.
+        Test finding children of foo.
         """
         xp = XPathQuery("/foo/*")
         self.assertEqual(xp.matches(self.e), True)
@@ -304,7 +304,7 @@ class XPathTests(unittest.TestCase):
         """
         A missing closing bracket raises a SyntaxError.
 
-        This test excercises the most common failure mode.
+        This test exercises the most common failure mode.
         """
         exc = self.assertRaises(SyntaxError, XPathQuery, """//bar[@attrib1""")
         self.assertTrue(
