@@ -277,7 +277,7 @@ class ReactorBuilder:
                     "under itself"
                 )
         try:
-            assert self.reactorFactory is not None
+            assert self.reactorFactory is not None, "reactorFactory is not provided"
             reactor = self.reactorFactory()
             reactor._originalReactorDict = globalReactor.__dict__
             reactor._originalReactorClass = globalReactor.__class__

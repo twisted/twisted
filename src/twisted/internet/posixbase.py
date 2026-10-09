@@ -17,6 +17,7 @@ from zope.interface import classImplements, implementer
 from twisted.internet import error, tcp, udp
 from twisted.internet.base import ReactorBase
 from twisted.internet.interfaces import (
+    Binding,
     IConnector,
     IHalfCloseableDescriptor,
     IReactorFDSet,
@@ -372,9 +373,10 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         port: int,
         factory: ClientFactory[P],
         timeout: float = 30.0,
-        bindAddress: tuple[str, int] | None = None,
+        bindAddress: Binding | tuple[str, int] | None = None,
     ) -> IConnector:
-        c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
+        bind = tcp.makeBindingFromArg(bindAddress)
+        c = tcp.Connector(host, port, factory, timeout, bind, self)
         c.connect()
         return c
 
