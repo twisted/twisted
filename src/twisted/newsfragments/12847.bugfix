@@ -1,0 +1,1 @@
+twisted.protocols.ftp.FTPClient now uses ip address of the original ftp server to open passive data connections by default, instead of trusting PASV responses.
