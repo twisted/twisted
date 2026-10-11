@@ -303,7 +303,9 @@ def protocolNegotiationMechanisms() -> FlagConstant:
 
     try:
         ctx.set_alpn_select_callback(lambda connection, protocols: protocols[0])
-    except (AttributeError, NotImplementedError):
+    except (AttributeError, NotImplementedError):  # pragma: no cover
+        # All supported versions pyOpenSSL and OpenSSL support ALPN.
+        # Keep this legacy fallback until this deprecated function is removed.
         pass
     else:
         support |= ProtocolNegotiationSupport.ALPN
