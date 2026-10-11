@@ -60,11 +60,12 @@ from zope.interface import implementedBy, implementer, implementer_only
 # System imports
 from OpenSSL import SSL
 
+from constantly import FlagConstant, Flags
 from incremental import Version
 
 # Twisted imports
 from twisted.internet import interfaces, tcp
-from twisted.python.deprecate import deprecatedModuleAttribute
+from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
 
 supported = True
 
@@ -253,12 +254,62 @@ from twisted.internet._sslverify import (
     PrivateCertificate,
     TLSVersion,
     VerificationError,
-    _ProtocolNegotiationSupport as ProtocolNegotiationSupport,
     optionsForClientTLS,
     platformTrust,
-    protocolNegotiationMechanisms,
     trustRootFromCertificates,
 )
+
+
+class ProtocolNegotiationSupport(Flags):
+    """
+    L{ProtocolNegotiationSupport} defines flags which are used to indicate the
+    level of ALPN support provided by the TLS backend.
+
+    @cvar NOSUPPORT: There is no support for ALPN.  This is exclusive with
+        L{ALPN}.
+
+    @cvar NPN: The implementation supports Next Protocol Negotiation.  (This
+        flag is provided for compatibility only; Twisted no longer supports
+        Next Protocol Negotiation)
+
+    @cvar ALPN: The implementation supports Application Layer Protocol
+        Negotiation.
+    """
+
+    NPN = FlagConstant(0x0001)
+    ALPN = FlagConstant(0x0002)
+
+
+# FIXME: https://twistedmatrix.com/trac/ticket/8074
+# Currently flags with literal zero values behave incorrectly. However,
+# creating a flag by NOTing a flag with itself appears to work totally fine, so
+# do that instead.
+ProtocolNegotiationSupport.NOSUPPORT = (
+    ProtocolNegotiationSupport.NPN ^ ProtocolNegotiationSupport.NPN
+)
+
+
+@deprecated(Version("Twisted", "NEXT", 0, 0))
+def protocolNegotiationMechanisms() -> FlagConstant:
+    """
+    Check whether the installed versions of pyOpenSSL and OpenSSL are recent
+    enough to support ALPN.
+
+    @return: A combination of flags from L{ProtocolNegotiationSupport} that
+        indicate which mechanisms for protocol negotiation are supported.
+    """
+    support = ProtocolNegotiationSupport.NOSUPPORT
+    ctx = SSL.Context(SSL.SSLv23_METHOD)
+
+    try:
+        ctx.set_alpn_select_callback(lambda connection, protocols: protocols[0])
+    except (AttributeError, NotImplementedError):
+        pass
+    else:
+        support |= ProtocolNegotiationSupport.ALPN
+
+    return support
+
 
 deprecatedModuleAttribute(
     Version("Twisted", "NEXT", 0, 0),

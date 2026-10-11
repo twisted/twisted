@@ -19,7 +19,7 @@ from OpenSSL.crypto import X509, PKey
 from OpenSSL.SSL import VERIFY_FAIL_IF_NO_PEER_CERT, VERIFY_PEER, Connection
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names
+from constantly import NamedConstant, Names
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509.oid import NameOID
@@ -39,11 +39,7 @@ from twisted.internet.interfaces import (
 )
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
-from twisted.python.deprecate import (
-    _mutuallyExclusiveArguments,
-    deprecated,
-    deprecatedModuleAttribute,
-)
+from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import nameToLabel
@@ -107,69 +103,6 @@ def _getExcludedTLSProtocols(oldest, newest):
     excludedNewer = versions[versions.index(newest) + 1 :] if newest else []
     excludedVersions = excludedOlder + excludedNewer
     return excludedVersions
-
-
-class ProtocolNegotiationSupport(Flags):
-    """
-    L{ProtocolNegotiationSupport} defines flags which are used to indicate the
-    level of ALPN support provided by the TLS backend.
-
-    @cvar NOSUPPORT: There is no support for ALPN.  This is exclusive with
-        L{ALPN}.
-
-    @cvar NPN: The implementation supports Next Protocol Negotiation.  (This
-        flag is provided for compatibility only; Twisted no longer supports
-        Next Protocol Negotiation)
-
-    @cvar ALPN: The implementation supports Application Layer Protocol
-        Negotiation.
-    """
-
-    NPN = FlagConstant(0x0001)
-    ALPN = FlagConstant(0x0002)
-
-
-# FIXME: https://twistedmatrix.com/trac/ticket/8074
-# Currently flags with literal zero values behave incorrectly. However,
-# creating a flag by NOTing a flag with itself appears to work totally fine, so
-# do that instead.
-ProtocolNegotiationSupport.NOSUPPORT = (
-    ProtocolNegotiationSupport.NPN ^ ProtocolNegotiationSupport.NPN
-)
-
-# Create alias before registering deprecation warning.
-# ProtocolNegotiationSupport is imported in ssl.py and we don't want to raise a warning at import time.
-# A new deprecation warning is registered in ssl.py module so that applications only get a deprecation warning when accessing this class
-_ProtocolNegotiationSupport = ProtocolNegotiationSupport
-
-deprecatedModuleAttribute(
-    Version("Twisted", "NEXT", 0, 0),
-    "All supported TLS backends provide ALPN. There is no need to check for support.",
-    __name__,
-    ProtocolNegotiationSupport.__name__,
-)
-
-
-@deprecated(Version("Twisted", "NEXT", 0, 0))
-def protocolNegotiationMechanisms() -> FlagConstant:
-    """
-    Check whether the installed versions of pyOpenSSL and OpenSSL are recent
-    enough to support ALPN.
-
-    @return: A combination of flags from L{ProtocolNegotiationSupport} that
-        indicate which mechanisms for protocol negotiation are supported.
-    """
-    support = ProtocolNegotiationSupport.NOSUPPORT
-    ctx = SSL.Context(SSL.SSLv23_METHOD)
-
-    try:
-        ctx.set_alpn_select_callback(lambda connection, protocols: protocols[0])
-    except (AttributeError, NotImplementedError):
-        pass
-    else:
-        support |= ProtocolNegotiationSupport.ALPN
-
-    return support
 
 
 _x509names = {

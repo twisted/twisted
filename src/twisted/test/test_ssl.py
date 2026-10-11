@@ -11,6 +11,7 @@ import os
 from unittest import skipIf
 
 import hamcrest
+from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet.error import ConnectionDone
@@ -41,6 +42,25 @@ class DeprecationTests(TestCase):
     """
     Deprecations in the public SSL API.
     """
+
+    def test_protocolNegotiationMechanismsDeprecated(self) -> None:
+        """
+        When ALPN is available on a platform, L{protocolNegotiationMechanisms}
+        includes ALPN in the supported protocols.
+
+        A deprecation warning is raised when L{protocolNegotiationMechanisms} is called.
+        """
+        supportedProtocols = self.callDeprecated(
+            Version("Twisted", "NEXT", 0, 0),
+            ssl.protocolNegotiationMechanisms,
+        )
+        flags = self.getDeprecatedModuleAttribute(
+            "twisted.internet.ssl",
+            "ProtocolNegotiationSupport",
+            Version("Twisted", "NEXT", 0, 0),
+            "All supported TLS backends provide ALPN. There is no need to check for support.",
+        )
+        self.assertTrue(flags.ALPN in supportedProtocols)
 
     def test_protocolNegotiationSupportDeprecated(self) -> None:
         """

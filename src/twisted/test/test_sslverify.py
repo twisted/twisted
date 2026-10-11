@@ -2601,38 +2601,6 @@ class ALPNTests(TestCase):
     ) -> tuple[bytes | None, Failure | None]:
         return negotiateProtocol(serverProtocols, clientProtocols, viaFactory)
 
-    def test_protocolNegotiationMechanismsDeprecated(self) -> None:
-        """
-        When ALPN is available on a platform, protocolNegotiationMechanisms
-        includes ALPN in the suported protocols.
-
-        A deprecation warning is raised when L{protocolNegotiationMechanisms} is called.
-        """
-        supportedProtocols = self.callDeprecated(
-            Version("Twisted", "NEXT", 0, 0),
-            ssl.protocolNegotiationMechanisms,
-        )
-        self.assertTrue(
-            sslverify._ProtocolNegotiationSupport.ALPN in supportedProtocols
-        )
-
-    def test_ProtocolNegotiationSupportDeprecated(self) -> None:
-        """
-        Accessing the flags in L{twisted.internet._sslverify.ProtocolNegotiationSupport} emits
-        a deprecation warning.
-        """
-        flags = sslverify.ProtocolNegotiationSupport
-        warnings = self.flushWarnings([self.test_ProtocolNegotiationSupportDeprecated])
-        self.assertEqual(len(warnings), 1)
-        self.assertIs(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(
-            warnings[0]["message"],
-            "twisted.internet._sslverify.ProtocolNegotiationSupport was deprecated "
-            "in Twisted NEXT: All supported TLS backends provide ALPN. "
-            "There is no need to check for support.",
-        )
-        self.assertIs(flags, sslverify._ProtocolNegotiationSupport)
-
     def test_connectionCreatorNegotiation(self) -> None:
         protocols = [b"a", b"b"]
         negotiatedProtocol, lostReason = self.negotiateProtocol(
