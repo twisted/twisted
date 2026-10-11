@@ -119,7 +119,7 @@ class _PollableReadPipe(_PollableResource):
                 # finished = (result == -1)
                 if not bytesToRead:
                     break
-                hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)  # type: ignore[call-overload]
+                hr, data = win32file.ReadFile(self.pipe, bytesToRead, None)
                 fullDataRead.append(data)
             except win32api.error:
                 finished = 1
