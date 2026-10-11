@@ -33,14 +33,6 @@ except ImportError as e:
     skipSSL = True
     skipSSLReason = str(e)
 
-    def _noSSL():
-        # ugh, make pyflakes happy.
-        global SSL
-        global ssl
-        SSL = ssl = None
-
-    _noSSL()
-
 from zope.interface import implementer
 
 
@@ -262,7 +254,7 @@ class ContextGeneratingMixin:
         )
 
 
-if SSL is not None:
+if not skipSSL:
 
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """
