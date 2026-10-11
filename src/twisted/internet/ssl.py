@@ -60,8 +60,11 @@ from zope.interface import implementedBy, implementer, implementer_only
 # System imports
 from OpenSSL import SSL
 
+from incremental import Version
+
 # Twisted imports
 from twisted.internet import interfaces, tcp
+from twisted.python.deprecate import deprecatedModuleAttribute
 
 supported = True
 
@@ -248,13 +251,20 @@ from twisted.internet._sslverify import (
     OpenSSLDefaultPaths,
     OpenSSLDiffieHellmanParameters as DiffieHellmanParameters,
     PrivateCertificate,
-    ProtocolNegotiationSupport,
     TLSVersion,
     VerificationError,
+    _ProtocolNegotiationSupport as ProtocolNegotiationSupport,
     optionsForClientTLS,
     platformTrust,
     protocolNegotiationMechanisms,
     trustRootFromCertificates,
+)
+
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "All supported TLS backends provide ALPN. There is no need to check for support.",
+    __name__,
+    ProtocolNegotiationSupport.__name__,
 )
 
 __all__ = [

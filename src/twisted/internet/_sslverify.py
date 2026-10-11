@@ -39,7 +39,11 @@ from twisted.internet.interfaces import (
 )
 from twisted.logger import Logger
 from twisted.python.compat import nativeString
-from twisted.python.deprecate import _mutuallyExclusiveArguments, deprecated
+from twisted.python.deprecate import (
+    _mutuallyExclusiveArguments,
+    deprecated,
+    deprecatedModuleAttribute,
+)
 from twisted.python.failure import Failure
 from twisted.python.randbytes import secureRandom
 from twisted.python.util import nameToLabel
@@ -133,7 +137,20 @@ ProtocolNegotiationSupport.NOSUPPORT = (
     ProtocolNegotiationSupport.NPN ^ ProtocolNegotiationSupport.NPN
 )
 
+# Create alias before registering deprecation warning.
+# ProtocolNegotiationSupport is imported in ssl.py and we don't want to raise a warning at import time.
+# A new deprecation warning is registered in ssl.py module so that applications only get a deprecation warning when accessing this class
+_ProtocolNegotiationSupport = ProtocolNegotiationSupport
 
+deprecatedModuleAttribute(
+    Version("Twisted", "NEXT", 0, 0),
+    "All supported TLS backends provide ALPN. There is no need to check for support.",
+    __name__,
+    ProtocolNegotiationSupport.__name__,
+)
+
+
+@deprecated(Version("Twisted", "NEXT", 0, 0))
 def protocolNegotiationMechanisms() -> FlagConstant:
     """
     Check whether the installed versions of pyOpenSSL and OpenSSL are recent
@@ -142,8 +159,6 @@ def protocolNegotiationMechanisms() -> FlagConstant:
     @return: A combination of flags from L{ProtocolNegotiationSupport} that
         indicate which mechanisms for protocol negotiation are supported.
     """
-    # TODO: deprecate this, as it will always return ALPN and only ALPN on all
-    # supported versions of OpenSSL.
     support = ProtocolNegotiationSupport.NOSUPPORT
     ctx = SSL.Context(SSL.SSLv23_METHOD)
 
