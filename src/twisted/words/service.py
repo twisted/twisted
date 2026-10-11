@@ -653,7 +653,7 @@ class IRCUser(irc.IRC):
         """
         topic = group.meta.get("topic")
         if topic:
-            author = group.meta.get("topic_author") or "<noone>"
+            author = group.meta.get("topic_author") or "<noone>"  # codespell:ignore
             date = group.meta.get("topic_date", 0)
             self.topic(self.name, "#" + group.name, topic)
             self.topicAuthor(self.name, "#" + group.name, author, date)

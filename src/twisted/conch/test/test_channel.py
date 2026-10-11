@@ -321,7 +321,7 @@ class ChannelTests(TestCase):
 
     def test_writeSequence(self) -> None:
         """
-        Test that writeSequence is equivalent to write(''.join(sequece)).
+        Test that writeSequence is equivalent to write(''.join(sequence)).
         """
         self.channel.addWindowBytes(20)
         self.channel.writeSequence(b"%d" % (i,) for i in range(10))

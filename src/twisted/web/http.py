@@ -513,7 +513,7 @@ def toChunk(data: bytes) -> tuple[bytes, bytes, bytes, bytes]:
 
     @returns: a tuple of C{bytes} representing the chunked encoding of data
     """
-    # We use bytes formatting here for best performace.
+    # We use bytes formatting here for best performance.
     return b"%x" % len(data), b"\r\n", data, b"\r\n"
 
 
@@ -2886,7 +2886,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         Stop producing data.
 
-        The HTTPChannel doesn't *actually* implement this, beacuse the
+        The HTTPChannel doesn't *actually* implement this, because the
         assumption is that it will only be called just before C{loseConnection}
         is called. There's nothing sensible we can do other than call
         C{loseConnection} anyway.

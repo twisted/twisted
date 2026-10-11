@@ -572,7 +572,7 @@ class BasicFTPServerTests(FTPServerTestCase):
 
         def cb(responseLines):
             """
-            Extract the host and port from the resonse, and
+            Extract the host and port from the response, and
             verify the server is listening of the port it claims to be.
             """
             host, port = ftp.decodeHostPort(responseLines[-1][4:])
@@ -1885,7 +1885,7 @@ class FTPFileListingTests(TestCase):
 
         def check(fileOther):
             ((file,), other) = fileOther
-            self.assertFalse(other, f"unexpect unparsable lines: {repr(other)}")
+            self.assertFalse(other, f"unexpected unparsable lines: {repr(other)}")
             self.assertTrue(file["filetype"] == "-", "misparsed fileitem")
             self.assertTrue(file["perms"] == "rw-r--r--", "misparsed perms")
             self.assertTrue(file["owner"] == "root", "misparsed fileitem")
@@ -2035,7 +2035,7 @@ class FTPClientFailedRETRAndErrbacksUponDisconnectTests(TestCase):
             # PASV
             "227 Entering Passive Mode (127,0,0,1,%d,%d)"
             % (portNum >> 8, portNum & 0xFF),
-            # RETR /file/that/doesnt/exist
+            # RETR /file/that/does not/exist
             "550 Failed to open file.",
         ]
         f.buildProtocol = lambda addr: PrintLines(responses)
@@ -2045,7 +2045,7 @@ class FTPClientFailedRETRAndErrbacksUponDisconnectTests(TestCase):
 
         def gotClient(client):
             p = protocol.Protocol()
-            return client.retrieveFile("/file/that/doesnt/exist", p)
+            return client.retrieveFile("/file/that/does not/exist", p)
 
         d.addCallback(gotClient)
         return self.assertFailure(d, ftp.CommandFailed)
@@ -3639,8 +3639,8 @@ class IFTPShellTestsMixin:
         """
         removeFile should not work on directory.
         """
-        self.createDirectory("ned")
-        d = self.shell.removeFile(("ned",))
+        self.createDirectory("someDirectory")
+        d = self.shell.removeFile(("someDirectory",))
         return self.assertFailure(d, ftp.IsADirectoryError)
 
     def test_removeNotExistingFile(self):
@@ -3655,13 +3655,13 @@ class IFTPShellTestsMixin:
         """
         Check the output of the list method.
         """
-        self.createDirectory("ned")
+        self.createDirectory("someDirectory")
         self.createFile("file.txt")
         d = self.shell.list((".",))
 
         def cb(l):
             l.sort()
-            self.assertEqual(l, [("file.txt", []), ("ned", [])])
+            self.assertEqual(l, [("file.txt", []), ("someDirectory", [])])
 
         return d.addCallback(cb)
 
@@ -3669,7 +3669,7 @@ class IFTPShellTestsMixin:
         """
         Check the output of list with asked stats.
         """
-        self.createDirectory("ned")
+        self.createDirectory("someDirectory")
         self.createFile("file.txt")
         d = self.shell.list(
             (".",),
@@ -3683,7 +3683,7 @@ class IFTPShellTestsMixin:
             l.sort()
             self.assertEqual(len(l), 2)
             self.assertEqual(l[0][0], "file.txt")
-            self.assertEqual(l[1][0], "ned")
+            self.assertEqual(l[1][0], "someDirectory")
             # Size and permissions are reported differently between platforms
             # so just check they are present
             self.assertEqual(len(l[0][1]), 2)
@@ -3695,7 +3695,7 @@ class IFTPShellTestsMixin:
         """
         Querying an invalid stat should result to a C{AttributeError}.
         """
-        self.createDirectory("ned")
+        self.createDirectory("someDirectory")
         d = self.shell.list(
             (".",),
             (
@@ -3730,8 +3730,8 @@ class IFTPShellTestsMixin:
         """
         Try to access a resource.
         """
-        self.createDirectory("ned")
-        d = self.shell.access(("ned",))
+        self.createDirectory("someDirectory")
+        d = self.shell.access(("someDirectory",))
         return d
 
     def test_accessNotFound(self):
@@ -3759,15 +3759,15 @@ class IFTPShellTestsMixin:
         openForReading should fail with a C{ftp.FileNotFoundError} on a file
         that doesn't exist.
         """
-        d = self.shell.openForReading(("ned",))
+        d = self.shell.openForReading(("someDirectory",))
         return self.assertFailure(d, ftp.FileNotFoundError)
 
     def test_openForReadingOnDirectory(self):
         """
         openForReading should not work on directory.
         """
-        self.createDirectory("ned")
-        d = self.shell.openForReading(("ned",))
+        self.createDirectory("someDirectory")
+        d = self.shell.openForReading(("someDirectory",))
         return self.assertFailure(d, ftp.IsADirectoryError)
 
     def test_openForWriting(self):
@@ -3791,8 +3791,8 @@ class IFTPShellTestsMixin:
         openForWriting should not be able to open a directory that already
         exists.
         """
-        self.createDirectory("ned")
-        d = self.shell.openForWriting(("ned",))
+        self.createDirectory("someDirectory")
+        d = self.shell.openForWriting(("someDirectory",))
         return self.assertFailure(d, ftp.IsADirectoryError)
 
     def test_openForWritingInNotExistingDirectory(self):
@@ -3800,8 +3800,8 @@ class IFTPShellTestsMixin:
         openForWring should fail with a L{ftp.FileNotFoundError} if you specify
         a file in a directory that doesn't exist.
         """
-        self.createDirectory("ned")
-        d = self.shell.openForWriting(("ned", "idonotexist", "foo"))
+        self.createDirectory("someDirectory")
+        d = self.shell.openForWriting(("someDirectory", "idonotexist", "foo"))
         return self.assertFailure(d, ftp.FileNotFoundError)
 
     def test_statFile(self):
@@ -3823,8 +3823,8 @@ class IFTPShellTestsMixin:
         """
         Check the output of the stat method on a directory.
         """
-        self.createDirectory("ned")
-        d = self.shell.stat(("ned",), ("size", "directory"))
+        self.createDirectory("someDirectory")
+        d = self.shell.stat(("someDirectory",), ("size", "directory"))
 
         def cb(res):
             self.assertTrue(res[1])
@@ -3836,8 +3836,8 @@ class IFTPShellTestsMixin:
         """
         Check the owner and groups stats.
         """
-        self.createDirectory("ned")
-        d = self.shell.stat(("ned",), ("owner", "group"))
+        self.createDirectory("someDirectory")
+        d = self.shell.stat(("someDirectory",), ("owner", "group"))
 
         def cb(res):
             self.assertEqual(len(res), 2)
@@ -3862,8 +3862,8 @@ class IFTPShellTestsMixin:
 
         self.shell._path = notImplementedFilePath
 
-        self.createDirectory("ned")
-        d = self.shell.stat(("ned",), ("hardlinks",))
+        self.createDirectory("someDirectory")
+        d = self.shell.stat(("someDirectory",), ("hardlinks",))
         self.assertEqual(self.successResultOf(d), [0])
 
     def test_statOwnerGroupNotImplemented(self):
@@ -3885,8 +3885,8 @@ class IFTPShellTestsMixin:
 
         self.shell._path = notImplementedFilePath
 
-        self.createDirectory("ned")
-        d = self.shell.stat(("ned",), ("owner", "group"))
+        self.createDirectory("someDirectory")
+        d = self.shell.stat(("someDirectory",), ("owner", "group"))
         self.assertEqual(self.successResultOf(d), ["0", "0"])
 
     def test_statNotExisting(self):
@@ -3901,20 +3901,20 @@ class IFTPShellTestsMixin:
         """
         Querying an invalid stat should result to a C{AttributeError}.
         """
-        self.createDirectory("ned")
-        d = self.shell.stat(("ned",), ("size", "whateverstat"))
+        self.createDirectory("someDirectory")
+        d = self.shell.stat(("someDirectory",), ("size", "whateverstat"))
         return self.assertFailure(d, AttributeError)
 
     def test_rename(self):
         """
         Try to rename a directory.
         """
-        self.createDirectory("ned")
-        d = self.shell.rename(("ned",), ("foo",))
+        self.createDirectory("someDirectory")
+        d = self.shell.rename(("someDirectory",), ("foo",))
 
         def cb(res):
             self.assertTrue(self.directoryExists("foo"))
-            self.assertFalse(self.directoryExists("ned"))
+            self.assertFalse(self.directoryExists("someDirectory"))
 
         return d.addCallback(cb)
 

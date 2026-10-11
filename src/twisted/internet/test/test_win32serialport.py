@@ -83,7 +83,7 @@ class Win32SerialPortTests(unittest.TestCase):
             skip = "Windows serial port support is not available."
 
     def setUp(self):
-        # Re-usable protocol and reactor
+        # Reusable protocol and reactor
         self.protocol = Protocol()
         self.reactor = DoNothing()
 

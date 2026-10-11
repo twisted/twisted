@@ -353,13 +353,13 @@ class DeterministicTLSMemoryBIOTests(SynchronousTestCase):
         wrappedServerProtocol: Any = server.wrappedProtocol
         pump.flush()
         self.assertEqual(wrappedServerProtocol.received, [])
-        client.write(b"hel")
-        client.write(b"lo")
+        client.write(b"hello")
+        client.write(b" you")
         self.assertEqual(wrappedServerProtocol.received, [])
         pump.flush(advanceClock=False)
         self.assertEqual(wrappedServerProtocol.received, [])
         pump.flush(advanceClock=True)
-        self.assertEqual(b"".join(wrappedServerProtocol.received), b"hello")
+        self.assertEqual(b"".join(wrappedServerProtocol.received), b"hello you")
 
 
 class TLSMemoryBIOTests(TestCase):
@@ -985,7 +985,7 @@ class TLSMemoryBIOTests(TestCase):
         ) = self.handshakeProtocols()
 
         # Make sure connectionLost calls _shutdownTLS, but loseConnection
-        # doesnt call it for the second time.
+        # doesn't call it for the second time.
         calls = []
 
         def _shutdownTLS(shutdown=tlsClient._shutdownTLS):
@@ -1598,10 +1598,10 @@ class TLSProducerTests(TestCase):
         broken2: IOpenSSLContextFactory = JustBroken()  # type: ignore[assignment]
 
         def test1() -> None:
-            with self.assertRaises(TypeError) as te:
+            with self.assertRaises(TypeError) as error:
                 TLSMemoryBIOFactory(broken1, True, Factory.forProtocol(Protocol))
             self.assertEqual(
-                str(te.exception),
+                str(error.exception),
                 "has get context but broken's `getContext` method doesn't return a `Context`",
             )
 

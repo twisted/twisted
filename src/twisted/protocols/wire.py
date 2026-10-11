@@ -66,7 +66,7 @@ class QOTD(protocol.Protocol):
 
     def getQuote(self):
         """
-        Return a quote. May be overrriden in subclasses.
+        Return a quote. May be overridden in subclasses.
         """
         return b"An apple a day keeps the doctor away.\r\n"
 

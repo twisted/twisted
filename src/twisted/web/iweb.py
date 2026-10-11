@@ -651,7 +651,7 @@ class _IRequestEncoder(Interface):
 
 class _IRequestEncoderFactory(Interface):
     """
-    A factory for returing L{_IRequestEncoder} instances.
+    A factory for returning L{_IRequestEncoder} instances.
 
     @since: 12.3
     """

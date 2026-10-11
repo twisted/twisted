@@ -407,7 +407,7 @@ class TestCase(SynchronousTestCase):
                 del reactor.stop
 
             # If the reactor was crashed elsewhere due to a timeout, hopefully
-            # that crasher also reported an error. Just return.
+            # that crash also reported an error. Just return.
             # _timedOut is most likely to be set when d has fired but hasn't
             # completed its callback chain (see self._run)
             if results or self._timedOut:  # defined in run() and _run()

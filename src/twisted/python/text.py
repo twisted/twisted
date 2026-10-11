@@ -80,9 +80,9 @@ def greedyWrap(inString, width=80):
     Given a string and a column width, return a list of lines.
 
     Caveat: I'm use a stupid greedy word-wrapping
-    algorythm.  I won't put two spaces at the end
+    algorithm.  I won't put two spaces at the end
     of a sentence.  I don't do full justification.
-    And no, I've never even *heard* of hypenation.
+    And no, I've never even *heard* of hyphenation.
     """
 
     outLines = []

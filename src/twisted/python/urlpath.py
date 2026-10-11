@@ -16,7 +16,7 @@ _allascii = b"".join([chr(x).encode("ascii") for x in range(1, 128)])
 
 def _rereconstituter(name):
     """
-    Attriute declaration to preserve mutability on L{URLPath}.
+    Attribute declaration to preserve mutability on L{URLPath}.
 
     @param name: a public attribute name
     @type name: native L{str}

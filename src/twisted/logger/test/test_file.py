@@ -87,7 +87,7 @@ class FileLogObserverTests(TestCase):
 
     def test_observeFlushes(self) -> None:
         """
-        L{FileLogObserver} calles C{flush()} on the output file when it
+        L{FileLogObserver} calls C{flush()} on the output file when it
         observes an event.
         """
         with DummyFile() as fileHandle:

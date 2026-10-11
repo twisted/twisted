@@ -200,7 +200,7 @@ class StrFileTests(unittest.TestCase):
         self.assertTrue(text.strFile("g", self.io))
 
     def test_3_1(self) -> None:
-        self.assertTrue(text.strFile("thi", self.io))
+        self.assertTrue(text.strFile("thi", self.io))  # codespell:ignore
 
     def test_3_2(self) -> None:
         self.assertTrue(text.strFile("his", self.io))

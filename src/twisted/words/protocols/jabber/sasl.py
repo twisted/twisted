@@ -115,7 +115,7 @@ class SASLInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
 
         Uses the authenticator's C{jid} and C{password} attribute for the
         authentication credentials. If no supported SASL mechanisms are
-        advertized by the receiving party, a failing deferred is returned with
+        advertised by the receiving party, a failing deferred is returned with
         a L{SASLNoAcceptableMechanism} exception.
         """
 

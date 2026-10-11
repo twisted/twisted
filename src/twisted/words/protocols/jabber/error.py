@@ -72,7 +72,7 @@ class BaseError(Exception):
     @type namespace: C{str}
     @ivar condition: The error condition. The valid values are defined by
                      subclasses of L{BaseError}.
-    @type contition: C{str}
+    @type condition: C{str}
     @ivar text: Optional text message to supplement the condition or application
                 specific condition.
     @type text: C{unicode}

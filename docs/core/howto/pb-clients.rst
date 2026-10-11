@@ -37,7 +37,7 @@ we will want connections from the same player to use the same ``Avatar`` .
 
 Another thing which is necessary in more complicated scenarios
 is notifying a player asynchronously. While it is possible, of
-course, to allow a player to call ``perspective_remoteListener(referencable)`` that would
+course, to allow a player to call ``perspective_remoteListener(referenceable)`` that would
 mean both duplication of code and a higher latency in logging in,
 both bad.
 

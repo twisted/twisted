@@ -218,7 +218,7 @@ class _NameEncoder:
         b"Dnt": b"DNT",
         b"Etag": b"ETag",
         b"P3p": b"P3P",
-        b"Te": b"TE",
+        b"Te": b"TE",  # codespell:ignore
         b"Www-Authenticate": b"WWW-Authenticate",
         b"X-Xss-Protection": b"X-XSS-Protection",
     }

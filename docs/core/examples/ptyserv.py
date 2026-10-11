@@ -35,7 +35,7 @@ class FakeTelnet(protocol.Protocol):
 
     def connectionLost(self, reason):
         print("connection lost")
-        self.propro.tranport.loseConnection()
+        self.propro.transport.loseConnection()
 
 
 class ProcessProtocol(protocol.ProcessProtocol):

@@ -433,7 +433,7 @@ class TimeoutProtocol(ProtocolWrapper):
         Constructor.
 
         @param factory: An L{TimeoutFactory}.
-        @param wrappedProtocol: A L{Protocol} to wrapp.
+        @param wrappedProtocol: A L{Protocol} to wrap.
         @param timeoutPeriod: Number of seconds to wait for activity before
             timing out.
         """

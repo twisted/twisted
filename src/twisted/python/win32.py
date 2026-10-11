@@ -106,7 +106,7 @@ class _ErrorFormatter:
         timgolden.me.uk/pywin32-docs/win32api__FormatMessage_meth.html>}).
 
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
-        which correspond to those erorrs (like I{socket.errorTab}).
+        which correspond to those errors (like I{socket.errorTab}).
     """
 
     def __init__(self, WinError, FormatMessage, errorTab):

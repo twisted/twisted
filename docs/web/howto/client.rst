@@ -528,7 +528,7 @@ have an attribute
 called ``maxPersistentPerHost`` which limits the
 number of cached persistent connections to the same server. The default
 value is 2.  This is effective only when the :py:attr:`persistent <twisted.web.client.HTTPConnectionPool.persistent>` option is
-True. You can change the value like bellow:
+True. You can change the value like below:
 
 
     
