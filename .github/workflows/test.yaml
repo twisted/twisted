@@ -427,7 +427,7 @@ jobs:
         python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v4
+      uses: CodSpeedHQ/action@v5
       with:
         mode: simulation
         exclude-allocations: true
