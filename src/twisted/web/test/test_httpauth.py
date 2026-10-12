@@ -5,7 +5,6 @@
 Tests for L{twisted.web._auth}.
 """
 
-
 import base64
 
 from zope.interface import implementer

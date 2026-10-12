@@ -1,6 +1,7 @@
 """
 Tests for L{twisted.trial._dist.stream}.
 """
+
 from __future__ import annotations
 
 from collections.abc import Awaitable

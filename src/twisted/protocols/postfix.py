@@ -5,6 +5,7 @@
 """
 Postfix mail transport agent related protocols.
 """
+
 from __future__ import annotations
 
 import sys

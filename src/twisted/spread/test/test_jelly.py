@@ -5,7 +5,6 @@
 Test cases for L{jelly} object serialization.
 """
 
-
 import datetime
 import decimal
 

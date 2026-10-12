@@ -6,7 +6,6 @@
 Tests for L{twisted.protocols.amp}.
 """
 
-
 import datetime
 import decimal
 from typing import ClassVar, TypeVar
@@ -1712,7 +1711,7 @@ class AMPTests(TestCase):
             self.assertRaises(amp.ProtocolSwitched, c.sendHello, b"world")
 
         def cbConnsLost(info):
-            ((serverSuccess, serverData), (clientSuccess, clientData)) = info
+            (serverSuccess, serverData), (clientSuccess, clientData) = info
             self.assertTrue(serverSuccess)
             self.assertTrue(clientSuccess)
             self.assertEqual(b"".join(serverData), SWITCH_CLIENT_DATA)

@@ -10,7 +10,7 @@ from twisted.trial import unittest
 from .. import _v2parser
 from .._exceptions import InvalidProxyHeader
 
-V2_SIGNATURE = b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+V2_SIGNATURE = b"\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a"
 
 
 def _makeHeaderIPv6(
@@ -19,7 +19,7 @@ def _makeHeaderIPv6(
     famProto: bytes = b"\x21",
     addrLength: bytes = b"\x00\x24",
     addrs: bytes = ((b"\x00" * 15) + b"\x01") * 2,
-    ports: bytes = b"\x1F\x90\x22\xB8",
+    ports: bytes = b"\x1f\x90\x22\xb8",
 ) -> bytes:
     """
     Construct a version 2 IPv6 header with custom bytes.
@@ -55,9 +55,9 @@ def _makeHeaderIPv4(
     sig: bytes = V2_SIGNATURE,
     verCom: bytes = b"\x21",
     famProto: bytes = b"\x11",
-    addrLength: bytes = b"\x00\x0C",
-    addrs: bytes = b"\x7F\x00\x00\x01\x7F\x00\x00\x01",
-    ports: bytes = b"\x1F\x90\x22\xB8",
+    addrLength: bytes = b"\x00\x0c",
+    addrs: bytes = b"\x7f\x00\x00\x01\x7f\x00\x00\x01",
+    ports: bytes = b"\x1f\x90\x22\xb8",
 ) -> bytes:
     """
     Construct a version 2 IPv4 header with custom bytes.
@@ -93,11 +93,11 @@ def _makeHeaderUnix(
     sig: bytes = V2_SIGNATURE,
     verCom: bytes = b"\x21",
     famProto: bytes = b"\x31",
-    addrLength: bytes = b"\x00\xD8",
+    addrLength: bytes = b"\x00\xd8",
     addrs: bytes = (
-        b"\x2F\x68\x6F\x6D\x65\x2F\x74\x65\x73\x74\x73\x2F"
-        b"\x6D\x79\x73\x6F\x63\x6B\x65\x74\x73\x2F\x73\x6F"
-        b"\x63\x6B" + (b"\x00" * 82)
+        b"\x2f\x68\x6f\x6d\x65\x2f\x74\x65\x73\x74\x73\x2f"
+        b"\x6d\x79\x73\x6f\x63\x6b\x65\x74\x73\x2f\x73\x6f"
+        b"\x63\x6b" + (b"\x00" * 82)
     )
     * 2,
 ) -> bytes:

@@ -364,7 +364,7 @@ class IRCUser(irc.IRC):
     ]
 
     def _cbLogin(self, result):
-        (iface, avatar, logout) = result
+        iface, avatar, logout = result
         assert iface is iwords.IUser, f"Realm is buggy, got {iface!r}"
 
         # Let them send messages to the world

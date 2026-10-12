@@ -478,13 +478,11 @@ class IBodyProducer(IPushProducer):
     # about this interface.  This interface needs to remain close enough to one
     # of those interfaces for consumers to work with it.
 
-    length = Attribute(
-        """
+    length = Attribute("""
         C{length} is a L{int} indicating how many bytes in total this
         L{IBodyProducer} will write to the consumer or L{UNKNOWN_LENGTH}
         if this is not known in advance.
-        """
-    )
+        """)
 
     def startProducing(consumer):
         """
@@ -728,7 +726,7 @@ class IAgent(Interface):
 
     if not TYPE_CHECKING:  # pragma: no branch
 
-        def __init__(self) -> None:  # type:ignore
+        def __init__(self) -> None:  # type: ignore
             """
             IAgent does not have any particular requirement upon its
             constructor.

@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.main}.
 """
 
-
 from twisted.internet.error import ReactorAlreadyInstalledError
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor

@@ -73,9 +73,7 @@ class MockProcessSpawner:
 shouldSkip = (
     "Cannot run without cryptography"
     if cryptography is None
-    else "Unix system required"
-    if unix is None
-    else None
+    else "Unix system required" if unix is None else None
 )
 
 

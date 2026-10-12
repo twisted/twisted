@@ -8,7 +8,6 @@ Client which will talk to the server run by pbAnonServer.py, logging in
 either anonymously or with username/password credentials.
 """
 
-
 from sys import stdout
 
 from twisted.cred.credentials import Anonymous, UsernamePassword

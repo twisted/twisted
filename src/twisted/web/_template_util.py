@@ -82,9 +82,7 @@ def redirectTo(URL: bytes, request: IRequest) -> bytes:
     <a href=\"%(url)s\">click here</a>
     </body>
 </html>
-""" % {
-        b"url": escape(URL.decode("utf-8")).encode("utf-8")
-    }
+""" % {b"url": escape(URL.decode("utf-8")).encode("utf-8")}
     return content
 
 
@@ -658,8 +656,7 @@ class FailureElement(Element):
     @since: 12.1
     """
 
-    loader = XMLString(
-        """
+    loader = XMLString("""
 <div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
   <style type="text/css">
     div.error {
@@ -732,8 +729,7 @@ class FailureElement(Element):
     <span t:render="type" />: <span t:render="value" />
   </div>
 </div>
-"""
-    )
+""")
 
     def __init__(self, failure, loader=None):
         Element.__init__(self, loader)

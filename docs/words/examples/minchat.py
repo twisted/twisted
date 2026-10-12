@@ -11,7 +11,6 @@ To run the script:
 $ python minchat.py
 """
 
-
 from twisted.words.im import baseaccount, basechat, ircsupport
 
 # A list of account objects. We might as well create them at runtime, this is

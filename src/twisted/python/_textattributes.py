@@ -20,7 +20,6 @@ Serializing a formatting structure is done with L{flatten}.
 @see: L{twisted.words.protocols.irc._CharacterAttributes}
 """
 
-
 from collections.abc import Sequence
 from typing import ClassVar
 

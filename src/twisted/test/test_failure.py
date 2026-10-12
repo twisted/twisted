@@ -4,6 +4,7 @@
 """
 Test cases for the L{twisted.python.failure} module.
 """
+
 from __future__ import annotations
 
 import linecache

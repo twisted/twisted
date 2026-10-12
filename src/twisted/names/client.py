@@ -15,6 +15,7 @@ return an C{IResolver}.
 Future plans: Proper nameserver acquisition on Windows/MacOS,
 better caching, respect timeouts
 """
+
 from __future__ import annotations
 
 import errno

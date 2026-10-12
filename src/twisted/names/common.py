@@ -6,7 +6,6 @@
 Base functionality useful to various parts of Twisted Names.
 """
 
-
 import socket
 
 from zope.interface import implementer
@@ -163,7 +162,7 @@ class ResolverBase:
         return d
 
     def _cbRecords(self, records, name, effort):
-        (ans, auth, add) = records
+        ans, auth, add = records
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
             raise error.DNSLookupError(name)
@@ -230,7 +229,7 @@ def extractRecord(resolver, name, answers, level=10):
         )
 
         def queryAgain(records):
-            (ans, auth, add) = records
+            ans, auth, add = records
             return extractRecord(nsResolver, name, ans + auth + add, level - 1)
 
         return nsResolver.lookupAddress(name.name).addCallback(queryAgain)

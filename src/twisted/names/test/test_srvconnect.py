@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.srvconnect}.
 """
 
-
 import random
 
 from zope.interface.verify import verifyObject

@@ -6,7 +6,6 @@
 Authoritative resolvers.
 """
 
-
 import os
 import time
 

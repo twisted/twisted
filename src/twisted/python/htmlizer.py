@@ -36,8 +36,8 @@ class TokenPrinter:
         if not isinstance(token, bytes):
             token = token.encode(self.encoding)
 
-        (srow, scol) = sCoordinates
-        (erow, ecol) = eCoordinates
+        srow, scol = sCoordinates
+        erow, ecol = eCoordinates
         if self.currentLine < srow:
             self.writer(b"\n" * (srow - self.currentLine))
             self.currentLine, self.currentCol = srow, 0
@@ -113,7 +113,7 @@ def filter(inp, out, writer=HTMLWriter):
     printer = TokenPrinter(writer(out.write).write).printtoken
     try:
         for token in tokenize.tokenize(inp.readline):
-            (tokenType, string, start, end, line) = token
+            tokenType, string, start, end, line = token
             printer(tokenType, string, start, end, line)
     except tokenize.TokenError:
         pass
