@@ -8,8 +8,10 @@ Tests for twisted SSL support.
 from __future__ import annotations
 
 import os
+from unittest import skipIf
 
 import hamcrest
+from incremental import Version
 
 from twisted.internet import defer, interfaces, protocol, reactor
 from twisted.internet.error import ConnectionDone
@@ -25,17 +27,55 @@ try:
 
     from twisted.internet import ssl
     from twisted.test.ssl_helpers import ClientTLSContext, certPath
-except ImportError:
 
-    def _noSSL():
-        # ugh, make pyflakes happy.
-        global SSL
-        global ssl
-        SSL = ssl = None
-
-    _noSSL()
+    skipSSLReason = ""
+    skipSSL = False
+except ImportError as e:
+    skipSSL = True
+    skipSSLReason = str(e)
 
 from zope.interface import implementer
+
+
+@skipIf(skipSSL, skipSSLReason)
+class DeprecationTests(TestCase):
+    """
+    Deprecations in the public SSL API.
+    """
+
+    def test_protocolNegotiationMechanismsDeprecated(self) -> None:
+        """
+        When ALPN is available on a platform, L{protocolNegotiationMechanisms}
+        includes ALPN in the supported protocols.
+
+        A deprecation warning is raised when L{protocolNegotiationMechanisms} is called.
+        """
+        supportedProtocols = self.callDeprecated(
+            Version("Twisted", "NEXT", 0, 0),
+            ssl.protocolNegotiationMechanisms,
+        )
+        flags = self.getDeprecatedModuleAttribute(
+            "twisted.internet.ssl",
+            "ProtocolNegotiationSupport",
+            Version("Twisted", "NEXT", 0, 0),
+            "All supported TLS backends provide ALPN. There is no need to check for support.",
+        )
+        self.assertTrue(flags.ALPN in supportedProtocols)
+
+    def test_protocolNegotiationSupportDeprecated(self) -> None:
+        """
+        Accessing L{ssl.ProtocolNegotiationSupport} emits a deprecation warning.
+        """
+        ssl.ProtocolNegotiationSupport
+        warnings = self.flushWarnings([self.test_protocolNegotiationSupportDeprecated])
+        self.assertEqual(len(warnings), 1)
+        self.assertIs(warnings[0]["category"], DeprecationWarning)
+        self.assertEqual(
+            warnings[0]["message"],
+            "twisted.internet.ssl.ProtocolNegotiationSupport was deprecated "
+            "in Twisted NEXT: All supported TLS backends provide ALPN. "
+            "There is no need to check for support.",
+        )
 
 
 class UnintelligentProtocol(basic.LineReceiver):
@@ -234,7 +274,7 @@ class ContextGeneratingMixin:
         )
 
 
-if SSL is not None:
+if not skipSSL:
 
     class ServerTLSContext(ssl.DefaultOpenSSLContextFactory):
         """

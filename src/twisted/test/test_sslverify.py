@@ -2601,14 +2601,6 @@ class ALPNTests(TestCase):
     ) -> tuple[bytes | None, Failure | None]:
         return negotiateProtocol(serverProtocols, clientProtocols, viaFactory)
 
-    def test_nextProtocolMechanismsALPNIsSupported(self) -> None:
-        """
-        When ALPN is available on a platform, protocolNegotiationMechanisms
-        includes ALPN in the suported protocols.
-        """
-        supportedProtocols = sslverify.protocolNegotiationMechanisms()
-        self.assertTrue(sslverify.ProtocolNegotiationSupport.ALPN in supportedProtocols)
-
     def test_connectionCreatorNegotiation(self) -> None:
         protocols = [b"a", b"b"]
         negotiatedProtocol, lostReason = self.negotiateProtocol(
