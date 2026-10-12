@@ -5,7 +5,6 @@
 Demonstrate sending mail via SMTP.
 """
 
-
 import sys
 from email.mime.text import MIMEText
 

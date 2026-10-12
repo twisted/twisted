@@ -5,7 +5,6 @@
 Tests for L{twisted.names.cache}.
 """
 
-
 import time
 
 from zope.interface.verify import verifyClass

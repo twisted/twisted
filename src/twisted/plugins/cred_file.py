@@ -7,7 +7,6 @@
 Cred plugin for a file of the format 'username:password'.
 """
 
-
 import sys
 
 from zope.interface import implementer

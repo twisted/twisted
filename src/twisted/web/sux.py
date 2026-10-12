@@ -20,7 +20,6 @@ does not:
     option, they're not on by default).
 """
 
-
 from twisted.internet.protocol import Protocol
 from twisted.python.reflect import prefixedMethodNames
 

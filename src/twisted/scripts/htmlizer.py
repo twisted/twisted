@@ -7,7 +7,6 @@
 HTML pretty-printing for Python source code.
 """
 
-
 __version__ = "$Revision: 1.8 $"[11:-2]
 
 import os
@@ -44,7 +43,7 @@ class Options(usage.Options):
         extraActions=[usage.CompleteFiles("*.py", descr="source python file")]
     )
 
-    def parseArgs(self, filename):  # type:ignore[override]
+    def parseArgs(self, filename):  # type: ignore[override]
         self["filename"] = filename
 
 

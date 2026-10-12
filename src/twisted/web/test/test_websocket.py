@@ -87,8 +87,7 @@ else:
         def negotiationStarted(self, transport: WebSocketTransport) -> None:
             self.transport = transport
 
-        def negotiationFinished(self) -> None:
-            ...
+        def negotiationFinished(self) -> None: ...
 
         def connectionLost(self, reason: Failure) -> None:
             self.wasLost = reason

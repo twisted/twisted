@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.task}.
 """
 
-
 from twisted.internet import defer, error, interfaces, reactor, task
 from twisted.internet.main import installReactor
 from twisted.internet.test.modulehelpers import NoReactor

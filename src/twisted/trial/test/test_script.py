@@ -980,18 +980,14 @@ class OrderTests(unittest.TestCase):
         package = FilePath(tempdir).child("twisted_toptobottom_temp")
         package.makedirs()
         package.child("__init__.py").setContent(b"")
-        package.child("test_missing.py").setContent(
-            textwrap.dedent(
-                """
+        package.child("test_missing.py").setContent(textwrap.dedent("""
         from twisted.trial.unittest import TestCase
         class TestMissing(TestCase):
             def test_second(self) -> None: pass
             def test_third(self) -> None: pass
             def test_fourth(self) -> None: pass
             def test_first(self) -> None: pass
-        """
-            ).encode("utf8")
-        )
+        """).encode("utf8"))
         pathEntry = package.parent().path
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)

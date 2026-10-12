@@ -5,7 +5,6 @@
 Test case for L{twisted.protocols.loopback}.
 """
 
-
 from zope.interface import implementer
 
 from twisted.internet import defer, interfaces, reactor
@@ -278,7 +277,7 @@ class LoopbackAsyncTests(LoopbackTestCaseMixin, unittest.TestCase):
         d = self._producertest(PushProducer)
 
         def finished(results):
-            (client, server) = results
+            client, server = results
             self.assertFalse(
                 server.producer.resumed,
                 "Streaming producer should not have been resumed.",

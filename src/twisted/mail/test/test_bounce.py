@@ -22,14 +22,12 @@ class BounceTests(unittest.TestCase):
         L{twisted.mail.bounce.generateBounce} can accept L{unicode}.
         """
         fromAddress, to, s = bounce.generateBounce(
-            StringIO(
-                """\
+            StringIO("""\
 From: Moshe Zadka <moshez@example.com>
 To: nonexistent@example.org
 Subject: test
 
-"""
-            ),
+"""),
             "moshez@example.com",
             "nonexistent@example.org",
         )
@@ -46,14 +44,12 @@ Subject: test
         L{twisted.mail.bounce.generateBounce} can accept L{bytes}.
         """
         fromAddress, to, s = bounce.generateBounce(
-            BytesIO(
-                b"""\
+            BytesIO(b"""\
 From: Moshe Zadka <moshez@example.com>
 To: nonexistent@example.org
 Subject: test
 
-"""
-            ),
+"""),
             b"moshez@example.com",
             b"nonexistent@example.org",
         )
@@ -70,14 +66,12 @@ Subject: test
         Pass a custom transcript message to L{twisted.mail.bounce.generateBounce}.
         """
         fromAddress, to, s = bounce.generateBounce(
-            BytesIO(
-                b"""\
+            BytesIO(b"""\
 From: Moshe Zadka <moshez@example.com>
 To: nonexistent@example.org
 Subject: test
 
-"""
-            ),
+"""),
             b"moshez@example.com",
             b"nonexistent@example.org",
             "Custom transcript",
@@ -90,7 +84,7 @@ Subject: test
         self.assertEqual(mess["From"], "postmaster@example.org")
         self.assertEqual(mess["subject"], "Returned Mail: see transcript for details")
         self.assertTrue(mess.is_multipart())
-        parts: list[Message] = mess.get_payload()  # type:ignore[assignment]
+        parts: list[Message] = mess.get_payload()  # type: ignore[assignment]
         self.assertEqual(
             parts[0].get_payload(),
             "Custom transcript\n",
@@ -111,13 +105,13 @@ Subject: test
         self.assertEqual(mess["From"], "postmaster@example.org")
         self.assertEqual(mess["subject"], "Returned Mail: see transcript for details")
         self.assertTrue(mess.is_multipart())
-        parts: list[Message] = mess.get_payload()  # type:ignore[assignment]
-        innerMessage: list[Message] = parts[1].get_payload()  # type:ignore[assignment]
+        parts: list[Message] = mess.get_payload()  # type: ignore[assignment]
+        innerMessage: list[Message] = parts[1].get_payload()  # type: ignore[assignment]
         if isinstance(message, bytes):
             messageText = message.decode("utf-8")
         else:
             messageText = message
-        pl: str = innerMessage[0].get_payload()  # type:ignore[assignment]
+        pl: str = innerMessage[0].get_payload()  # type: ignore[assignment]
         self.assertEqual(pl + "\n", messageText)
 
     def test_bounceBigMessage(self) -> None:

@@ -5,7 +5,6 @@
 Tests for L{twisted.python.threadpool}
 """
 
-
 import gc
 import pickle
 import threading

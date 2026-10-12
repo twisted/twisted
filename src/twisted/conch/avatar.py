@@ -14,8 +14,7 @@ from twisted.python.compat import nativeString
 
 
 class SubsystemFactory(TypingProtocol):
-    def __call__(self, data: bytes, avatar: IConchUser) -> Protocol:
-        ...
+    def __call__(self, data: bytes, avatar: IConchUser) -> Protocol: ...
 
 
 @implementer(IConchUser)

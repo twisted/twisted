@@ -5,6 +5,7 @@
 """
 Tests for Twisted plugin system.
 """
+
 from __future__ import annotations
 
 import compileall
@@ -102,7 +103,7 @@ class PluginTests(unittest.TestCase):
         self.package.child("dropin.cache").remove()
 
     def _withCacheness(
-        meth: Callable[[PluginTests], object]
+        meth: Callable[[PluginTests], object],
     ) -> Callable[[PluginTests], None]:
         """
         This is a paranoid test wrapper, that calls C{meth} 2 times, clear the

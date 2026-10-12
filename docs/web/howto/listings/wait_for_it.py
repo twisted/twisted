@@ -3,15 +3,13 @@ import sys
 from twisted.internet.defer import Deferred
 from twisted.web.template import Element, XMLString, flatten, renderer
 
-sample = XMLString(
-    """
+sample = XMLString("""
     <div xmlns:t="http://twistedmatrix.com/ns/twisted.web.template/0.1">
     Before waiting ...
     <span t:render="wait"></span>
     ... after waiting.
     </div>
-    """
-)
+    """)
 
 
 class WaitForIt(Element):

@@ -6,7 +6,6 @@
 Tests for L{twisted.python.util}.
 """
 
-
 import errno
 import os.path
 import shutil
@@ -228,7 +227,7 @@ class MergeFunctionMetadataTests(TestCase):
             return foo_object
 
         def bar(x, y, ab, c=10, *d, **e):
-            (a, b) = ab
+            a, b = ab
             return bar_object
 
         baz = util.mergeFunctionMetadata(foo, bar)
@@ -458,7 +457,7 @@ class GetPasswordTests(TestCase):
         )
 
         def processFinished(result):
-            (reason, output) = result
+            reason, output = result
             reason.trap(ProcessDone)
             self.assertIn((1, b"secret"), output)
 

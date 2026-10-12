@@ -5,7 +5,6 @@
 Tests for L{twisted.cred}'s implementation of CRAM-MD5.
 """
 
-
 import hashlib
 from binascii import hexlify
 from hmac import HMAC
