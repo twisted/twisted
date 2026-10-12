@@ -158,10 +158,7 @@ jobs:
           - python-version: '3.13'
 
           # Just Python 3.14 with default settings.
-          # This runs on latest Ubuntu to have OpenSSH client with
-          # post quantum key exchange support.
           - python-version: '3.14'
-            runs-on: 'ubuntu-26.04'
 
           # Oldest Intel macOS (available on GitHub)
           # and lowest Python (major) supported versions.
@@ -430,9 +427,10 @@ jobs:
         python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov pytest-benchmark
 
     - name: Run benchmarks
-      uses: CodSpeedHQ/action@v4
+      uses: CodSpeedHQ/action@v5
       with:
         mode: simulation
+        exclude-allocations: true
         # codspeed runs this command under a CPU emulator, so it's super-slow.
         # We don't collect the code coverage yet.
         run: python -m pytest --codspeed benchmarks/
