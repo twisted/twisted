@@ -312,6 +312,97 @@ class SMTPClientTests(TestCase, LoopbackMixin):
         self.assertEqual(transport.value(), b"")
         self.assertTrue(transport.disconnecting)
 
+    def _dataClient(self):
+        """
+        Return a fresh L{smtp.SMTPClient} wired for direct unit testing of
+        L{smtp.SMTPClient.transformChunk}.
+
+        The client is placed in the state L{smtp.SMTPClient.smtpState_data}
+        would leave it in (fresh chunk-boundary state, no-op timeout
+        reset), without having to supply a real mail source.
+        """
+        client = smtp.SMTPClient(b"localhost")
+        client.resetTimeout = lambda: None
+        client._lastChunkEndsWithNewline = False
+        return client
+
+    def test_transformChunkDotStuffsAcrossChunks(self):
+        """
+        A line consisting of a single C{b"."} is still dot-stuffed when the
+        preceding C{b"\\n"} and the C{b"."} fall on either side of a chunk
+        boundary.
+
+        Without this, an unescaped C{\\r\\n.\\r\\n} in the middle of the
+        C{DATA} payload would prematurely end the body and let the server
+        read whatever followed as new SMTP commands (SMTP smuggling).
+        """
+        client = self._dataClient()
+
+        wire = client.transformChunk(b"body\n") + client.transformChunk(b".\nmore\n")
+
+        self.assertNotIn(b"\r\n.\r\n", wire)
+        self.assertIn(b"\r\n..\r\n", wire)
+        self.assertEqual(wire, b"body\r\n..\r\nmore\r\n")
+
+    def test_transformChunkIssueRepro(self):
+        """
+        The exact reproducer from the issue: a C{b"."} line that lands on a
+        16 KiB C{FileSender} boundary is dot-stuffed.
+        """
+        msg = b"x" * (basic.FileSender.CHUNK_SIZE - 1) + b"\n" + b".\n" + b"more body\n"
+        client = self._dataClient()
+        size = basic.FileSender.CHUNK_SIZE
+
+        wire = b"".join(
+            client.transformChunk(msg[i : i + size]) for i in range(0, len(msg), size)
+        )
+
+        self.assertNotIn(b"\r\n.\r\n", wire)
+
+    def test_transformChunkMatchesUnchunked(self):
+        """
+        Transforming a message in chunks returns the same bytes as
+        transforming it in a single call, for every possible chunk size.
+        This is the invariant the fix for chunk-boundary dot-stuffing needs
+        to preserve.
+        """
+        for message in [
+            b"body\n.\nmore\n",
+            b"\n.\n.\n.\n",
+            b"foo\r\n.\r\nbar\r\n",
+            b"line\n.at.start.\n.\nend\n",
+            b".leading dot\n",
+            b"no newline",
+            b"trailing newline\n",
+        ]:
+            unchunked = self._dataClient().transformChunk(message)
+
+            for size in range(1, len(message) + 1):
+                client = self._dataClient()
+                chunked = b"".join(
+                    client.transformChunk(message[i : i + size])
+                    for i in range(0, len(message), size)
+                )
+                self.assertEqual(
+                    chunked,
+                    unchunked,
+                    f"message={message!r} chunk_size={size}",
+                )
+
+    def test_smtpStateDataResetsChunkState(self):
+        """
+        L{smtp.SMTPClient.smtpState_data} clears the chunk-boundary state
+        so that the trailing newline of one body cannot cause an extra dot
+        to be stuffed into the first chunk of the next body.
+        """
+        client = MySMTPClient()
+        client.makeConnection(StringTransport())
+        client._lastChunkEndsWithNewline = True
+
+        client.smtpState_data(354, b"")
+
+        self.assertFalse(client._lastChunkEndsWithNewline)
+
 
 class DummySMTPMessage:
     def __init__(self, protocol, users):

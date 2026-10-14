@@ -436,6 +436,11 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
     _userIs = None
     _onLogout = None
 
+    # Set by L{_sendMessageContent} at the start of each message transfer;
+    # carried across calls to L{transformChunk} to keep dot-stuffing correct
+    # at chunk boundaries.
+    _lastChunkEndsWithNewline = False
+
     AUTH_CMDS = [b"CAPA", b"USER", b"PASS", b"APOP", b"AUTH", b"RPOP", b"QUIT"]
 
     portal = None
@@ -1108,6 +1113,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             resp, fp = info
             fp = fpWrapper(fp)
             self.successResponse(successResponse(resp))
+            self._lastChunkEndsWithNewline = False
             s = basic.FileSender()
             d = s.beginFileTransfer(fp, self.transport, self.transformChunk)
 
@@ -1177,13 +1183,24 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         termination character (C{'.'}) by adding an extra one when one appears
         at the beginning of a line.
 
+        State from the previous chunk is tracked so that a line consisting of
+        a single C{b"."} is still escaped when the C{\\r\\n} that terminates
+        the previous line and the C{b"."} itself fall on either side of a
+        chunk boundary.  Without this, an unescaped C{\\r\\n.\\r\\n} in the
+        middle of a C{RETR} or C{TOP} response would be interpreted by the
+        client as the end of the message and truncate the delivered body.
+
         @type chunk: L{bytes}
         @param chunk: A string to transform.
 
         @rtype: L{bytes}
         @return: The transformed string.
         """
-        return chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        transformed = chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if self._lastChunkEndsWithNewline and transformed.startswith(b"."):
+            transformed = b"." + transformed
+        self._lastChunkEndsWithNewline = chunk.endswith(b"\n")
+        return transformed
 
     def finishedFileTransfer(self, lastsent):
         """
