@@ -119,6 +119,58 @@ class UtilityTests(unittest.SynchronousTestCase):
         self.assertEqual(listLines, [b"+OK \r\n", b"1 abc\r\n", b"3 ghi\r\n", b".\r\n"])
 
 
+class TransformChunkTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{pop3.POP3.transformChunk}'s dot-stuffing and CRLF conversion.
+    """
+
+    def test_dotStuffingAcrossChunks(self):
+        """
+        A line consisting of a single C{b"."} is still dot-stuffed when the
+        preceding C{b"\\n"} and the C{b"."} fall on either side of a chunk
+        boundary.
+
+        Without this, an unescaped C{\\r\\n.\\r\\n} inside a C{RETR} or
+        C{TOP} response would be read by the client as the end of the
+        message, truncating the delivered body.
+        """
+        server = pop3.POP3()
+
+        wire = server.transformChunk(b"body\n") + server.transformChunk(b".\nmore\n")
+
+        self.assertNotIn(b"\r\n.\r\n", wire)
+        self.assertEqual(wire, b"body\r\n..\r\nmore\r\n")
+
+    def test_chunkedMatchesUnchunked(self):
+        """
+        Transforming a message in chunks returns the same bytes as
+        transforming it in a single call, for every possible chunk size.
+        """
+        for message in [
+            b"body\n.\nmore\n",
+            b"\n.\n.\n.\n",
+            b"foo\r\n.\r\nbar\r\n",
+            b"line\n.at.start.\n.\nend\n",
+            b".leading dot\n",
+            b"no newline",
+            b"trailing newline\n",
+        ]:
+            unchunkedServer = pop3.POP3()
+            unchunked = unchunkedServer.transformChunk(message)
+
+            for size in range(1, len(message) + 1):
+                chunkedServer = pop3.POP3()
+                chunked = b"".join(
+                    chunkedServer.transformChunk(message[i : i + size])
+                    for i in range(0, len(message), size)
+                )
+                self.assertEqual(
+                    chunked,
+                    unchunked,
+                    f"message={message!r} chunk_size={size}",
+                )
+
+
 class MyVirtualPOP3(mail.protocols.VirtualPOP3):
     """
     A virtual-domain-supporting POP3 server.

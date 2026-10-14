@@ -937,6 +937,11 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
     # None, perform no timeout checking.
     timeout = None
 
+    # Set by L{smtpState_data} at the start of each DATA phase; carried
+    # across calls to L{transformChunk} to keep dot-stuffing correct at
+    # chunk boundaries.
+    _lastChunkEndsWithNewline = False
+
     def __init__(self, identity, logsize=10):
         if isinstance(identity, str):
             identity = identity.encode("ascii")
@@ -1079,6 +1084,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
             self.sendLine(b"RCPT TO:" + quoteaddr(self.lastAddress))
 
     def smtpState_data(self, code, resp):
+        self._lastChunkEndsWithNewline = False
         s = basic.FileSender()
         d = s.beginFileTransfer(self.getMailData(), self.transport, self.transformChunk)
 
@@ -1111,9 +1117,20 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
         This method also resets the idle timeout so that as long as process is
         being made sending the message body, the client will not time out.
+
+        State from the previous chunk is tracked so that a line consisting of
+        a single C{b"."} is still escaped when the C{\\r\\n} that terminates
+        the previous line and the C{b"."} itself fall on either side of a
+        chunk boundary.  Without this, an unescaped C{\\r\\n.\\r\\n} in the
+        middle of the body would end the C{DATA} payload early and let the
+        server interpret the remainder as new commands (SMTP smuggling).
         """
         self.resetTimeout()
-        return chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        transformed = chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if self._lastChunkEndsWithNewline and transformed.startswith(b"."):
+            transformed = b"." + transformed
+        self._lastChunkEndsWithNewline = chunk.endswith(b"\n")
+        return transformed
 
     def finishedFileTransfer(self, lastsent):
         if lastsent != b"\n":
