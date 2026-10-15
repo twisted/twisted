@@ -13,9 +13,9 @@ import gc
 import io
 import os
 import socket
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from functools import wraps
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
 from unittest import skipIf
 
 from zope.interface import Interface, implementer

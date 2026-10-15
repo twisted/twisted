@@ -18,8 +18,8 @@ import os
 import re
 import socket
 import warnings
-from collections.abc import Iterable, Sequence
-from typing import Any, Callable, ClassVar, Protocol as TypingProtocol, TypeVar, Union
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, ClassVar, Protocol as TypingProtocol, TypeVar
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -747,10 +747,7 @@ _gairesult = list[
         socket.SocketKind,
         int,
         str,
-        Union[
-            tuple[str, int],
-            tuple[str, int, int, int],
-        ],
+        tuple[str, int] | tuple[str, int, int, int],
     ]
 ]
 """

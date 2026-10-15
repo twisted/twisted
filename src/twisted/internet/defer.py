@@ -14,7 +14,15 @@ import traceback
 import warnings
 from abc import ABC, abstractmethod
 from asyncio import AbstractEventLoop, Future, iscoroutine
-from collections.abc import Awaitable, Coroutine, Generator, Iterable, Mapping, Sequence
+from collections.abc import (
+    Awaitable,
+    Callable,
+    Coroutine,
+    Generator,
+    Iterable,
+    Mapping,
+    Sequence,
+)
 from contextvars import Context as _Context, copy_context as _copy_context
 from enum import Enum
 from functools import wraps
@@ -23,19 +31,19 @@ from types import CoroutineType, GeneratorType, MappingProxyType, TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
+    Concatenate,
     Generic,
     Literal,
     NoReturn,
+    TypeAlias,
     TypeVar,
-    Union,
     cast,
     overload,
 )
 
 import attr
 from incremental import Version
-from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
+from typing_extensions import ParamSpec, Self
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -319,12 +327,12 @@ _CallbackOrderedArguments: TypeAlias = tuple[object, ...]
 _CallbackKeywordArguments: TypeAlias = Mapping[str, object]
 _CallbackChain: TypeAlias = tuple[
     tuple[
-        Union[DeferredCallback, Literal[_Sentinel._CONTINUE]],
+        DeferredCallback | Literal[_Sentinel._CONTINUE],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
     ],
     tuple[
-        Union[DeferredErrback, DeferredCallback, Literal[_Sentinel._CONTINUE]],
+        DeferredErrback | DeferredCallback | Literal[_Sentinel._CONTINUE],
         _CallbackOrderedArguments,
         _CallbackKeywordArguments,
     ],

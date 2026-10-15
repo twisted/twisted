@@ -10,7 +10,8 @@ For basic support see reactor threading API docs.
 from __future__ import annotations
 
 import queue as Queue
-from typing import Callable, TypeVar, cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 from typing_extensions import ParamSpec
 
