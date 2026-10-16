@@ -1731,6 +1731,7 @@ class _ReadBodyProtocol(protocol.Protocol):
         self.status = status
         self.message = message
         self.dataBuffer = []
+        self.canceled = False
 
     def dataReceived(self, data):
         """
@@ -1752,7 +1753,13 @@ class _ReadBodyProtocol(protocol.Protocol):
                 )
             )
         else:
-            self.deferred.errback(reason)
+            if self.canceled:
+                try:
+                    self.deferred.errback(reason)
+                except defer.AlreadyCalledError:
+                    pass
+            else:
+                self.deferred.errback(reason)
 
 
 def readBody(response: IResponse) -> defer.Deferred[bytes]:
@@ -1779,6 +1786,7 @@ def readBody(response: IResponse) -> defer.Deferred[bytes]:
         abort = getAbort()
         if abort is not None:
             abort()
+        protocol.canceled = True
 
     d: defer.Deferred[bytes] = defer.Deferred(cancel)
     protocol = _ReadBodyProtocol(response.code, response.phrase, d)
