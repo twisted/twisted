@@ -8,6 +8,7 @@ Authoritative resolvers.
 
 
 import os
+import shlex
 import time
 
 from twisted.internet import defer
@@ -313,15 +314,37 @@ class BindAuthority(FileAuthority):
         """
         Strip comments from C{lines}.
 
+        Semicolons inside double-quoted strings are preserved so TXT RDATA
+        such as C{"v=spf1; include:_spf.example.com"} is not truncated.
+
         @param lines: lines to work on
         @type lines: iterable of L{bytes}
 
         @return: C{lines} sans comments.
         """
-        return (
-            a.find(b";") == -1 and a or a[: a.find(b";")]
-            for a in [b.strip() for b in lines]
-        )
+
+        def stripOne(line: bytes) -> bytes:
+            line = line.strip()
+            out = bytearray()
+            inQuotes = False
+            i = 0
+            while i < len(line):
+                c = line[i : i + 1]
+                if c == b"\\" and inQuotes and i + 1 < len(line):
+                    out.extend(line[i : i + 2])
+                    i += 2
+                    continue
+                if c == b'"':
+                    inQuotes = not inQuotes
+                    out.extend(c)
+                elif c == b";" and not inQuotes:
+                    break
+                else:
+                    out.extend(c)
+                i += 1
+            return bytes(out).strip()
+
+        return (stripped for stripped in (stripOne(b) for b in lines) if stripped)
 
     def collapseContinuations(self, lines):
         """
@@ -347,7 +370,30 @@ class BindAuthority(FileAuthority):
                     state = 0
                 else:
                     l[-1] += b" " + line
-        return filter(None, (line.split() for line in l))
+        return filter(None, (self._splitZoneWords(line) for line in l))
+
+    def _splitZoneWords(self, line):
+        """
+        Split a zone-file line into words, respecting double-quoted strings.
+
+        BIND TXT (and similar) RDATA is often written as a single quoted
+        string that contains spaces. A naive C{str.split} breaks those
+        strings into multiple tokens and leaves the quote characters in the
+        data. Use L{shlex} so a line like C{@ IN TXT "v=spf1 mx -all"}
+        yields one TXT string of C{v=spf1 mx -all}.
+
+        @param line: a single logical zone-file line (comments already
+            stripped, continuations already collapsed)
+        @type line: L{bytes}
+
+        @return: whitespace-separated words with quotes removed
+        @rtype: L{list} of L{bytes}
+        """
+        lexer = shlex.shlex(line.decode("utf-8"), posix=True)
+        lexer.whitespace_split = True
+        # Comments were already removed by L{stripComments}.
+        lexer.commenters = ""
+        return [token.encode("utf-8") for token in lexer]
 
     def parseLines(self, lines):
         """
