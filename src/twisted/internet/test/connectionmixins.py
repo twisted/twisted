@@ -157,6 +157,7 @@ def runProtocolsWithReactor(
     clientProtocol: ConnectableProtocol,
     endpointCreator: EndpointCreator,
     writeToPeerAfterAbort: bool = True,
+    reactorSetUp=lambda _: None,
 ) -> Any:
     """
     Connect two protocols using endpoints and a new reactor instance.
@@ -175,9 +176,12 @@ def runProtocolsWithReactor(
 
     @param endpointCreator: An instance of L{EndpointCreator}.
 
+    @param reactorSetUp: Callable called with the reactor as argument, after the reactor is created.
+
     @return: The reactor run by this test.
     """
     reactor = reactorBuilder.buildReactor()
+    reactorSetUp(reactor)
 
     async def steps() -> None:
         clientDone: Deferred[None] = Deferred()
