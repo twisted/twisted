@@ -62,11 +62,8 @@ class ResolverChain(common.ResolverBase):
             When the last timeout expires, the query is considered failed.
 
         @rtype: L{Deferred}
-        @return: A L{Deferred} which fires with a three-tuple of lists of
-            L{twisted.names.dns.RRHeader} instances.  The first element of the
-            tuple gives answers.  The second element of the tuple gives
-            authorities.  The third element of the tuple gives additional
-            information.  The L{Deferred} may instead fail with one of the
+        @return: A L{Deferred} which fires with L{common.ResolverResponse}.
+            The L{Deferred} may instead fail with one of the
             exceptions defined in L{twisted.names.error} or with
             C{NotImplementedError}.
         """

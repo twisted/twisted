@@ -203,13 +203,13 @@ malformed
         records from the hosts file.
         """
         d = self.resolver.lookupAddress(b"multiple")
-        answers, authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
         self.assertEqual(
-            (
+            [
                 RRHeader(b"multiple", A, IN, self.ttl, Record_A("1.1.1.3", self.ttl)),
                 RRHeader(b"multiple", A, IN, self.ttl, Record_A("1.1.1.4", self.ttl)),
-            ),
-            answers,
+            ],
+            resp.answer,
         )
 
     def test_lookupIPV6Address(self) -> None:
@@ -218,17 +218,17 @@ malformed
         with AAAA records from the hosts file.
         """
         d = self.resolver.lookupIPV6Address(b"ip6-multiple")
-        answers, authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
         self.assertEqual(
-            (
+            [
                 RRHeader(
                     b"ip6-multiple", AAAA, IN, self.ttl, Record_AAAA("::3", self.ttl)
                 ),
                 RRHeader(
                     b"ip6-multiple", AAAA, IN, self.ttl, Record_AAAA("::4", self.ttl)
                 ),
-            ),
-            answers,
+            ],
+            resp.answer,
         )
 
     def test_lookupAllRecords(self) -> None:
@@ -237,10 +237,10 @@ malformed
         with A records from the hosts file.
         """
         d = self.resolver.lookupAllRecords(b"mixed")
-        answers, authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
         self.assertEqual(
-            (RRHeader(b"mixed", A, IN, self.ttl, Record_A("1.1.1.2", self.ttl)),),
-            answers,
+            [RRHeader(b"mixed", A, IN, self.ttl, Record_A("1.1.1.2", self.ttl))],
+            resp.answer,
         )
 
     def test_notImplemented(self) -> None:
@@ -254,8 +254,8 @@ malformed
 
     def test_query(self) -> None:
         d = self.resolver.query(Query(b"EXAMPLE"))
-        [answer], authority, additional = self.successResultOf(d)
-        self.assertEqual(answer.payload.dottedQuad(), "1.1.1.1")
+        resp = self.successResultOf(d)
+        self.assertEqual(resp.answer[0].payload.dottedQuad(), "1.1.1.1")
 
     def test_lookupAddressNotFound(self) -> None:
         """
@@ -286,10 +286,10 @@ malformed
         aren't valid IP addresses.
         """
         d = self.resolver.lookupAddress(b"malformed")
-        [answer], authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
         self.assertEqual(
             RRHeader(b"malformed", A, IN, self.ttl, Record_A("1.1.1.5", self.ttl)),
-            answer,
+            resp.answer[0],
         )
 
     def test_lookupIPV6Malformed(self) -> None:
@@ -298,8 +298,8 @@ malformed
         L{hosts.Resolver.lookupIPV6Address}.
         """
         d = self.resolver.lookupIPV6Address(b"malformed")
-        [answer], authority, additional = self.successResultOf(d)
+        resp = self.successResultOf(d)
         self.assertEqual(
             RRHeader(b"malformed", AAAA, IN, self.ttl, Record_AAAA("::5", self.ttl)),
-            answer,
+            resp.answer[0],
         )
