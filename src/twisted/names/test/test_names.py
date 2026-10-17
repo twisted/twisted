@@ -1405,6 +1405,73 @@ class BindAuthorityTests(unittest.TestCase):
                 e.exception.args[0],
             )
 
+    def test_quotedTXTRecord(self):
+        """
+        Quoted TXT RDATA keeps internal spaces as a single string.
+
+        Without quote-aware splitting, C{@ IN TXT "v=spf1 mx -all"} is
+        parsed as three separate TXT strings with orphaned quote characters.
+        """
+        zone = (
+            sampleBindZone
+            + b"""
+@ IN TXT "v=spf1 mx -all"
+"""
+        )
+        auth = self.loadBindString(zone)
+        [[rr], [], []] = self.successResultOf(auth.lookupText(b"example.com"))
+        self.assertEqual(
+            dns.Record_TXT(b"v=spf1 mx -all", ttl=604800),
+            rr.payload,
+        )
+
+    def test_TXTCommentInsideQuotes(self):
+        """
+        A semicolon inside a quoted TXT string is not treated as a comment.
+        """
+        zone = (
+            sampleBindZone
+            + b"""
+@ IN TXT "v=spf1; include:_spf.example.com -all"
+"""
+        )
+        auth = self.loadBindString(zone)
+        [[rr], [], []] = self.successResultOf(auth.lookupText(b"example.com"))
+        self.assertEqual(
+            dns.Record_TXT(b"v=spf1; include:_spf.example.com -all", ttl=604800),
+            rr.payload,
+        )
+
+    def test_TXTCommentOutsideQuotes(self):
+        """
+        A semicolon outside quotes still starts a zone-file comment.
+        """
+        zone = (
+            sampleBindZone
+            + b"""
+@ IN TXT "hello world" ; trailing comment
+"""
+        )
+        auth = self.loadBindString(zone)
+        [[rr], [], []] = self.successResultOf(auth.lookupText(b"example.com"))
+        self.assertEqual(
+            dns.Record_TXT(b"hello world", ttl=604800),
+            rr.payload,
+        )
+
+    def test_TXTEscapedQuoteInsideQuotes(self):
+        """
+        Backslash-escaped quotes inside TXT RDATA are preserved.
+        """
+        # Single-quoted bytes literal so \" stays as backslash+quote in the zone.
+        zone = sampleBindZone + b'\n@ IN TXT "say \\"hi\\"; still quoted"\n'
+        auth = self.loadBindString(zone)
+        [[rr], [], []] = self.successResultOf(auth.lookupText(b"example.com"))
+        self.assertEqual(
+            dns.Record_TXT(b'say "hi"; still quoted', ttl=604800),
+            rr.payload,
+        )
+
 
 samplePySource = """\
 zone = [

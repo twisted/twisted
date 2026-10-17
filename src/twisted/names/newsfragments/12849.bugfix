@@ -1,0 +1,1 @@
+`BindAuthority` now splits zone-file lines with quote awareness (via `shlex`) and does not treat semicolons inside double-quoted TXT strings as comments, so records like `@ IN TXT "v=spf1 mx -all"` load as a single TXT string.
