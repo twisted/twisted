@@ -1473,8 +1473,6 @@ class BindAuthorityTests(unittest.TestCase):
         )
 
 
-
-
 samplePySource = """\
 zone = [
     SOA(
