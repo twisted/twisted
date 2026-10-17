@@ -1459,6 +1459,23 @@ class BindAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
+    def test_TXTEscapedQuoteInsideQuotes(self):
+        """
+        Backslash-escaped quotes inside TXT RDATA are preserved.
+        """
+        zone = (
+            sampleBindZone
+            + b"""
+@ IN TXT "say \"hi\"; still quoted"
+"""
+        )
+        auth = self.loadBindString(zone)
+        [[rr], [], []] = self.successResultOf(auth.lookupText(b"example.com"))
+        self.assertEqual(
+            dns.Record_TXT(b'say "hi"; still quoted', ttl=604800),
+            rr.payload,
+        )
+
 
 samplePySource = """\
 zone = [
