@@ -402,8 +402,7 @@ jobs:
 
 
   benchmarks:
-    # Ubuntu 26.04 is not yet supported: https://github.com/CodSpeedHQ/codspeed/issues/544
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read  # required for actions/checkout
