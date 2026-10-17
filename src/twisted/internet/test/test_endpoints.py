@@ -67,6 +67,7 @@ from twisted.internet.interfaces import (
 from twisted.internet.protocol import ClientFactory, Factory, Protocol
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
+from twisted.internet.tcp import makeBinding, makeBindingFromArg
 from twisted.internet.testing import (
     EventLoggingObserver,
     MemoryReactorClock,
@@ -1471,7 +1472,7 @@ class TCP4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -1578,7 +1579,7 @@ class TCP6EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -1625,7 +1626,7 @@ class TCP6EndpointNameResolutionTests(ClientEndpointTestCaseMixin, unittest.Test
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -2142,7 +2143,7 @@ class HostnameEndpointMemoryIPv4ReactorTests(
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -2204,7 +2205,7 @@ class HostnameEndpointMemoryIPv6ReactorTests(
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -2237,7 +2238,7 @@ class HostnameEndpointsOneIPv4Tests(ClientEndpointTestCaseMixin, unittest.TestCa
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -2435,7 +2436,7 @@ class HostnameEndpointsOneIPv6Tests(ClientEndpointTestCaseMixin, unittest.TestCa
                 address.port,
                 clientFactory,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -2826,32 +2827,117 @@ class HostnameEndpointBindAddressTypes(unittest.TestCase):
     """
 
     def setUp(self):
-        self.drr = deterministicResolvingReactor(MemoryReactor(), ["127.0.0.1"])
+        self.reactor = MemoryReactor()
+        self.drr = deterministicResolvingReactor(self.reactor, ["127.0.0.42"])
+
+    def test_binding(self):
+        ba = makeBinding("1.2.3.4", 1234)
+        ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
+        self.assertEqual(ep._bindAddress, makeBinding("1.2.3.4", 1234))
 
     def test_bytes(self):
         ba = b"1.2.3.4"
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
-        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
+        self.assertEqual(ep._bindAddress, makeBinding("1.2.3.4", 0))
 
     def test_str(self):
         ba = "1.2.3.4"
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
-        self.assertEqual(ep._bindAddress, ("1.2.3.4", 0))
+        self.assertEqual(ep._bindAddress, makeBinding("1.2.3.4", 0))
 
     def test_tuple_bytes(self):
         ba = (b"1.2.3.4", 1234)
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
-        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+        self.assertEqual(ep._bindAddress, makeBinding("1.2.3.4", 1234))
 
     def test_tuple_str(self):
         ba = ("1.2.3.4", 1234)
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
-        self.assertEqual(ep._bindAddress, ("1.2.3.4", 1234))
+        self.assertEqual(ep._bindAddress, makeBinding("1.2.3.4", 1234))
 
     def test_none(self) -> None:
         ba = None
         ep = endpoints.HostnameEndpoint(self.drr, b"example.com", 80, bindAddress=ba)
         self.assertEqual(ep._bindAddress, None)
+
+    def test_notTwoTuple(self):
+        """
+        A tuple is passed, but is not a 2-tuple
+        """
+        with self.assertRaises(ValueError) as e:
+            endpoints.HostnameEndpoint(
+                self.drr,
+                b"www.example.com",
+                80,
+                bindAddress=(b"localhost", 1234, "not a 2-tuple"),
+            )
+        self.assertIn("must be size 2", str(e.exception))
+
+    def test_portNotInt(self):
+        """
+        A 2-tuple is passed, but the port is not an integer
+        """
+        with self.assertRaises(ValueError) as e:
+            endpoints.HostnameEndpoint(
+                self.drr,
+                b"www.example.com",
+                80,
+                bindAddress=(b"localhost", "1234"),
+            )
+        self.assertIn("must contain integer port", str(e.exception))
+
+    def test_notHost(self):
+        """
+        A tuple is passed, but first element isn't a str/bytes
+        """
+        with self.assertRaises(ValueError):
+            endpoints.HostnameEndpoint(
+                self.drr, b"www.example.com", 80, bindAddress=(4321, 1234)
+            )
+
+    def test_attemptDelay(self):
+        """
+        Pass a non-default attemptDelay
+        """
+
+        # we need two results for this test
+        self.drr = deterministicResolvingReactor(
+            self.reactor, ["127.0.0.42", "127.0.0.43"]
+        )
+
+        fac = Factory.forProtocol(Protocol)
+        self.reactor.listenTCP(80, fac)
+
+        class Attempts(Factory):
+            instances = []
+
+            def buildProtocol(self, addr):
+                self.instances.append(Protocol())
+                return self.instances[-1]
+
+        ep = endpoints.HostnameEndpoint(
+            self.drr,
+            b"example.com",
+            80,
+            attemptDelay=12.5,
+        )
+        attempts = Attempts()
+        ep.connect(attempts)
+
+        comp = ConnectionCompleter(self.reactor)
+
+        assert len(Attempts.instances) == 0
+        comp.failOnce()
+
+        # one connection has already failed, but we shouldn't attempt
+        # the next one until our 12.5s delay expires
+        self.reactor.advance(6.0)
+        assert len(Attempts.instances) == 0
+
+        self.reactor.advance(7.0)
+        # now the delay has passed, so we should be trying again
+        comp.succeedOnce()
+        assert len(Attempts.instances) == 1
 
 
 @skipIf(skipSSL, skipSSLReason)
@@ -2993,7 +3079,7 @@ class SSL4EndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 clientFactory,
                 self.clientSSLContext,
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -3222,7 +3308,7 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
                 address.port,
                 TLSWrapperFactoryChecker(self, clientFactory),
                 connectArgs.get("timeout", 30),
-                connectArgs.get("bindAddress", None),
+                makeBindingFromArg(connectArgs.get("bindAddress", None)),
             ),
             address,
         )
@@ -4082,7 +4168,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
-        self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
+        self.assertEqual(client._bindAddress, makeBinding("10.0.0.3", 0))
         certOptions = client._sslContextFactory
         self.assertIsInstance(certOptions, CertificateOptions)
         self.assertEqual(certOptions.method, TLS_METHOD)
@@ -4134,7 +4220,7 @@ class SSLClientStringTests(unittest.TestCase):
         self.assertEqual(client._host, "example.net")
         self.assertEqual(client._port, 4321)
         self.assertEqual(client._timeout, 3)
-        self.assertEqual(client._bindAddress, ("10.0.0.3", 0))
+        self.assertEqual(client._bindAddress, makeBinding("10.0.0.3", 0))
 
     def test_sslWithDefaults(self):
         """
@@ -4761,7 +4847,7 @@ class WrapClientTLSParserTests(unittest.TestCase):
         self.assertEqual(hostnameEndpoint._hostBytes, b"example.com")
         self.assertEqual(hostnameEndpoint._port, 443)
         self.assertEqual(hostnameEndpoint._timeout, 10)
-        self.assertEqual(hostnameEndpoint._bindAddress, ("127.0.0.1", 0))
+        self.assertEqual(hostnameEndpoint._bindAddress, makeBinding("127.0.0.1", 0))
 
     def test_hostnameEndpointConstructionNoParameters(self) -> None:
         """
@@ -4831,8 +4917,8 @@ class WrapClientTLSParserTests(unittest.TestCase):
         )
         d = endpoint.connect(Factory.forProtocol(Protocol))
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop()
-        self.assertIs(type(bindAddress), tuple)
-        self.assertEqual(bindAddress, ("127.0.0.1", 0))
+        self.assertIs(type(bindAddress), interfaces._Binding)
+        self.assertEqual(bindAddress, makeBinding("127.0.0.1", 0))
         clientProtocol = factory.buildProtocol(None)
         self.assertNoResult(d)
         assert clientProtocol is not None
