@@ -57,7 +57,6 @@ from twisted.internet.interfaces import (
     _Binding,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
-from twisted.internet.tcp import makeBinding
 
 try:
     from twisted.internet.stdio import PipeAddress, StandardIO
@@ -932,28 +931,12 @@ class HostnameEndpoint:
         self._port = port
         self._timeout = timeout
 
-        self._bindAddress = None
-        if bindAddress is None:
-            pass
-        elif isinstance(bindAddress, _Binding):
-            self._bindAddress = bindAddress
-        elif isinstance(bindAddress, bytes):
-            self._bindAddress = makeBinding(bindAddress.decode(), 0)
-        elif isinstance(bindAddress, str):
-            self._bindAddress = makeBinding(bindAddress, 0)
-        else:  # must be tuple, according to type-hints
-            if len(bindAddress) != 2:
-                raise ValueError("tuple passed to bindAddress must be size 2")
-            if not isinstance(bindAddress[1], int):
-                raise ValueError("bindAddress tuple must contain integer port")
+        if bindAddress is not None and not isinstance(bindAddress, _Binding):
+            if isinstance(bindAddress, (bytes, str)):
+                bindAddress = (bindAddress, 0)
             if isinstance(bindAddress[0], bytes):
-                self._bindAddress = makeBinding(bindAddress[0].decode(), bindAddress[1])
-            elif isinstance(bindAddress[0], str):
-                self._bindAddress = makeBinding(bindAddress[0], bindAddress[1])
-            else:
-                raise ValueError(
-                    "bindAddress tuple must contain host as first argument"
-                )
+                bindAddress = (bindAddress[0].decode(), bindAddress[1])
+        self._bindAddress = bindAddress
         if attemptDelay is None:
             attemptDelay = self._DEFAULT_ATTEMPT_DELAY
         self._attemptDelay = attemptDelay
@@ -1310,9 +1293,7 @@ class SSL4ClientEndpoint:
         self._port = port
         self._sslContextFactory = sslContextFactory
         self._timeout = timeout
-        self._bindAddress = (
-            makeBinding() if bindAddress is None else makeBinding(*bindAddress)
-        )
+        self._bindAddress = bindAddress
 
     def connect(self, protocolFactory):
         """

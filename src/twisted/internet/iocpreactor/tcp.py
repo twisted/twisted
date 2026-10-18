@@ -33,12 +33,10 @@ from twisted.internet.tcp import (
     _AbortingMixin,
     _BaseBaseClient,
     _BaseTCPClient,
-    _Binding,
     _constructTCPPort,
     _getsockname,
     _resolveIPv6,
     _SocketCloser,
-    makeBinding,
 )
 from twisted.python import failure, log, reflect
 
@@ -268,15 +266,7 @@ class Client(_BaseBaseClient, _BaseTCPClient, Connection):
     def __init__(self, host, port, bindAddress, connector, reactor):
         # ConnectEx documentation says socket _has_ to be bound
         if bindAddress is None:
-            bindAddress = makeBinding("", 0)
-        elif isinstance(bindAddress, tuple):
-            bindAddress = makeBinding(*bindAddress)
-        else:
-            assert isinstance(
-                bindAddress, _Binding
-            ), "bindAddress must be None, 2-tuple or Binding"
-        # bindAddress is a Binding, str, tuple or None .. so must be a
-        # Binding here if none of the above "if" checks hit
+            bindAddress = ("", 0)
         self.reactor = reactor  # createInternetSocket needs this
         _BaseTCPClient.__init__(self, host, port, bindAddress, connector, reactor)
 

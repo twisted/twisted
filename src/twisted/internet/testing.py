@@ -19,7 +19,7 @@ from zope.interface.verify import verifyClass
 
 from typing_extensions import ParamSpec, Self
 
-from twisted.internet import address, error, protocol, task, tcp
+from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
 from twisted.internet.address import IPv4Address, IPv6Address, UNIXAddress
 from twisted.internet.defer import Deferred, ensureDeferred, succeed
@@ -737,8 +737,7 @@ class MemoryReactor:
         Fake L{IReactorTCP.connectTCP}, that logs the call and
         returns an L{IConnector}.
         """
-        bind = tcp.makeBindingFromArg(bindAddress)
-        self.tcpClients.append((host, port, factory, timeout, bind))
+        self.tcpClients.append((host, port, factory, timeout, bindAddress))
         if isIPv6Address(host):
             conn = _FakeConnector(IPv6Address("TCP", host, port))
         else:

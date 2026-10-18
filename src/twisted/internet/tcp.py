@@ -235,22 +235,6 @@ def makeBinding(
 # see https://github.com/twisted/twisted/issues/12677
 
 
-def makeBindingFromArg(arg: Binding | tuple[str, int] | None) -> Binding:
-    """
-    Convert a L{bindAddress} argument into a canonical L{Binding}
-    form.
-    """
-    if isinstance(arg, tuple):
-        bind = makeBinding(arg[0], arg[1])
-    elif arg is None:
-        bind = makeBinding("", 0)
-    else:
-        # not a tuple or None so it must be a Binding
-        addr = "" if arg._address is None else arg._address
-        bind = makeBinding(addr, arg._port, arg._reuseAddress, arg._reusePort)
-    return bind
-
-
 @implementer(ITLSTransport, ITCPTransport, ISystemHandle)
 class Connection(
     _TLSConnectionMixin, abstract.FileDescriptor, _SocketCloser, _AbortingMixin
@@ -793,13 +777,15 @@ class _BaseTCPClient:
             err = error.ConnectBindError(se.args[0], se.args[1])
             whenDone = None
         if whenDone and bindAddress is not None:
-            assert isinstance(bindAddress, _Binding)
-            if bindAddress._reuseAddress:
-                skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            if platformType == "posix" and sys.platform != "cygwin":
-                if bindAddress._reusePort:
-                    skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
             try:
+                if isinstance(bindAddress, tuple):
+                    bindAddress = makeBinding(*bindAddress)
+                assert isinstance(bindAddress, _Binding)
+                if bindAddress._reuseAddress:
+                    skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                if platformType == "posix" and sys.platform != "cygwin":
+                    if bindAddress._reusePort:
+                        skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
                 if abstract.isIPv6Address(bindAddress._address):
                     bindinfo = _resolveIPv6(bindAddress._address, bindAddress._port)
                 else:

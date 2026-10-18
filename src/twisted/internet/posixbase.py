@@ -375,8 +375,7 @@ class PosixReactorBase(_DisconnectSelectableMixin, ReactorBase):
         timeout: float = 30.0,
         bindAddress: Binding | tuple[str, int] | None = None,
     ) -> IConnector:
-        bind = tcp.makeBindingFromArg(bindAddress)
-        c = tcp.Connector(host, port, factory, timeout, bind, self)
+        c = tcp.Connector(host, port, factory, timeout, bindAddress, self)
         c.connect()
         return c
 

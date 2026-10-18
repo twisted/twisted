@@ -31,7 +31,6 @@ from twisted.internet.error import (
 from twisted.internet.interfaces import IOpenSSLClientConnectionCreator
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.task import Clock
-from twisted.internet.tcp import makeBinding
 from twisted.internet.test.test_endpoints import deterministicResolvingReactor
 from twisted.internet.testing import (
     AccumulatingProtocol,
@@ -1256,7 +1255,7 @@ class AgentTests(
         agent = client.Agent(self.reactor, bindAddress="192.168.0.1")
         agent.request(b"GET", b"http://foo/")
         address = self.reactor.tcpClients.pop()[4]
-        self.assertEqual(makeBinding("192.168.0.1", 0), address)
+        self.assertEqual(("192.168.0.1", 0), address)
 
     @skipIf(not sslPresent, "SSL not present, cannot run SSL tests.")
     def test_bindAddressSSL(self):
@@ -1267,7 +1266,7 @@ class AgentTests(
         agent = client.Agent(self.reactor, bindAddress="192.168.0.1")
         agent.request(b"GET", b"https://foo/")
         address = self.reactor.tcpClients.pop()[4]
-        self.assertEqual(makeBinding("192.168.0.1", 0), address)
+        self.assertEqual(("192.168.0.1", 0), address)
 
     def test_responseIncludesRequest(self):
         """
