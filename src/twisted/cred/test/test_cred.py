@@ -17,7 +17,7 @@ from twisted.python.versions import Version
 from twisted.trial import unittest
 
 try:
-    from crypt import crypt as _crypt
+    from crypt import crypt as _crypt  # type: ignore[import-not-found]
 except ImportError:
     crypt = None
 else:
@@ -266,7 +266,7 @@ class HashedPasswordOnDiskDatabaseTests(unittest.TestCase):
 
     def hash(self, u: bytes, p: bytes, s: bytes) -> bytes:
         hashed_password = crypt(p.decode("ascii"), s.decode("ascii"))  # type: ignore[misc]
-        return hashed_password.encode("ascii")
+        return hashed_password.encode("ascii")  # type: ignore[no-any-return]
 
     def testGoodCredentials(self):
         goodCreds = [credentials.UsernamePassword(u, p) for u, p in self.users]

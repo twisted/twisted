@@ -26,6 +26,7 @@ import os
 import signal
 import stat
 import sys
+from collections.abc import Callable
 from unittest import SkipTest, skipIf
 
 try:
@@ -704,10 +705,14 @@ class TwoProcessProtocol(protocol.ProcessProtocol):
     finished = 0
 
     def __init__(self):
+        self.startedDeferred = defer.Deferred()
         self.deferred = defer.Deferred()
 
     def outReceived(self, data):
-        pass
+        if not self.startedDeferred.called:
+            # Run callback only once.
+            # This is used to detect when data starts arriving through stdout
+            self.startedDeferred.callback(None)
 
     def processEnded(self, reason):
         self.finished = 1
@@ -748,13 +753,23 @@ class TestTwoProcessesBase:
     def _onClose(self):
         return defer.gatherResults([p.deferred for p in self.pp])
 
-    def test_close(self):
+    async def _terminateProcesses(self, terminate: Callable[[int], None]) -> None:
+        """
+        Wait for both processes to start, then terminate them one at a time.
+        """
+        await defer.gatherResults([p.startedDeferred for p in self.pp])
+
+        terminate(0)
+        await self.pp[0].deferred
+
+        terminate(1)
+        await self.pp[1].deferred
+
+    async def test_close(self) -> None:
         if self.verbose:
             print("starting processes")
         self.createProcesses()
-        reactor.callLater(1, self.close, 0)
-        reactor.callLater(2, self.close, 1)
-        return self._onClose()
+        await self._terminateProcesses(self.close)
 
 
 @skipIf(runtime.platform.getType() != "win32", "Only runs on Windows")
@@ -793,29 +808,23 @@ class TwoProcessesPosixTests(TestTwoProcessesBase, unittest.TestCase):
         if self.verbose:
             print(self.pp[0].finished, self.pp[1].finished)
 
-    def test_kill(self):
+    async def test_kill(self) -> None:
         if self.verbose:
             print("starting processes")
         self.createProcesses(usePTY=0)
-        reactor.callLater(1, self.kill, 0)
-        reactor.callLater(2, self.kill, 1)
-        return self._onClose()
+        await self._terminateProcesses(self.kill)
 
-    def test_closePty(self):
+    async def test_closePty(self) -> None:
         if self.verbose:
             print("starting processes")
         self.createProcesses(usePTY=1)
-        reactor.callLater(1, self.close, 0)
-        reactor.callLater(2, self.close, 1)
-        return self._onClose()
+        await self._terminateProcesses(self.close)
 
-    def test_killPty(self):
+    async def test_killPty(self) -> None:
         if self.verbose:
             print("starting processes")
         self.createProcesses(usePTY=1)
-        reactor.callLater(1, self.kill, 0)
-        reactor.callLater(2, self.kill, 1)
-        return self._onClose()
+        await self._terminateProcesses(self.kill)
 
 
 class FDChecker(protocol.ProcessProtocol):
@@ -918,15 +927,20 @@ class FDTests(unittest.TestCase):
         # See what happens when all the pipes close before the process
         # actually stops. This test *requires* SIGCHLD catching to work,
         # as there is no other way to find out the process is done.
+        class LingerAccumulator(Accumulator):
+            def outConnectionLost(self) -> None:
+                assert self.transport is not None
+                self.transport.closeStdin()
+
         scriptPath = b"twisted.test.process_linger"
-        p = Accumulator()
+        p = LingerAccumulator()
         d = p.endedDeferred = defer.Deferred()
         reactor.spawnProcess(
             p,
             pyExe,
             [pyExe, b"-u", b"-m", scriptPath],
             env=properEnv,
-            childFDs={1: "r", 2: 2},
+            childFDs={0: "w", 1: "r", 2: 2},
         )
 
         def processEnded(ign):

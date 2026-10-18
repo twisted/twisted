@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, NewType, cast
 
 from zope.interface import classImplements, implementer
 
-from twisted.internet import abstract, defer, error, fdesc, main, threads
+from twisted.internet import abstract, defer, error, main, threads
 from twisted.internet._resolver import (
     ComplexResolverSimplifier as _ComplexResolverSimplifier,
     GAIResolver as _GAIResolver,
@@ -1326,7 +1326,6 @@ class BasePort(abstract.FileDescriptor):
     def createInternetSocket(self) -> socket.socket:
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(False)
-        fdesc._setCloseOnExec(s.fileno())
         return s
 
     def doWrite(self) -> Failure | None:

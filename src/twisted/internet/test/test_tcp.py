@@ -2735,6 +2735,7 @@ class AdoptStreamConnectionTestsBuilder(
         client.protocolConnectionLost = Deferred()
 
         port = reactor.listenTCP(0, firstServer, interface=interface)
+        self.addCleanup(port.stopListening)
 
         def firtServerConnected(proto):
             reactor.removeReader(proto.transport)
@@ -2742,6 +2743,7 @@ class AdoptStreamConnectionTestsBuilder(
             reactor.adoptStreamConnection(
                 proto.transport.fileno(), addressFamily, server
             )
+            proto.transport.socket.close()
 
         firstServer.protocolConnectionMade.addCallback(firtServerConnected)
 

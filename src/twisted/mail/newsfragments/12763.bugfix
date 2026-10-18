@@ -1,0 +1,1 @@
+twisted.mail.imap4.IMAP4Server now rejects a SEARCH command containing a literal with a negative octet count, so an authenticated client can no longer freeze the server with a crafted command.

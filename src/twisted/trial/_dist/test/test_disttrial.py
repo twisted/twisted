@@ -114,7 +114,6 @@ class CountingReactor(MemoryReactorClock):
 
         @param workerProto: See L{IReactorProcess.spawnProcess}.
         @param args: See L{IReactorProcess.spawnProcess}.
-        @param kwargs: See L{IReactorProcess.spawnProcess}.
         """
         self._workers.append(workerProto)
         workerProto.makeConnection(FakeTransport())
