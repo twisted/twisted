@@ -1,0 +1,1 @@
+twisted.names.authority.FileAuthority no longer returns records which are outside the SOA, even if they are present in the initializer file.
