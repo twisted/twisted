@@ -1292,12 +1292,7 @@ def _accept(logger, accepts, listener, reservedFD):
 
 def _constructTCPPort(self, port, factory, backlog, interface):
     binding = port
-    if port is None:
-        # what does port of "None" really mean? socket.bind()
-        # doesn't say and it gets called like this below in
-        # _fromListeningDescriptor
-        binding = makeBinding(interface, port, reuseAddress=True)
-    if isinstance(binding, int):
+    if port is None or isinstance(port, int):
         binding = makeBinding(interface, port, reuseAddress=True)
     else:
         assert isinstance(binding, _Binding), "Binding is {}".format(binding)
