@@ -134,6 +134,39 @@ class FileAuthority(common.ResolverBase):
                             name, rec.TYPE, dns.IN, rec.ttl or ttl, rec, auth=True
                         )
 
+    def _isBelowDelegation(self, name):
+        """
+        Determine whether C{name} falls below a delegation point (zone cut)
+        within this zone.
+
+        A name is below a delegation if any of its ancestor names (within
+        this zone) has NS records that are not at the zone apex. Per
+        RFC 2181 \u00a76.1, such names belong to the delegated child zone.
+
+        @param name: The DNS name to check.
+        @type name: L{bytes}
+
+        @return: A L{bytes} delegation point name if C{name} is below a
+            delegation, otherwise L{None}.
+        @rtype: L{bytes} or L{None}
+        """
+        labels = dns._nameToLabels(name.lower())
+        soa_labels = dns._nameToLabels(self.soa[0].lower())
+        soa_len = len(soa_labels)
+
+        # Walk up from the queried name toward the zone apex, checking each
+        # ancestor for NS records that indicate a delegation.
+        for i in range(1, len(labels) - soa_len + 1):
+            ancestor = b".".join(labels[i:-1])
+            if ancestor == self.soa[0].lower():
+                break
+            ancestor_records = self.records.get(ancestor)
+            if ancestor_records:
+                for rec in ancestor_records:
+                    if rec.TYPE == dns.NS:
+                        return ancestor
+        return None
+
     def _lookup(self, name, cls, type, timeout=None):
         """
         Determine a response to a particular DNS query.
@@ -158,6 +191,38 @@ class FileAuthority(common.ResolverBase):
             I{additional} sections of a DNS response) or with a L{Failure} if
             there is a problem processing the query.
         """
+        # Check if the name falls below a known delegation point.
+        # Per RFC 2181 \u00a76.1, a server must not answer authoritatively
+        # for names in a delegated child zone.
+        delegation_point = self._isBelowDelegation(name)
+
+        if delegation_point is not None:
+            # Return a referral: NS records in authority, no answers.
+            default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+            authority_records = self.records.get(delegation_point, ())
+            authority = []
+            additional = []
+            for record in authority_records:
+                if record.ttl is not None:
+                    ttl = record.ttl
+                else:
+                    ttl = default_ttl
+                if record.TYPE == dns.NS:
+                    authority.append(
+                        dns.RRHeader(
+                            delegation_point,
+                            record.TYPE,
+                            dns.IN,
+                            ttl,
+                            record,
+                            auth=False,
+                        )
+                    )
+            # Additional processing for NS records (A/AAAA glue).
+            additionalInformation = self._additionalRecords([], authority, default_ttl)
+            additional.extend(additionalInformation)
+            return defer.succeed(([], authority, additional))
+
         cnames = []
         results = []
         authority = []
@@ -213,9 +278,7 @@ class FileAuthority(common.ResolverBase):
             return defer.succeed((results, authority, additional))
         else:
             if dns._isSubdomainOf(name, self.soa[0]):
-                # We may be the authority and we didn't find it.
-                # XXX: The QNAME may also be in a delegated child zone. See
-                # #6581 and #6580
+                # We are the authority and we didn't find it.
                 return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
             else:
                 # The QNAME is not a descendant of this zone. Fail with

@@ -1,0 +1,1 @@
+twisted.names authority now returns a referral (instead of an authoritative answer) for queries targeting names below a delegation point, as required by RFC 2181 section 6.1.
