@@ -6,7 +6,6 @@ Positioning interfaces.
 @since: 14.0
 """
 
-
 from zope.interface import Attribute, Interface
 
 
@@ -88,12 +87,10 @@ class IPositioningBeacon(Interface):
     A positioning beacon.
     """
 
-    identifier = Attribute(
-        """
+    identifier = Attribute("""
         A unique identifier for this beacon. The type is dependent on the
         implementation, but must be immutable.
-        """
-    )
+        """)
 
 
 class INMEAReceiver(Interface):

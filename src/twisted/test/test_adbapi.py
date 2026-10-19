@@ -4,6 +4,7 @@
 """
 Tests for twisted.enterprise.adbapi.
 """
+
 from __future__ import annotations
 
 import os

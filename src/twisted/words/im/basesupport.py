@@ -7,6 +7,7 @@
 
 You will find these useful if you're adding a new protocol to IM.
 """
+
 from twisted.internet import error
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.persisted import styles

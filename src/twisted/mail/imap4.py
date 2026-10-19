@@ -14,6 +14,7 @@ To do::
   Clarify some API docs (Query, etc)
   Make APPEND recognize (again) non-existent mailboxes before accepting the literal
 """
+
 from __future__ import annotations
 
 import binascii
@@ -798,7 +799,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             handler(*args)
 
     def __cbDispatch(self, result, tag, fn, args, parseargs, uid):
-        (arg, rest) = result
+        arg, rest = result
         args.append(arg)
         self.__doCommand(tag, fn, args, parseargs, rest, uid)
 
@@ -1181,7 +1182,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
             )
 
     def __cbAuthResp(self, result, tag):
-        (iface, avatar, logout) = result
+        iface, avatar, logout = result
         assert iface is IAccount, "IAccount is the only supported interface"
         self.account = avatar
         self.state = "auth"
@@ -1255,7 +1256,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         raise UnauthorizedLogin()
 
     def __cbLogin(self, result, tag):
-        (iface, avatar, logout) = result
+        iface, avatar, logout = result
         if iface is not IAccount:
             self.sendBadResponse(tag, b"Server error: login returned unexpected value")
             log.err(f"__cbLogin called with {iface!r}, IAccount expected")
@@ -1891,7 +1892,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         number of a message in the mailbox.  The I{last message id} is an
         L{int} containing the highest UID of a message in the mailbox.
         """
-        (lastSequenceId, lastMessageId) = lastIDs
+        lastSequenceId, lastMessageId = lastIDs
         return not self._singleSearchStep(query, id, msg, lastSequenceId, lastMessageId)
 
     def search_OLD(self, query, id, msg):
@@ -1921,7 +1922,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         number of a message in the mailbox.  The I{last message id} is an
         L{int} containing the highest UID of a message in the mailbox.
         """
-        (lastSequenceId, lastMessageId) = lastIDs
+        lastSequenceId, lastMessageId = lastIDs
         a = self._singleSearchStep(query, id, msg, lastSequenceId, lastMessageId)
         b = self._singleSearchStep(query, id, msg, lastSequenceId, lastMessageId)
         return a or b
@@ -2022,7 +2023,7 @@ class IMAP4Server(basic.LineReceiver, policies.TimeoutMixin):
         number of a message in the mailbox.  The I{last message id} is an
         L{int} containing the highest UID of a message in the mailbox.
         """
-        (lastSequenceId, lastMessageId) = lastIDs
+        lastSequenceId, lastMessageId = lastIDs
         c = query.pop(0)
         m = parseIdList(c, lastMessageId)
         return msg.getUID() in m
@@ -2753,7 +2754,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbCapabilities(self, result):
-        (lines, tagline) = result
+        lines, tagline = result
         caps = {}
         for rest in lines:
             for cap in rest[1:]:
@@ -2788,7 +2789,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbLogout(self, result):
-        (lines, tagline) = result
+        lines, tagline = result
         self.transport.loseConnection()
         # We don't particularly care what the server said
         return None
@@ -2810,7 +2811,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
     def __cbNoop(self, result):
         # Conceivable, this is elidable.
         # It is, afterall, a no-op.
-        (lines, tagline) = result
+        lines, tagline = result
         return lines
 
     def startTLS(self, contextFactory=None):
@@ -3034,7 +3035,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbNamespace(self, result):
-        (lines, last) = result
+        lines, last = result
 
         # Namespaces and their delimiters qualify and delimit
         # mailboxes, so they should be native strings
@@ -3052,9 +3053,13 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         for parts in lines:
             if len(parts) == 4 and parts[0] == b"NAMESPACE":
                 return [
-                    []
-                    if pairOrNone is None
-                    else [_prepareNamespaceOrDelimiter(value) for value in pairOrNone]
+                    (
+                        []
+                        if pairOrNone is None
+                        else [
+                            _prepareNamespaceOrDelimiter(value) for value in pairOrNone
+                        ]
+                    )
                     for pairOrNone in parts[1:]
                 ]
         log.err("No NAMESPACE response to NAMESPACE command")
@@ -3164,7 +3169,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
 
         See RFC 3501, section 6.3.1.
         """
-        (lines, tagline) = result
+        lines, tagline = result
         # In the absence of specification, we are free to assume:
         #   READ-WRITE access
         datum = {"READ-WRITE": rw}
@@ -3359,7 +3364,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbList(self, result, command):
-        (lines, last) = result
+        lines, last = result
         results = []
 
         for parts in lines:
@@ -3432,7 +3437,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbStatus(self, result):
-        (lines, last) = result
+        lines, last = result
         status = {}
         for parts in lines:
             if parts[0] == b"STATUS":
@@ -3561,7 +3566,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbExpunge(self, result):
-        (lines, last) = result
+        lines, last = result
         ids = []
         for parts in lines:
             if len(parts) == 2 and parts[1] == b"EXPUNGE":
@@ -3597,7 +3602,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return d
 
     def __cbSearch(self, result):
-        (lines, end) = result
+        lines, end = result
         ids = []
         for parts in lines:
             if len(parts) > 0 and parts[0] == b"SEARCH":
@@ -4060,7 +4065,7 @@ class IMAP4Client(basic.LineReceiver, policies.TimeoutMixin):
         return values, unstructured
 
     def _cbFetch(self, result, requestedParts, structured):
-        (lines, last) = result
+        lines, last = result
         info = {}
         for parts in lines:
             if len(parts) == 3 and parts[1] == b"FETCH":

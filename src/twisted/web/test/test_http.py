@@ -15,8 +15,7 @@ from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from unittest import skipIf
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from urllib.parse import urlparse, urlunsplit
+from urllib.parse import clear_cache, urlparse, urlunsplit  # type: ignore[attr-defined]
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
@@ -2443,15 +2442,12 @@ GET /?key=value&multiple=two+words&multiple=more%20words&empty= HTTP/1.0
         from the C{content} attribute.
         """
         query = "key=value&multiple=two+words&multiple=more%20words&empty="
-        httpRequest = networkString(
-            """\
+        httpRequest = networkString("""\
 POST / HTTP/1.0
 Content-Length: %d
 Content-Type: application/x-www-form-urlencoded
 
-%s"""
-            % (len(query), query)
-        )
+%s""" % (len(query), query))
 
         method = []
         args = []
@@ -3912,7 +3908,7 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         factory = http.HTTPFactory()
         factory.timeOut = None
         factory._logDateTime = "sometime"
-        factory._logDateTimeCall = True  # type:ignore
+        factory._logDateTimeCall = True  # type: ignore
 
         # Here we are asserting a few legacy / compatibility features of the
         # writable logFile attribute, which used to be effectively an

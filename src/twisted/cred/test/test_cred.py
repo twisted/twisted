@@ -5,7 +5,6 @@
 Tests for L{twisted.cred}, now with 30% more starch.
 """
 
-
 from binascii import hexlify, unhexlify
 
 from zope.interface import Interface, implementer

@@ -6,7 +6,6 @@
 Interfaces related to threads.
 """
 
-
 from typing import Callable
 
 from zope.interface import Interface

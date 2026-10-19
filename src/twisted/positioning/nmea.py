@@ -19,7 +19,6 @@ U{http://www.nmea.org/content/nmea_standards/nmea_0183_v_410.asp}.
 @since: 14.0
 """
 
-
 import datetime
 import operator
 from functools import reduce

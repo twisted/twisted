@@ -6,7 +6,6 @@
 I contain PythonScript, which is a very simple python script resource.
 """
 
-
 import os
 import traceback
 from io import StringIO

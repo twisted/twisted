@@ -5,6 +5,7 @@
 Benchmark for SSH connection setup between a Conch client and server using RSA
 keys.
 """
+
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.conch.ssh.transport import SSHClientTransport

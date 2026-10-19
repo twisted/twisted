@@ -5,7 +5,6 @@
 Tests L{twisted.web.client} helper APIs
 """
 
-
 from urllib.parse import urlparse
 
 from twisted.trial import unittest

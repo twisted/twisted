@@ -5,6 +5,7 @@
 """
 Tests for L{twisted.python.url}.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -77,8 +78,7 @@ _percentenc = lambda s: "".join("%%%02X" % ord(c) for c in s)
 
 class _HasException(Protocol):
     @property
-    def exception(self) -> BaseException:
-        ...
+    def exception(self) -> BaseException: ...
 
 
 class TestURL(SynchronousTestCase):

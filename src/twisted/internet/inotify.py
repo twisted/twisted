@@ -37,7 +37,6 @@ converting from a L{bytes} path name to a L{str} path name.
 @since: 10.1
 """
 
-
 import os
 import struct
 

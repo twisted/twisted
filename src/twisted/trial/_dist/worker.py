@@ -8,6 +8,7 @@ This module implements the worker classes.
 
 @since: 12.3
 """
+
 from __future__ import annotations
 
 import os

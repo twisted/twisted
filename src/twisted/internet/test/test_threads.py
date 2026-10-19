@@ -5,7 +5,6 @@
 Tests for implementations of L{IReactorThreads}.
 """
 
-
 import gc
 import threading
 from weakref import ref

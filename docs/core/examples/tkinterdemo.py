@@ -12,7 +12,6 @@ Run this example by typing in:
  python tkinterdemo.py
 """
 
-
 from tkinter import LEFT, Button, Frame, Tk
 
 from twisted.internet import reactor, tksupport
