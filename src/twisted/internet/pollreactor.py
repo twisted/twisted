@@ -11,7 +11,6 @@ listeners or connectors are added)::
     pollreactor.install()
 """
 
-
 # System imports
 import errno
 from select import (

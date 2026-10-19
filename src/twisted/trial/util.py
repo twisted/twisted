@@ -17,6 +17,7 @@ Maintainer: Jonathan Lange
 @var DEFAULT_TIMEOUT_DURATION: The default timeout which will be applied to
     asynchronous (ie, Deferred-returning) test methods, in seconds.
 """
+
 from __future__ import annotations
 
 from random import randrange

@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.stdio}.
 """
 
-
 from twisted.internet.interfaces import IReactorCore
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.internet.test.reactormixins import ReactorBuilder

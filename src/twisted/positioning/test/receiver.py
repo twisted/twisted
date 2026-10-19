@@ -4,7 +4,6 @@
 Receivers for use in tests.
 """
 
-
 from twisted.positioning import base, ipositioning
 
 

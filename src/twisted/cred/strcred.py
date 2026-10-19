@@ -13,6 +13,7 @@ Examples:
  - memory:admin:asdf:user:lkj
  - unix
 """
+
 from __future__ import annotations
 
 import sys

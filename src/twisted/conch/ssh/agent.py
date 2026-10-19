@@ -9,7 +9,6 @@ U{PROTOCOL.agent<http://www.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.
 Maintainer: Paul Swartz
 """
 
-
 import struct
 
 from twisted.conch.error import ConchError, MissingKeyStoreError

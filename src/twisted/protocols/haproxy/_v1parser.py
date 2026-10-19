@@ -6,6 +6,7 @@
 """
 IProxyParser implementation for version one of the PROXY protocol.
 """
+
 from __future__ import annotations
 
 from zope.interface import implementer

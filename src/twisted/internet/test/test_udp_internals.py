@@ -4,6 +4,7 @@
 """
 Tests for the internal implementation details of L{twisted.internet.udp}.
 """
+
 from __future__ import annotations
 
 import socket

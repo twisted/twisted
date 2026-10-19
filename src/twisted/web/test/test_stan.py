@@ -6,7 +6,6 @@ Tests for L{twisted.web._stan} portion of the L{twisted.web.template}
 implementation.
 """
 
-
 import sys
 from typing import NoReturn
 

@@ -142,7 +142,7 @@ class ChannelTests(TestCase):
         self.assertIsNone(c.avatar)
 
         # Just testing argument order with garbage values; types ignored.
-        c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)  # type:ignore[arg-type]
+        c2 = channel.SSHChannel(1, 2, 3, 4, 5, 6, 7)  # type: ignore[arg-type]
         self.assertEqual(c2.localWindowSize, 1)
         self.assertEqual(c2.localWindowLeft, 1)
         self.assertEqual(c2.localMaxPacket, 2)

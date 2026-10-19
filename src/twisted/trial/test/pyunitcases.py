@@ -6,6 +6,7 @@ Sample test cases defined using the standard library L{unittest.TestCase}
 class which are used as data by test cases which are actually part of the
 trial test suite to verify handling of handling of such cases.
 """
+
 from __future__ import annotations
 
 import unittest

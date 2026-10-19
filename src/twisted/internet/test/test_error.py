@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.error}
 """
 
-
 from twisted.internet import error
 from twisted.trial.unittest import SynchronousTestCase
 

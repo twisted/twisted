@@ -5,7 +5,6 @@
 Credential managers for L{twisted.mail}.
 """
 
-
 import hashlib
 import hmac
 

@@ -6,7 +6,6 @@
 Tests for twisted.names.dns.
 """
 
-
 import struct
 from io import BytesIO
 
@@ -1450,7 +1449,7 @@ class DatagramProtocolTests(unittest.SynchronousTestCase):
         def writeError(packet: bytes, addr: tuple[str, int] | None = None) -> None:
             raise RuntimeError("bar")
 
-        self.proto.transport.write = writeError  # type:ignore[method-assign]
+        self.proto.transport.write = writeError  # type: ignore[method-assign]
 
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])
         self.failureResultOf(d, RuntimeError)
@@ -1465,7 +1464,7 @@ class DatagramProtocolTests(unittest.SynchronousTestCase):
         def startListeningError() -> None:
             raise CannotListenError(None, None, None)
 
-        self.proto.startListening = startListeningError  # type:ignore[method-assign]
+        self.proto.startListening = startListeningError  # type: ignore[method-assign]
         # Clean up transport so that the protocol calls startListening again
         del self.proto.transport
         d = self.proto.query(("127.0.0.1", 21345), [dns.Query(b"foo")])

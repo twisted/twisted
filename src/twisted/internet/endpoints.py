@@ -127,8 +127,7 @@ _R = TypeVar("_R")
 class _DeferToThreadFunction(TypingProtocol):
     def __call__(
         self, f: Callable[_P, _R], *args: _P.args, **kwds: _P.kwargs
-    ) -> defer.Deferred[_R]:
-        ...
+    ) -> defer.Deferred[_R]: ...
 
 
 def _staticmethod(f: Callable[_P, _R]) -> Callable[_P, _R]:

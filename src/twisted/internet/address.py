@@ -5,7 +5,6 @@
 Address objects for network connections.
 """
 
-
 import os
 from typing import Literal
 

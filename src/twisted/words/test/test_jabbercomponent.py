@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.words.protocols.jabber.component}
 """
+
 from hashlib import sha1
 
 from zope.interface.verify import verifyObject
