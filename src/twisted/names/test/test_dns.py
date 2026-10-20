@@ -1049,7 +1049,7 @@ class MessageTests(unittest.SynchronousTestCase):
             for _ in range(count)
         ]
 
-    def test_encodeTruncationSetsTCBit(self):
+    def test_encodeTruncationSetsTCBit(self) -> None:
         """
         When the answers do not all fit within L{dns.Message.maxSize},
         L{dns.Message.encode} sets the TC (truncation) bit, drops the records
@@ -1080,7 +1080,7 @@ class MessageTests(unittest.SynchronousTestCase):
         # no partial record was emitted.
         self.assertEqual(struct.unpack("!H", wire[6:8])[0], len(decoded.answers))
 
-    def test_encodeNoTruncationWhenItFits(self):
+    def test_encodeNoTruncationWhenItFits(self) -> None:
         """
         When every answer fits within L{dns.Message.maxSize},
         L{dns.Message.encode} leaves the TC bit clear and includes every
@@ -1101,7 +1101,7 @@ class MessageTests(unittest.SynchronousTestCase):
         self.assertFalse(decoded.trunc)
         self.assertEqual(len(decoded.answers), len(answers))
 
-    def test_encodeNoMaxSizeNeverTruncates(self):
+    def test_encodeNoMaxSizeNeverTruncates(self) -> None:
         """
         A L{dns.Message} whose C{maxSize} is C{0} (as produced by
         L{dns.Message.decode}) is never truncated by L{dns.Message.encode},

@@ -142,10 +142,12 @@ class CapturingProtocol:
     address it was called with.
     """
 
-    def __init__(self):
-        self.messages = []
+    def __init__(self) -> None:
+        self.messages: list[tuple[dns.Message, tuple[str, int] | None]] = []
 
-    def writeMessage(self, message, address=None):
+    def writeMessage(
+        self, message: dns.Message, address: tuple[str, int] | None = None
+    ) -> None:
         """
         Record the message and address.
 
@@ -1128,7 +1130,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         ]
         return message
 
-    def test_sendReplyDatagramTruncatesOversizedResponse(self):
+    def test_sendReplyDatagramTruncatesOversizedResponse(self) -> None:
         """
         When L{server.DNSServerFactory.sendReply} sends an oversized response
         over a datagram (UDP) protocol, it bounds the response to the 512 octet
@@ -1153,7 +1155,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertTrue(decoded.trunc, "TC bit was not set on the datagram reply.")
         self.assertLess(len(decoded.answers), 8)
 
-    def test_sendReplyStreamDoesNotTruncate(self):
+    def test_sendReplyStreamDoesNotTruncate(self) -> None:
         """
         L{server.DNSServerFactory.sendReply} does not impose the UDP size limit
         on stream (TCP) replies, where the whole RRSet must be returned without
@@ -1174,7 +1176,7 @@ class DNSServerFactoryTests(unittest.TestCase):
         self.assertFalse(decoded.trunc)
         self.assertEqual(len(decoded.answers), 8)
 
-    def test_sendReplyDatagramKeepsSmallResponseIntact(self):
+    def test_sendReplyDatagramKeepsSmallResponseIntact(self) -> None:
         """
         A datagram response that already fits within the UDP size limit is sent
         without the TC bit and with all of its records intact.
