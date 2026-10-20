@@ -9,25 +9,35 @@ allows access to a shell and a python interpreter over SSH.
 Maintainer: Paul Swartz
 """
 
+from __future__ import annotations
 
 import os
 import signal
 import struct
 import sys
+from collections.abc import Iterable
+from functools import cached_property
+from typing import Callable, TypeVar
 
 from zope.interface import implementer
 
 from twisted.conch.interfaces import (
     EnvironmentVariableNotPermitted,
+    IConchUser,
     ISession,
     ISessionSetEnv,
 )
 from twisted.conch.ssh import channel, common, connection
+from twisted.conch.ssh.connection import SSHConnection
 from twisted.internet import interfaces, protocol
+from twisted.internet.interfaces import IAddress, IProtocol, ITransport
+from twisted.internet.protocol import Protocol
 from twisted.logger import Logger
 from twisted.python.compat import networkString
+from twisted.python.failure import Failure
 
 log = Logger()
+_T = TypeVar("_T")
 
 
 class SSHSession(channel.SSHChannel):
@@ -45,67 +55,114 @@ class SSHSession(channel.SSHChannel):
     @type buf: L{bytes}
     @ivar client: a protocol for communication with a shell, an application
         program, or a subsystem (see RFC 4254, section 6.5).
-    @type client: L{SSHSessionProcessProtocol}
+
     @ivar session: an object providing concrete implementations of session
         operations.
     @type session: L{ISession}
     """
 
     name = b"session"
+    client: SSHSessionProcessProtocol | None
+    session: ISession | None
 
-    def __init__(self, *args, **kw):
-        channel.SSHChannel.__init__(self, *args, **kw)
+    def __init__(
+        self,
+        localWindow: int = 0,
+        localMaxPacket: int = 0,
+        remoteWindow: int = 0,
+        remoteMaxPacket: int = 0,
+        conn: SSHConnection | None = None,
+        data: bytes | None = None,
+        avatar: IConchUser | None = None,
+    ) -> None:
+        super().__init__(
+            localWindow,
+            localMaxPacket,
+            remoteWindow,
+            remoteMaxPacket,
+            conn,
+            data,
+            avatar,
+        )
         self.buf = b""
         self.client = None
         self.session = None
 
-    def request_subsystem(self, data):
-        subsystem, ignored = common.getNS(data)
-        log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
-        client = self.avatar.lookupSubsystem(subsystem, data)
-        if client:
-            pp = SSHSessionProcessProtocol(self)
-            proto = wrapProcessProtocol(pp)
-            client.makeConnection(proto)
-            pp.makeConnection(wrapProtocol(client))
-            self.client = pp
-            return 1
-        else:
-            log.error("Failed to get subsystem")
-            return 0
+    @cached_property
+    def _session(self) -> ISession:
+        # for compatibility
+        session = self.session = ISession(self.avatar)
+        return session
 
-    def request_shell(self, data):
-        log.info("Getting shell")
-        if not self.session:
-            self.session = ISession(self.avatar)
-        try:
-            pp = SSHSessionProcessProtocol(self)
-            self.session.openShell(pp)
-        except Exception:
-            log.failure("Error getting shell")
+    def _shellOrCommand(
+        self,
+        *,
+        prepare: Callable[[], _T | None],
+        complete: Callable[[SSHSessionProcessProtocol, _T], None],
+    ) -> int:
+        """
+        Dedicate this session to a specific type of shell, exec, or subsystem
+        (see RFC 4254, section 6.5), of which only one may be executed per
+        session.
+        """
+        if self.client is not None:
+            log.error("multiple session-client requests sent to the same session")
             return 0
-        else:
-            self.client = pp
-            return 1
-
-    def request_exec(self, data):
-        if not self.session:
-            self.session = ISession(self.avatar)
-        f, data = common.getNS(data)
-        log.info('Executing command "{f}"', f=f)
-        try:
-            pp = SSHSessionProcessProtocol(self)
-            self.session.execCommand(pp, f)
-        except Exception:
-            log.failure('Error executing command "{f}"', f=f)
+        if (preparation := prepare()) is None:
+            # No logging here, subsystem setup preparation logs itself below.
             return 0
-        else:
-            self.client = pp
-            return 1
+        with log.failuresHandled("while establishing session client:") as op:
+            complete(pp := SSHSessionProcessProtocol(self), preparation)
+        if op.failed:
+            return 0
+        self.client = pp
+        return 1
 
-    def request_pty_req(self, data):
-        if not self.session:
-            self.session = ISession(self.avatar)
+    def request_subsystem(self, data: bytes) -> int:
+        def getSubsystem() -> Protocol | None:
+            subsystem, _ = common.getNS(data)
+            log.info('Asking for subsystem "{subsystem}"', subsystem=subsystem)
+            assert self.avatar is not None, "should already be authenticated"
+            subsys = self.avatar.lookupSubsystem(subsystem, data)
+            if subsys is None:
+                log.error("Failed to get subsystem {subsystem}", subsystem=subsystem)
+                return None
+            return subsys
+
+        def connectSubsystem(pp: SSHSessionProcessProtocol, subsys: Protocol) -> None:
+            asProcProt = wrapProcessProtocol(pp)
+            # note: this type signature is wrong but un-annotated
+            # BaseProtocol.makeConnection allows it to pass without any type
+            # errors.  given that subsystems are very lightly used within
+            # Twisted (pretty much *just* file transfer) it's possible that
+            # this is just broken and always has been
+            subsys.makeConnection(asProcProt)
+            pp.makeConnection(wrapProtocol(subsys))
+
+        return self._shellOrCommand(prepare=getSubsystem, complete=connectSubsystem)
+
+    def request_shell(self, data: bytes) -> int:
+        def logShellRequest() -> bool | None:
+            log.info("requesting shell")
+            return True
+
+        def openShell(pp: SSHSessionProcessProtocol, ignored: bool) -> None:
+            self._session.openShell(pp)
+
+        return self._shellOrCommand(prepare=logShellRequest, complete=openShell)
+
+    def request_exec(self, data: bytes) -> int:
+        def parseNS() -> bytes | None:
+            f = common.getNS(data)[0]
+            log.info('Executing command "{f}"', f=f)
+            return f
+
+        def completer(pp: SSHSessionProcessProtocol, f: bytes) -> None:
+            self._session.execCommand(pp, f)
+
+        return self._shellOrCommand(prepare=parseNS, complete=completer)
+
+    def request_pty_req(self, data: bytes) -> int:
         term, windowSize, modes = parseRequest_pty_req(data)
         log.info(
             "Handling pty request: {term!r} {windowSize!r}",
@@ -113,14 +170,14 @@ class SSHSession(channel.SSHChannel):
             windowSize=windowSize,
         )
         try:
-            self.session.getPty(term, windowSize, modes)
+            self._session.getPty(term, windowSize, modes)
         except Exception:
             log.failure("Error handling pty request")
             return 0
         else:
             return 1
 
-    def request_env(self, data):
+    def request_env(self, data: bytes) -> int:
         """
         Process a request to pass an environment variable.
 
@@ -130,13 +187,12 @@ class SSHSession(channel.SSHChannel):
         @return: A true value if the request to pass this environment
             variable was accepted, otherwise a false value.
         """
-        if not self.session:
-            self.session = ISession(self.avatar)
-        if not ISessionSetEnv.providedBy(self.session):
+        hasSetEnv: ISessionSetEnv | None = ISessionSetEnv(self._session, None)
+        if hasSetEnv is None:
             return 0
         name, value, data = common.getNS(data, 2)
         try:
-            self.session.setEnv(name, value)
+            hasSetEnv.setEnv(name, value)
         except EnvironmentVariableNotPermitted:
             return 0
         except Exception:
@@ -145,33 +201,40 @@ class SSHSession(channel.SSHChannel):
         else:
             return 1
 
-    def request_window_change(self, data):
-        if not self.session:
-            self.session = ISession(self.avatar)
+    def request_window_change(self, data: bytes) -> int:
         winSize = parseRequest_window_change(data)
         try:
-            self.session.windowChanged(winSize)
+            self._session.windowChanged(winSize)
         except Exception:
             log.failure("Error changing window size")
             return 0
         else:
             return 1
 
-    def dataReceived(self, data):
-        if not self.client:
+    def dataReceived(self, data: bytes) -> None:
+        if self.client is None:
             # self.conn.sendClose(self)
             self.buf += data
             return
+        # TODO: transport really might be None at runtime, if something got
+        # disconnected.
+        assert (
+            self.client.transport is not None
+        ), "client transport was no longer connected"
         self.client.transport.write(data)
 
-    def extReceived(self, dataType, data):
+    def extReceived(self, dataType: int, data: bytes) -> None:
         if dataType == connection.EXTENDED_DATA_STDERR:
-            if self.client and hasattr(self.client.transport, "writeErr"):
+            if (
+                self.client
+                and self.client.transport
+                and hasattr(self.client.transport, "writeErr")
+            ):
                 self.client.transport.writeErr(data)
         else:
             log.warn("Weird extended data: {dataType}", dataType=dataType)
 
-    def eofReceived(self):
+    def eofReceived(self) -> None:
         # If we have a session, tell it that EOF has been received and
         # expect it to send a close message (it may need to send other
         # messages such as exit-status or exit-signal first).  If we don't
@@ -179,9 +242,12 @@ class SSHSession(channel.SSHChannel):
         if self.session:
             self.session.eofReceived()
         elif self.client:
+            assert (
+                self.conn is not None
+            ), "connection should be established if EOF is being received"
             self.conn.sendClose(self)
 
-    def closed(self):
+    def closed(self) -> None:
         if self.client and self.client.transport:
             self.client.transport.loseConnection()
         if self.session:
@@ -190,8 +256,8 @@ class SSHSession(channel.SSHChannel):
     # def closeReceived(self):
     #    self.loseConnection() # don't know what to do with this
 
-    def loseConnection(self):
-        if self.client:
+    def loseConnection(self) -> None:
+        if self.client and self.client.transport:
             self.client.transport.loseConnection()
         channel.SSHChannel.loseConnection(self)
 
@@ -201,44 +267,56 @@ class _ProtocolWrapper(protocol.ProcessProtocol):
     This class wraps a L{Protocol} instance in a L{ProcessProtocol} instance.
     """
 
-    def __init__(self, proto):
+    def __init__(self, proto: IProtocol):
         self.proto = proto
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         self.proto.connectionMade()
 
-    def outReceived(self, data):
+    def outReceived(self, data: bytes) -> None:
         self.proto.dataReceived(data)
 
-    def processEnded(self, reason):
+    def processEnded(self, reason: Failure) -> None:
         self.proto.connectionLost(reason)
 
 
+@implementer(ITransport)
 class _DummyTransport:
-    def __init__(self, proto):
+    def __init__(self, proto: protocol.Protocol) -> None:
         self.proto = proto
+        it = self.proto.transport
+        assert it is not None, "transport must be set"
+        self._transport = it
 
-    def dataReceived(self, data):
-        self.proto.transport.write(data)
+    def getHost(self) -> IAddress:
+        return self._transport.getHost()
 
-    def write(self, data):
+    def getPeer(self) -> IAddress:
+        return self._transport.getPeer()
+
+    def dataReceived(self, data: bytes) -> None:
+        self._transport.write(data)
+
+    def write(self, data: bytes) -> None:
         self.proto.dataReceived(data)
 
-    def writeSequence(self, seq):
+    def writeSequence(self, seq: Iterable[bytes]) -> None:
         self.write(b"".join(seq))
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         self.proto.connectionLost(protocol.connectionDone)
 
 
-def wrapProcessProtocol(inst):
-    if isinstance(inst, protocol.Protocol):
+def wrapProcessProtocol(
+    inst: IProtocol | protocol.ProcessProtocol,
+) -> protocol.ProcessProtocol:
+    if IProtocol.providedBy(inst):
         return _ProtocolWrapper(inst)
     else:
         return inst
 
 
-def wrapProtocol(proto):
+def wrapProtocol(proto: protocol.Protocol) -> ITransport:
     return _DummyTransport(proto)
 
 
@@ -413,7 +491,7 @@ def packRequest_pty_req(term, geometry, modes):
     @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
-    (rows, cols, xpixel, ypixel) = geometry
+    rows, cols, xpixel, ypixel = geometry
     termPacked = common.NS(term)
     winSizePacked = struct.pack(">4L", cols, rows, xpixel, ypixel)
     modesPacked = common.NS(modes)  # depend on the client packing modes
@@ -436,5 +514,5 @@ def packRequest_window_change(geometry):
     @type geometry: L{tuple}
     @param geometry: A tuple of (rows, columns, xpixel, ypixel)
     """
-    (rows, cols, xpixel, ypixel) = geometry
+    rows, cols, xpixel, ypixel = geometry
     return struct.pack(">4L", cols, rows, xpixel, ypixel)

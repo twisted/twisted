@@ -19,11 +19,12 @@ from OpenSSL.crypto import X509, PKey
 from OpenSSL.SSL import VERIFY_FAIL_IF_NO_PEER_CERT, VERIFY_PEER, Connection
 
 import attr
-from constantly import FlagConstant, Flags, NamedConstant, Names
+from constantly import NamedConstant, Names
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509.oid import NameOID
 from incremental import Version
+from typing_extensions import Self
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
@@ -102,58 +103,6 @@ def _getExcludedTLSProtocols(oldest, newest):
     excludedNewer = versions[versions.index(newest) + 1 :] if newest else []
     excludedVersions = excludedOlder + excludedNewer
     return excludedVersions
-
-
-class ProtocolNegotiationSupport(Flags):
-    """
-    L{ProtocolNegotiationSupport} defines flags which are used to indicate the
-    level of ALPN support provided by the TLS backend.
-
-    @cvar NOSUPPORT: There is no support for ALPN.  This is exclusive with
-        L{ALPN}.
-
-    @cvar NPN: The implementation supports Next Protocol Negotiation.  (This
-        flag is provided for compatibility only; Twisted no longer supports
-        Next Protocol Negotiation)
-
-    @cvar ALPN: The implementation supports Application Layer Protocol
-        Negotiation.
-    """
-
-    NPN = FlagConstant(0x0001)
-    ALPN = FlagConstant(0x0002)
-
-
-# FIXME: https://twistedmatrix.com/trac/ticket/8074
-# Currently flags with literal zero values behave incorrectly. However,
-# creating a flag by NOTing a flag with itself appears to work totally fine, so
-# do that instead.
-ProtocolNegotiationSupport.NOSUPPORT = (
-    ProtocolNegotiationSupport.NPN ^ ProtocolNegotiationSupport.NPN
-)
-
-
-def protocolNegotiationMechanisms() -> FlagConstant:
-    """
-    Check whether the installed versions of pyOpenSSL and OpenSSL are recent
-    enough to support ALPN.
-
-    @return: A combination of flags from L{ProtocolNegotiationSupport} that
-        indicate which mechanisms for protocol negotiation are supported.
-    """
-    # TODO: deprecate this, as it will always return ALPN and only ALPN on all
-    # supported versions of OpenSSL.
-    support = ProtocolNegotiationSupport.NOSUPPORT
-    ctx = SSL.Context(SSL.SSLv23_METHOD)
-
-    try:
-        ctx.set_alpn_select_callback(lambda connection, protocols: protocols[0])
-    except (AttributeError, NotImplementedError):
-        pass
-    else:
-        support |= ProtocolNegotiationSupport.ALPN
-
-    return support
 
 
 _x509names = {
@@ -539,7 +488,7 @@ class CertificateRequest(CertBase):
             )
         return cls(req)
 
-    def _subjectToDistinguishedName(self) -> DistinguishedName:
+    def getSubject(self) -> DistinguishedName:
         """
         Retrieve the subject of this certificate request.
 
@@ -764,10 +713,10 @@ class KeyPair(PublicKey):
         return "%s-bit %s Key Pair with Hash: %s" % L
 
     @classmethod
-    def generate(Class, kind=crypto.TYPE_RSA, size=2048):
+    def generate(cls, kind: int = crypto.TYPE_RSA, size: int = 2048) -> Self:
         pkey = crypto.PKey()
         pkey.generate_key(kind, size)
-        return Class(pkey)
+        return cls(pkey)
 
     def newCertificate(self, newCertData, format=crypto.FILETYPE_ASN1):
         return PrivateCertificate.load(newCertData, self, format)
@@ -820,7 +769,7 @@ class KeyPair(PublicKey):
         """
         hlreq = CertificateRequest.load(requestData, requestFormat)
 
-        dn = hlreq._subjectToDistinguishedName()
+        dn = hlreq.getSubject()
         vval = verifyDNCallback(dn)
 
         def verified(value):
@@ -857,7 +806,7 @@ class KeyPair(PublicKey):
         req = requestObject.original
         cert = crypto.X509()
         issuerDistinguishedName._copyInto(cert.get_issuer())
-        requestObject._subjectToDistinguishedName()._copyInto(cert.get_subject())
+        requestObject.getSubject()._copyInto(cert.get_subject())
         cert.set_pubkey(crypto.PKey.from_cryptography_key(req.public_key()))
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(secondsToExpiry)
@@ -1304,8 +1253,8 @@ class OpenSSLCertificateOptions:
         extraCertChain: list[X509] | None = None,
         acceptableCiphers: IAcceptableCiphers | None = None,
         dhParameters: OpenSSLDiffieHellmanParameters | None = None,
-        trustRoot: IOpenSSLTrustRoot | None = None,
-        acceptableProtocols: list[bytes] | None = None,
+        trustRoot: IOpenSSLTrustRoot | Certificate | None = None,
+        acceptableProtocols: Sequence[bytes] | None = None,
         raiseMinimumTo: NamedConstant | None = None,
         insecurelyLowerMinimumTo: NamedConstant | None = None,
         lowerMaximumSecurityTo: NamedConstant | None = None,

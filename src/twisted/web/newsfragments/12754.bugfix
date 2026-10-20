@@ -1,0 +1,1 @@
+twisted.web.http.HTTPChannel.headerReceived now rejects a header value that contains a bare carriage return or line feed, closing a request-smuggling gap where such a value could hide a following header from the parser (RFC 9110 section 5.5).

@@ -1657,7 +1657,7 @@ class IFileDescriptor(ILoggingContext):
     An interface representing a UNIX-style numeric file descriptor.
     """
 
-    def fileno() -> object:
+    def fileno() -> int:
         """
         @return: The platform-specified representation of a file descriptor
             number.  Or C{-1} if the descriptor no longer has a valid file

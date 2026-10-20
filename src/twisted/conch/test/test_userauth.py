@@ -119,7 +119,7 @@ class FakeTransport(transport.SSHTransportBase):
     @ivar packets: a list of 2-tuples: (messageType, data).  Each 2-tuple is
         a sent packet.
     @type packets: C{list}
-    @param lostConnecion: True if loseConnection has been called on us.
+    @ivar lostConnection: True if loseConnection has been called on us.
     @type lostConnection: L{bool}
     """
 

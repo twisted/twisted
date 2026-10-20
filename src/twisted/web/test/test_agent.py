@@ -3455,7 +3455,7 @@ class RequestURIInjectionTests(
         """
         Attempt a request with the provided URI.
 
-        @param method: see L{URIInjectionTestsMixin}
+        @param uri: see L{URIInjectionTestsMixin}
         """
         client.Request(
             method=b"GET",
@@ -3475,9 +3475,9 @@ class RequestWriteToURIInjectionTests(
 
     def attemptRequestWithMaliciousURI(self, uri):
         """
-        Attempt a request with the provided method.
+        Attempt a request with the provided URI.
 
-        @param method: see L{URIInjectionTestsMixin}
+        @param uri: see L{URIInjectionTestsMixin}
         """
         headers = http_headers.Headers({b"Host": [b"twisted.invalid"]})
         req = client.Request(

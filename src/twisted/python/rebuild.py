@@ -8,15 +8,12 @@
 """
 
 import linecache
-
-# System Imports
 import sys
 import time
 import types
 from importlib import reload
 from types import ModuleType
 
-# Sibling Imports
 from twisted.python import log, reflect
 
 lastRebuild = time.time()
@@ -50,10 +47,7 @@ class Sensitive:
         if t == types.FunctionType:
             return latestFunction(anObject)
         elif t == types.MethodType:
-            if anObject.__self__ is None:
-                return getattr(anObject.im_class, anObject.__name__)
-            else:
-                return getattr(anObject.__self__, anObject.__name__)
+            return getattr(anObject.__self__, anObject.__name__)
         else:
             log.msg("warning returning anObject!")
             return anObject
@@ -142,9 +136,7 @@ def rebuild(module, doLog=1):
     d = module.__dict__
     _modDictIDMap[id(d)] = module
     newclasses = {}
-    classes = {}
     functions = {}
-    values = {}
     if doLog:
         log.msg(f"  (scanning {str(module.__name__)}): ")
     for k, v in d.items():
@@ -161,12 +153,8 @@ def rebuild(module, doLog=1):
                     log.logfile.write("o")
                     log.logfile.flush()
 
-    values.update(classes)
-    values.update(functions)
-    fromOldModule = values.__contains__
+    fromOldModule = functions.__contains__
     newclasses = newclasses.keys()
-    classes = classes.keys()
-    functions = functions.keys()
 
     if doLog:
         log.msg("")
@@ -180,19 +168,11 @@ def rebuild(module, doLog=1):
     if doLog:
         log.msg(f"  (cleaning {str(module.__name__)}): ")
 
-    for clazz in classes:
-        if getattr(module, clazz.__name__) is clazz:
-            log.msg(f"WARNING: class {reflect.qual(clazz)} not replaced by reload!")
-        else:
-            if doLog:
-                log.logfile.write("x")
-                log.logfile.flush()
-            clazz.__bases__ = ()
-            clazz.__dict__.clear()
-            clazz.__getattr__ = __injectedgetattr__
-            clazz.__module__ = module.__name__
+    classReferrers = []
     if newclasses:
         import gc
+
+        classReferrers = gc.get_referrers(*newclasses)
     for nclass in newclasses:
         ga = getattr(module, nclass.__name__)
         if ga is nclass:
@@ -202,7 +182,7 @@ def rebuild(module, doLog=1):
                 )
             )
         else:
-            for r in gc.get_referrers(nclass):
+            for r in classReferrers:
                 if getattr(r, "__class__", None) is nclass:
                     r.__class__ = ga
     if doLog:

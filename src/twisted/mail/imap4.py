@@ -4593,13 +4593,35 @@ def Not(query):
     return f"(NOT {query})"
 
 
-def wildcardToRegexp(wildcard, delim=None):
-    wildcard = wildcard.replace("*", "(?:.*?)")
-    if delim is None:
-        wildcard = wildcard.replace("%", "(?:.*?)")
-    else:
-        wildcard = wildcard.replace("%", "(?:(?:[^%s])*?)" % re.escape(delim))
-    return re.compile(wildcard, re.I)
+def wildcardToRegexp(wildcard: str, delim: str | None = None) -> re.Pattern[str]:
+    """
+    Convert what the IMAP describes as a "mailbox name with possible wildcards"
+    into a regular expression that will match a full mailbox name.
+
+    @param wildcard: the mailbox name matching expression which may contain
+        IMAP wildcards, e.g. C{*} and C{%}.  Note that this is I{not} treated
+        as a regular expression itself, and any regex syntax will be matched
+        literally.
+
+    @param delim: the delimiter between IMAP path elements, if any.  Note that
+        this is always C{"/"} when used by Twisted's IMAP server.
+
+    @return: a L{re.Pattern} that will match IMAP mailbox names with the given
+        wildcards.
+    """
+    parts = re.split(r"([*%])", wildcard)
+    result = []
+    for p in parts:
+        if p == "*":
+            result.append("(?:.*?)")
+        elif p == "%":
+            if delim is None:
+                result.append("(?:.*?)")
+            else:
+                result.append(f"(?:(?:[^{re.escape(delim)}])*?)")
+        else:
+            result.append(re.escape(p))
+    return re.compile("".join(result), re.I)
 
 
 def splitQuoted(s):
@@ -4757,6 +4779,8 @@ def parseNestedParens(s, handleLiteral=1):
                     if end == -1:
                         raise ValueError("Malformed literal")
                     literalSize = int(s[i + 1 : end])
+                    if literalSize < 0:
+                        raise ValueError("Illegal literal size")
                     contentStack[-1].append((s[end + 3 : end + 3 + literalSize],))
                     i = end + 3 + literalSize
                 elif c == b"(" or c == b"[":

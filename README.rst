@@ -88,7 +88,7 @@ Static Code Checkers
 
 You can ensure that code complies to Twisted `coding standards <https://docs.twisted.org/en/latest/development/coding-standard.html>`_::
 
-  $ tox -e lint   # run pre-commit to check coding stanards
+  $ tox -e lint   # run pre-commit to check coding standards
   $ tox -e mypy   # run MyPy static type checker to check for type errors
 
 Or, for speed, use pre-commit directly::
