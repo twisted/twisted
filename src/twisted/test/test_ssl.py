@@ -51,13 +51,13 @@ class DeprecationTests(TestCase):
         A deprecation warning is raised when L{protocolNegotiationMechanisms} is called.
         """
         supportedProtocols = self.callDeprecated(
-            Version("Twisted", "NEXT", 0, 0),
+            Version("Twisted", 26, 10, 0, release_candidate=1),
             ssl.protocolNegotiationMechanisms,
         )
         flags = self.getDeprecatedModuleAttribute(
             "twisted.internet.ssl",
             "ProtocolNegotiationSupport",
-            Version("Twisted", "NEXT", 0, 0),
+            Version("Twisted", 26, 10, 0, release_candidate=1),
             "All supported TLS backends provide ALPN. There is no need to check for support.",
         )
         self.assertTrue(flags.ALPN in supportedProtocols)
@@ -73,7 +73,7 @@ class DeprecationTests(TestCase):
         self.assertEqual(
             warnings[0]["message"],
             "twisted.internet.ssl.ProtocolNegotiationSupport was deprecated "
-            "in Twisted NEXT: All supported TLS backends provide ALPN. "
+            "in Twisted 26.10.0rc1: All supported TLS backends provide ALPN. "
             "There is no need to check for support.",
         )
 

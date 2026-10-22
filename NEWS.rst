@@ -8,6 +8,169 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
+twisted 26.10.0rc1 (2026-10-22)
+===============================
+
+This is the last release with support for Python 3.10.
+
+This include fixes for:
+
+* CVE-2026-83813 (GHSA-jj36-9pvh-vj5r),
+* GHSA-vpp8-g58w-m8mp (no CVE assigned yet)
+* GHSA-cwm5-jh59-mwxr (no CVE assigned yet)
+* GHSA-3476-c5c2-fr73 (no CVE assigned yet)
+* GHSA-q7qq-6mhp-9rc4 (no CVE assigned yet)
+* GHSA-2qrf-pqgx-qh9v (no CVE assigned yet)
+* GHSA-53xc-49m8-p798 (no CVE assigned yet)
+
+
+Features
+--------
+
+- It is now possible to set the SO_REUSEPORT and SO_REUSEADDR TCP socket flags from user code. (#9101)
+- Python 3.14 is now supported. (#12640)
+- `twisted.internet.defer.Deferred.__iter__`, used when awaiting a `Deferred`, is now about 2-3% faster. (#12727)
+
+
+Bugfixes
+--------
+
+- twisted.internet.tcp.Port.startListening() now closes the socket when raising CannotListenError. (#6108)
+- Initiating a TCP connection with an address literals and a port outside of the 1-65535 range in twisted.internet.tcp.BaseClient and twisted.internet.iocpreactor.tcp.Client now triggers an errback instead of an unhandled error. This change might also fix other unhandled errors occurred while connecting using address literals. (#7798)
+- twisted.logger.LoggingFile.fileno now raises io.UnsupportedOperation
+  instead of returning -1.
+  This fixes an interoperability issue with multiprocessing. (#9638)
+- `twistd` now exits with a non-zero status when given an unknown subcommand. (#12656)
+- twisted.internet.testing.MemoryReactor.removeAll() now returns what was removed to comply with IReactorFDSet.removeAll() (#12743)
+- twisted.internet.asyncioreactor.AsyncioSelectorReactor.callLater now has the
+  same signature as twisted.internet.interfaces.IReactorTime.callLater.
+  twisted.internet.asyncioreactor.AsyncioSelectorReactor.callFromThread now has the
+  same signature as twisted.internet.interfaces.IReactorFromThreads.callFromThread. (#12767)
+- twisted.protocols.ftp.FTPClient now uses ip address of the original ftp server to open passive data connections by default, instead of trusting PASV responses. (#12847)
+
+
+Improved Documentation
+----------------------
+
+- The “Writing Servers” and “UDP Networking” documentation pages have been updated to remove obsolete references to persisting the reactor (a feature gone from Twisted for several decades now), and to better explain the factory and protocol setup and teardown lifecycle. (#5031)
+- Twisted's policy documentation now includes a prominently featured, clear
+  explanation of our AI policy: to wit, including the outputs of generative AI
+  systems is forbidden. (#12676)
+
+
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.runner.samefile is deprecated and replaced by os.path.samefile. (#12671)
+- twisted.internet.tcp.Connection no longer supports returning a non-None value from a protocol's dataReceived method, deprecated since Twisted 11.0.0. (#12688)
+- `twisted.internet.error.PotentialZombieWarning`, deprecated since Twisted 10.0, has been removed. (#12744)
+- Implementations of `twisted.internet.interfaces.IProcessProtocol` are now required to provide a `processExited` method. Omitting this method was deprecated in Twisted 8.2. (#12824)
+- twisted.internet.ssl.protocolNegotiationMechanisms and twisted.internet.ssl.ProtocolNegotiationSupport are deprecated because all supported TLS backends provide ALPN. Callers can configure ALPN without checking for support. (#12868)
+
+
+Misc
+----
+
+- #12538, #12574, #12621, #12636, #12651, #12653, #12654, #12659, #12660, #12670, #12682, #12685, #12690, #12692, #12694, #12697, #12709, #12710, #12712, #12717, #12723, #12736, #12739, #12746, #12756, #12758, #12765, #12768, #12773, #12775, #12778, #12780, #12782, #12783, #12790, #12796, #12798, #12802, #12806, #12809, #12811, #12819, #12827, #12829, #12852, #12854, #12856, #12859, #12864, #12870, #12875
+
+
+Conch
+-----
+
+Features
+~~~~~~~~
+
+- twisted.conch.ssh.transport.SSHServerTransport now supports the hybrid
+  post-quantum key exchange algorithm mlkem768x25519-sha256. (#12520)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.conch.telnet.Telnet.dataReceived now limits how much data it buffers for a single telnet subnegotiation, so a peer can no longer exhaust server memory by sending a subnegotiation that is never terminated. (#12706)
+- To comply with RFC 4254 Section-6.5, twisted.conch.ssh.session.SSHSession will
+  now enforce that only one "shell", "exec", or "subsystem" command will succeed
+  per channel. (#12800)
+
+
+Web
+---
+
+Features
+~~~~~~~~
+
+- twisted.web.http.Request.write now performs chunked writes ~12% faster (#12729)
+
+
+Bugfixes
+~~~~~~~~
+
+- twisted.web's HTTP/2 server now limits the rate at which a remote peer may reset streams, mitigating the HTTP/2 Rapid Reset denial-of-service attack (CVE-2023-44487). (#12705)
+- twisted.web.http.HTTPChannel.headerReceived now rejects a header value that contains a bare carriage return or line feed, closing a request-smuggling gap where such a value could hide a following header from the parser (RFC 9110 section 5.5). (#12754)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- `_makeGetterFactory` method in `twisted.web.client` has been removed.  We would not normally remark upon a private API's removal, but we are aware of some 3rd party usage. Please remember that you should not depend on private names within Twisted as they may be removed without notice! (#12721)
+
+
+Misc
+~~~~
+
+- #12815
+
+
+Mail
+----
+
+Bugfixes
+~~~~~~~~
+
+- twisted.mail.imap4.IMAP4Server now rejects a SEARCH command containing a literal with a negative octet count, so an authenticated client can no longer freeze the server with a crafted command. (#12763)
+- twisted.mail.imap4 no longer allows clients to specify arbitrary regexes. (#12787)
+
+
+Words
+-----
+
+Bugfixes
+~~~~~~~~
+
+- The domish XML element streams in twisted.words.xish (used to parse XMPP) now limit the byte size and element count of a single stanza, so a peer can no longer exhaust server memory by sending an unbounded stanza. (#12707)
+- twisted.words.protocols.irc.IRC.dataReceived now limits the length of a single line, so a peer can no longer exhaust server memory by sending data without a line delimiter. (#12770)
+
+
+Names
+-----
+
+Bugfixes
+~~~~~~~~
+
+- `twisted.names.dns.DNSDatagramProtocol.query` now discards query responses that
+  come from hosts other than the one the query was issued to, preventing other
+  hosts from injecting invalid DNS responses. (#12696)
+
+
+Deprecations and Removals
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- `twisted.names.dns.Message` no longer has the class attributes `queries`, `answers`, `add`, or `ns`. (#12667)
+- `twisted.names.client.ThreadedResolver`, deprecated since Twisted 9.0, has been removed. (#12843)
+
+
+Misc
+~~~~
+
+- #12701
+
+
+Trial
+-----
+
+No significant changes.
+
+
 Twisted 26.4.0 (2026-05-11)
 ===========================
 
