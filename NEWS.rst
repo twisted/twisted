@@ -11,6 +11,19 @@ https://twisted.org/trac/ticket/<number>
 twisted 26.10.0rc1 (2026-10-22)
 ===============================
 
+This is the last release with support for Python 3.10.
+
+This include fixes for:
+
+* CVE-2026-83813 (GHSA-jj36-9pvh-vj5r),
+* GHSA-vpp8-g58w-m8mp (no CVE assigned yet)
+* GHSA-cwm5-jh59-mwxr (no CVE assigned yet)
+* GHSA-3476-c5c2-fr73 (no CVE assigned yet)
+* GHSA-q7qq-6mhp-9rc4 (no CVE assigned yet)
+* GHSA-2qrf-pqgx-qh9v (no CVE assigned yet)
+* GHSA-53xc-49m8-p798 (no CVE assigned yet)
+
+
 Features
 --------
 
