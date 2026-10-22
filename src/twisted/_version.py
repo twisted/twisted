@@ -3,9 +3,9 @@ Provides Twisted version information.
 """
 
 # This file is auto-generated! Do not edit!
-# Use `python -m incremental.update Twisted` to change this file.
+# Use `incremental` to change this file.
 
 from incremental import Version
 
-__version__ = Version("Twisted", 26, 4, 0, post=0)
+__version__ = Version("Twisted", 26, 10, 0, release_candidate=1)
 __all__ = ["__version__"]
