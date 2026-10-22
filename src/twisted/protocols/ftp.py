@@ -1109,6 +1109,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         ip = "%d.%d.%d.%d" % tuple(addr[:4])
         port = addr[4] << 8 | addr[5]
 
+        if port < 1024 or ip != self.transport.getPeer().host:
+            return defer.fail(CmdNotImplementedForArgError(address))
+
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
             self.cleanupDTP()
@@ -1150,6 +1153,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
                 self._validateNetworkProtocol(protocol)
             except FTPCmdError:
                 return defer.fail()
+
+        if port < 1024 or ip != self.transport.getPeer().host:
+            return defer.fail(CmdNotImplementedForArgError(extendedAddress))
 
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
