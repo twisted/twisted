@@ -1,3 +1,0 @@
-twisted.logger.LoggingFile.fileno now raises io.UnsupportedOperation
-instead of returning -1.
-This fixes an interoperability issue with multiprocessing.

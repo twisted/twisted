@@ -1,1 +1,0 @@
-twisted.internet.ssl.protocolNegotiationMechanisms and twisted.internet.ssl.ProtocolNegotiationSupport are deprecated because all supported TLS backends provide ALPN. Callers can configure ALPN without checking for support.
