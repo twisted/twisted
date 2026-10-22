@@ -1,0 +1,3 @@
+When a recycled file descriptor is detected in epollreactor, Twisted will now
+log a message indicating which file descriptor was closed prematurely rather
+than printing a traceback.
