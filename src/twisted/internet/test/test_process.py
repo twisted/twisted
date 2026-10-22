@@ -266,7 +266,8 @@ class ProcessTestsBuilderBase(ReactorBuilder):
         # here, but that's okay because the signal handler was installed above,
         # before we could have gotten it).
         signaled.wait(120)
-        if not signaled.isSet():
+        if not signaled.is_set():  # pragma: no cover
+            # This is not expected in normal test runs.
             self.fail("Timed out waiting for child process to exit.")
 
         # Capture the processEnded callback.
@@ -379,16 +380,15 @@ class ProcessTestsBuilderBase(ReactorBuilder):
             try:
                 exe = pyExe.decode(sys.getfilesystemencoding())
 
-                subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"])
-                f2 = subprocess.Popen(
-                    [exe, "-c", ("import time; time.sleep(0.5);" "print('Foo')")],
-                    stdout=subprocess.PIPE,
-                )
-                # The read call below will blow up with an EINTR from the
-                # SIGCHLD from the first process exiting if we install a
-                # SIGCHLD handler without SA_RESTART.  (which we used to do)
-                with f2.stdout:
-                    result.append(f2.stdout.read())
+                with subprocess.Popen([exe, "-c", "import time; time.sleep(0.1)"]):
+                    with subprocess.Popen(
+                        [exe, "-c", ("import time; time.sleep(0.5);" "print('Foo')")],
+                        stdout=subprocess.PIPE,
+                    ) as process:
+                        # The read call below will blow up with an EINTR from the
+                        # SIGCHLD from the first process exiting if we install a
+                        # SIGCHLD handler without SA_RESTART.  (which we used to do)
+                        result.append(process.stdout.read())
             finally:
                 reactor.stop()
 

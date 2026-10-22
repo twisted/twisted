@@ -27,7 +27,7 @@ from service_identity.hazmat import DNS_ID, IPAddress_ID, verify_service_identit
 try:
     from service_identity.hazmat import ServiceID
 except ImportError:
-    ServiceID = object  # type:ignore[assignment,misc]
+    ServiceID = object  # type: ignore[assignment, misc]
 try:
     from service_identity.pyopenssl import extract_patterns
 except ImportError:

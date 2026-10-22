@@ -520,7 +520,7 @@ class AutoJobsTests(unittest.SynchronousTestCase):
         When `os.process_cpu_count()` is available (Python 3.13+), `_autoJobs`
         returns its result.
         """
-        count = os.process_cpu_count()  # type: ignore
+        count = os.process_cpu_count()
         self.assertEqual(trial._autoJobs(), count)
 
     @skipIf(

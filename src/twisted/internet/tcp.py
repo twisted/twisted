@@ -22,6 +22,7 @@ import attr
 
 from twisted.internet.error import ConnectionDone, ConnectionLost
 from twisted.internet.interfaces import (
+    Binding,
     IHalfCloseableProtocol,
     IListeningPort,
     IProtocol,
@@ -29,8 +30,9 @@ from twisted.internet.interfaces import (
     IReactorFDSet,
     ISystemHandle,
     ITCPTransport,
+    _Binding,
 )
-from twisted.internet.protocol import ClientFactory, P
+from twisted.internet.protocol import ClientFactory, Factory, P
 from twisted.logger import ILogObserver, LogEvent, Logger
 from twisted.python.runtime import platformType
 
@@ -102,7 +104,7 @@ elif not TYPE_CHECKING:  # pragma: no branch
 from errno import errorcode
 
 # Twisted Imports
-from twisted.internet import abstract, address, base, defer, error, fdesc, main
+from twisted.internet import abstract, address, base, defer, error, main
 from twisted.internet.error import CannotListenError
 from twisted.internet.protocol import Protocol
 from twisted.internet.task import deferLater
@@ -208,6 +210,29 @@ class _AbortingMixin:
         self.reactor.callLater(
             0, self.connectionLost, failure.Failure(error.ConnectionAborted())
         )
+
+
+def makeBinding(
+    interface: str = "",
+    port: int = 0,
+    reuseAddress: bool = False,
+    reusePort: bool = False,
+) -> Binding:
+    """
+    Create an object describing how to bind locally.
+
+    This may include an address, a port and other options -- which
+    end up using e.g. C{setsockopt} on Posix.
+
+    C{reuseAddress} maps to C{SO_REUSEADDR} and C{reusePort} maps to
+    C{SO_REUSEPORT} on Posix systems.
+    """
+    return Binding(_Binding(interface, port, reuseAddress, reusePort))
+
+
+# note: it could make sense to have a makeExclusiveBinding() function
+# as well, that returns an object "similar" to above but for
+# see https://github.com/twisted/twisted/issues/12677
 
 
 @implementer(ITLSTransport, ITCPTransport, ISystemHandle)
@@ -569,7 +594,6 @@ class BaseClient(_BaseBaseClient, _TLSClientMixin, Connection):
         """
         s = socket.socket(self.addressFamily, self.socketType)
         s.setblocking(0)
-        fdesc._setCloseOnExec(s.fileno())
         return s
 
     def doConnect(self):
@@ -754,11 +778,18 @@ class _BaseTCPClient:
             whenDone = None
         if whenDone and bindAddress is not None:
             try:
-                assert type(bindAddress) == tuple
-                if abstract.isIPv6Address(bindAddress[0]):
-                    bindinfo = _resolveIPv6(*bindAddress)
+                if isinstance(bindAddress, tuple):
+                    bindAddress = makeBinding(*bindAddress)
+                assert isinstance(bindAddress, _Binding)
+                if bindAddress._reuseAddress:
+                    skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                if platformType == "posix" and sys.platform != "cygwin":
+                    if bindAddress._reusePort:
+                        skt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+                if abstract.isIPv6Address(bindAddress._address):
+                    bindinfo = _resolveIPv6(bindAddress._address, bindAddress._port)
                 else:
-                    bindinfo = bindAddress
+                    bindinfo = bindAddress._address, bindAddress._port
                 skt.bind(bindinfo)
             except OSError as se:
                 err = error.ConnectBindError(se.args[0], se.args[1])
@@ -1245,6 +1276,28 @@ def _accept(logger, accepts, listener, reservedFD):
             yield client, address
 
 
+def _constructTCPPort(self, port, factory, backlog, interface):
+    binding = port
+    if port is None or isinstance(port, int):
+        binding = makeBinding(interface, port, reuseAddress=True)
+    else:
+        assert isinstance(binding, _Binding), "Binding is {}".format(binding)
+        if interface != "" and binding._address != interface:
+            raise ValueError("Inconsistent interface vs Binding specifiers")
+    # we need to be backwards-compatible to when Port had settable
+    # .port and .interface attributes .. so we extract everything
+    # from Binding here (thus leaving Binding immutable).
+    self.port = binding._port
+    self.interface = "" if binding._address is None else binding._address
+    self._reuseAddress = binding._reuseAddress
+    self._reusePort = binding._reusePort
+    self.factory = factory
+    self.backlog = backlog
+    if abstract.isIPv6Address(interface):
+        self.addressFamily = socket.AF_INET6
+        self._addressType = address.IPv6Address
+
+
 @implementer(IListeningPort)
 class Port(base.BasePort, _SocketCloser):
     """
@@ -1288,6 +1341,8 @@ class Port(base.BasePort, _SocketCloser):
     sessionno = 0
     interface = ""
     backlog = 50
+    factory: Factory | None = None  # teach mypy "factory" exists
+    port: int | None = None
 
     _type = "TCP"
 
@@ -1313,13 +1368,7 @@ class Port(base.BasePort, _SocketCloser):
     ):
         """Initialize with a numeric port to listen on."""
         base.BasePort.__init__(self, reactor=reactor)
-        self.port = port
-        self.factory = factory
-        self.backlog = backlog
-        if abstract.isIPv6Address(interface):
-            self.addressFamily = socket.AF_INET6
-            self._addressType = address.IPv6Address
-        self.interface = interface
+        _constructTCPPort(self, port, factory, backlog, interface)
 
     @classmethod
     def _fromListeningDescriptor(cls, reactor, fd, addressFamily, factory):
@@ -1360,7 +1409,10 @@ class Port(base.BasePort, _SocketCloser):
     def createInternetSocket(self):
         s = base.BasePort.createInternetSocket(self)
         if platformType == "posix" and sys.platform != "cygwin":
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self._reuseAddress:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if self._reusePort:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         return s
 
     def startListening(self) -> None:
@@ -1403,7 +1455,7 @@ class Port(base.BasePort, _SocketCloser):
 
         # The order of the next 5 lines is kind of bizarre.  If no one
         # can explain it, perhaps we should re-arrange them.
-        self.factory.doStart()
+        self.factory.doStart()  # type: ignore
         self.connected = True
         self.socket = skt
         self.fileno = self.socket.fileno  # type:ignore[method-assign]
@@ -1438,8 +1490,6 @@ class Port(base.BasePort, _SocketCloser):
                 )
 
                 for accepted, (skt, addr) in enumerate(clients, 1):
-                    fdesc._setCloseOnExec(skt.fileno())
-
                     if len(addr) == 4:
                         # IPv6, make sure we get the scopeID if it
                         # exists
@@ -1551,7 +1601,7 @@ class Connector(base.BaseConnector):
         port: int | str,
         factory: ClientFactory[P],
         timeout: float,
-        bindAddress: str | tuple[str, int] | None,
+        bindAddress: Binding | str | tuple[str, int] | None,
         reactor: Any = None,
     ) -> None:
         if isinstance(port, str):

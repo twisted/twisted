@@ -9,6 +9,7 @@ import subprocess
 import sys
 from itertools import count
 from typing import Any
+from unittest import skipIf
 
 from zope.interface import implementer
 
@@ -289,6 +290,7 @@ run()"""
 
 
 class ConchServerSetupMixin:
+    skip = None
     if not cryptography:
         skip = "can't run without cryptography"
 
@@ -522,6 +524,7 @@ class RekeyTestsMixin(ConchServerSetupMixin):
 
 
 class OpenSSHClientMixin:
+    skip: str | None = None
     if not which("ssh"):
         skip = "no ssh command-line client available"
 
@@ -573,13 +576,17 @@ class OpenSSHClientMixin:
         return result
 
 
+_openSSHPath = which("ssh")
+
+
+@skipIf(not _openSSHPath, "ssh client not found")
 class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCase):
     """
     Tests L{SSHTransportBase}'s key exchange algorithm compatibility with
     OpenSSH.
     """
 
-    def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo):
+    def assertExecuteWithKexAlgorithm(self, keyExchangeAlgo: str) -> Deferred[Any]:
         """
         Call execute() method of L{OpenSSHClientMixin} with an ssh option that
         forces the exclusive use of the key exchange algorithm specified by
@@ -591,15 +598,11 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         @return: L{defer.Deferred}
         """
         kexAlgorithms = []
-        try:
-            output = subprocess.check_output(
-                [which("ssh")[0], "-Q", "kex"], stderr=subprocess.STDOUT
-            )
-            if not isinstance(output, str):
-                output = output.decode("utf-8")
-            kexAlgorithms = output.split()
-        except BaseException:
-            pass
+
+        output = subprocess.check_output(
+            [_openSSHPath[0], "-Q", "kex"], stderr=subprocess.STDOUT
+        )
+        kexAlgorithms = output.decode("utf-8").split()
 
         if keyExchangeAlgo not in kexAlgorithms:
             raise SkipTest(f"{keyExchangeAlgo} not supported by ssh client")
@@ -631,6 +634,18 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         OpenSSH
         """
         return self.assertExecuteWithKexAlgorithm("ecdh-sha2-nistp521")
+
+    def test_CURVE25519_SHA256(self) -> Deferred[Any]:
+        """
+        The curve25519-sha256 key exchange algorithm is compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm("curve25519-sha256")
+
+    def test_MLKEM768X25519_SHA256(self) -> Deferred[Any]:
+        """
+        The mlkem768x25519-sha256 key exchange algorithm is compatible with OpenSSH.
+        """
+        return self.assertExecuteWithKexAlgorithm("mlkem768x25519-sha256")
 
     def test_DH_GROUP14(self):
         """

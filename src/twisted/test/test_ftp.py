@@ -21,6 +21,7 @@ from twisted.cred import checkers, credentials, portal
 from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm
 from twisted.internet import defer, error, protocol, reactor, task
+from twisted.internet.address import IPv4Address
 from twisted.internet.interfaces import IConsumer
 from twisted.protocols import basic, ftp, loopback
 from twisted.python import failure, filepath, runtime
@@ -2083,7 +2084,9 @@ class FTPClientTests(TestCase):
         Create a FTP client and connect it to fake transport.
         """
         self.client = ftp.FTPClient()
-        self.transport = proto_helpers.StringTransportWithDisconnection()
+        self.transport = proto_helpers.StringTransportWithDisconnection(
+            peerAddress=IPv4Address("TCP", "127.0.0.1", 21)
+        )
         self.client.makeConnection(self.transport)
         self.transport.protocol = self.client
 
@@ -3015,6 +3018,59 @@ class FTPClientTests(TestCase):
         self.client.lineReceived(b"250-perhaps a progress report")
         self.client.lineReceived(b"250 okay")
         return d.addCallback(self.assertTrue)
+
+    def test_passiveRETRPeerCheck(self):
+        """
+        By default, client uses ip address of the original server for passive
+        data connections, instead of trusting PASV responses.
+        """
+
+        def cbConnect(host, port, factory):
+            self.assertEqual(host, "127.0.0.1")
+            self.assertEqual(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                b"150 File status okay; about to open data connection."
+            )
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        d = self.client.retrieveFile("spam", _BufferingProtocol())
+        self.assertEqual(self.transport.value(), b"PASV\r\n")
+        self.transport.clear()
+        self.client.lineReceived(passivemode_msg(self.client, host="127.0.0.2"))
+        self.assertEqual(self.transport.value(), b"RETR spam\r\n")
+        self.client.lineReceived(b"226 Transfer Complete.")
+        return d
+
+    def test_passiveRETRNoPeerCheck(self):
+        """
+        When client explicitly disables checkPeerSourceIP, the ip address in PASV
+        response is always used when opening passive data connections.
+        """
+
+        def cbConnect(host, port, factory):
+            self.assertEqual(host, "127.0.0.2")
+            self.assertEqual(port, 12345)
+            proto = factory.buildProtocol((host, port))
+            proto.makeConnection(proto_helpers.StringTransport())
+            self.client.lineReceived(
+                b"150 File status okay; about to open data connection."
+            )
+            proto.connectionLost(failure.Failure(error.ConnectionDone("")))
+
+        self.client._trustPasvAddr = True
+        self.client.connectFactory = cbConnect
+        self._testLogin()
+        d = self.client.retrieveFile("spam", _BufferingProtocol())
+        self.assertEqual(self.transport.value(), b"PASV\r\n")
+        self.transport.clear()
+        self.client.lineReceived(passivemode_msg(self.client, host="127.0.0.2"))
+        self.assertEqual(self.transport.value(), b"RETR spam\r\n")
+        self.client.lineReceived(b"226 Transfer Complete.")
+        return d
 
 
 class FTPClientBasicTests(TestCase):
