@@ -280,7 +280,7 @@ def _isGlobbingExpression(segments=None):
         return True
 
 
-def _normalizeIPAddress(addr: str):
+def _normalizeIPAddress(addr: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
     """
     Parse an IP address string into ipaddress object. IPv4-mapped IPv6 address
     is converted to IPv4 format.
