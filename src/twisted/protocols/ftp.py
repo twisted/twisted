@@ -280,6 +280,24 @@ def _isGlobbingExpression(segments=None):
         return True
 
 
+def _normalizeIPAddress(addr: str):
+    """
+    Parse an IP address string into ipaddress object. IPv4-mapped IPv6 address
+    is converted to IPv4 format.
+
+    @type  addr: C{str}
+    @param addr: IP address string
+
+    @rtype: C{ipaddress.IPv4Address} or C{ipaddress.IPv6Address}
+    @return: IP address object
+    """
+    ip = ipaddress.ip_address(addr)
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    else:
+        return ip
+
+
 class FTPCmdError(Exception):
     """
     Generic exception for FTP commands.
@@ -1003,23 +1021,17 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             return defer.fail(BadCmdSequenceError("may not send PASV after EPSV ALL"))
 
         host = self.transport.getHost().host
-        try:
-            address = ipaddress.IPv6Address(host)
-        except ipaddress.AddressValueError:
-            pass
+        ip = _normalizeIPAddress(host)
+        if isinstance(ip, ipaddress.IPv6Address):
+            # There's no standard defining the behaviour of PASV with
+            # IPv6, so just claim it as unimplemented.  (Some servers
+            # return something like '0,0,0,0' in the host part of the
+            # response in order that at least clients that ignore the
+            # host part can work, and if it becomes necessary then we
+            # could do that too.)
+            return defer.fail(PASVIPv6NotImplementedError())
         else:
-            if address.ipv4_mapped is not None:
-                # IPv4-mapped addresses are usable, but we need to make sure
-                # they're encoded as IPv4 in the response.
-                host = str(address.ipv4_mapped)
-            else:
-                # There's no standard defining the behaviour of PASV with
-                # IPv6, so just claim it as unimplemented.  (Some servers
-                # return something like '0,0,0,0' in the host part of the
-                # response in order that at least clients that ignore the
-                # host part can work, and if it becomes necessary then we
-                # could do that too.)
-                return defer.fail(PASVIPv6NotImplementedError())
+            host = str(ip)
 
         # if we have a DTP port set up, lose it.
         if self.dtpFactory is not None:
@@ -1109,7 +1121,7 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
         ip = "%d.%d.%d.%d" % tuple(addr[:4])
         port = addr[4] << 8 | addr[5]
 
-        if port < 1024 or ip != self.transport.getPeer().host:
+        if port < 1024 or ip != str(_normalizeIPAddress(self.transport.getPeer().host)):
             return defer.fail(CmdNotImplementedForArgError(address))
 
         # if we have a DTP port set up, lose it.
@@ -1154,7 +1166,9 @@ class FTP(basic.LineReceiver, policies.TimeoutMixin):
             except FTPCmdError:
                 return defer.fail()
 
-        if port < 1024 or ip != self.transport.getPeer().host:
+        if port < 1024 or _normalizeIPAddress(ip) != _normalizeIPAddress(
+            self.transport.getPeer().host
+        ):
             return defer.fail(CmdNotImplementedForArgError(extendedAddress))
 
         # if we have a DTP port set up, lose it.
