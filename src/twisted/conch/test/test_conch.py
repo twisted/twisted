@@ -645,6 +645,11 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         """
         The mlkem768x25519-sha256 key exchange algorithm is compatible with OpenSSH.
         """
+        from twisted.conch.ssh import _kex
+
+        if not _kex.cryptographyHasMLKEM:
+            raise SkipTest("mlkem not supported by cryptography version")
+
         return self.assertExecuteWithKexAlgorithm("mlkem768x25519-sha256")
 
     def test_DH_GROUP14(self):

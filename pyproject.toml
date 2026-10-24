@@ -17,14 +17,13 @@ dynamic = [
 description = "An asynchronous networking framework written in Python"
 license = "MIT"
 # When updating this value, make sure our CI matrix includes a matching minimum version.
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Twisted Matrix Community", email = "twisted@python.org" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -285,7 +284,7 @@ include = [
 # Next time you need to work on black consider migration to ruff
 # https://github.com/twisted/twisted/issues/12646
 [tool.black]
-target-version = ['py310', 'py311', 'py312']
+target-version = ['py311', 'py312']
 
 [tool.isort]
 profile = "black"
