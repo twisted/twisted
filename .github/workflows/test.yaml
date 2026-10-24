@@ -118,11 +118,9 @@ jobs:
           # by GitHub. The availability of the Python version
           # depends on the version of Ubuntu in use.
           # See https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
-          - python-version: '3.10.4'
+          - python-version: '3.11.15'
             tox-env: 'nodeps-withcov-posix'
             job-name: 'nodeps-test'
-            # Python 3.10.4 is not available on Ubuntu 26.04
-            runs-on: 'ubuntu-24.04'
 
           # The `lowdeps-nodeps-noipv6` job tests the lowest-version dependency
           # footprint for Twisted; all the lowest versions, nothing but the
@@ -134,7 +132,7 @@ jobs:
           # meaningful; the reasoning is just "older systems are probably the
           # ones more likely to not have IPv6 configured".
 
-          - python-version: '3.10'
+          - python-version: '3.11'
             noipv6: '-noipv6'
             tox-env: 'lowdeps-nodeps-withcov-posix'
             job-name: 'lowdeps-nodeps-noipv6'
@@ -142,14 +140,9 @@ jobs:
           # The `lowdeps-alldeps` job tests the lowest supported dependency
           # versions for a full-featured version of Twisted; all the lowest
           # versions, but every extra installed.
-          - python-version: '3.10'
+          - python-version: '3.11'
             tox-env: 'lowdeps-alldeps-withcov-posix'
             job-name: 'lowdeps-alldeps'
-            # Conch test fail when run on Ubuntu 26.04
-            runs-on: 'ubuntu-24.04'
-
-          # Just Python 3.10 with default settings.
-          - python-version: '3.10'
 
           # Just Python 3.11 with default settings.
           - python-version: '3.11'
@@ -162,7 +155,7 @@ jobs:
 
           # Oldest Intel macOS (available on GitHub)
           # and lowest Python (major) supported versions.
-          - python-version: '3.10'
+          - python-version: '3.11'
             runs-on: 'macos-15'
             job-name: 'macos-15-default-tests'
             tox-env: 'macos-withcov-alldeps'
@@ -174,7 +167,7 @@ jobs:
             tox-env: 'macos-withcov-alldeps'
 
           # Windows, minimum Python version with select reactor.
-          - python-version: '3.10'
+          - python-version: '3.11'
             runs-on: 'windows-2025'
             tox-env: 'alldeps-withcov-windows'
             job-name: 'win-default-tests-select'
@@ -221,7 +214,7 @@ jobs:
           # framebuffer server.  This covers our integration with the version
           # of Gtk packaged within our selected version of Linux above.
           # This is executed using the lowest Python major version that we support.
-          - python-version: '3.10'
+          - python-version: '3.11'
             tox-env: 'alldeps-gtk-withcov-posix'
             platform-deps: 'gtk-platform'
             tox-wrapper: 'xvfb-run -a'
