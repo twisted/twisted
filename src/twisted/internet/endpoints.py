@@ -37,6 +37,7 @@ from twisted.internet.address import (
     _ProcessAddress,
 )
 from twisted.internet.interfaces import (
+    Binding,
     IAddress,
     IHostnameResolver,
     IHostResolution,
@@ -53,6 +54,7 @@ from twisted.internet.interfaces import (
     IStreamClientEndpointStringParserWithReactor,
     IStreamServerEndpoint,
     IStreamServerEndpointStringParser,
+    _Binding,
 )
 from twisted.internet.protocol import ClientFactory, Factory, ProcessProtocol, Protocol
 
@@ -620,7 +622,7 @@ class TCP4ClientEndpoint:
         host: str,
         port: int,
         timeout: float = 30,
-        bindAddress: str | tuple[bytes | str, int] | None = None,
+        bindAddress: Binding | str | tuple[bytes | str, int] | None = None,
     ) -> None:
         """
         @param reactor: An L{IReactorTCP} provider
@@ -869,7 +871,7 @@ class HostnameEndpoint:
         host: str | bytes,
         port: int,
         timeout: float = 30,
-        bindAddress: bytes | str | tuple[bytes | str, int] | None = None,
+        bindAddress: Binding | bytes | str | tuple[bytes | str, int] | None = None,
         attemptDelay: float | None = None,
     ) -> None:
         """
@@ -899,7 +901,9 @@ class HostnameEndpoint:
             specific local port. To bind the port, but leave the
             interface unbound, use a tuple of ("", port), or ("0.0.0.0",
             port) for IPv4, or ("::0", port) for IPv6. To leave both
-            interface and port unbound, just use None.
+            interface and port unbound, just use None. You may also pass
+            a Binding instance (as returned from L{makeBinding} to specify
+            further options.
         @type bindAddress: L{str}, L{tuple}, or None
 
         @param attemptDelay: The number of seconds to delay between connection
@@ -927,7 +931,7 @@ class HostnameEndpoint:
         self._port = port
         self._timeout = timeout
 
-        if bindAddress is not None:
+        if bindAddress is not None and not isinstance(bindAddress, _Binding):
             if isinstance(bindAddress, (bytes, str)):
                 bindAddress = (bindAddress, 0)
             if isinstance(bindAddress[0], bytes):
