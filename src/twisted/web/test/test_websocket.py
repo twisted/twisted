@@ -419,6 +419,10 @@ class MessageTest(SynchronousTestCase):
     textFrame = b"\x81\x86\x00\x00\x00\x00abcdef"
 
     def testCompleteFrameControl(self) -> None:
+       """
+       When a full message is received,
+       it is forwarded to the ws high level handler.
+       """
         self.server.dataReceived(self.frame)
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
