@@ -8,8 +8,11 @@ https://twisted.org/trac/ticket/<number>
 
 .. towncrier release notes start
 
-twisted 26.10.0rc1 (2026-10-22)
+
+twisted 26.10.0rc2 (2026-10-26)
 ===============================
+
+Since 26.10.0rc1, this release added the fix for #12885.
 
 This is the last release with support for Python 3.10.
 
@@ -61,7 +64,6 @@ Improved Documentation
 Deprecations and Removals
 -------------------------
 
-- twisted.trial.runner.samefile is deprecated and replaced by os.path.samefile. (#12671)
 - twisted.internet.tcp.Connection no longer supports returning a non-None value from a protocol's dataReceived method, deprecated since Twisted 11.0.0. (#12688)
 - `twisted.internet.error.PotentialZombieWarning`, deprecated since Twisted 10.0, has been removed. (#12744)
 - Implementations of `twisted.internet.interfaces.IProcessProtocol` are now required to provide a `processExited` method. Omitting this method was deprecated in Twisted 8.2. (#12824)
@@ -105,6 +107,7 @@ Features
 Bugfixes
 ~~~~~~~~
 
+- twisted.web.websocket.WebSocketResource and twisted.web.websocket.WebSocketClientEndpoint will now deliver complete messages, rather than partial messages, to textMessageReceived and bytesMessageReceived on their WebSocketProtocol. (#12885)
 - twisted.web's HTTP/2 server now limits the rate at which a remote peer may reset streams, mitigating the HTTP/2 Rapid Reset denial-of-service attack (CVE-2023-44487). (#12705)
 - twisted.web.http.HTTPChannel.headerReceived now rejects a header value that contains a bare carriage return or line feed, closing a request-smuggling gap where such a value could hide a following header from the parser (RFC 9110 section 5.5). (#12754)
 
@@ -168,7 +171,10 @@ Misc
 Trial
 -----
 
-No significant changes.
+Deprecations and Removals
+-------------------------
+
+- twisted.trial.runner.samefile is deprecated and replaced by os.path.samefile. (#12671)
 
 
 Twisted 26.4.0 (2026-05-11)

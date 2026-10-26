@@ -986,7 +986,7 @@ class RunnerDeprecationTests(unittest.SynchronousTestCase):
         Test that L{runner.samefile} is deprecated.
         """
         self.callDeprecated(
-            (Version("Twisted", 26, 10, 0, release_candidate=1), "os.path.samefile"),
+            (Version("Twisted", 26, 10, 0, release_candidate=2), "os.path.samefile"),
             runner.samefile,
             __file__,
             os.path.abspath(__file__),

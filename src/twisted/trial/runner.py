@@ -94,7 +94,7 @@ def isPackageDirectory(dirname):
 
 
 @deprecated(
-    Version("Twisted", 26, 10, 0, release_candidate=1), replacement="os.path.samefile"
+    Version("Twisted", 26, 10, 0, release_candidate=2), replacement="os.path.samefile"
 )
 def samefile(filename1: str, filename2: str) -> bool:
     """

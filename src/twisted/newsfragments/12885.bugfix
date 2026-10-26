@@ -1,1 +1,0 @@
-twisted.web.websocket.WebSocketResource and twisted.web.websocket.WebSocketClientEndpoint will now deliver complete messages, rather than partial messages, to textMessageReceived and bytesMessageReceived on their WebSocketProtocol.
