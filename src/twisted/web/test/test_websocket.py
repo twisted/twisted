@@ -366,7 +366,7 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(p.closedReason.type, ConnectionDone)
 
 
-class Receiver(WebSocketProtocol):
+class Receiver:
     def __init__(self) -> None:
         self.messages: list[bytes | str] = []
 
