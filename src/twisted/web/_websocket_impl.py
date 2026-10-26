@@ -438,6 +438,10 @@ CoStr = TypeVar("CoStr", bytes | bytearray, str, covariant=True)
 
 
 class SomeMessage(typing.Protocol[CoStr]):
+    """
+    The properties we rely on from the wsproto text and bytes message types.
+    """
+
     @property
     def data(self) -> CoStr:
         ...
@@ -447,24 +451,33 @@ class SomeMessage(typing.Protocol[CoStr]):
         ...
 
 
-def deliver(
+def maybeDeliver(
     event: SomeMessage[SomeStr],
     buffer: Buffer[SomeStr],
-    received: Callable[[SomeStr], None],
+    receivedMethod: Callable[[SomeStr], None],
 ) -> None:
+    """
+    If it is complete, deliver the given event to the given C{...Received()}
+    method.
+
+    This re-assembles messages from buffered data because, as wsproto explains,
+    "[a websocket event] only represents a single chunk of data and not a full
+    WebSocket message.  You need to buffer and reassemble these chunks to get
+    the full message."
+    """
     buffer.add(event.data)
     if event.message_finished:
-        received(buffer.done())
+        receivedMethod(buffer.done())
 
 
 @_handleEvent.register
 def _handle_textMessage(event: TextMessage, proto: AnyWSWP) -> None:
-    deliver(event, proto._textBuffer, proto._wsp.textMessageReceived)
+    maybeDeliver(event, proto._textBuffer, proto._wsp.textMessageReceived)
 
 
 @_handleEvent.register
 def _handle_bytesMessage(event: BytesMessage, proto: AnyWSWP) -> None:
-    deliver(event, proto._bytesBuffer, proto._wsp.bytesMessageReceived)
+    maybeDeliver(event, proto._bytesBuffer, proto._wsp.bytesMessageReceived)
 
 
 @_handleEvent.register
