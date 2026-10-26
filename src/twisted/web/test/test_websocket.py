@@ -392,6 +392,7 @@ class Receiver:
         pass
 
 
+@skipIf(shouldSkip, "wsproto library required for websockets")
 class MessageTest(SynchronousTestCase):
     def setUp(self) -> None:
         self.receiver = Receiver()
