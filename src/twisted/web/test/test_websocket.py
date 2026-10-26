@@ -423,7 +423,12 @@ class MessageTest(SynchronousTestCase):
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
     def testOneFrameAcrossTwoReads(self) -> None:
+        """
+        A partial binary message is not forwarded
+        unless it is fully received.
+        """
         self.server.dataReceived(self.frame[:8])
+        self.assertEqual(self.receiver.messages, [])
         self.server.dataReceived(self.frame[8:])
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
