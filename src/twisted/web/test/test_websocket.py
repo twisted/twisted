@@ -411,7 +411,7 @@ class MessageTest(SynchronousTestCase):
             b"Sec-WebSocket-Version: 13\r\n"
             b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n"
         )
-        self.assertIn(b"101 Switching Protocols", transport.value())
+        self.assertIn(b"HTTP/1.1 101", transport.value())
 
     # FIN=1, opcode=binary, MASK=1, length=6, four-byte zero mask, payload
     frame = b"\x82\x86\x00\x00\x00\x00abcdef"
