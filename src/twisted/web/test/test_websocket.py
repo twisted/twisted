@@ -13,10 +13,16 @@ from unittest import skipIf
 
 from zope.interface import implementer
 
+from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
 from twisted.internet.interfaces import IPushProducer
-from twisted.internet.testing import AccumulatingProtocol, MemoryReactorClock
+from twisted.internet.task import Clock
+from twisted.internet.testing import (
+    AccumulatingProtocol,
+    MemoryReactorClock,
+    StringTransport,
+)
 from twisted.python.failure import Failure
 from twisted.test.iosim import ConnectionCompleter, IOPump
 from twisted.trial.unittest import SynchronousTestCase
@@ -358,3 +364,93 @@ class WebSocketTests(SynchronousTestCase):
         # expressed this way because assertIs isn't a guard for mypy
         assert p.closedReason is not None, "should be closed now"
         self.assertEqual(p.closedReason.type, ConnectionDone)
+
+
+class Receiver:
+    def __init__(self) -> None:
+        self.messages: list[bytes | str] = []
+
+    def buildProtocol(self, request: Request) -> Receiver:
+        return self
+
+    def negotiationStarted(self, transport: WebSocketTransport) -> None:
+        pass
+
+    def negotiationFinished(self) -> None:
+        pass
+
+    def bytesMessageReceived(self, data: bytes | bytearray) -> None:
+        self.messages.append(bytes(data))
+
+    def textMessageReceived(self, data: str) -> None:
+        self.messages.append(data)
+
+    def pongReceived(self, payload: bytes) -> None:
+        pass
+
+    def connectionLost(self, reason: Failure) -> None:
+        pass
+
+
+class MessageTest(SynchronousTestCase):
+    def setUp(self) -> None:
+        self.receiver = Receiver()
+        root = Resource()
+        root.putChild(b"ws", WebSocketResource(self.receiver))
+        self.server = Site(root, reactor=Clock()).buildProtocol(
+            IPv4Address("TCP", "127.0.0.1", 12345)
+        )
+        transport = StringTransport()
+        self.server.makeConnection(transport)
+        self.server.dataReceived(
+            b"GET /ws HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Upgrade: websocket\r\n"
+            b"Connection: Upgrade\r\n"
+            b"Sec-WebSocket-Version: 13\r\n"
+            b"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n"
+        )
+        self.assertIn(b"101 Switching Protocols", transport.value())
+
+    # FIN=1, opcode=binary, MASK=1, length=6, four-byte zero mask, payload
+    frame = b"\x82\x86\x00\x00\x00\x00abcdef"
+    # FIN=1, opcode=text, MASK=1, length=6, four-byte zero mask, payload
+    textFrame = b"\x81\x86\x00\x00\x00\x00abcdef"
+
+    def testCompleteFrameControl(self) -> None:
+        self.server.dataReceived(self.frame)
+        self.assertEqual(self.receiver.messages, [b"abcdef"])
+
+    def testOneFrameAcrossTwoReads(self) -> None:
+        self.server.dataReceived(self.frame[:8])
+        self.server.dataReceived(self.frame[8:])
+        self.assertEqual(self.receiver.messages, [b"abcdef"])
+
+    def testOneFrameAcrossTwoReadsText(self) -> None:
+        self.server.dataReceived(self.textFrame[:8])
+        self.server.dataReceived(self.textFrame[8:])
+        self.assertEqual(self.receiver.messages, ["abcdef"])
+
+    def testOneMessageAcrossTwoFrames(self) -> None:
+        # A non-final binary frame followed by a final continuation frame
+        self.server.dataReceived(
+            b"".join(
+                [
+                    b"\x02\x82\x00\x00\x00\x00ab",
+                    b"\x80\x84\x00\x00\x00\x00cdef",
+                ]
+            )
+        )
+        self.assertEqual(self.receiver.messages, [b"abcdef"])
+
+    def testOneMessageAcrossTwoFramesText(self) -> None:
+        # A non-final binary frame followed by a final continuation frame
+        self.server.dataReceived(
+            b"".join(
+                [
+                    b"\x01\x82\x00\x00\x00\x00ab",
+                    b"\x80\x84\x00\x00\x00\x00cdef",
+                ]
+            )
+        )
+        self.assertEqual(self.receiver.messages, ["abcdef"])

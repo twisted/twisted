@@ -309,6 +309,22 @@ def _handleEvent(event: Event, proto: AnyWSWP) -> None:
     """
 
 
+SomeStr = TypeVar("SomeStr", bytes | bytearray, str)
+
+
+@dataclass(slots=True)
+class Buffer(Generic[SomeStr]):
+    data: SomeStr
+
+    def add(self, new: SomeStr) -> None:
+        self.data += new
+
+    def done(self) -> SomeStr:
+        result = self.data
+        self.data = self.data[0:0]
+        return result
+
+
 @implementer(IProtocol)
 @dataclass
 class _WebSocketWireProtocol(Generic[_WSP]):
@@ -325,6 +341,8 @@ class _WebSocketWireProtocol(Generic[_WSP]):
     # Internal state.
     _done: Deferred[_WSP] = field(init=False)
     _rejectResponse: Response | None = None
+    _textBuffer: Buffer[str] = field(default_factory=lambda: Buffer(""))
+    _bytesBuffer: Buffer[bytes | bytearray] = field(default_factory=lambda: Buffer(b""))
 
     def makeConnection(self, transport: ITransport) -> None:
         self.transport = transport
@@ -416,14 +434,37 @@ def _handle_rejectData(event: RejectData, proto: AnyWSWP) -> None:
         proto.transport.loseConnection()
 
 
+CoStr = TypeVar("CoStr", bytes | bytearray, str, covariant=True)
+
+
+class SomeMessage(typing.Protocol[CoStr]):
+    @property
+    def data(self) -> CoStr:
+        ...
+
+    @property
+    def message_finished(self) -> bool:
+        ...
+
+
+def deliver(
+    event: SomeMessage[SomeStr],
+    buffer: Buffer[SomeStr],
+    received: Callable[[SomeStr], None],
+) -> None:
+    buffer.add(event.data)
+    if event.message_finished:
+        received(buffer.done())
+
+
 @_handleEvent.register
 def _handle_textMessage(event: TextMessage, proto: AnyWSWP) -> None:
-    proto._wsp.textMessageReceived(event.data)
+    deliver(event, proto._textBuffer, proto._wsp.textMessageReceived)
 
 
 @_handleEvent.register
 def _handle_bytesMessage(event: BytesMessage, proto: AnyWSWP) -> None:
-    proto._wsp.bytesMessageReceived(event.data)
+    deliver(event, proto._bytesBuffer, proto._wsp.bytesMessageReceived)
 
 
 @_handleEvent.register
