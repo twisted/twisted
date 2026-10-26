@@ -366,18 +366,12 @@ class WebSocketTests(SynchronousTestCase):
         self.assertEqual(p.closedReason.type, ConnectionDone)
 
 
-class Receiver:
+class Receiver(WebSocketProtocol):
     def __init__(self) -> None:
         self.messages: list[bytes | str] = []
 
     def buildProtocol(self, request: Request) -> Receiver:
         return self
-
-    def negotiationStarted(self, transport: WebSocketTransport) -> None:
-        pass
-
-    def negotiationFinished(self) -> None:
-        pass
 
     def bytesMessageReceived(self, data: bytes | bytearray) -> None:
         self.messages.append(bytes(data))
@@ -385,11 +379,17 @@ class Receiver:
     def textMessageReceived(self, data: str) -> None:
         self.messages.append(data)
 
+    def negotiationStarted(self, transport: WebSocketTransport) -> None:
+        ...
+
+    def negotiationFinished(self) -> None:
+        ...
+
     def pongReceived(self, payload: bytes) -> None:
-        pass
+        ...
 
     def connectionLost(self, reason: Failure) -> None:
-        pass
+        ...
 
 
 @skipIf(shouldSkip, "wsproto library required for websockets")
