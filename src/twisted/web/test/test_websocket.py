@@ -393,8 +393,16 @@ class Receiver:
 
 
 @skipIf(shouldSkip, "wsproto library required for websockets")
-class MessageTest(SynchronousTestCase):
+class FramingAndFragmentationTests(SynchronousTestCase):
+    """
+    Messages will be delivered whole, and re-assembled from their fragments
+    both at the websocket level and the TCP/TLS level.
+    """
+
     def setUp(self) -> None:
+        """
+        Establish a connection.
+        """
         self.receiver = Receiver()
         root = Resource()
         root.putChild(b"ws", WebSocketResource(self.receiver))
@@ -419,17 +427,17 @@ class MessageTest(SynchronousTestCase):
     textFrame = b"\x81\x86\x00\x00\x00\x00abcdef"
 
     def testCompleteFrameControl(self) -> None:
-       """
-       When a full message is received,
-       it is forwarded to the ws high level handler.
-       """
+        """
+        When a full message is received, it is forwarded to
+        WebSocketProtocol.bytesMessageReceived.
+        """
         self.server.dataReceived(self.frame)
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
     def testOneFrameAcrossTwoReads(self) -> None:
         """
-        A partial binary message is not forwarded
-        unless it is fully received.
+        A partial binary message is not forwarded to
+        WebSocketProtocol.bytesMessageReceived unless it is fully received.
         """
         self.server.dataReceived(self.frame[:8])
         self.assertEqual(self.receiver.messages, [])
@@ -437,12 +445,20 @@ class MessageTest(SynchronousTestCase):
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
     def testOneFrameAcrossTwoReadsText(self) -> None:
+        """
+        A partial text message is not forwarded to
+        WebSocketProtocol.textMessageReceived unless it is fully received.
+        """
         self.server.dataReceived(self.textFrame[:8])
         self.server.dataReceived(self.textFrame[8:])
         self.assertEqual(self.receiver.messages, ["abcdef"])
 
     def testOneMessageAcrossTwoFrames(self) -> None:
-        # A non-final binary frame followed by a final continuation frame
+        """
+        A partial binary message is not forwarded to
+        WebSocketProtocol.bytesMessageReceived unless its final frame is
+        received.
+        """
         self.server.dataReceived(
             b"".join(
                 [
@@ -454,7 +470,11 @@ class MessageTest(SynchronousTestCase):
         self.assertEqual(self.receiver.messages, [b"abcdef"])
 
     def testOneMessageAcrossTwoFramesText(self) -> None:
-        # A non-final binary frame followed by a final continuation frame
+        """
+        A partial text message is not forwarded to
+        WebSocketProtocol.textMessageReceived unless its final frame is
+        received.
+        """
         self.server.dataReceived(
             b"".join(
                 [
