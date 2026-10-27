@@ -20,11 +20,11 @@ This include fixes for:
 
 * CVE-2026-83813 (GHSA-jj36-9pvh-vj5r),
 * GHSA-vpp8-g58w-m8mp (no CVE assigned yet)
-* GHSA-cwm5-jh59-mwxr (no CVE assigned yet)
-* GHSA-3476-c5c2-fr73 (no CVE assigned yet)
-* GHSA-q7qq-6mhp-9rc4 (no CVE assigned yet)
-* GHSA-2qrf-pqgx-qh9v (no CVE assigned yet)
-* GHSA-53xc-49m8-p798 (no CVE assigned yet)
+* CVE-2026-115778 (GHSA-cwm5-jh59-mwxr)
+* CVE-2026-115775 (GHSA-3476-c5c2-fr73)
+* CVE-2026-115877 (GHSA-q7qq-6mhp-9rc4)
+* CVE-2026-115774 (GHSA-2qrf-pqgx-qh9v)
+* CVE-2026-115776 (GHSA-53xc-49m8-p798)
 
 
 Features
