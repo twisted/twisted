@@ -285,10 +285,8 @@ def _normalizeIPAddress(addr: str) -> ipaddress.IPv4Address | ipaddress.IPv6Addr
     Parse an IP address string into ipaddress object. IPv4-mapped IPv6 address
     is converted to IPv4 format.
 
-    @type  addr: C{str}
     @param addr: IP address string
 
-    @rtype: C{ipaddress.IPv4Address} or C{ipaddress.IPv6Address}
     @return: IP address object
     """
     ip = ipaddress.ip_address(addr)
