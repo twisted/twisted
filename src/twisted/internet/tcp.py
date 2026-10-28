@@ -1282,7 +1282,7 @@ def _constructTCPPort(self, port, factory, backlog, interface):
     if port is None or isinstance(port, int):
         binding = makeBinding(interface, port, reuseAddress=True)
     else:
-        assert isinstance(binding, _Binding), "Binding is {}".format(binding)
+        assert isinstance(binding, _Binding), f"Binding is {binding}"
         if interface != "" and binding._address != interface:
             raise ValueError("Inconsistent interface vs Binding specifiers")
     # we need to be backwards-compatible to when Port had settable
