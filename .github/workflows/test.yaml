@@ -205,7 +205,7 @@ jobs:
           # extension.
           # There is very little PYPY specific code so there is not much to
           # gain from reporting coverage.
-          - python-version: 'pypy3.12-v8.0.1'
+          - python-version: 'pypy3.11-v8.0.1'
             tox-env: 'alldeps-nocov-posix'
             job-name: 'no-coverage'
             skip-coverage: yes
