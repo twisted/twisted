@@ -1,6 +1,6 @@
 # Benchmarks, to be run by codspeed.io in CI
 
-Benchmarks are run using `pytest`: `pytest benchmarks/`.
+Benchmarks are run using `pytest`: `pytest benchmarks/ --codspeed`.
 This is unlike normal Twisted tests, that use `trial`.
 
 ## Running benchmarks as part of CI
@@ -12,14 +12,8 @@ Note that as of mid-2024, codspeed.io uses a simulated CPU (Cachegrind) to run t
 
 ## Running benchmarks locally
 
-You can run benchmarks locally by installing `pytest-benchmark` and then running `pytest benchmarks/`.
-`tox -e benchmark` does this automatically.
-Unlike `pytest-codspeed`, the results are specific to your computer, but they're helpful for local before/after comparisons.
-And `pytest-codspeed` outputs nothing when run locally, at least at the time of writing (May 2024).
+You can run benchmarks locally by running `tox -e benchmark`.
 
 ## Writing benchmarks
 
 See the [Codspeed documentation](https://docs.codspeed.io/benchmarks/python).
-
-Note that the `@pytest.mark.benchmark` style of benchmark doesn't work with `pytest-benchmark`, so you should not use it.
-Instead, use the `benchmark` pytest fixture (i.e. an argument with that name to the test functions).
