@@ -9,17 +9,18 @@ https://twisted.org/trac/ticket/<number>
 .. towncrier release notes start
 
 
-twisted 26.10.0rc2 (2026-10-26)
-===============================
+twisted 26.10.0 (2026-10-30)
+============================
 
+No changes since 26.10.0rc2.
 Since 26.10.0rc1, this release added the fix for #12885.
 
 This is the last release with support for Python 3.10.
 
 This include fixes for:
 
-* CVE-2026-83813 (GHSA-jj36-9pvh-vj5r),
-* GHSA-vpp8-g58w-m8mp (no CVE assigned yet)
+* CVE-2026-83813 (GHSA-jj36-9pvh-vj5r)
+* CVE-2023-44487 (GHSA-vpp8-g58w-m8mp)
 * CVE-2026-115778 (GHSA-cwm5-jh59-mwxr)
 * CVE-2026-115775 (GHSA-3476-c5c2-fr73)
 * CVE-2026-115877 (GHSA-q7qq-6mhp-9rc4)

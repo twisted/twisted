@@ -289,7 +289,7 @@ ProtocolNegotiationSupport.NOSUPPORT = (
 )
 
 
-@deprecated(Version("Twisted", 26, 10, 0, release_candidate=2))
+@deprecated(Version("Twisted", 26, 10, 0))
 def protocolNegotiationMechanisms() -> FlagConstant:
     """
     Check whether the installed versions of pyOpenSSL and OpenSSL are recent
@@ -314,7 +314,7 @@ def protocolNegotiationMechanisms() -> FlagConstant:
 
 
 deprecatedModuleAttribute(
-    Version("Twisted", 26, 10, 0, release_candidate=2),
+    Version("Twisted", 26, 10, 0),
     "All supported TLS backends provide ALPN. There is no need to check for support.",
     __name__,
     ProtocolNegotiationSupport.__name__,
