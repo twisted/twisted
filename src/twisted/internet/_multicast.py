@@ -124,7 +124,10 @@ class MulticastMixin:
         self.socket.setsockopt(a, b, int(bool(mode)))
 
     def getTTL(self) -> int:
-        return self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL)
+        from sys import byteorder
+
+        ttl = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
+        return int.from_bytes(ttl, byteorder)
 
     def setTTL(self, ttl: int) -> None:
         bttl = struct.pack("B", ttl)
