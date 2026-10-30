@@ -423,7 +423,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov pytest-benchmark
+        python -m pip install '.[tls,conch,http2]' pytest pytest-codspeed pytest-cov
 
     - name: Run benchmarks
       uses: CodSpeedHQ/action@v5
@@ -443,8 +443,6 @@ jobs:
         # The previous Codspeed run takes care of the actual benchmark
         # measurements.
         pytest \
-          --benchmark-min-rounds 1 --benchmark-max-time 0.00001 \
-          --benchmark-columns=rounds \
           --cov benchmarks --cov twisted --cov-config=.coveragerc \
           --cov-report=xml \
           benchmarks
