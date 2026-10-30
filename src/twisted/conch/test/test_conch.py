@@ -14,6 +14,7 @@ from unittest import skipIf
 from zope.interface import implementer
 
 from twisted.conch.error import ConchError
+from twisted.conch.ssh._kex import cryptographyHasMLKEM
 from twisted.conch.test.keydata import privateRSA_openssh, publicRSA_openssh
 from twisted.conch.test.test_ssh import ConchTestRealm
 from twisted.cred import portal
@@ -641,6 +642,10 @@ class OpenSSHKeyExchangeTests(ConchServerSetupMixin, OpenSSHClientMixin, TestCas
         """
         return self.assertExecuteWithKexAlgorithm("curve25519-sha256")
 
+    @skipIf(
+        not cryptographyHasMLKEM,
+        "ML-KEM is not supported by cryptography older than v48",
+    )
     def test_MLKEM768X25519_SHA256(self) -> Deferred[Any]:
         """
         The mlkem768x25519-sha256 key exchange algorithm is compatible with OpenSSH.
