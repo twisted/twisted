@@ -204,12 +204,19 @@ class ErrorReportingTests(StringTest):
         suite = unittest.decorate(self.loader.loadDoctests(erroneous), itrial.ITestCase)
         output = self.getOutput(suite)
         path = "twisted.trial.test.erroneous.unexpectedException"
-        for substring in ["1/0", "ZeroDivisionError", "Exception raised:", path]:
+        # Python 3.15+ changed doctest error output format
+        if sys.version_info >= (3, 15):
+            substrings = ["1/0", "ZeroDivisionError", path]
+        else:
+            substrings = ["1/0", "ZeroDivisionError", "Exception raised:", path]
+        for substring in substrings:
             self.assertSubstring(substring, output)
-        self.assertTrue(
-            re.search("Fail(ed|ure in) example:", output),
-            "Couldn't match 'Failure in example: ' " "or 'Failed example: '",
-        )
+        # Python 3.15+ no longer uses "Failed example:" format
+        if sys.version_info < (3, 15):
+            self.assertTrue(
+                re.search("Fail(ed|ure in) example:", output),
+                "Couldn't match 'Failure in example: ' " "or 'Failed example: '",
+            )
         expect = [self.doubleSeparator, re.compile(r"\[(ERROR|FAIL)\]")]
         self.stringComparison(expect, output.splitlines())
 
