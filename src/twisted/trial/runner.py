@@ -93,7 +93,7 @@ def isPackageDirectory(dirname):
     return False
 
 
-@deprecated(Version("Twisted", "NEXT", 0, 0), replacement="os.path.samefile")
+@deprecated(Version("Twisted", 26, 10, 0), replacement="os.path.samefile")
 def samefile(filename1: str, filename2: str) -> bool:
     """
     A hacky implementation of C{os.path.samefile}. Do not use this.

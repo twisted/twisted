@@ -1,1 +1,0 @@
-Implementations of `twisted.internet.interfaces.IProcessProtocol` are now required to provide a `processExited` method. Omitting this method was deprecated in Twisted 8.2.

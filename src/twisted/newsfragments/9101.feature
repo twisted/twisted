@@ -1,1 +1,0 @@
-It is now possible to set the SO_REUSEPORT and SO_REUSEADDR TCP socket flags from user code.
