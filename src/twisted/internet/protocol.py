@@ -11,11 +11,12 @@ Twisted.  The Protocol class contains some introductory material.
 from __future__ import annotations
 
 import random
-from typing import Any, Callable, Generic, Protocol as TypingProtocol
+from collections.abc import Callable
+from typing import Any, Generic, Protocol as TypingProtocol, Self
 
 from zope.interface import implementer
 
-from typing_extensions import ParamSpec, Self, TypeVar
+from typing_extensions import ParamSpec, TypeVar
 
 from twisted.internet import defer, error, interfaces
 from twisted.internet.interfaces import (

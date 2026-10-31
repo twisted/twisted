@@ -9,7 +9,7 @@ IPv6-aware hostname resolution.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from socket import (
     AF_INET,
     AF_INET6,
@@ -21,7 +21,7 @@ from socket import (
     gaierror,
     getaddrinfo,
 )
-from typing import TYPE_CHECKING, Callable, NoReturn, Protocol
+from typing import TYPE_CHECKING, NoReturn, Protocol
 
 from zope.interface import implementer
 

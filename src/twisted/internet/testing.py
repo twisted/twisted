@@ -7,17 +7,17 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
-from collections.abc import Coroutine, Generator, Iterator, Sequence
+from collections.abc import Callable, Coroutine, Generator, Iterator, Sequence
 from dataclasses import dataclass
 from io import BytesIO
 from socket import AF_INET, AF_INET6
 from time import time
-from typing import Any, Callable, Protocol, TypeVar, overload
+from typing import Any, Protocol, Self, TypeVar, overload
 
 from zope.interface import implementedBy, implementer
 from zope.interface.verify import verifyClass
 
-from typing_extensions import ParamSpec, Self
+from typing_extensions import ParamSpec
 
 from twisted.internet import address, error, protocol, task
 from twisted.internet.abstract import _dataMustBeBytes, isIPv6Address
