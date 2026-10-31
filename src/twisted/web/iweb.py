@@ -18,10 +18,15 @@ from zope.interface import Attribute, Interface
 
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator, IPushProducer
+from twisted.internet.interfaces import (
+    IOpenSSLClientConnectionCreator,
+    IPushProducer,
+    IStreamClientEndpoint,
+)
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
+    from twisted.web.client import URI
     from twisted.web.template import Flattenable, Tag
 
 
@@ -808,7 +813,7 @@ class IAgentEndpointFactory(Interface):
     @since: 15.0
     """
 
-    def endpointForURI(uri):
+    def endpointForURI(uri: URI) -> IStreamClientEndpoint:
         """
         Construct and return an L{IStreamClientEndpoint} for the outgoing
         request's connection.

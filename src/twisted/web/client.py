@@ -16,7 +16,7 @@ from collections.abc import Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, Self, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
@@ -29,6 +29,7 @@ from twisted.internet.abstract import isIPv6Address
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
+    Binding,
     IAddress,
     IDelayedCall,
     IOpenSSLClientConnectionCreator,
@@ -917,7 +918,7 @@ class _AgentBase:
 
     def _requestWithEndpoint(
         self,
-        key: tuple[bytes, bytes, int],
+        key: tuple[Hashable, ...],
         endpoint: IStreamClientEndpoint,
         method: bytes,
         parsedURI: URI,
@@ -1051,13 +1052,15 @@ class Agent(_AgentBase):
     @since: 9.0
     """
 
+    endpointFactory: IAgentEndpointFactory
+
     def __init__(
         self,
-        reactor,
-        contextFactory=BrowserLikePolicyForHTTPS(),
-        connectTimeout=None,
-        bindAddress=None,
-        pool=None,
+        reactor: IReactorTime,
+        contextFactory: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
+        connectTimeout: float | None = None,
+        bindAddress: Binding | tuple[bytes | str, int] | bytes | None = None,
+        pool: HTTPConnectionPool | None = None,
     ):
         """
         Create an L{Agent}.
@@ -1086,7 +1089,7 @@ class Agent(_AgentBase):
         @type pool: L{HTTPConnectionPool}
         """
         if not IPolicyForHTTPS.providedBy(contextFactory):
-            warnings.warn(
+            warnings.warn(  # type: ignore[unreachable]
                 repr(contextFactory)
                 + " was passed as the HTTPS policy for an Agent, but it does "
                 "not provide IPolicyForHTTPS.  Since Twisted 14.0, you must "
@@ -1101,7 +1104,12 @@ class Agent(_AgentBase):
         self._init(reactor, endpointFactory, pool)
 
     @classmethod
-    def usingEndpointFactory(cls, reactor, endpointFactory, pool=None):
+    def usingEndpointFactory(
+        cls,
+        reactor: IReactorTime,
+        endpointFactory: IAgentEndpointFactory,
+        pool: HTTPConnectionPool | None = None,
+    ) -> Self:
         """
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
@@ -1126,7 +1134,12 @@ class Agent(_AgentBase):
         agent._init(reactor, endpointFactory, pool)
         return agent
 
-    def _init(self, reactor, endpointFactory, pool):
+    def _init(
+        self,
+        reactor: IReactorTime,
+        endpointFactory: IAgentEndpointFactory,
+        pool: HTTPConnectionPool | None,
+    ) -> None:
         """
         Initialize a new L{Agent}.
 
@@ -1149,7 +1162,7 @@ class Agent(_AgentBase):
         _AgentBase.__init__(self, reactor, pool)
         self._endpointFactory = endpointFactory
 
-    def _getEndpoint(self, uri):
+    def _getEndpoint(self, uri: URI) -> IStreamClientEndpoint:
         """
         Get an endpoint for the given URI, using C{self._endpointFactory}.
 
@@ -1205,13 +1218,24 @@ class ProxyAgent(_AgentBase):
     @since: 11.1
     """
 
-    def __init__(self, endpoint, reactor=None, pool=None):
+    def __init__(
+        self,
+        endpoint: IStreamClientEndpoint,
+        reactor: IReactorTime | None = None,
+        pool: HTTPConnectionPool | None = None,
+    ):
         if reactor is None:
             from twisted.internet import reactor
-        _AgentBase.__init__(self, reactor, pool)
+        _AgentBase.__init__(self, reactor, pool)  # type: ignore[arg-type]
         self._proxyEndpoint = endpoint
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
+    ) -> Deferred[IResponse]:
         """
         Issue a new request via the configured proxy.
         """
