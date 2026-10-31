@@ -29,7 +29,7 @@ Various other classes in this module support this usage:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from zope.interface import implementer
 
@@ -222,6 +222,7 @@ class HTTPParser(LineReceiver):
     # Some servers (like http://news.ycombinator.com/) return status lines and
     # HTTP headers delimited by \n instead of \r\n.
     delimiter = b"\n"
+    _partialHeader: list[bytes] | None = None
 
     CONNECTION_CONTROL_HEADERS = {
         b"content-length",
@@ -234,13 +235,14 @@ class HTTPParser(LineReceiver):
         b"proxy-connection",
     }
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         self.headers = Headers()
         self.connHeaders = Headers()
         self.state = STATUS
         self._partialHeader = None
 
-    def switchToBodyMode(self, decoder):
+    # Using Any here because there is no common interface for decoders.
+    def switchToBodyMode(self, decoder: Any) -> None:
         """
         Switch to body parsing mode - interpret any more bytes delivered as
         part of the message body and deliver them to the given decoder.
@@ -252,7 +254,7 @@ class HTTPParser(LineReceiver):
         self.state = BODY
         self.setRawMode()
 
-    def lineReceived(self, line):
+    def lineReceived(self, line: bytes) -> None:
         """
         Handle one line from a response.
         """
@@ -279,15 +281,16 @@ class HTTPParser(LineReceiver):
             else:
                 # A line beginning with LWS is a continuation of a header
                 # begun on a previous line.
+                assert self._partialHeader is not None
                 self._partialHeader.append(line)
 
-    def rawDataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
         Pass data from the message body to the body decoder object.
         """
         self.bodyDecoder.dataReceived(data)
 
-    def isConnectionControlHeader(self, name):
+    def isConnectionControlHeader(self, name: bytes) -> bool:
         """
         Return C{True} if the given lower-cased name is the name of a
         connection control header (rather than an entity header).
@@ -299,7 +302,7 @@ class HTTPParser(LineReceiver):
         """
         return name in self.CONNECTION_CONTROL_HEADERS
 
-    def statusReceived(self, status):
+    def statusReceived(self, status: bytes) -> None:
         """
         Callback invoked whenever the first line of a new message is received.
         Override this.
@@ -309,7 +312,7 @@ class HTTPParser(LineReceiver):
         @type status: C{bytes}
         """
 
-    def headerReceived(self, name, value):
+    def headerReceived(self, name: bytes, value: bytes) -> None:
         """
         Store the given header in C{self.headers}.
         """
@@ -320,7 +323,7 @@ class HTTPParser(LineReceiver):
             headers = self.headers
         headers.addRawHeader(name, value)
 
-    def allHeadersReceived(self):
+    def allHeadersReceived(self) -> None:
         """
         Callback invoked after the last header is passed to C{headerReceived}.
         Override this to change to the C{BODY} or C{DONE} state.
