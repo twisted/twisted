@@ -508,7 +508,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
     delimiter = b"\r\n"
     MAX_LENGTH = 16384
 
-    def clearLineBuffer(self):
+    def clearLineBuffer(self) -> bytes:
         """
         Clear buffered data.
 
@@ -518,7 +518,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         b, self._buffer = self._buffer, b""
         return b
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Protocol.dataReceived.
         Translates bytes into lines, and calls lineReceived (or
@@ -546,19 +546,19 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
                             exceeded = line + self.delimiter + self._buffer
                             self._buffer = b""
                             return self.lineLengthExceeded(exceeded)
-                        why = self.lineReceived(line)
-                        if why or self.transport and self.transport.disconnecting:
+                        why = self.lineReceived(line)  # type: ignore[func-returns-value]
+                        if why or self.transport and self.transport.disconnecting:  # type: ignore[attr-defined]
                             return why
                 else:
                     data = self._buffer
                     self._buffer = b""
-                    why = self.rawDataReceived(data)
+                    why = self.rawDataReceived(data)  # type: ignore[func-returns-value]
                     if why:
-                        return why
+                        return why  # type: ignore[unreachable]
         finally:
             self._busyReceiving = False
 
-    def setLineMode(self, extra=b""):
+    def setLineMode(self, extra: bytes = b"") -> None:
         """
         Sets the line-mode of this receiver.
 
@@ -574,7 +574,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         if extra:
             return self.dataReceived(extra)
 
-    def setRawMode(self):
+    def setRawMode(self) -> None:
         """
         Sets the raw mode of this receiver.
         Further data received will be sent to rawDataReceived rather
@@ -582,13 +582,13 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         """
         self.line_mode = 0
 
-    def rawDataReceived(self, data):
+    def rawDataReceived(self, data: bytes) -> None:
         """
         Override this for when raw data is received.
         """
         raise NotImplementedError
 
-    def lineReceived(self, line):
+    def lineReceived(self, line: bytes) -> None:
         """
         Override this for when each line is received.
 
@@ -597,16 +597,17 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         """
         raise NotImplementedError
 
-    def sendLine(self, line):
+    def sendLine(self, line: bytes) -> None:
         """
         Sends a line to the other end of the connection.
 
         @param line: The line to send, not including the delimiter.
         @type line: C{bytes}
         """
+        assert self.transport is not None
         return self.transport.write(line + self.delimiter)
 
-    def lineLengthExceeded(self, line):
+    def lineLengthExceeded(self, line: bytes) -> None:
         """
         Called when the maximum line length has been reached.
         Override if it needs to be dealt with in some special way.
@@ -616,6 +617,7 @@ class LineReceiver(protocol.Protocol, _PauseableMixin):
         be more than one line, or may be only the initial portion of the
         line.
         """
+        assert self.transport is not None
         return self.transport.loseConnection()
 
 
