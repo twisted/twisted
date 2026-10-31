@@ -7,7 +7,7 @@ Tests for L{twisted._threads._team}.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from twisted.python.components import proxyForInterface
 from twisted.python.context import call, get

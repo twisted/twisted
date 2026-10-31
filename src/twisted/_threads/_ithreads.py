@@ -7,7 +7,7 @@ Interfaces related to threads.
 """
 
 
-from typing import Callable
+from collections.abc import Callable
 
 from zope.interface import Interface
 
