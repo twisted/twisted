@@ -35,6 +35,7 @@ from typing import (
     Generic,
     Literal,
     NoReturn,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
@@ -43,7 +44,7 @@ from typing import (
 
 import attr
 from incremental import Version
-from typing_extensions import ParamSpec, Self
+from typing_extensions import ParamSpec
 
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger

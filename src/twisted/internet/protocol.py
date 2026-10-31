@@ -12,11 +12,11 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable
-from typing import Any, Generic, Protocol as TypingProtocol
+from typing import Any, Generic, Protocol as TypingProtocol, Self
 
 from zope.interface import implementer
 
-from typing_extensions import ParamSpec, Self, TypeVar
+from typing_extensions import ParamSpec, TypeVar
 
 from twisted.internet import defer, error, interfaces
 from twisted.internet.interfaces import (
