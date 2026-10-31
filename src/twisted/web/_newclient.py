@@ -29,6 +29,7 @@ Various other classes in this module support this usage:
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from zope.interface import implementer
@@ -241,7 +242,6 @@ class HTTPParser(LineReceiver):
         self.state = STATUS
         self._partialHeader = None
 
-    # Using Any here because there is no common interface for decoders.
     def switchToBodyMode(self, decoder: Any) -> None:
         """
         Switch to body parsing mode - interpret any more bytes delivered as
@@ -361,27 +361,28 @@ class HTTPClientParser(HTTPParser):
 
     NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
-    _transferDecoders = {
+    # Using Any here because there is no common interface for decoders.
+    _transferDecoders: dict[bytes, type[Any]] = {
         b"chunked": _ChunkedTransferDecoder,
     }
 
     bodyDecoder: _IdentityTransferDecoder | None = None
     _log = Logger()
 
-    def __init__(self, request, finisher):
+    def __init__(self, request: IClientRequest, finisher: Callable[[bytes], None]):
         self.request = request
         self.finisher = finisher
-        self._responseDeferred = Deferred()
+        self._responseDeferred: Deferred[IResponse] = Deferred()
         self._everReceivedData = False
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         Override so that we know if any response has been received.
         """
         self._everReceivedData = True
         HTTPParser.dataReceived(self, data)
 
-    def parseVersion(self, strversion):
+    def parseVersion(self, strversion: bytes) -> tuple[bytes, int, int]:
         """
         Parse version strings of the form Protocol '/' Major '.' Minor. E.g.
         b'HTTP/1.1'.  Returns (protocol, major, minor).  Will raise ValueError
@@ -394,15 +395,15 @@ class HTTPClientParser(HTTPParser):
 
         try:
             proto, strnumber = strversion.split(b"/")
-            major, minor = strnumber.split(b".")
-            major, minor = int(major), int(minor)
+            major_b, minor_b = strnumber.split(b".")
+            major, minor = int(major_b), int(minor_b)
         except ValueError as e:
             raise BadResponseVersion(str(e), strversion)
         if major < 0 or minor < 0:
             raise BadResponseVersion("version may not be negative", strversion)
         return (proto, major, minor)
 
-    def statusReceived(self, status):
+    def statusReceived(self, status: bytes) -> None:
         """
         Parse the status line into its components and create a response object
         to keep track of this response's state.
@@ -434,7 +435,7 @@ class HTTPClientParser(HTTPParser):
             self.request,
         )
 
-    def _finished(self, rest):
+    def _finished(self, rest: bytes) -> None:
         """
         Called to indicate that an entire response has been received.  No more
         bytes will be interpreted by this L{HTTPClientParser}.  Extra bytes are
@@ -447,7 +448,7 @@ class HTTPClientParser(HTTPParser):
         self.state = DONE
         self.finisher(rest)
 
-    def isConnectionControlHeader(self, name):
+    def isConnectionControlHeader(self, name: bytes) -> bool:
         """
         Content-Length in the response to a HEAD request is an entity header,
         not a connection control header.
@@ -456,7 +457,7 @@ class HTTPClientParser(HTTPParser):
             return False
         return HTTPParser.isConnectionControlHeader(self, name)
 
-    def allHeadersReceived(self):
+    def allHeadersReceived(self) -> None:
         """
         Figure out how long the response body is going to be by examining
         headers and stuff.
@@ -481,6 +482,9 @@ class HTTPClientParser(HTTPParser):
             self._finished(self.clearLineBuffer())
             self.response._bodyDataFinished()
         else:
+            transferDecoder: Callable[
+                [Callable[[bytes], None], Callable[[bytes], None]], Any
+            ] | None
             transferEncodingHeaders = self.connHeaders.getRawHeaders(
                 b"Transfer-Encoding"
             )
@@ -520,7 +524,8 @@ class HTTPClientParser(HTTPParser):
                 # object actually indicates it is ready to handle bytes
                 # (probably because an application gave it a way to interpret
                 # them).
-                self.transport.pauseProducing()
+                assert self.transport is not None
+                self.transport.pauseProducing()  # type: ignore[attr-defined]
                 self.switchToBodyMode(
                     transferDecoder(self.response._bodyDataReceived, self._finished)
                 )
