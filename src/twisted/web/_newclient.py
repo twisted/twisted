@@ -1498,20 +1498,22 @@ class HTTP11ClientProtocol(Protocol):
     _parser: HTTPClientParser | None = None
     _finishedRequest: Deferred[IResponse] | None = None
     _currentRequest: Request | None = None
-    _transportProxy = None
+    _transportProxy: TransportProxyProducer | None = None
     _responseDeferred: Deferred[IResponse] | None = None
     _log = Logger()
 
-    def __init__(self, quiescentCallback=lambda c: None):
+    def __init__(
+        self, quiescentCallback: Callable[[HTTP11ClientProtocol], None] = lambda c: None
+    ):
         self._quiescentCallback = quiescentCallback
-        self._abortDeferreds = []
+        self._abortDeferreds: list[Deferred[None]] = []
 
     def connectionMade(self) -> None:
         if ITCPTransport.providedBy(self.transport):
             self.transport.setTcpNoDelay(True)
 
     @property
-    def state(self):
+    def state(self) -> str:
         return self._state
 
     def request(self, request: Request) -> Deferred[IResponse]:
@@ -1645,11 +1647,11 @@ class HTTP11ClientProtocol(Protocol):
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
                 self.transport.loseConnection()
-            self._disconnectParser(reason)
+            self._disconnectParser(reason)  # type: ignore[arg-type]
 
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
 
-    def _disconnectParser(self, reason):
+    def _disconnectParser(self, reason: Failure) -> None:
         """
         If there is still a parser, call its C{connectionLost} method with the
         given reason.  If there is not, do nothing.
@@ -1667,11 +1669,12 @@ class HTTP11ClientProtocol(Protocol):
             # transport.  Stop proxying from the parser's transport to the real
             # transport before telling the parser it's done so that it can't do
             # anything.
+            assert self._transportProxy is not None
             self._transportProxy.stopProxying()
             self._transportProxy = None
             parser.connectionLost(reason)
 
-    def _giveUp(self, reason):
+    def _giveUp(self, reason: Failure) -> None:
         """
         Lose the underlying connection and disconnect the parser with the given
         L{Failure}.
@@ -1679,19 +1682,21 @@ class HTTP11ClientProtocol(Protocol):
         Use this method instead of calling the transport's loseConnection
         method directly otherwise random things will break.
         """
+        assert self.transport is not None
         self.transport.loseConnection()
         self._disconnectParser(reason)
 
-    def dataReceived(self, bytes):
+    def dataReceived(self, bytes: bytes) -> None:
         """
         Handle some stuff from some place.
         """
         try:
+            assert self._parser is not None
             self._parser.dataReceived(bytes)
         except BaseException:
             self._giveUp(Failure())
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure) -> None:  # type: ignore[override]
         """
         The underlying transport went away.  If appropriate, notify the parser
         object.
@@ -1699,40 +1704,44 @@ class HTTP11ClientProtocol(Protocol):
 
     connectionLost = makeStatefulDispatcher("connectionLost", connectionLost)
 
-    def _connectionLost_QUIESCENT(self, reason):
+    def _connectionLost_QUIESCENT(self, reason: Failure) -> None:
         """
         Nothing is currently happening.  Move to the C{'CONNECTION_LOST'}
         state but otherwise do nothing.
         """
         self._state = "CONNECTION_LOST"
 
-    def _connectionLost_GENERATION_FAILED(self, reason):
+    def _connectionLost_GENERATION_FAILED(self, reason: Failure) -> None:
         """
         The connection was in an inconsistent state.  Move to the
         C{'CONNECTION_LOST'} state but otherwise do nothing.
         """
         self._state = "CONNECTION_LOST"
 
-    def _connectionLost_TRANSMITTING(self, reason):
+    def _connectionLost_TRANSMITTING(self, reason: Failure) -> None:
         """
         Fail the L{Deferred} for the current request, notify the request
         object that it does not need to continue transmitting itself, and
         move to the C{'CONNECTION_LOST'} state.
         """
         self._state = "CONNECTION_LOST"
+        assert self._finishedRequest is not None
         self._finishedRequest.errback(Failure(RequestTransmissionFailed([reason])))
         del self._finishedRequest
 
         # Tell the request that it should stop bothering now.
+        assert self._currentRequest is not None
         self._currentRequest.stopWriting()
 
-    def _connectionLost_TRANSMITTING_AFTER_RECEIVING_RESPONSE(self, reason):
+    def _connectionLost_TRANSMITTING_AFTER_RECEIVING_RESPONSE(
+        self, reason: Failure
+    ) -> None:
         """
         Move to the C{'CONNECTION_LOST'} state.
         """
         self._state = "CONNECTION_LOST"
 
-    def _connectionLost_WAITING(self, reason):
+    def _connectionLost_WAITING(self, reason: Failure) -> None:
         """
         Disconnect the response parser so that it can propagate the event as
         necessary (for example, to call an application protocol's
@@ -1742,7 +1751,7 @@ class HTTP11ClientProtocol(Protocol):
         self._disconnectParser(reason)
         self._state = "CONNECTION_LOST"
 
-    def _connectionLost_ABORTING(self, reason):
+    def _connectionLost_ABORTING(self, reason: Failure) -> None:
         """
         Disconnect the response parser with a L{ConnectionAborted} failure, and
         move to the C{'CONNECTION_LOST'} state.
@@ -1753,15 +1762,16 @@ class HTTP11ClientProtocol(Protocol):
             d.callback(None)
         self._abortDeferreds = []
 
-    def abort(self):
+    def abort(self) -> Deferred[None]:
         """
         Close the connection and cause all outstanding L{request} L{Deferred}s
         to fire with an error.
         """
         if self._state == "CONNECTION_LOST":
             return succeed(None)
+        assert self.transport is not None
         self.transport.loseConnection()
         self._state = "ABORTING"
-        d = Deferred()
+        d: Deferred[None] = Deferred()
         self._abortDeferreds.append(d)
         return d
