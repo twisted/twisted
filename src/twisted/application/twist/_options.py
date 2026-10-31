@@ -8,10 +8,10 @@ Command line options for C{twist}.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from sys import stderr, stdout
 from textwrap import dedent
-from typing import Callable, NoReturn, cast
+from typing import NoReturn, cast
 
 from twisted.copyright import version
 from twisted.internet.interfaces import IReactorCore
