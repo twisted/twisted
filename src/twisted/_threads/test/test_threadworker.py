@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import gc
 import weakref
+from collections.abc import Callable
 from threading import ThreadError, local
-from typing import Callable, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from twisted.trial.unittest import SynchronousTestCase
 from .. import AlreadyQuit, LockWorker, ThreadWorker
