@@ -65,6 +65,8 @@ from twisted.web.iweb import (
 if TYPE_CHECKING:
     from http.client import HTTPMessage as _InfoType, HTTPResponse as _ResponseBase
     from urllib.request import Request as _RequestBase
+
+    from twisted.internet._sslverify import IOpenSSLTrustRoot
 else:
     _RequestBase = object
     _ResponseBase = object
@@ -338,7 +340,7 @@ class BrowserLikePolicyForHTTPS:
     SSL connection creator for web clients.
     """
 
-    def __init__(self, trustRoot=None):
+    def __init__(self, trustRoot: IOpenSSLTrustRoot | None = None):
         self._trustRoot = trustRoot
 
     @_requireSSL
@@ -638,7 +640,11 @@ class _HTTP11ClientFactory(protocol.Factory):
     @since: 11.1
     """
 
-    def __init__(self, quiescentCallback, metadata):
+    def __init__(
+        self,
+        quiescentCallback: Callable[[HTTP11ClientProtocol], None],
+        metadata: object,
+    ):
         self._quiescentCallback = quiescentCallback
         self._metadata = metadata
 
