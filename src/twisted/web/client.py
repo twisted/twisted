@@ -30,6 +30,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
     IAddress,
+    IDelayedCall,
     IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
@@ -755,15 +756,15 @@ class HTTPConnectionPool:
 
     _factory = _HTTP11ClientFactory
     maxPersistentPerHost = 2
-    cachedConnectionTimeout = 240
+    cachedConnectionTimeout: float = 240
     retryAutomatically = True
     _log = Logger()
 
-    def __init__(self, reactor, persistent=True):
+    def __init__(self, reactor: IReactorTime, persistent: bool = True):
         self._reactor = reactor
         self.persistent = persistent
-        self._connections = {}
-        self._timeouts = {}
+        self._connections: dict[Hashable, list[HTTP11ClientProtocol]] = {}
+        self._timeouts: dict[HTTP11ClientProtocol, IDelayedCall] = {}
 
     def getConnection(
         self, key: Hashable, endpoint: IStreamClientEndpoint
@@ -798,7 +799,7 @@ class HTTPConnectionPool:
             if connection.state == "QUIESCENT":
                 if self.retryAutomatically:
                     newConnection = lambda: self._newConnection(key, endpoint)
-                    connection = _RetryingHTTP11ClientProtocol(
+                    connection = _RetryingHTTP11ClientProtocol(  # type: ignore[assignment]
                         connection, newConnection
                     )
                 return defer.succeed(connection)
@@ -823,15 +824,18 @@ class HTTPConnectionPool:
         )  # type:ignore[assignment]
         return result
 
-    def _removeConnection(self, key, connection):
+    def _removeConnection(
+        self, key: Hashable, connection: HTTP11ClientProtocol
+    ) -> None:
         """
         Remove a connection from the cache and disconnect it.
         """
+        assert connection.transport is not None
         connection.transport.loseConnection()
         self._connections[key].remove(connection)
         del self._timeouts[connection]
 
-    def _putConnection(self, key, connection):
+    def _putConnection(self, key: Hashable, connection: HTTP11ClientProtocol) -> None:
         """
         Return a persistent connection to the pool. This will be called by
         L{HTTP11ClientProtocol} when the connection becomes quiescent.
@@ -850,6 +854,7 @@ class HTTPConnectionPool:
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
             dropped = connections.pop(0)
+            assert dropped.transport is not None
             dropped.transport.loseConnection()
             self._timeouts[dropped].cancel()
             del self._timeouts[dropped]
@@ -859,7 +864,7 @@ class HTTPConnectionPool:
         )
         self._timeouts[connection] = cid
 
-    def closeCachedConnections(self):
+    def closeCachedConnections(self) -> Deferred[None]:
         """
         Close all persistent connections and remove them from the pool.
 
