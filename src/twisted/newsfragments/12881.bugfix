@@ -1,0 +1,1 @@
+FTP server in twisted.protocols.ftp now rejects PORT/EPRT requests that use privileged ports or IP addresses other than the original client's.
