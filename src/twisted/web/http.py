@@ -2106,7 +2106,8 @@ class _ChunkedTransferDecoder:
 
         # eolIndex in this part of code is equal to 0
 
-        data = memoryview(self._buffer)[2:].tobytes()
+        with memoryview(self._buffer) as view, view[2:] as dataView:
+            data = dataView.tobytes()
 
         del self._buffer[:]
         self.state = "FINISHED"
@@ -2121,7 +2122,8 @@ class _ChunkedTransferDecoder:
         @returns: C{True} to continue processing of any buffered data.
         """
         if len(self._buffer) >= self.length:
-            chunk = memoryview(self._buffer)[: self.length].tobytes()
+            with memoryview(self._buffer) as view, view[: self.length] as chunkView:
+                chunk = chunkView.tobytes()
             del self._buffer[: self.length]
             self.state = "CRLF"
             self.dataCallback(chunk)
