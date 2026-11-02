@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import select
 import sys
-from typing import Callable
+from collections.abc import Callable
 
 from twisted.internet import default
 from twisted.internet.default import _getInstallFunction, install

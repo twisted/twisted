@@ -10,8 +10,8 @@ from __future__ import annotations
 import sys
 import time
 import warnings
-from collections.abc import Coroutine, Iterable, Iterator, Sequence
-from typing import Any, Callable, Generic, NoReturn, TypeVar, cast
+from collections.abc import Callable, Coroutine, Iterable, Iterator, Sequence
+from typing import Any, Generic, NoReturn, TypeVar, cast
 
 from zope.interface import implementer
 

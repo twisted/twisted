@@ -9,9 +9,10 @@ L{twisted.python.threadpool}.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from queue import Queue
 from threading import Lock, Thread, local as LocalStorage
-from typing import Callable, Protocol
+from typing import Protocol
 
 from twisted.python.log import err
 from ._ithreads import IWorker

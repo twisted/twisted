@@ -7,8 +7,9 @@ Tests for L{twisted.application.twist._options}.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from sys import stderr, stdout
-from typing import TYPE_CHECKING, Callable, TextIO
+from typing import TYPE_CHECKING, TextIO
 
 if TYPE_CHECKING:
     from types import NotImplementedType

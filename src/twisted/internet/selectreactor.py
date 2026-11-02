@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import select
 import sys
+from collections.abc import Callable
 from errno import EBADF, EINTR
 from time import sleep
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from zope.interface import implementer
 

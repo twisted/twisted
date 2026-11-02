@@ -8,8 +8,9 @@ Implementation of an in-memory worker that defers execution.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum, auto
-from typing import Callable, Literal
+from typing import Literal
 
 from zope.interface import implementer
 

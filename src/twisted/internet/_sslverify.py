@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import warnings
 from binascii import hexlify
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import lru_cache
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from zope.interface import Interface, implementer
 
@@ -24,7 +24,6 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.x509.oid import NameOID
 from incremental import Version
-from typing_extensions import Self
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.internet.defer import Deferred
