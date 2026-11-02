@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_hostAndPeer} to test
 that ITransport.getHost() and ITransport.getPeer() work for process transports.
 """
 
-
 import sys
 
 from twisted.internet import protocol, stdio

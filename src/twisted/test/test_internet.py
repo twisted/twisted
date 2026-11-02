@@ -5,7 +5,6 @@
 Tests for lots of functionality provided by L{twisted.internet}.
 """
 
-
 import os
 import sys
 import time
@@ -1049,7 +1048,7 @@ class ResolveTests(TestCase):
         )
 
         def cbFinished(result):
-            (reason, output, error) = result
+            reason, output, error = result
             # If the output is "done 127.0.0.1\n" we don't really care what
             # else happened.
             output = b"".join(output)

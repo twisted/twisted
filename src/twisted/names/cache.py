@@ -6,7 +6,6 @@
 An in-memory caching resolver.
 """
 
-
 from twisted.internet import defer
 from twisted.names import common, dns
 from twisted.python import failure, log

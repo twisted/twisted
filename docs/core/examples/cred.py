@@ -107,7 +107,7 @@ class Protocol(basic.LineReceiver):
         )
 
     def _cbLogin(self, result):
-        (interface, avatar, logout) = result
+        interface, avatar, logout = result
         assert interface is IProtocolUser
         self.avatar = avatar
         self.logout = logout

@@ -113,7 +113,6 @@ class IRCReplyBot(irc.IRCClient):
 
 
 class IIRCClientFactory(Interface):
-
     """
     @ivar nickname
     """

@@ -10,7 +10,6 @@ want, and it sends the result set back to the user, one result per line,
 and finally closes the connection.
 """
 
-
 from random import randrange
 from sys import stdout
 

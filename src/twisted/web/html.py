@@ -3,8 +3,7 @@
 # See LICENSE for details.
 
 
-"""I hold HTML generation helpers.
-"""
+"""I hold HTML generation helpers."""
 
 from html import escape
 from io import StringIO

@@ -6,7 +6,6 @@
 Implementation module for the `tkconch` command.
 """
 
-
 import base64
 import getpass
 import os

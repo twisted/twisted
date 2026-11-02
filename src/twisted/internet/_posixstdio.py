@@ -10,6 +10,7 @@ Future Plans::
 
 Maintainer: James Y Knight
 """
+
 from __future__ import annotations
 
 from zope.interface import implementer
@@ -105,7 +106,7 @@ class StandardIO:
         _writer = self._writer
         protocol = self.protocol
         self._reader = self._writer = None
-        self.protocol = None  # type:ignore[assignment]
+        self.protocol = None  # type: ignore[assignment]
 
         if _writer is not None and not _writer.disconnected:
             _writer.connectionLost(reason)

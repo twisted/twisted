@@ -9,6 +9,7 @@ Do NOT use this module directly - use reactor.spawnProcess() instead.
 
 Maintainer: Itamar Shtull-Trauring
 """
+
 from __future__ import annotations
 
 import errno

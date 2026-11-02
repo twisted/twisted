@@ -7,7 +7,6 @@ Classes and functions used by L{twisted.trial.test.test_util}
 and L{twisted.trial.test.test_loader}.
 """
 
-
 import os
 import sys
 

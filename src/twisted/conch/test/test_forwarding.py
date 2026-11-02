@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.ssh.forwarding}.
 """
 
-
 from twisted.python.reflect import requireModule
 
 cryptography = requireModule("cryptography")

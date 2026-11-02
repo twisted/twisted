@@ -5,7 +5,6 @@
 Utilities for Twisted.names tests.
 """
 
-
 from random import randrange
 
 from zope.interface import implementer

@@ -1,5 +1,7 @@
-from TwistedQuotes import quoteproto  # Protocol and Factory
-from TwistedQuotes import quoters  # "give me a quote" code
+from TwistedQuotes import (  # Protocol and Factory; "give me a quote" code
+    quoteproto,
+    quoters,
+)
 
 from twisted.application import internet  # services that run TCP/SSL/etc.
 from twisted.python import usage  # twisted command-line processing

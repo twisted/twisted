@@ -62,15 +62,13 @@ class ResourceScriptDirectoryTests(TestCase):
         """
         tmp = FilePath(self.mktemp())
         tmp.makedirs()
-        tmp.child("test.rpy").setContent(
-            b"""
+        tmp.child("test.rpy").setContent(b"""
 from twisted.web.resource import Resource
 class TestResource(Resource):
     isLeaf = True
     def render_GET(self, request):
         return b'ok'
-resource = TestResource()"""
-        )
+resource = TestResource()""")
         resource = ResourceScriptDirectory(tmp._asBytesPath())
         request = DummyRequest([b""])
         child = resource.getChild(b"test.rpy", request)

@@ -6,7 +6,6 @@
 sendmsg(2) and recvmsg(2) support for Python.
 """
 
-
 from collections import namedtuple
 from socket import CMSG_SPACE, SCM_RIGHTS, socket as Socket
 

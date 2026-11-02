@@ -4,6 +4,7 @@
 """
 Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 """
+
 from typing import Any, Optional
 from unittest import mock
 
@@ -209,21 +210,21 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
 
     IPV4HEADER = (
         # V2 Signature
-        b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+        b"\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a"
         # V2 PROXY command
         b"\x21"
         # AF_INET/STREAM
         b"\x11"
         # 12 bytes for 2 IPv4 addresses and two ports
-        b"\x00\x0C"
+        b"\x00\x0c"
         # 127.0.0.1 for source and destination
-        b"\x7F\x00\x00\x01\x7F\x00\x00\x01"
+        b"\x7f\x00\x00\x01\x7f\x00\x00\x01"
         # 8080 for source 8888 for destination
-        b"\x1F\x90\x22\xB8"
+        b"\x1f\x90\x22\xb8"
     )
     IPV6HEADER = (
         # V2 Signature
-        b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+        b"\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a"
         # V2 PROXY command
         b"\x21"
         # AF_INET6/STREAM
@@ -234,23 +235,23 @@ class HAProxyWrappingFactoryV2Tests(unittest.TestCase):
         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
         # 8080 for source 8888 for destination
-        b"\x1F\x90\x22\xB8"
+        b"\x1f\x90\x22\xb8"
     )
 
     _SOCK_PATH = (
-        b"\x2F\x68\x6F\x6D\x65\x2F\x74\x65\x73\x74\x73\x2F\x6D\x79\x73\x6F"
-        b"\x63\x6B\x65\x74\x73\x2F\x73\x6F\x63\x6B" + (b"\x00" * 82)
+        b"\x2f\x68\x6f\x6d\x65\x2f\x74\x65\x73\x74\x73\x2f\x6d\x79\x73\x6f"
+        b"\x63\x6b\x65\x74\x73\x2f\x73\x6f\x63\x6b" + (b"\x00" * 82)
     )
     UNIXHEADER = (
         (
             # V2 Signature
-            b"\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A"
+            b"\x0d\x0a\x0d\x0a\x00\x0d\x0a\x51\x55\x49\x54\x0a"
             # V2 PROXY command
             b"\x21"
             # AF_UNIX/STREAM
             b"\x31"
             # 108 bytes for 2 null terminated paths
-            b"\x00\xD8"
+            b"\x00\xd8"
             # /home/tests/mysockets/sock for source and destination paths
         )
         + _SOCK_PATH

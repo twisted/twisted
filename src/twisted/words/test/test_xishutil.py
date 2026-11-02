@@ -5,7 +5,6 @@
 Test cases for twisted.words.xish.utility
 """
 
-
 from collections import OrderedDict
 
 from twisted.trial import unittest

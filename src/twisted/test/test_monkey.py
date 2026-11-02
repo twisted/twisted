@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.python.monkey}.
 """
+
 from __future__ import annotations
 
 from typing import NoReturn

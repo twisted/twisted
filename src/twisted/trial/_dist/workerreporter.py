@@ -8,6 +8,7 @@ Test reporter forwarding test results over trial distributed AMP commands.
 
 @since: 12.3
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence

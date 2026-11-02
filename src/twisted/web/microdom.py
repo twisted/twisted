@@ -18,6 +18,7 @@ Microdom mainly focuses on working with HTML and XHTML.
 
 This module is now deprecated.
 """
+
 from __future__ import annotations
 
 # System Imports

@@ -5,7 +5,6 @@
 Test code for basic Factory classes.
 """
 
-
 import pickle
 
 from twisted.internet.protocol import Protocol, ReconnectingClientFactory

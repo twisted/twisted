@@ -5,7 +5,6 @@
 Tests for L{twisted.python.usage}, a command line option parsing library.
 """
 
-
 from twisted.python import usage
 from twisted.trial import unittest
 

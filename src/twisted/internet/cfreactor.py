@@ -9,6 +9,7 @@ CoreFoundation main loop used by macOS.
 This is useful for integrating Twisted with U{PyObjC<http://pyobjc.sf.net/>}
 applications.
 """
+
 from __future__ import annotations
 
 __all__ = ["install", "CFReactor"]
@@ -167,7 +168,7 @@ class CFReactor(PosixReactorBase):
             C{CFSocketCreateWithNative} (in C{CFReactor._watchFD}).  A 2-tuple
             of C{(int, CFRunLoopSource)}.
         """
-        (fd, smugglesrc) = context
+        fd, smugglesrc = context
         if fd not in self._fdmap:
             # Spurious notifications seem to be generated sometimes if you
             # CFSocketDisableCallBacks in the middle of an event.  I don't know

@@ -5,7 +5,6 @@
 Test cases for twisted.names.
 """
 
-
 import copy
 import operator
 import socket

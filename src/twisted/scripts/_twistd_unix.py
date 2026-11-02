@@ -106,16 +106,12 @@ def checkPID(pidfile):
                     )
                 )
         else:
-            sys.exit(
-                """\
+            sys.exit("""\
 Another twistd server is running, PID {}\n
 This could either be a previously started instance of your application or a
 different application entirely. To start a new one, either run it in some other
 directory, or use the --pidfile and --logfile parameters to avoid clashes.
-""".format(
-                    pid
-                )
-            )
+""".format(pid))
 
 
 class UnixAppLogger(app.AppLogger):

@@ -10,7 +10,6 @@ HTTP BASIC authentication.
 @see: U{http://tools.ietf.org/html/rfc2617}
 """
 
-
 import binascii
 
 from zope.interface import implementer

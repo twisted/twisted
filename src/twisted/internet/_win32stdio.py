@@ -4,7 +4,6 @@
 Windows-specific implementation of the L{twisted.internet.stdio} interface.
 """
 
-
 import msvcrt
 import os
 

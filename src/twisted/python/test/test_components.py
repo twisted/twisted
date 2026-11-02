@@ -6,7 +6,6 @@
 Test cases for Twisted component architecture.
 """
 
-
 from functools import wraps
 
 from zope.interface import Attribute, Interface, implementer
@@ -553,10 +552,8 @@ class IProxiedInterface(Interface):
     An interface class for use by L{proxyForInterface}.
     """
 
-    ifaceAttribute = Attribute(
-        """
-        An example declared attribute, which should be proxied."""
-    )
+    ifaceAttribute = Attribute("""
+        An example declared attribute, which should be proxied.""")
 
     def yay(*a, **kw):
         """

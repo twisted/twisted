@@ -5,7 +5,6 @@
 Test the memcache client protocol.
 """
 
-
 from twisted.internet.defer import Deferred, DeferredList, TimeoutError, gatherResults
 from twisted.internet.error import ConnectionDone
 from twisted.internet.task import Clock

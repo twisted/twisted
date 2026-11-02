@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.runner.procmon}.
 """
+
 from __future__ import annotations
 
 import errno
@@ -25,7 +26,7 @@ from twisted.trial import unittest
 
 
 @implementer(IProcessTransport)
-class DummyProcess:  # type:ignore[misc]
+class DummyProcess:  # type: ignore[misc]
     """
     An incomplete and fake L{IProcessTransport} implementation for testing how
     L{ProcessMonitor} behaves when its monitored processes exit.

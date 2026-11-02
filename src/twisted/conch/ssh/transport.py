@@ -9,6 +9,7 @@ RFC 4253.
 
 Maintainer: Paul Swartz
 """
+
 from __future__ import annotations
 
 import binascii

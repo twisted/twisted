@@ -25,7 +25,6 @@ telnet server is required; for the ssh server, "username" is the username and
 "password" is the password.
 """
 
-
 import random
 import string
 

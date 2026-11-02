@@ -14,6 +14,7 @@ Please do not use this module directly.
 @var _sockErrReadRefuse: list of symbolic error constants (from the C{errno}
     module) representing socket errors that indicate connection refused.
 """
+
 from __future__ import annotations
 
 # System Imports
@@ -28,17 +29,19 @@ from twisted.internet.protocol import AbstractDatagramProtocol
 from twisted.python.runtime import platformType
 
 if platformType == "win32":
-    from errno import WSAEINPROGRESS  # type: ignore[attr-defined]
-    from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
     from errno import (  # type: ignore[attr-defined]
         WSAECONNREFUSED,
         WSAECONNRESET,
+    )
+    from errno import (  # type: ignore[attr-defined]
+        WSAEINPROGRESS,
         WSAEINTR,
         WSAEMSGSIZE,
         WSAENETRESET,
         WSAENOPROTOOPT as ENOPROTOOPT,
         WSAETIMEDOUT,
     )
+    from errno import WSAEWOULDBLOCK  # type: ignore[attr-defined]
 
     # Classify read and write errors
     _sockErrReadIgnore = [WSAEINTR, WSAEWOULDBLOCK, WSAEMSGSIZE, WSAEINPROGRESS]
@@ -270,7 +273,7 @@ class Port(base.BasePort):
             try:
                 # For legacy/compatibility reasons we sometimes return an
                 # C{int} here, but this should be disregarded.
-                return self.socket.send(datagram)  # type:ignore[no-any-return]
+                return self.socket.send(datagram)  # type: ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
@@ -302,7 +305,7 @@ class Port(base.BasePort):
                     addr[0], "IPv4 port write() called with IPv6 address"
                 )
             try:
-                return self.socket.sendto(datagram, addr)  # type:ignore[no-any-return]
+                return self.socket.sendto(datagram, addr)  # type: ignore[no-any-return]
             except OSError as se:
                 no = se.args[0]
                 if no == EINTR:
