@@ -1,0 +1,1 @@
+`twisted.python.util.getPluginDirs` and `twisted.python.util.addPluginDir`, deprecated since Twisted 12.2, have been removed.
