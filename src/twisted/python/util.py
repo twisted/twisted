@@ -252,32 +252,6 @@ def padTo(n, seq, default=None):
     return blank
 
 
-def getPluginDirs():
-    warnings.warn(
-        "twisted.python.util.getPluginDirs is deprecated since Twisted 12.2.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    import twisted
-
-    systemPlugins = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(twisted.__file__))), "plugins"
-    )
-    userPlugins = os.path.expanduser("~/TwistedPlugins")
-    confPlugins = os.path.expanduser("~/.twisted")
-    allPlugins = filter(os.path.isdir, [systemPlugins, userPlugins, confPlugins])
-    return allPlugins
-
-
-def addPluginDir():
-    warnings.warn(
-        "twisted.python.util.addPluginDir is deprecated since Twisted 12.2.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    sys.path.extend(getPluginDirs())
-
-
 def sibpath(
     path: os.PathLike[AnyStr] | AnyStr, sibling: os.PathLike[AnyStr] | AnyStr
 ) -> AnyStr:
@@ -949,8 +923,6 @@ def runWithWarningsSuppressed(suppressedWarnings, f, *args, **kwargs):
 __all__ = [
     "uniquify",
     "padTo",
-    "getPluginDirs",
-    "addPluginDir",
     "sibpath",
     "getPassword",
     "println",
