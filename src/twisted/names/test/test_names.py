@@ -188,7 +188,7 @@ class ServerDNSTests(unittest.TestCase):
     Test cases for DNS server and client.
     """
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.factory = server.DNSServerFactory(
             [test_domain_com, reverse_domain, my_domain_com], verbose=2
         )
