@@ -34,7 +34,6 @@ from twisted.python import util
 from twisted.python.filepath import FilePath
 from twisted.test.test_process import MockOS
 from twisted.trial.unittest import FailTest, TestCase
-from twisted.trial.util import suppress as SUPPRESS
 
 pyExe = FilePath(sys.executable)._asBytesPath()
 
@@ -854,49 +853,6 @@ class InitGroupsTests(TestCase):
         Calling L{util.initgroups} with None for gid gives an error.
         """
         self.assertRaises(TypeError, util.initgroups, os.getuid(), None)
-
-
-class DeprecationTests(TestCase):
-    """
-    Tests for deprecations in C{twisted.python.util}.
-    """
-
-    def test_getPluginDirs(self):
-        """
-        L{util.getPluginDirs} is deprecated.
-        """
-        util.getPluginDirs()
-        currentWarnings = self.flushWarnings(
-            offendingFunctions=[self.test_getPluginDirs]
-        )
-        self.assertEqual(
-            currentWarnings[0]["message"],
-            "twisted.python.util.getPluginDirs is deprecated since Twisted " "12.2.",
-        )
-        self.assertEqual(currentWarnings[0]["category"], DeprecationWarning)
-        self.assertEqual(len(currentWarnings), 1)
-
-    def test_addPluginDir(self):
-        """
-        L{util.addPluginDir} is deprecated.
-        """
-        util.addPluginDir()
-        currentWarnings = self.flushWarnings(
-            offendingFunctions=[self.test_addPluginDir]
-        )
-        self.assertEqual(
-            currentWarnings[0]["message"],
-            "twisted.python.util.addPluginDir is deprecated since Twisted " "12.2.",
-        )
-        self.assertEqual(currentWarnings[0]["category"], DeprecationWarning)
-        self.assertEqual(len(currentWarnings), 1)
-
-    test_addPluginDir.suppress = [  # type: ignore[attr-defined]
-        SUPPRESS(
-            category=DeprecationWarning,
-            message="twisted.python.util.getPluginDirs is deprecated",
-        )
-    ]
 
 
 class SuppressedWarningsTests(TestCase):
