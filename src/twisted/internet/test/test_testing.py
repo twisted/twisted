@@ -358,7 +358,8 @@ class ReactorTests(TestCase):
         """
         proto = DatagramProtocol()
         reactor = MemoryReactor()
-        listener = reactor.listenUDP(4321, proto)
+        listener = reactor.listenUDP(4321, proto, interface="127.0.0.9")
+        self.assertEqual(listener.getHost(), IPv4Address("UDP", "127.0.0.9", 4321))
         self.assertEqual(listener._isListening, True)  # type:ignore[attr-defined]
         listener.stopListening()
         self.assertEqual(listener._isListening, False)  # type:ignore[attr-defined]

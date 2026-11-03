@@ -779,13 +779,13 @@ class MemoryReactor:
         self,
         port: int,
         protocol: DatagramProtocol,
-        interface: str = "",
+        interface: str = "0.0.0.0",
         maxPacketSize: int = 8192,
     ) -> IListeningPort:
         address = (
             IPv6Address("UDP", interface, port)
             if isIPv6Address(interface)
-            else IPv4Address("UDP", "0.0.0.0", port)
+            else IPv4Address("UDP", interface, port)
         )
         transport = FakeDatagramTransport()
         self.udpListeners.append((port, protocol, interface, maxPacketSize, transport))
