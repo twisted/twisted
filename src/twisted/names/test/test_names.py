@@ -12,20 +12,19 @@ import socket
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
-from typing import Sequence
+from typing import Callable, Sequence
 
-from twisted.internet import defer, error, reactor
+from twisted.internet import defer, error
+from twisted.internet.address import IPv4Address
 from twisted.internet.defer import succeed
-from twisted.internet.testing import (
-    MemoryReactorClock,
-    StringTransport,
-    waitUntilAllDisconnected,
-)
+from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.names import authority, client, common, dns, server
 from twisted.names.authority import BindAuthority
 from twisted.names.client import Resolver
 from twisted.names.dns import (
     SOA,
+    DNSProtocol,
+    IEncodableRecord,
     IRecord,
     Message,
     Query,
@@ -36,11 +35,16 @@ from twisted.names.dns import (
 from twisted.names.error import DomainError
 from twisted.names.secondary import SecondaryAuthority, SecondaryAuthorityService
 from twisted.python.compat import nativeString
+from twisted.python.failure import Failure
 from twisted.python.filepath import FilePath
+from twisted.test.iosim import connectedServerAndClient
 from twisted.trial import unittest
 
+AnswerAuthorityAdditional = tuple[list[RRHeader], list[RRHeader], list[RRHeader]]
+SomeRRHeaders = Sequence[list[RRHeader]]
 
-def justPayload(results):
+
+def justPayload(results: SomeRRHeaders) -> list[IEncodableRecord | None]:
     return [r.payload for r in results[0]]
 
 
@@ -189,51 +193,25 @@ class ServerDNSTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
+        self.reactor = MemoryReactorClock()
         self.factory = server.DNSServerFactory(
             [test_domain_com, reverse_domain, my_domain_com], verbose=2
         )
 
-        p = dns.DNSDatagramProtocol(self.factory)
-
-        while 1:
-            listenerTCP = reactor.listenTCP(0, self.factory, interface="127.0.0.1")
-            # It's simpler to do the stop listening with addCleanup,
-            # even though we might not end up using this TCP port in
-            # the test (if the listenUDP below fails).  Cleaning up
-            # this TCP port sooner than "cleanup time" would mean
-            # adding more code to keep track of the Deferred returned
-            # by stopListening.
-            self.addCleanup(listenerTCP.stopListening)
-            port = listenerTCP.getHost().port
-
-            try:
-                listenerUDP = reactor.listenUDP(port, p, interface="127.0.0.1")
-            except error.CannotListenError:
-                pass
-            else:
-                self.addCleanup(listenerUDP.stopListening)
-                break
-
-        self.listenerTCP = listenerTCP
-        self.listenerUDP = listenerUDP
-        self.resolver = client.Resolver(servers=[("127.0.0.1", port)])
-
-    def tearDown(self):
-        """
-        Clean up any server connections associated with the
-        L{DNSServerFactory} created in L{setUp}
-        """
-        # It'd be great if DNSServerFactory had a method that
-        # encapsulated this task.  At least the necessary data is
-        # available, though.
-        for conn in self.factory.connections[:]:
-            conn.transport.loseConnection()
-
-        return waitUntilAllDisconnected(reactor, self.factory.connections[:])
+        p = dns.DNSDatagramProtocol(self.factory, reactor=self.reactor)
+        self.listenerUDP = self.reactor.listenUDP(53, p, interface="127.0.0.1")
+        self.listenerTCP = self.reactor.listenTCP(
+            53, self.factory, interface="127.0.0.1"
+        )
+        self.resolver = client.Resolver(
+            servers=[("127.0.0.1", 53)], reactor=self.reactor
+        )
 
     def namesTest(
-        self, querying: defer.Deferred[Message], expectedRecords: Sequence[IRecord]
-    ) -> defer.Deferred[Message]:
+        self,
+        querying: defer.Deferred[SomeRRHeaders],
+        expectedRecords: Sequence[IRecord],
+    ) -> None:
         """
         Assert that the DNS response C{querying} will eventually fire with
         contains exactly a certain collection of records.
@@ -243,29 +221,26 @@ class ServerDNSTests(unittest.TestCase):
 
         @param expectedRecords: A L{list} of L{IRecord} providers which must be
             in the response or the test will be failed.
-
-        @return: A L{Deferred} that fires when the assertion has been made.  It
-            fires with a success result if the assertion succeeds and with a
-            L{Failure} if it fails.
         """
 
-        def checkResults(response):
+        def checkResults(response: SomeRRHeaders) -> None:
             receivedRecords = justPayload(response)
             self.assertEqual(set(expectedRecords), set(receivedRecords))
 
         querying.addCallback(checkResults)
-        return querying
+        self.reactor.deliverUDPTraffic()
+        self.successResultOf(querying)
 
-    def test_addressRecord1(self):
+    def test_addressRecord1(self) -> None:
         """Test simple DNS 'A' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAddress("test-domain.com"),
             [dns.Record_A("127.0.0.1", ttl=19283784)],
         )
 
-    def test_addressRecord2(self):
+    def test_addressRecord2(self) -> None:
         """Test DNS 'A' record queries with multiple answers"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAddress("host.test-domain.com"),
             [
                 dns.Record_A("123.242.1.5", ttl=19283784),
@@ -273,9 +248,9 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_addressRecord3(self):
+    def test_addressRecord3(self) -> None:
         """Test DNS 'A' record queries with edge cases"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAddress("host-two.test-domain.com"),
             [
                 dns.Record_A("255.255.255.254", ttl=19283784),
@@ -283,18 +258,16 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_authority(self):
+    def test_authority(self) -> None:
         """Test DNS 'SOA' record queries"""
-        return self.namesTest(
-            self.resolver.lookupAuthority("test-domain.com"), [soa_record]
-        )
+        self.namesTest(self.resolver.lookupAuthority("test-domain.com"), [soa_record])
 
-    def test_mailExchangeRecord(self):
+    def test_mailExchangeRecord(self) -> None:
         """
         The DNS client can issue an MX query and receive a response including
         an MX record as well as any A record hints.
         """
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupMailExchange(b"test-domain.com"),
             [
                 dns.Record_MX(10, b"host.test-domain.com", ttl=19283784),
@@ -303,16 +276,16 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_nameserver(self):
+    def test_nameserver(self) -> None:
         """Test DNS 'NS' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupNameservers("test-domain.com"),
             [dns.Record_NS("39.28.189.39", ttl=19283784)],
         )
 
-    def test_HINFO(self):
+    def test_HINFO(self) -> None:
         """Test DNS 'HINFO' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupHostInfo("test-domain.com"),
             [
                 dns.Record_HINFO(
@@ -321,44 +294,44 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_PTR(self):
+    def test_PTR(self) -> None:
         """Test DNS 'PTR' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupPointer("123.93.84.28.in-addr.arpa"),
             [dns.Record_PTR("test.host-reverse.lookup.com", ttl=11193983)],
         )
 
-    def test_CNAME(self):
+    def test_CNAME(self) -> None:
         """Test DNS 'CNAME' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupCanonicalName("test-domain.com"),
             [dns.Record_CNAME("canonical.name.com", ttl=19283784)],
         )
 
-    def test_MB(self):
+    def test_MB(self) -> None:
         """Test DNS 'MB' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupMailBox("test-domain.com"),
             [dns.Record_MB("mailbox.test-domain.com", ttl=19283784)],
         )
 
-    def test_MG(self):
+    def test_MG(self) -> None:
         """Test DNS 'MG' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupMailGroup("test-domain.com"),
             [dns.Record_MG("mail.group.someplace", ttl=19283784)],
         )
 
-    def test_MR(self):
+    def test_MR(self) -> None:
         """Test DNS 'MR' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupMailRename("test-domain.com"),
             [dns.Record_MR("mail.redirect.or.whatever", ttl=19283784)],
         )
 
-    def test_MINFO(self):
+    def test_MINFO(self) -> None:
         """Test DNS 'MINFO' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupMailboxInfo("test-domain.com"),
             [
                 dns.Record_MINFO(
@@ -367,16 +340,16 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_SRV(self):
+    def test_SRV(self) -> None:
         """Test DNS 'SRV' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupService("http.tcp.test-domain.com"),
             [dns.Record_SRV(257, 16383, 43690, "some.other.place.fool", ttl=19283784)],
         )
 
-    def test_AFSDB(self):
+    def test_AFSDB(self) -> None:
         """Test DNS 'AFSDB' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAFSDatabase("test-domain.com"),
             [
                 dns.Record_AFSDB(
@@ -385,9 +358,9 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_RP(self):
+    def test_RP(self) -> None:
         """Test DNS 'RP' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupResponsibility("test-domain.com"),
             [
                 dns.Record_RP(
@@ -396,9 +369,9 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_TXT(self):
+    def test_TXT(self) -> None:
         """Test DNS 'TXT' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupText("test-domain.com"),
             [
                 dns.Record_TXT(
@@ -410,11 +383,11 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_spf(self):
+    def test_spf(self) -> None:
         """
         L{DNSServerFactory} can serve I{SPF} resource records.
         """
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupSenderPolicy("test-domain.com"),
             [
                 dns.Record_SPF(b"v=spf1 mx/30 mx:example.org/30 -all", ttl=19283784),
@@ -426,9 +399,9 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_WKS(self):
+    def test_WKS(self) -> None:
         """Test DNS 'WKS' record queries"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupWellKnownServices("test-domain.com"),
             [
                 dns.Record_WKS(
@@ -440,10 +413,10 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_someRecordsWithTTLs(self):
+    def test_someRecordsWithTTLs(self) -> None:
         result_soa = copy.copy(my_soa)
         result_soa.ttl = my_soa.expire
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAllRecords("my-domain.com"),
             [
                 result_soa,
@@ -454,16 +427,16 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_AAAA(self):
+    def test_AAAA(self) -> None:
         """Test DNS 'AAAA' record queries (IPv6)"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupIPV6Address("test-domain.com"),
             [dns.Record_AAAA("AF43:5634:1294:AFCB:56AC:48EF:34C3:01FF", ttl=19283784)],
         )
 
-    def test_A6(self):
+    def test_A6(self) -> None:
         """Test DNS 'A6' record queries (IPv6)"""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAddress6("test-domain.com"),
             [
                 dns.Record_A6(0, "ABCD::4321", "", ttl=19283784),
@@ -477,7 +450,7 @@ class ServerDNSTests(unittest.TestCase):
             ],
         )
 
-    def test_zoneTransfer(self) -> defer.Deferred[Message]:
+    def test_zoneTransfer(self) -> None:
         """
         Test DNS 'AXFR' queries (Zone transfer)
         """
@@ -488,35 +461,55 @@ class ServerDNSTests(unittest.TestCase):
         for r in results:
             if r.ttl is None:
                 r.ttl = default_ttl
-        return self.namesTest(
-            self.resolver.lookupZone("test-domain.com").addCallback(
-                lambda r: (r[0][:-1],)
-            ),
-            results,
-        )
+        a = self.resolver.lookupZone("test-domain.com")
+        (
+            serverPort,
+            serverFactory,
+            serverBacklog,
+            serverInterface,
+        ) = self.reactor.tcpServers.pop(0)
+        host, port, factory, timeout, bindAddress = self.reactor.tcpClients.pop(0)
+        self.assertEqual(host, "127.0.0.1")
+        self.assertEqual(port, 53)
 
-    def test_zoneTransferConnectionFails(self):
+        sProto = serverFactory.buildProtocol(IPv4Address("TCP", host, 4321))
+
+        # See if a zone transfer query is issued.
+        proto = factory.buildProtocol(IPv4Address("TCP", host, port))
+        connectedServerAndClient(
+            lambda: sProto,
+            lambda: proto,
+        )
+        assert proto is not None
+        transport = StringTransport()
+        proto.makeConnection(transport)
+
+        self.namesTest(a.addCallback(lambda r: [r[0][:-1]]), results)
+
+    def test_zoneTransferConnectionFails(self) -> None:
         """
         A failed AXFR TCP connection errbacks the L{Deferred} returned
         from L{Resolver.lookupZone}.
         """
-        resolver = Resolver(servers=[("nameserver.invalid", 53)])
-        return self.assertFailure(
-            resolver.lookupZone("impossible.invalid"), error.DNSLookupError
+        resolver = Resolver(servers=[("nameserver.invalid", 53)], reactor=self.reactor)
+        lookup = resolver.lookupZone("impossible.invalid")
+        self.reactor.tcpClients[0][2].clientConnectionFailed(
+            self.reactor.connectors[0], Failure(error.DNSLookupError())
         )
+        self.failureResultOf(lookup, error.DNSLookupError)
 
-    def test_similarZonesDontInterfere(self):
+    def test_similarZonesDontInterfere(self) -> None:
         """Tests that unrelated zones don't mess with each other."""
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupAddress("anothertest-domain.com"),
             [dns.Record_A("1.2.3.4", ttl=19283784)],
         )
 
-    def test_NAPTR(self):
+    def test_NAPTR(self) -> None:
         """
         Test DNS 'NAPTR' record queries.
         """
-        return self.namesTest(
+        self.namesTest(
             self.resolver.lookupNamingAuthorityPointer("test-domain.com"),
             [
                 dns.Record_NAPTR(
@@ -532,7 +525,7 @@ class ServerDNSTests(unittest.TestCase):
 
 
 class HelperTests(unittest.TestCase):
-    def test_serialGenerator(self):
+    def test_serialGenerator(self) -> None:
         f = self.mktemp()
         a = authority.getSerial(f)
         for i in range(20):
@@ -542,11 +535,16 @@ class HelperTests(unittest.TestCase):
 
 
 class AXFRTests(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.results = None
-        self.d = defer.Deferred()
-        self.d.addCallback(self._gotResults)
+        self.d: defer.Deferred[list[RRHeader]] = defer.Deferred()
+
+        def _gotResults(result: list[RRHeader]) -> None:
+            self.results = result
+
+        self.d.addCallback(_gotResults)
         self.controller = client.AXFRController("fooby.com", self.d)
+        self.reactor = MemoryReactorClock()
 
         self.soa = dns.RRHeader(
             name="fooby.com",
@@ -595,7 +593,7 @@ class AXFRTests(unittest.TestCase):
             self.soa,
         ]
 
-    def _makeMessage(self):
+    def _makeMessage(self) -> dns.Message:
         # hooray they all have the same message format
         return dns.Message(
             id=999,
@@ -603,42 +601,43 @@ class AXFRTests(unittest.TestCase):
             opCode=0,
             recDes=0,
             recAv=1,
-            auth=1,
+            auth=True,
             rCode=0,
             trunc=0,
             maxSize=0,
         )
 
-    def test_bindAndTNamesStyle(self):
+    def test_bindAndTNamesStyle(self) -> None:
         # Bind style = One big single message
         m = self._makeMessage()
         m.queries = [dns.Query("fooby.com", dns.AXFR, dns.IN)]
         m.answers = self.records
-        self.controller.messageReceived(m, None)
+        self.controller.messageReceived(
+            m, DNSProtocol(self.controller, reactor=self.reactor)
+        )
         self.assertEqual(self.results, self.records)
 
-    def _gotResults(self, result):
-        self.results = result
-
-    def test_DJBStyle(self):
+    def test_DJBStyle(self) -> None:
         # DJB style = message per record
         records = self.records[:]
         while records:
             m = self._makeMessage()
             m.queries = []  # DJB *doesn't* specify any queries.. hmm..
             m.answers = [records.pop(0)]
-            self.controller.messageReceived(m, None)
+            self.controller.messageReceived(
+                m, DNSProtocol(self.controller, reactor=self.reactor)
+            )
         self.assertEqual(self.results, self.records)
 
 
 class ResolvConfHandlingTests(unittest.TestCase):
-    def test_missing(self):
+    def test_missing(self) -> None:
         resolvConf = self.mktemp()
         r = client.Resolver(resolv=resolvConf)
         self.assertEqual(r.dynServers, [("127.0.0.1", 53)])
         r._parseCall.cancel()
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         resolvConf = self.mktemp()
         open(resolvConf, "w").close()
         r = client.Resolver(resolv=resolvConf)
@@ -652,7 +651,7 @@ class AuthorityTests(unittest.TestCase):
     (independent of its fileness).
     """
 
-    def test_domainErrorForNameWithCommonSuffix(self):
+    def test_domainErrorForNameWithCommonSuffix(self) -> None:
         """
         L{FileAuthority} lookup methods errback with L{DomainError} if
         the requested C{name} shares a common suffix with its zone but
@@ -665,7 +664,7 @@ class AuthorityTests(unittest.TestCase):
         f = self.failureResultOf(testDomain.lookupAddress(testDomainName))
         self.assertIsInstance(f.value, DomainError)
 
-    def test_recordMissing(self):
+    def test_recordMissing(self) -> None:
         """
         If a L{FileAuthority} has a zone which includes an I{NS} record for a
         particular name and that authority is asked for another record for the
@@ -699,7 +698,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(additional, [])
 
-    def test_unknownTypeNXDOMAIN(self):
+    def test_unknownTypeNXDOMAIN(self) -> None:
         """
         Requesting a record of unknown type where no records exist for the name
         in question results in L{DomainError}.
@@ -712,7 +711,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertIsInstance(f.value, DomainError)
 
-    def test_unknownTypeMissing(self):
+    def test_unknownTypeMissing(self) -> None:
         """
         Requesting a record of unknown type where other records exist for the
         name in question results in an empty answer set.
@@ -723,7 +722,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(answer, [])
 
-    def _referralTest(self, method):
+    def _referralTest(self, method: str) -> None:
         """
         Create an authority and make a request against it.  Then verify that the
         result is a referral, including no records in the answers or additional
@@ -756,7 +755,7 @@ class AuthorityTests(unittest.TestCase):
         )
         self.assertEqual(additional, [])
 
-    def test_referral(self):
+    def test_referral(self) -> None:
         """
         When an I{NS} record is found for a child zone, it is included in the
         authority section of the response. It is marked as non-authoritative if
@@ -765,7 +764,7 @@ class AuthorityTests(unittest.TestCase):
         """
         self._referralTest("lookupAddress")
 
-    def test_allRecordsReferral(self):
+    def test_allRecordsReferral(self) -> None:
         """
         A referral is also generated for a request of type C{ALL_RECORDS}.
         """
@@ -781,14 +780,20 @@ class AdditionalProcessingTests(unittest.TestCase):
     _A = dns.Record_A(b"10.0.0.1")
     _AAAA = dns.Record_AAAA(b"f080::1")
 
-    def _lookupSomeRecords(self, method, soa, makeRecord, target, addresses):
+    def _lookupSomeRecords(
+        self,
+        method: str,
+        soa: dns.Record_SOA,
+        makeRecord: Callable[[bytes], IRecord],
+        target: bytes,
+        addresses: list[IEncodableRecord],
+    ) -> defer.Deferred[tuple[list[RRHeader], list[RRHeader], list[RRHeader]]]:
         """
         Perform a DNS lookup against a L{FileAuthority} configured with records
         as defined by C{makeRecord} and C{addresses}.
 
         @param method: The name of the lookup method to use; for example,
             C{"lookupNameservers"}.
-        @type method: L{str}
 
         @param soa: A L{Record_SOA} for the zone for which the L{FileAuthority}
             is authoritative.
@@ -803,7 +808,6 @@ class AdditionalProcessingTests(unittest.TestCase):
             require extra processing by the server so that all the available,
             useful information is returned.  For example, this is the target of
             a CNAME record or the mail exchange host pointed to by an MX record.
-        @type target: L{bytes}
 
         @param addresses: A L{list} of records giving addresses of C{target}.
 
@@ -817,7 +821,9 @@ class AdditionalProcessingTests(unittest.TestCase):
                 target: addresses,
             },
         )
-        return getattr(authority, method)(soa_record.mname.name)
+        return getattr(authority, method)(  # type:ignore[no-any-return]
+            soa_record.mname.name
+        )
 
     def assertRecordsMatch(self, expected, computed):
         """
@@ -840,7 +846,12 @@ class AdditionalProcessingTests(unittest.TestCase):
         key = lambda rr: rr.type
         self.assertEqual(sorted(expected, key=key), sorted(computed, key=key))
 
-    def _additionalTest(self, method, makeRecord, addresses):
+    def _additionalTest(
+        self,
+        method: str,
+        makeRecord: Callable[[bytes], IRecord],
+        addresses: list[IEncodableRecord],
+    ) -> None:
         """
         Verify that certain address records are included in the I{additional}
         section of a response generated by L{FileAuthority}.
@@ -875,7 +886,7 @@ class AdditionalProcessingTests(unittest.TestCase):
             additional,
         )
 
-    def _additionalMXTest(self, addresses):
+    def _additionalMXTest(self, addresses: list[IEncodableRecord]) -> None:
         """
         Verify that a response to an MX query has certain records in the
         I{additional} section.
@@ -886,21 +897,21 @@ class AdditionalProcessingTests(unittest.TestCase):
             "lookupMailExchange", partial(dns.Record_MX, 10), addresses
         )
 
-    def test_mailExchangeAdditionalA(self):
+    def test_mailExchangeAdditionalA(self) -> None:
         """
         If the name of the MX response has A records, they are included in the
         additional section of the response.
         """
         self._additionalMXTest([self._A])
 
-    def test_mailExchangeAdditionalAAAA(self):
+    def test_mailExchangeAdditionalAAAA(self) -> None:
         """
         If the name of the MX response has AAAA records, they are included in
         the additional section of the response.
         """
         self._additionalMXTest([self._AAAA])
 
-    def test_mailExchangeAdditionalBoth(self):
+    def test_mailExchangeAdditionalBoth(self) -> None:
         """
         If the name of the MX response has both A and AAAA records, they are
         all included in the additional section of the response.
@@ -916,21 +927,21 @@ class AdditionalProcessingTests(unittest.TestCase):
         """
         self._additionalTest("lookupNameservers", dns.Record_NS, addresses)
 
-    def test_nameserverAdditionalA(self):
+    def test_nameserverAdditionalA(self) -> None:
         """
         If the name of the NS response has A records, they are included in the
         additional section of the response.
         """
         self._additionalNSTest([self._A])
 
-    def test_nameserverAdditionalAAAA(self):
+    def test_nameserverAdditionalAAAA(self) -> None:
         """
         If the name of the NS response has AAAA records, they are included in
         the additional section of the response.
         """
         self._additionalNSTest([self._AAAA])
 
-    def test_nameserverAdditionalBoth(self):
+    def test_nameserverAdditionalBoth(self) -> None:
         """
         If the name of the NS response has both A and AAAA records, they are
         all included in the additional section of the response.
@@ -972,21 +983,21 @@ class AdditionalProcessingTests(unittest.TestCase):
             answer,
         )
 
-    def test_canonicalNameAnswerA(self):
+    def test_canonicalNameAnswerA(self) -> None:
         """
         If the name of the CNAME response has A records, they are included in
         the answer section of the response.
         """
         self._answerCNAMETest([self._A])
 
-    def test_canonicalNameAnswerAAAA(self):
+    def test_canonicalNameAnswerAAAA(self) -> None:
         """
         If the name of the CNAME response has AAAA records, they are included
         in the answer section of the response.
         """
         self._answerCNAMETest([self._AAAA])
 
-    def test_canonicalNameAnswerBoth(self):
+    def test_canonicalNameAnswerBoth(self) -> None:
         """
         If the name of the CNAME response has both A and AAAA records, they are
         all included in the answer section of the response.
@@ -995,7 +1006,7 @@ class AdditionalProcessingTests(unittest.TestCase):
 
 
 class NoInitialResponseTests(unittest.TestCase):
-    def test_noAnswer(self):
+    def test_noAnswer(self) -> None:
         """
         If a request returns a L{dns.NS} response, but we can't connect to the
         given server, the request fails with the error returned at connection.
@@ -1010,7 +1021,7 @@ class NoInitialResponseTests(unittest.TestCase):
             return defer.fail(socket.gaierror("Couldn't connect"))
 
         resolver = Resolver(servers=[("0.0.0.0", 0)])
-        resolver._query = query
+        resolver._query = query  # type:ignore[method-assign]
         messages = []
         # Let's patch dns.DNSDatagramProtocol.query, as there is no easy way to
         # customize it.
@@ -1032,14 +1043,14 @@ class NoInitialResponseTests(unittest.TestCase):
             opCode=0,
             recDes=0,
             recAv=1,
-            auth=1,
+            auth=True,
             rCode=0,
             trunc=0,
             maxSize=0,
         )
         m.answers = records
         messages.append(m)
-        return self.assertFailure(resolver.getHostByName("fooby.com"), socket.gaierror)
+        self.failureResultOf(resolver.getHostByName("fooby.com"), socket.gaierror)
 
 
 class SecondaryAuthorityServiceTests(unittest.TestCase):
@@ -1048,7 +1059,7 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
     authorities up to date by doing zone transfers from a master.
     """
 
-    def test_constructAuthorityFromHost(self):
+    def test_constructAuthorityFromHost(self) -> None:
         """
         L{SecondaryAuthorityService} can be constructed with a C{str} giving a
         master server address and several domains, causing the creation of a
@@ -1068,7 +1079,7 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         self.assertEqual(service.domains[1]._port, 53)
         self.assertEqual(service.domains[1].domain, b"example.org")
 
-    def test_constructAuthorityFromHostAndPort(self):
+    def test_constructAuthorityFromHostAndPort(self) -> None:
         """
         L{SecondaryAuthorityService.fromServerAddressAndDomains} constructs a
         new L{SecondaryAuthorityService} from a C{str} giving a master server
@@ -1092,7 +1103,7 @@ class SecondaryAuthorityServiceTests(unittest.TestCase):
         self.assertEqual(service.domains[1]._port, port)
         self.assertEqual(service.domains[1].domain, b"example.edu")
 
-    def test_constructAuthorityFromBytes(self):
+    def test_constructAuthorityFromBytes(self) -> None:
         """
         L{SecondaryAuthorityService.fromServerAddressAndDomains} constructs a
         new L{SecondaryAuthorityService} from a C{bytes} giving a master server
@@ -1120,7 +1131,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
     with a specified IP address and optionally specified DNS port.
     """
 
-    def test_defaultPort(self):
+    def test_defaultPort(self) -> None:
         """
         When constructed using L{SecondaryAuthority.__init__}, the default port
         of 53 is used.
@@ -1130,7 +1141,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
         self.assertEqual(secondary._port, 53)
         self.assertEqual(secondary.domain, b"inside.com")
 
-    def test_explicitPort(self):
+    def test_explicitPort(self) -> None:
         """
         When constructed using L{SecondaryAuthority.fromServerAddressAndDomain},
         the specified port is used.
@@ -1142,7 +1153,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
         self.assertEqual(secondary._port, 5353)
         self.assertEqual(secondary.domain, b"inside.com")
 
-    def test_transfer(self):
+    def test_transfer(self) -> None:
         """
         An attempt is made to transfer the zone for the domain the
         L{SecondaryAuthority} was constructed with from the server address it
@@ -1161,7 +1172,8 @@ class SecondaryAuthorityTests(unittest.TestCase):
         self.assertEqual(port, 1234)
 
         # See if a zone transfer query is issued.
-        proto = factory.buildProtocol((host, port))
+        proto = factory.buildProtocol(IPv4Address("TCP", host, port))
+        assert proto is not None
         transport = StringTransport()
         proto.makeConnection(transport)
 
@@ -1172,7 +1184,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
 
         self.assertEqual([dns.Query("example.com", dns.AXFR, dns.IN)], msg.queries)
 
-    def test_lookupAddress(self):
+    def test_lookupAddress(self) -> None:
         """
         L{SecondaryAuthority.lookupAddress} returns a L{Deferred} that fires
         with the I{A} records the authority has cached from the primary.
@@ -1186,11 +1198,12 @@ class SecondaryAuthorityTests(unittest.TestCase):
 
         host, port, factory, timeout, bindAddress = reactor.tcpClients.pop(0)
 
-        proto = factory.buildProtocol((host, port))
+        proto = factory.buildProtocol(IPv4Address("TCP", host, port))
         transport = StringTransport()
+        assert proto is not None
         proto.makeConnection(transport)
 
-        query = Message(answer=1, auth=1)
+        query = Message(answer=1, auth=True)
         query.decode(BytesIO(transport.value()[2:]))
 
         # Generate a response with some data we can check.
@@ -1205,7 +1218,7 @@ class SecondaryAuthorityTests(unittest.TestCase):
             ttl=12000,
         )
         a = Record_A(b"192.168.1.2", ttl=0)
-        answer = Message(id=query.id, answer=1, auth=1)
+        answer = Message(id=query.id, answer=1, auth=True)
         answer.answers.extend(
             [
                 RRHeader(b"example.com", type=SOA, payload=soa),
@@ -1300,7 +1313,7 @@ class BindAuthorityTests(unittest.TestCase):
 
         self.assertIsInstance(authority.records, dict, "Records is not a dictionary")
 
-    def test_ttl(self):
+    def test_ttl(self) -> None:
         """
         Loads the default $TTL and applies it to all records.
         """
@@ -1308,7 +1321,7 @@ class BindAuthorityTests(unittest.TestCase):
             for rec in self.auth.records[dom]:
                 self.assertTrue(604800 == rec.ttl)
 
-    def test_originFromFile(self):
+    def test_originFromFile(self) -> None:
         """
         Loads the default $ORIGIN.
         """
@@ -1321,7 +1334,7 @@ class BindAuthorityTests(unittest.TestCase):
             self.auth.records,
         )
 
-    def test_aRecords(self):
+    def test_aRecords(self) -> None:
         """
         A records are loaded.
         """
@@ -1338,7 +1351,7 @@ class BindAuthorityTests(unittest.TestCase):
                 rr.payload,
             )
 
-    def test_aaaaRecords(self):
+    def test_aaaaRecords(self) -> None:
         """
         AAAA records are loaded.
         """
@@ -1353,7 +1366,7 @@ class BindAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_mxRecords(self):
+    def test_mxRecords(self) -> None:
         """
         MX records are loaded.
         """
@@ -1369,7 +1382,7 @@ class BindAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_cnameRecords(self):
+    def test_cnameRecords(self) -> None:
         """
         CNAME records are loaded.
         """
@@ -1385,7 +1398,7 @@ class BindAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_invalidRecordClass(self):
+    def test_invalidRecordClass(self) -> None:
         """
         loadBindString raises NotImplementedError on invalid records.
         """
@@ -1393,7 +1406,7 @@ class BindAuthorityTests(unittest.TestCase):
             self.loadBindString(b"example.com. IN LOL 192.168.0.1")
         self.assertEqual("Record type 'LOL' not supported", e.exception.args[0])
 
-    def test_invalidDirectives(self):
+    def test_invalidDirectives(self) -> None:
         """
         $INCLUDE and $GENERATE raise NotImplementedError.
         """
@@ -1449,7 +1462,7 @@ zone = [
 """
 
 
-class PySourceAuthorityTests(unittest.TestCase):
+class PySourceAuthorityTests(unittest.SynchronousTestCase):
     """
     Tests for L{twisted.names.authority.PySourceAuthority}.
     """
@@ -1473,7 +1486,7 @@ class PySourceAuthorityTests(unittest.TestCase):
     def setUp(self):
         self.auth = self.loadPySourceString(samplePySource)
 
-    def test_aRecords(self):
+    def test_aRecords(self) -> None:
         """
         A records are loaded.
         """
@@ -1487,7 +1500,7 @@ class PySourceAuthorityTests(unittest.TestCase):
                 rr.payload,
             )
 
-    def test_aaaaRecords(self):
+    def test_aaaaRecords(self) -> None:
         """
         AAAA records are loaded.
         """
@@ -1499,7 +1512,7 @@ class PySourceAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_mxRecords(self):
+    def test_mxRecords(self) -> None:
         """
         MX records are loaded.
         """
@@ -1514,7 +1527,7 @@ class PySourceAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_cnameRecords(self):
+    def test_cnameRecords(self) -> None:
         """
         CNAME records are loaded.
         """
@@ -1529,7 +1542,7 @@ class PySourceAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_PTR(self):
+    def test_PTR(self) -> None:
         """
         PTR records are loaded.
         """
@@ -1544,7 +1557,7 @@ class PySourceAuthorityTests(unittest.TestCase):
             rr.payload,
         )
 
-    def test_badInputNoZone(self):
+    def test_badInputNoZone(self) -> None:
         """
         Input file has no zone variable
         """

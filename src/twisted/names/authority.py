@@ -80,8 +80,10 @@ class FileAuthority(common.ResolverBase):
     _ADDITIONAL_PROCESSING_TYPES = (dns.CNAME, dns.MX, dns.NS)
     _ADDRESS_TYPES = (dns.A, dns.AAAA)
 
-    soa = None
-    records = None
+    # legacy typing: this is broadly expected to be set everywhere, because
+    # subclasses are expected to.
+    soa: tuple[bytes, dns.Record_SOA] = None  # type:ignore[assignment]
+    records: dict[bytes, list[dns.SimpleRecord]] = None  # type:ignore[assignment]
 
     def __init__(self, filename):
         common.ResolverBase.__init__(self)

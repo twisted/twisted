@@ -900,26 +900,38 @@ class MemoryReactor:
         self.writers.clear()
         return result
 
-    def deliverUDPTraffic(self) -> None:
+    def deliverUDPTraffic(self) -> int:
         """
         Deliver all pending UDP traffic between senders and receivers
         registered on this reactor.
         """
-        deliver = defaultdict(list)
-        receivers = {}
-        for port, dgramproto, interface, maxPacketSize, transport in self.udpListeners:
-            transport.written, written = [], transport.written
-            for packet, key in written:
-                deliver[key].append(((interface, port), packet))
-            receivers[(interface, port)] = dgramproto
-        for key, packets in deliver.items():
-            for srcaddr, packet in packets:
-                if key in receivers:
-                    print(f"{srcaddr}->{key!r}: {packet!r}")
-                    receiver = receivers[key]
-                    receiver.datagramReceived(packet, srcaddr)
-                else:
-                    print(f"DROPPED PACKET FROM {srcaddr} TO {key!r}: {packet!r}")
+        deliveredCount = 1
+        totalDelivered = 0
+        while deliveredCount:
+            deliveredCount = 0
+            # TODO: enumerate dropped packets
+            # TODO: maybe integrate with IOPump
+            deliver = defaultdict(list)
+            receivers = {}
+            for (
+                port,
+                dgramproto,
+                interface,
+                maxPacketSize,
+                transport,
+            ) in self.udpListeners:
+                transport.written, written = [], transport.written
+                for packet, key in written:
+                    deliver[key].append(((interface, port), packet))
+                receivers[(interface, port)] = dgramproto
+            for key, packets in deliver.items():
+                for srcaddr, packet in packets:
+                    if key in receivers:
+                        deliveredCount += 1
+                        totalDelivered += 1
+                        receiver = receivers[key]
+                        receiver.datagramReceived(packet, srcaddr)
+        return totalDelivered
 
 
 for iface in implementedBy(MemoryReactor):
