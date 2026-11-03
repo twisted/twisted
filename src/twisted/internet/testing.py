@@ -164,10 +164,10 @@ class FakeDatagramTransport:
     _isBroadcastAllowed = False
 
     def __init__(self) -> None:
-        self.written: list[tuple[bytes, object]] = []
+        self.written: list[tuple[bytes, tuple[str, int]]] = []
 
     def write(self, packet: bytes, addr: tuple[str, int] | None = noAddr) -> None:
-        self.written.append((packet, addr))
+        self.written.append((packet, addr if addr is not None else ("0.0.0.0", 0)))
 
     def connect(self, host: str, port: int) -> None:
         ...
@@ -909,7 +909,9 @@ class MemoryReactor:
             deliveredCount = 0
             # TODO: enumerate dropped packets
             # TODO: maybe integrate with IOPump
-            deliver = defaultdict(list)
+            deliver: dict[
+                tuple[str, int], list[tuple[tuple[str, int], bytes]]
+            ] = defaultdict(list)
             receivers = {}
             for (
                 port,
@@ -924,11 +926,10 @@ class MemoryReactor:
                 receivers[(interface, port)] = dgramproto
             for key, packets in deliver.items():
                 for srcaddr, packet in packets:
-                    if key in receivers:
-                        deliveredCount += 1
-                        totalDelivered += 1
-                        receiver = receivers[key]
-                        receiver.datagramReceived(packet, srcaddr)
+                    deliveredCount += 1
+                    totalDelivered += 1
+                    receiver = receivers[key]
+                    receiver.datagramReceived(packet, srcaddr)
         return totalDelivered
 
 
