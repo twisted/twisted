@@ -170,13 +170,13 @@ class FakeDatagramTransport:
         self.written.append((packet, addr))
 
     def connect(self, host: str, port: int) -> None:
-        pass
+        ...
 
     def getHost(self) -> IPv4Address | IPv6Address:
         return IPv4Address("UDP", "0.0.0.0", 0)
 
     def stopListening(self) -> Deferred[None] | None:
-        pass
+        ...
 
     def setBroadcastAllowed(self, enabled: bool) -> None:
         self._isBroadcastAllowed = enabled
