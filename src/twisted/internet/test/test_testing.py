@@ -358,7 +358,12 @@ class ReactorTests(TestCase):
         """
         proto = DatagramProtocol()
         reactor = MemoryReactor()
-        reactor.listenUDP(4321, proto)
+        listener = reactor.listenUDP(4321, proto)
+        self.assertEqual(listener._isListening, True)  # type:ignore[attr-defined]
+        listener.stopListening()
+        self.assertEqual(listener._isListening, False)  # type:ignore[attr-defined]
+        listener.startListening()
+        self.assertEqual(listener._isListening, True)  # type:ignore[attr-defined]
         [[port, proto, interface, size, transport]] = reactor.udpListeners
         self.assertIs(transport, proto.transport)
         self.assertEqual(transport.getBroadcastAllowed(), False)
