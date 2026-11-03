@@ -167,8 +167,6 @@ class FakeDatagramTransport:
         self.written: list[tuple[bytes, object]] = []
 
     def write(self, packet: bytes, addr: tuple[str, int] | None = noAddr) -> None:
-        if not isinstance(addr, tuple):
-            raise TypeError(f"datagram transport must include address: {addr!r}")
         self.written.append((packet, addr))
 
     def connect(self, host: str, port: int) -> None:
