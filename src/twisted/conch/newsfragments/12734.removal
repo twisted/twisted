@@ -1,0 +1,3 @@
+twisted.conch.ssh.connection.SSHConnection.ssh_CHANNEL_OPEN_CONFIRMATION now
+rejects server that returns a maximum packet size smaller than 32KB.
+As per RFC 4253 section 6.1, implementation should support at lest 32KB.
