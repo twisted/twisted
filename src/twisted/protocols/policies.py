@@ -10,7 +10,7 @@ Resource limiting policies.
 from __future__ import annotations
 
 import sys
-from typing import Callable, Generic
+from typing import Callable, Concatenate, Generic, ParamSpec
 
 from zope.interface import directlyProvides, providedBy
 
@@ -29,7 +29,7 @@ from twisted.python import log
 from twisted.python.failure import Failure
 
 
-def _wrappedLogPrefix(wrapper, wrapped):
+def _wrappedLogPrefix(wrapper: object, wrapped: object) -> str:
     """
     Compute a log prefix for a wrapper and the object it wraps.
 
@@ -133,6 +133,25 @@ class ProtocolWrapper(Generic[_P], Protocol):
 
 
 WP = TypeVar("WP", bound=ProtocolWrapper[IProtocol], default=ProtocolWrapper[IProtocol])
+_Params = ParamSpec("_Params")
+
+
+class _WrapsClientFactory(Protocol):
+    wrappedFactory: ClientFactory[ProtocolWrapper[IProtocol]]
+
+
+def _onlyForClientFactory(
+    x: Callable[Concatenate[_WrapsClientFactory, _Params], None], /
+) -> Callable[Concatenate[WrappingFactory[WP], _Params], None]:
+    """
+    Some methods of L{WrappingFactory} are only for L{WrappingFactory}
+    instances that wrap a L{ClientFactory} rather than a L{IProtocolFactory}.
+    These were implemented before Twisted had type-checking so this small
+    wrapper prevents type-checking errors without changing their
+    implementation; they can just raise an L{AttributeError} in an invalid
+    configuration.
+    """
+    return x  # type:ignore[return-value]
 
 
 class WrappingFactory(ClientFactory[WP]):
@@ -148,30 +167,34 @@ class WrappingFactory(ClientFactory[WP]):
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """
         Generate a log prefix mentioning both the wrapped factory and this one.
         """
         return _wrappedLogPrefix(self, self.wrappedFactory)
 
-    def doStart(self):
+    def doStart(self) -> None:
         self.wrappedFactory.doStart()
-        ClientFactory.doStart(self)
+        super().doStart()
 
-    def doStop(self):
+    def doStop(self) -> None:
         self.wrappedFactory.doStop()
-        ClientFactory.doStop(self)
+        super().doStop()
 
-    def startedConnecting(self, connector: IConnector) -> None:
-        assert isinstance(self.wrappedFactory, ClientFactory)
+    @_onlyForClientFactory
+    def startedConnecting(self: _WrapsClientFactory, connector: IConnector) -> None:
         self.wrappedFactory.startedConnecting(connector)
 
-    def clientConnectionFailed(self, connector: IConnector, reason: Failure) -> None:
-        assert isinstance(self.wrappedFactory, ClientFactory)
+    @_onlyForClientFactory
+    def clientConnectionFailed(
+        self: _WrapsClientFactory, connector: IConnector, reason: Failure
+    ) -> None:
         self.wrappedFactory.clientConnectionFailed(connector, reason)
 
-    def clientConnectionLost(self, connector: IConnector, reason: Failure) -> None:
-        assert isinstance(self.wrappedFactory, ClientFactory)
+    @_onlyForClientFactory
+    def clientConnectionLost(
+        self: _WrapsClientFactory, connector: IConnector, reason: Failure
+    ) -> None:
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
     def buildProtocol(self, addr: IAddress | None) -> WP:
