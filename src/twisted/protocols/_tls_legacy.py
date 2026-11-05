@@ -5,7 +5,7 @@ Handler for the various legacy things that a C{contextFactory} can be.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Any, Callable, Union
 from warnings import warn
 
 from OpenSSL.SSL import Connection, Context
@@ -27,7 +27,7 @@ SomeConnectionCreator = Union[
 ]
 
 
-SingleArgFactory = Callable[["TLSMemoryBIOProtocol"], Connection]
+SingleArgFactory = Callable[["TLSMemoryBIOProtocol[Any]"], Connection]
 
 
 class LegacyContextFactoryWarning(Warning):

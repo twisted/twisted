@@ -3733,6 +3733,7 @@ class ServerStringTests(unittest.TestCase):
         proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
         st = StringTransport()
         proto.makeConnection(st)
+        assert proto._tlsConnection is not None
         builtCtx = proto._tlsConnection.get_context()
         self.assertIsInstance(builtCtx, Context)
 
