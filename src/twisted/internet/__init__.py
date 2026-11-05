@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         IReactorProcess,
         IReactorTCP,
         IReactorTime,
+        IReactorUDP,
     )
 
     class _IReactorCommon(
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
         IReactorTime,
         IReactorFDSet,
         IReactorTCP,
+        IReactorUDP,
         IReactorProcess,
     ):
         """
