@@ -6,7 +6,6 @@
 Things likely to be used by writers of unit tests.
 """
 
-
 from twisted.trial._asyncrunner import TestDecorator, TestSuite, decorate
 from twisted.trial._asynctest import TestCase
 

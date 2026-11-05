@@ -1,6 +1,8 @@
-from TwistedQuotes import pbquote  # perspective broker binding
-from TwistedQuotes import quoteproto  # Protocol and Factory
-from TwistedQuotes import quoters  # "give me a quote" code
+from TwistedQuotes import (  # perspective broker binding; Protocol and Factory; "give me a quote" code
+    pbquote,
+    quoteproto,
+    quoters,
+)
 
 from twisted.application import internet, service
 from twisted.python import usage  # twisted command-line processing

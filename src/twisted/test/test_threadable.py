@@ -5,7 +5,6 @@
 Tests for L{twisted.python.threadable}.
 """
 
-
 import pickle
 import sys
 from unittest import skipIf

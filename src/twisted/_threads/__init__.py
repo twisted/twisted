@@ -6,7 +6,6 @@
 Twisted integration with operating system threads.
 """
 
-
 from ._ithreads import AlreadyQuit, IWorker
 from ._memory import createMemoryWorker
 from ._pool import pool

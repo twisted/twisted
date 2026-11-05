@@ -157,12 +157,10 @@ class ISFTPServer(Interface):
     their actions.
     """
 
-    avatar = Attribute(
-        """
+    avatar = Attribute("""
         The avatar returned by the Realm that we are authenticated with,
         and represents the logged-in user.
-        """
-    )
+        """)
 
     def gotVersion(otherVersion, extData):
         """
@@ -369,11 +367,9 @@ class IKnownHostEntry(Interface):
     @since: 8.2
     """
 
-    keyType: bytes | None = Attribute(
-        """
+    keyType: bytes | None = Attribute("""
         The SSH key type identifier for this key.
-        """
-    )
+        """)
 
     def matchesKey(key: Key) -> bool:
         """

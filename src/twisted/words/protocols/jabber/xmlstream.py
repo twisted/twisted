@@ -21,6 +21,7 @@ Stanzas.
 @var Reset: Token to signal that the XML stream has been reset.
 @type Reset: Basic object.
 """
+
 from __future__ import annotations
 
 from binascii import hexlify

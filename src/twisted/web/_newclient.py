@@ -1626,7 +1626,7 @@ class HTTP11ClientProtocol(Protocol):
         else:
             # Just in case we had paused the transport, resume it before
             # considering it quiescent again.
-            producer: IPushProducer = self.transport  # type:ignore[assignment]
+            producer: IPushProducer = self.transport  # type: ignore[assignment]
             producer.resumeProducing()
 
             # We call the quiescent callback first, to ensure connection gets

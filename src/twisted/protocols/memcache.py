@@ -25,7 +25,6 @@ See U{http://code.sixapart.com/svn/memcached/trunk/server/doc/protocol.txt} for
 more information about the protocol.
 """
 
-
 from collections import deque
 
 from twisted.internet.defer import Deferred, TimeoutError, fail

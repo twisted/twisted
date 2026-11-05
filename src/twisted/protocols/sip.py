@@ -772,7 +772,7 @@ class Base(protocol.DatagramProtocol):
 
     def _fixupNAT(self, message, sourcePeer):
         # RFC 2543 6.40.2,
-        (srcHost, srcPort) = sourcePeer
+        srcHost, srcPort = sourcePeer
         senderVia = parseViaHeader(message.headers["via"][0])
         if senderVia.host != srcHost:
             senderVia.received = srcHost
@@ -952,7 +952,7 @@ class Proxy(Base):
         Since at the moment we are stateless proxy, that's basically
         everything.
         """
-        (srcHost, srcPort) = sourcePeer
+        srcHost, srcPort = sourcePeer
 
         viaHeader = self.getVia()
         if viaHeader.toString() in message.headers["via"]:
@@ -1064,7 +1064,7 @@ class RegisterProxy(Proxy):
         # Responding to them is not a good idea.
         # However, we should keep track of terminal messages and re-transmit
         # if no ACK is received.
-        (host, port) = host_port
+        host, port = host_port
         pass
 
     def handle_REGISTER_request(self, message, host_port):
@@ -1073,7 +1073,7 @@ class RegisterProxy(Proxy):
 
         Currently registration is not proxied.
         """
-        (host, port) = host_port
+        host, port = host_port
         if self.portal is None:
             # There is no portal.  Let anyone in.
             self.register(message, host, port)
@@ -1116,7 +1116,7 @@ class RegisterProxy(Proxy):
 
     def _cbLogin(self, i_a_l, message, host, port):
         # It's stateless, matey.  What a joke.
-        (i, a, l) = i_a_l
+        i, a, l = i_a_l
         self.register(message, host, port)
 
     def _ebLogin(self, failure, message, host, port):

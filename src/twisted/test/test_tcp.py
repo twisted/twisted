@@ -5,7 +5,6 @@
 Tests for implementations of L{IReactorTCP}.
 """
 
-
 import errno
 import random
 import socket

@@ -7,6 +7,7 @@ are ssh-userauth and ssh-connection.
 
 Maintainer: Paul Swartz
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 class SSHService:
     # this is the ssh name for the service:
-    name: bytes = None  # type:ignore[assignment]
+    name: bytes = None  # type: ignore[assignment]
 
     protocolMessages: dict[int, str] = {}  # map #'s -> protocol names
     transport: SSHTransportBase | None = None  # gets set later

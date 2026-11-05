@@ -6,7 +6,6 @@ The L{_response} module contains constants for all standard HTTP codes, along
 with a mapping to the corresponding phrases.
 """
 
-
 import string
 
 from twisted.trial import unittest

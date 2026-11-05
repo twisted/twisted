@@ -16,9 +16,7 @@ from twisted.pair import raw
 
 class UDPHeader:
     def __init__(self, data):
-        (self.source, self.dest, self.len, self.check) = struct.unpack(
-            "!HHHH", data[:8]
-        )
+        self.source, self.dest, self.len, self.check = struct.unpack("!HHHH", data[:8])
 
 
 @implementer(raw.IRawDatagramProtocol)
@@ -38,7 +36,7 @@ class RawUDPProtocol(protocol.AbstractDatagramProtocol):
         self.udpProtos[num].append(proto)
 
     # This never really should have subclassed AbstractDatagramProtocol
-    def datagramReceived(  # type:ignore[override]
+    def datagramReceived(  # type: ignore[override]
         self,
         data,
         partial,

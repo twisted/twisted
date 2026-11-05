@@ -272,8 +272,7 @@ class ConchTestForwardingPort(protocol.Protocol):
 def _makeArgs(args: list[str], mod: str = "conch") -> list[bytes]:
     start = [
         sys.executable,
-        "-c"
-        """
+        "-c" """
 ### Twisted Preamble
 import sys, os
 path = os.path.abspath(sys.argv[0])
@@ -284,8 +283,7 @@ while os.path.dirname(path) != path:
     path = os.path.dirname(path)
 
 from twisted.conch.scripts.%s import run
-run()"""
-        % mod,
+run()""" % mod,
     ]
     return [each.encode("utf-8") for each in [*start, *args]]
 
@@ -568,7 +566,7 @@ class OpenSSHClientMixin:
             + " 127.0.0.1 "
             + remoteCommand
         )
-        port: int = self.conchServer.getHost().port  # type:ignore[attr-defined]
+        port: int = self.conchServer.getHost().port  # type: ignore[attr-defined]
         cmds = (cmdline % port).split()
         encodedCmds = []
         for cmd in cmds:

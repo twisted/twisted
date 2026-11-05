@@ -9,7 +9,6 @@ to test that IHalfCloseableProtocol.writeConnectionLost works for stdio
 transports.
 """
 
-
 import sys
 
 from zope.interface import implementer

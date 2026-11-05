@@ -29,8 +29,7 @@ else:
 
 
 class _HashFactory(Protocol):
-    def __call__(self, data: bytes = ...) -> _Hash:
-        ...
+    def __call__(self, data: bytes = ...) -> _Hash: ...
 
 
 class _IKexAlgorithm(Interface):

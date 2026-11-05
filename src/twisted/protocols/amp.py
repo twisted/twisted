@@ -186,6 +186,7 @@ has several features:
     error.
 @type ERROR_DESCRIPTION: L{bytes}
 """
+
 from __future__ import annotations
 
 import datetime
@@ -1698,7 +1699,7 @@ class _CommandMeta(type):
         er = attrs["allErrors"] = {}
         if "commandName" not in attrs:
             attrs["commandName"] = name.encode("ascii")
-        newtype: type[Command] = type.__new__(cls, name, bases, attrs)  # type:ignore
+        newtype: type[Command] = type.__new__(cls, name, bases, attrs)  # type: ignore
 
         if not isinstance(newtype.commandName, bytes):
             raise TypeError(
@@ -1719,9 +1720,9 @@ class _CommandMeta(type):
         accumulateClassDict(newtype, "fatalErrors", fatalErrors)
 
         if not isinstance(newtype.errors, dict):
-            newtype.errors = dict(newtype.errors)  # type:ignore[unreachable]
+            newtype.errors = dict(newtype.errors)  # type: ignore[unreachable]
         if not isinstance(newtype.fatalErrors, dict):
-            newtype.fatalErrors = dict(newtype.fatalErrors)  # type:ignore[unreachable]
+            newtype.fatalErrors = dict(newtype.fatalErrors)  # type: ignore[unreachable]
 
         for v, k in errors.items():
             reverseErrors[k] = v

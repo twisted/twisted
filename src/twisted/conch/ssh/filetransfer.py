@@ -118,8 +118,8 @@ class FileTransferBase(protocol.Protocol):
             (extendedCount,) = struct.unpack("!L", data[:4])
             data = data[4:]
             for i in range(extendedCount):
-                (extendedType, data) = getNS(data)
-                (extendedData, data) = getNS(data)
+                extendedType, data = getNS(data)
+                extendedData, data = getNS(data)
                 attrs[f"ext_{nativeString(extendedType)}"] = extendedData
         return attrs, data
 

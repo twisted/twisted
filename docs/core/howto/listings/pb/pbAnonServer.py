@@ -13,7 +13,6 @@ authenticated.  Success anonymous login requests are given an instance of
 MyPerspective with the name "Anonymous".
 """
 
-
 from sys import stdout
 
 from zope.interface import implementer

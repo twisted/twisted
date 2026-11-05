@@ -5,7 +5,6 @@
 L{twisted.cred.strcred}.
 """
 
-
 import os
 from collections.abc import Sequence
 from io import StringIO

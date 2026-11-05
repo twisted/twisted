@@ -5,7 +5,6 @@
 Tests for L{twisted.words.protocols.jabber.error}.
 """
 
-
 from twisted.trial import unittest
 from twisted.words.protocols.jabber import error
 from twisted.words.xish import domish

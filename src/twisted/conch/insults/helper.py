@@ -8,7 +8,6 @@ Partial in-memory terminal emulator
 @author: Jp Calderone
 """
 
-
 import re
 import string
 

@@ -1,6 +1,7 @@
 """
 Tests for twisted.protocols._sni.
 """
+
 from __future__ import annotations
 
 from twisted.python.filepath import FilePath

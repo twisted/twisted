@@ -8,6 +8,7 @@ DNS protocol implementation.
 Future Plans:
     - Get rid of some toplevels, maybe.
 """
+
 from __future__ import annotations
 
 import contextvars
@@ -406,13 +407,11 @@ def _str2time(s: str) -> int:
 
 
 @overload
-def str2time(s: str | bytes | int) -> int:
-    ...
+def str2time(s: str | bytes | int) -> int: ...
 
 
 @overload
-def str2time(s: None) -> None:
-    ...
+def str2time(s: None) -> None: ...
 
 
 def str2time(s: str | bytes | int | None) -> int | None:
@@ -506,9 +505,9 @@ class _DecodeContext:
 # guarantees the scope is restored correctly on exit -- and remains isolated
 # per-task should a future caller decode messages from multiple
 # L{asyncio}-style contexts concurrently.
-_decodeContextVar: contextvars.ContextVar[
-    _DecodeContext | None
-] = contextvars.ContextVar("_dnsDecodeContext", default=None)
+_decodeContextVar: contextvars.ContextVar[_DecodeContext | None] = (
+    contextvars.ContextVar("_dnsDecodeContext", default=None)
+)
 
 
 @contextmanager
@@ -2246,7 +2245,7 @@ class Record_SSHFP(tputil.FancyEqMixin, tputil.FancyStrMixin):
 
     def decode(self, strio, length=None):
         r = struct.unpack("!BB", readPrecisely(strio, 2))
-        (self.algorithm, self.fingerprintType) = r
+        self.algorithm, self.fingerprintType = r
         self.fingerprint = readPrecisely(strio, length - 2)
 
     def __hash__(self):
@@ -3254,7 +3253,7 @@ class DNSMixin:
     """
 
     # Legacy left-over default value; unused.
-    liveMessages = None  # type:ignore[assignment]
+    liveMessages = None  # type: ignore[assignment]
 
     def __init__(self, controller, reactor=None):
         self.controller = controller
@@ -3379,7 +3378,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
     transport: IUDPTransport
 
     # Legacy unused default value.
-    resends = None  # type:ignore[assignment]
+    resends = None  # type: ignore[assignment]
 
     _addressValidation: dict[int, tuple[str, int]]
     """
@@ -3396,7 +3395,7 @@ class DNSDatagramProtocol(DNSMixin, protocol.DatagramProtocol):
         """
         self.liveMessages = {}
         self.resends = {}
-        self.transport = None  # type:ignore[assignment]
+        self.transport = None  # type: ignore[assignment]
         self._addressValidation = {}
 
     def startProtocol(self):

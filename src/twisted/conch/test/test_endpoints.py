@@ -1495,10 +1495,10 @@ class NewConnectionHelperTests(TestCase):
 
         helper = _NewConnectionHelper(
             None,
-            None,  # type:ignore[arg-type]
+            None,  # type: ignore[arg-type]
             None,
-            None,  # type:ignore[arg-type]
-            None,  # type:ignore[arg-type]
+            None,  # type: ignore[arg-type]
+            None,  # type: ignore[arg-type]
             None,
             None,
             None,

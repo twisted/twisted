@@ -189,7 +189,7 @@ class ListConsumer:
         self.data = {}
 
     def consume(self, result):
-        (item, value) = result
+        item, value = result
         self.data.setdefault(item, []).append(value)
 
 

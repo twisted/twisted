@@ -10,7 +10,6 @@ Maintainer: Paul Swartz
 @since: 12.1
 """
 
-
 from zope.interface import implementer
 
 from twisted.internet.interfaces import IAddress

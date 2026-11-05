@@ -7,6 +7,7 @@ This module contains implementations of L{IFilePath} for zip files.
 
 See the constructor of L{ZipArchive} for use.
 """
+
 from __future__ import annotations
 
 import errno
@@ -73,7 +74,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
     def __cmp__(self, other: object) -> int:
         if not isinstance(other, ZipPath):
             # https://github.com/python/mypy/issues/18914
-            return NotImplemented  # type:ignore[no-any-return]
+            return NotImplemented  # type: ignore[no-any-return]
         return cmp(
             (self.archive, self.pathInArchive), (other.archive, other.pathInArchive)
         )
@@ -121,8 +122,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
 
         def parents(
             self,
-        ) -> Iterable[ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ZipStr]]:
-            ...
+        ) -> Iterable[ZipPath[_ZipStr, _ArchiveStr] | ZipArchive[_ZipStr]]: ...
 
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, _ArchiveStr]:
         """
@@ -195,7 +195,7 @@ class ZipPath(Generic[_ZipStr, _ArchiveStr], AbstractFilePath[_ZipStr]):
         # less meaningful here.
         return self.parent().path
 
-    def open(self, mode: Literal["r", "w"] = "r") -> IO[bytes]:  # type:ignore[override]
+    def open(self, mode: Literal["r", "w"] = "r") -> IO[bytes]:  # type: ignore[override]
         # TODO: liskov substitutability is broken here because the stdlib
         # zipfile does not support appending to files within archives, only to
         # archives themselves; we could fix this by emulating append mode.
@@ -297,7 +297,7 @@ class ZipArchive(ZipPath[AnyStr, AnyStr]):
     def __cmp__(self, other: object) -> int:
         if not isinstance(other, ZipArchive):
             # https://github.com/python/mypy/issues/18914
-            return NotImplemented  # type:ignore[no-any-return]
+            return NotImplemented  # type: ignore[no-any-return]
         return cmp(self.path, other.path)
 
     def child(self, path: OtherAnyStr) -> ZipPath[OtherAnyStr, AnyStr]:

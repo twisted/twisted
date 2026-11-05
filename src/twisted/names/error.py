@@ -6,7 +6,6 @@
 Exception class definitions for Twisted Names.
 """
 
-
 from twisted.internet.defer import TimeoutError
 
 

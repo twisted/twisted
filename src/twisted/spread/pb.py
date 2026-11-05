@@ -27,7 +27,6 @@ To get started, begin with L{PBClientFactory} and L{PBServerFactory}.
 @author: Glyph Lefkowitz
 """
 
-
 import random
 from hashlib import md5
 
@@ -1537,7 +1536,7 @@ class _JellyableAvatarMixin:
         Ensure that the avatar to be returned to the client is jellyable and
         set up disconnection notification to call the realm's logout object.
         """
-        (interface, avatar, logout) = result
+        interface, avatar, logout = result
         if not IJellyable.providedBy(avatar):
             avatar = AsReferenceable(avatar, "perspective")
 

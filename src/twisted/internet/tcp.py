@@ -82,7 +82,7 @@ elif not TYPE_CHECKING:  # pragma: no branch
 
     # No such thing as WSAEPERM or error code 10001
     # according to winsock.h or MSDN
-    EPERM = object()  # type:ignore[assignment]
+    EPERM = object()  # type: ignore[assignment]
     from errno import (  # type: ignore[no-redef,attr-defined]
         WSAEALREADY as EALREADY,
         WSAEINPROGRESS as EINPROGRESS,
@@ -94,11 +94,13 @@ elif not TYPE_CHECKING:  # pragma: no branch
     )
 
     # No such thing as WSAENFILE, either.
-    ENFILE = object()  # type:ignore[assignment]
+    ENFILE = object()  # type: ignore[assignment]
     # Nor ENOMEM
-    ENOMEM = object()  # type:ignore[assignment]
+    ENOMEM = object()  # type: ignore[assignment]
     EAGAIN = EWOULDBLOCK
-    from errno import WSAECONNRESET as ECONNABORTED  # type: ignore[no-redef,attr-defined]
+    from errno import (  # type: ignore[no-redef,attr-defined]
+        WSAECONNRESET as ECONNABORTED,
+    )
 
     from twisted.python.win32 import formatError as strerror
 
@@ -843,9 +845,9 @@ class Server(_TLSServerMixin, Connection):
 
     _base = Connection
 
-    _addressType: type[address.IPv4Address] | type[
-        address.IPv6Address
-    ] = address.IPv4Address
+    _addressType: type[address.IPv4Address] | type[address.IPv6Address] = (
+        address.IPv4Address
+    )
 
     def __init__(
         self,
@@ -1009,8 +1011,7 @@ class _IFileDescriptorReservation(Interface):
 
 
 class _HasClose(TypingProtocol):
-    def close(self) -> object:
-        ...
+    def close(self) -> object: ...
 
 
 @implementer(_IFileDescriptorReservation)
@@ -1459,7 +1460,7 @@ class Port(base.BasePort, _SocketCloser):
         self.factory.doStart()  # type: ignore
         self.connected = True
         self.socket = skt
-        self.fileno = self.socket.fileno  # type:ignore[method-assign]
+        self.fileno = self.socket.fileno  # type: ignore[method-assign]
         self.numberAccepts = 100
 
         self.startReading()

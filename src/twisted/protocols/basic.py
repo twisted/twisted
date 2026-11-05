@@ -7,7 +7,6 @@
 Basic protocols, such as line-oriented, netstring, and int prefixed strings.
 """
 
-
 import math
 
 # System imports

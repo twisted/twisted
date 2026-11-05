@@ -12,7 +12,6 @@ for more details.
 @author: Glyph Lefkowitz
 """
 
-
 import copy
 import struct
 from io import BytesIO

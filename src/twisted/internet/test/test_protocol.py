@@ -5,7 +5,6 @@
 Tests for L{twisted.internet.protocol}.
 """
 
-
 from io import BytesIO
 
 from zope.interface import implementer

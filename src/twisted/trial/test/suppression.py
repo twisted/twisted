@@ -10,7 +10,6 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-
 import warnings
 
 from twisted.trial import unittest, util

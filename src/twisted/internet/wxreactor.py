@@ -33,7 +33,7 @@ try:
     )
 except ImportError:
     # older version of wxPython:
-    from wxPython.wx import wxPySimpleApp, wxCallAfter, wxTimer
+    from wxPython.wx import wxCallAfter, wxPySimpleApp, wxTimer
 
 from twisted.internet import _threadedselect
 from twisted.python import log, runtime

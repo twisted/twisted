@@ -4,6 +4,7 @@
 """
 General functional-style helpers for disttrial.
 """
+
 from __future__ import annotations
 
 from collections.abc import Awaitable, Iterable

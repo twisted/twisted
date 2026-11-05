@@ -6,7 +6,6 @@
 Support for creating a service which runs a web server.
 """
 
-
 import os
 import warnings
 

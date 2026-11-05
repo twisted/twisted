@@ -5,6 +5,7 @@
 """
 Mail service support.
 """
+
 from __future__ import annotations
 
 # System imports

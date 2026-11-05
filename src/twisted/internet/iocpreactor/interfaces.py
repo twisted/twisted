@@ -6,7 +6,6 @@
 Interfaces for iocpreactor
 """
 
-
 from zope.interface import Interface
 
 

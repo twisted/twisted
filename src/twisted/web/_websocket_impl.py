@@ -443,12 +443,10 @@ class SomeMessage(typing.Protocol[CoStr]):
     """
 
     @property
-    def data(self) -> CoStr:
-        ...
+    def data(self) -> CoStr: ...
 
     @property
-    def message_finished(self) -> bool:
-        ...
+    def message_finished(self) -> bool: ...
 
 
 def maybeDeliver(

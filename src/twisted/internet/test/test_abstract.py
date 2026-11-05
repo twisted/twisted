@@ -5,6 +5,7 @@
 Tests for L{twisted.internet.abstract}, a collection of APIs for implementing
 reactors.
 """
+
 from __future__ import annotations
 
 from hypothesis import example, given, strategies as st

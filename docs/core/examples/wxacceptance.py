@@ -14,6 +14,7 @@ Please test on Linux, Win32 and macOS:
    (use dialog menu item), when menus are held down, when window is being
    dragged.
 """
+
 import sys
 import time
 

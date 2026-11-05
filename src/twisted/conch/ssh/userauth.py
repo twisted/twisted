@@ -8,6 +8,7 @@ Currently implemented authentication types are public-key and password.
 
 Maintainer: Paul Swartz
 """
+
 from __future__ import annotations
 
 import struct
@@ -198,7 +199,7 @@ class SSHUserAuthServer(service.SSHService):
         description of the arguments, see L{twisted.cred.portal.Portal.login}.
         We start the service requested by the user.
         """
-        (interface, avatar, logout) = result
+        interface, avatar, logout = result
         assert self.transport is not None
         self.transport.avatar = avatar
         self.transport.logoutFunction = logout

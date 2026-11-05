@@ -5,6 +5,7 @@
 """
 Tests for L{twisted.trial.util}
 """
+
 from __future__ import annotations
 
 import locale

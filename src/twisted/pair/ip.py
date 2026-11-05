@@ -58,7 +58,7 @@ class IPProtocol(protocol.AbstractDatagramProtocol):
         self.ipProtos[num].append(proto)
 
     # this never should have subclassed AbstractDatagramProtocol
-    def datagramReceived(  # type:ignore[override]
+    def datagramReceived(  # type: ignore[override]
         self,
         data,
         partial,
