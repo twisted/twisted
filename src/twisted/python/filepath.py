@@ -325,8 +325,6 @@ class AbstractFilePath(Generic[AnyStr]):
     @ivar path: Subclasses must set this variable.
     """
 
-    Selfish = TypeVar("Selfish", bound="AbstractFilePath[AnyStr]")
-
     path: AnyStr
 
     def getAccessTime(self) -> float:
