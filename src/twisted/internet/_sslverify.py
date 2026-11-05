@@ -53,6 +53,7 @@ from ._service_identity import (
 )
 
 if TYPE_CHECKING:
+    from twisted.protocols.policies import _P
     from twisted.protocols.tls import TLSMemoryBIOProtocol
 
 _log = Logger()
@@ -1070,7 +1071,7 @@ class ClientTLSOptions:
 
 
 def _verifyCB(
-    tlsProtocol: TLSMemoryBIOProtocol, hostIsDNS: bool, hostnameASCII: str
+    tlsProtocol: TLSMemoryBIOProtocol[_P], hostIsDNS: bool, hostnameASCII: str
 ) -> Callable[[Connection, X509, int, int, bool], bool]:
     svcid: ServiceID
     if hostIsDNS:
@@ -1078,7 +1079,7 @@ def _verifyCB(
     else:
         svcid = IPAddress_ID(hostnameASCII)
 
-    weakProtoRef: TLSMemoryBIOProtocol | None = tlsProtocol
+    weakProtoRef: TLSMemoryBIOProtocol[_P] | None = tlsProtocol
 
     def verifyCallback(
         conn: Connection, cert: X509, err: int, depth: int, ok: bool
