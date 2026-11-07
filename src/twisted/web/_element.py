@@ -5,7 +5,8 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from zope.interface import implementer
 

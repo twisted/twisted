@@ -11,9 +11,9 @@ import io
 import linecache
 import warnings
 from collections import OrderedDict
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from html import escape
-from typing import IO, Any, AnyStr, Callable, Union, cast
+from typing import IO, Any, AnyStr, cast
 from xml.sax import handler, make_parser
 from xml.sax.xmlreader import AttributesNSImpl, Locator
 
@@ -529,9 +529,7 @@ class _ToStan(handler.ContentHandler, handler.EntityResolver):
                 name = f"{self.prefixMap[ns]}:{name}"
         el = Tag(
             name,
-            attributes=OrderedDict(
-                cast(Mapping[Union[bytes, str], str], nonTemplateAttrs)
-            ),
+            attributes=OrderedDict(cast(Mapping[bytes | str, str], nonTemplateAttrs)),
             render=render,
             filename=filename,
             lineNumber=lineNumber,

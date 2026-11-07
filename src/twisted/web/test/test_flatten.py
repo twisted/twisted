@@ -12,9 +12,10 @@ import re
 import sys
 import traceback
 from collections import OrderedDict
+from collections.abc import Callable
 from textwrap import dedent
 from types import FunctionType
-from typing import Callable, NoReturn, cast
+from typing import NoReturn, cast
 from xml.etree.ElementTree import XML
 
 from zope.interface import implementer

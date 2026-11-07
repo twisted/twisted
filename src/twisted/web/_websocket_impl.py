@@ -9,9 +9,10 @@ Private implementation module for public L{twisted.web.websocket}.
 from __future__ import annotations
 
 import typing
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import singledispatch
-from typing import Callable, Generic, TypeVar, Union
+from typing import Generic, TypeVar
 
 from zope.interface import implementer
 
@@ -181,7 +182,7 @@ class WebSocketProtocol(typing.Protocol):
 
 
 _WSP = TypeVar("_WSP", covariant=True, bound=WebSocketProtocol)
-_Bootstrap = Callable[[Union[WSConnection, Connection], ITransport], None]
+_Bootstrap = Callable[[WSConnection | Connection, ITransport], None]
 _log = Logger()
 
 
