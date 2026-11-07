@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cached_property, partial
-from typing import Callable
 
 from zope.interface import implementer
 
