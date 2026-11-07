@@ -109,11 +109,12 @@ import re
 import tempfile
 import warnings
 from collections import defaultdict
+from collections.abc import Callable
 from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
-from typing import AnyStr, Callable, Protocol as TypingProtocol
+from typing import AnyStr, Protocol as TypingProtocol
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
