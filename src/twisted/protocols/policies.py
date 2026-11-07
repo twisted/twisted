@@ -12,9 +12,11 @@ from __future__ import annotations
 # system imports
 import sys
 from collections.abc import Callable
-from typing import Self, TypeVar
+from typing import Self
 
 from zope.interface import directlyProvides, providedBy
+
+from typing_extensions import TypeVar
 
 from twisted.internet import error, interfaces
 from twisted.internet.interfaces import IAddress, ILoggingContext
