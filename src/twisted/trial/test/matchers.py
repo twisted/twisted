@@ -5,7 +5,8 @@
 Hamcrest matchers useful throughout the test suite.
 """
 
-from typing import IO, Callable, Optional, TypeVar
+from collections.abc import Callable
+from typing import IO, TypeVar
 
 from hamcrest.core.base_matcher import BaseMatcher
 from hamcrest.core.description import Description
@@ -33,7 +34,7 @@ class _MatchAfter(BaseMatcher[_A]):
     def __init__(self, f: Callable[[_A], _B], m: Matcher[_B]) -> None:
         self.f = f
         self.m = m
-        self._e: Optional[Exception] = None
+        self._e: Exception | None = None
 
     def _matches(self, item: _A) -> bool:
         """

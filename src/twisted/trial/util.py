@@ -19,8 +19,9 @@ Maintainer: Jonathan Lange
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from random import randrange
-from typing import Any, Callable, TextIO, TypeVar
+from typing import Any, TextIO, TypeVar
 
 from typing_extensions import ParamSpec
 
