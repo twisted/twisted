@@ -37,7 +37,6 @@ import unittest as pyunit
 import warnings
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from importlib.machinery import SourceFileLoader
 from typing import ParamSpec, Protocol, TextIO, TypeAlias, TypeGuard
 
 from zope.interface import implementer
@@ -733,9 +732,8 @@ class TestLoader:
             within the given package (and so on), otherwise, only inspect
             modules in the package itself.
         """
-        name = reflect.filenameToModuleName(fileName)
         try:
-            module = SourceFileLoader(name, fileName).load_module()
+            module = filenameToModule(fileName)
             return self.loadAnything(module, recurse=recurse)
         except OSError:
             raise ValueError(f"{fileName} is not a Python file.")
