@@ -6,10 +6,10 @@ from __future__ import annotations
 Test cases for formmethod module.
 """
 
-from collections.abc import Iterable
-from typing import Callable
+from collections.abc import Callable, Iterable
+from typing import Concatenate
 
-from typing_extensions import Concatenate, ParamSpec
+from typing_extensions import ParamSpec
 
 from twisted.python import formmethod
 from twisted.trial import unittest
