@@ -94,26 +94,9 @@ If you want to run everything in a single Python interpreter so that you can sin
 When
 ~~~~
 
+Our hosted continuous integration will take care of running most of the tests for you, so you can push a pull request and check out the results `on our Github Actions page <https://github.com/twisted/twisted/actions>`.
 
-    
-Always, always, *always* be sure `all the     tests pass <https://ronjeffries.com/xprog/classics/expunittestsat100/>`_ before committing any code.  If someone else
-checks out code at the start of a development session and finds
-failing tests, they will not be happy and may decide to *hunt you down* .
-
-    
-
-
-Since this is a geographically dispersed team, the person who can help
-you get your code working probably isn't in the room with you.  You may want
-to share your work in progress over the network, but you want to leave the
-main Git tree in good working order.
-So `use a branch <https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging>`_ ,
-and merge your changes back in only after your problem is solved and all the
-unit tests pass again.
-
-    
-
-
+However, it may be 10-15 minutes before you can get a result, and thus running some tests locally before you push anything can save you time and save the project CPU credits from a generous (but limited) budget.
 
 Adding a Test
 -------------
