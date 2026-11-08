@@ -153,6 +153,16 @@ jobs:
           # Just Python 3.14 with default settings.
           - python-version: '3.14'
 
+          # Run as much of the codebase as we can with deprecation warnings
+          # reported as errors.
+          - python-version: '3.14'
+            tox-env: 'withcov-alldeps-warnerr'
+            job-name: 'warnings-clean'
+            # Note that right now we are running just Trial's tests to make
+            # sure that we *could* use it to run more tests, but this list
+            # should be expanded until it encompasses the entire codebase.
+            trial-args: '-- twisted.trial.test'
+
           # Oldest Intel macOS (available on GitHub)
           # and lowest Python (major) supported versions.
           - python-version: '3.11'
