@@ -19,7 +19,7 @@ import warnings
 from incremental import Version, getVersionString
 
 from twisted.internet.defer import Deferred, fail, succeed
-from twisted.python.deprecate import deprecated, deprecatedModuleAttribute
+from twisted.python.deprecate import deprecated
 from twisted.python.failure import Failure
 from twisted.python.reflect import (
     accumulateMethods,
@@ -28,6 +28,7 @@ from twisted.python.reflect import (
 )
 from twisted.python.util import FancyEqMixin
 from twisted.trial import unittest
+from .with_deprecated import _somethingOld, oldVersion
 
 
 class MockEquality(FancyEqMixin):
@@ -1646,7 +1647,11 @@ class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
     @type version: L{incremental.Version}
     """
 
-    version = Version("Bar", 1, 2, 3)
+    def setUp(self) -> None:
+        """
+        Load the version number.
+        """
+        self.version = oldVersion
 
     def test_deprecated(self):
         """
@@ -1706,29 +1711,3 @@ class GetDeprecatedModuleAttributeTests(unittest.SynchronousTestCase):
             "somethingNew",
             self.version,
         )
-
-
-def somethingOld():
-    """
-    A deprecated module attribute. Used by
-    L{GetDeprecatedModuleAttributeTests.test_deprecated}.
-    """
-
-
-# A non-deprecated alias of _somethingOld.
-_somethingOld = somethingOld
-
-
-deprecatedModuleAttribute(
-    GetDeprecatedModuleAttributeTests.version,
-    "It's old and clunky",
-    __name__,
-    "somethingOld",
-)
-
-
-def somethingNew():
-    """
-    A module attribute that is not deprecated. Used by
-    L{GetDeprecatedModuleAttributeTests.test_notDeprecated}.
-    """
