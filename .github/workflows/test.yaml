@@ -161,7 +161,7 @@ jobs:
             # Note that right now we are running just Trial's tests to make
             # sure that we *could* use it to run more tests, but this list
             # should be expanded until it encompasses the entire codebase.
-            trial-args: '-- twisted.trial.test'
+            trial-target: '-- twisted.trial.test'
 
           # Oldest Intel macOS (available on GitHub)
           # and lowest Python (major) supported versions.
