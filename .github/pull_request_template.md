@@ -21,7 +21,7 @@ The following checklist applies to *all* pull requests - no matter how small.
       (All PRs must resolve at least one issue.
       For larger PRs, describing the problem *before* submitting a PR is very useful to make sure you're solving the right thing.
       Someone from the core team will probably do this for you if this is a small, obvious fix and you forget, but your review might go a bit faster if you do it yourself.)
-* [ ] I have edited the PR title to be the issue number followed by a description of the change being made, like `#1234 fix crash in reactor.run()`.
+* [ ] I have edited the PR title to be the issue number followed by a description of the change being made, like `#5000 remove the sun from the sky`.
 * [ ] I have created a release notes news fragment file in src/twisted/newsfragments/
       (see: [Release notes fragments docs.](https://docs.twisted.org/en/latest/core/development/dev-process.html#release-notes-management). CI will fail and block your review if you don't do this.)
 * [ ] I have updated the automated tests to cover any modified code and to verify any changed behavior.
