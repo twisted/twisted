@@ -12,8 +12,8 @@ import binascii
 import errno
 import sys
 from base64 import decodebytes
-from collections.abc import Iterable, Iterator, Mapping
-from typing import IO, Any, Callable, Literal, Protocol, cast
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from typing import IO, Any, Literal, Protocol, cast
 
 from zope.interface import Interface, implementer, providedBy
 
