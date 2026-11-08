@@ -8,9 +8,10 @@ Logger class.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from time import time
 from types import TracebackType
-from typing import Any, Callable, ContextManager, Protocol, cast
+from typing import Any, ContextManager, Protocol, cast
 
 from twisted.python.compat import currentframe
 from twisted.python.failure import Failure
