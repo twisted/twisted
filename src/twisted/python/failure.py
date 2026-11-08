@@ -18,11 +18,12 @@ import copy
 import inspect
 import linecache
 import sys
+from collections.abc import Callable
 from functools import partial
 from inspect import getmro
 from io import StringIO
 from types import CodeType
-from typing import Callable, NoReturn, TypeVar
+from typing import NoReturn, TypeVar
 
 from incremental import Version
 

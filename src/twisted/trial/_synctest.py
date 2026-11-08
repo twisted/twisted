@@ -16,9 +16,9 @@ import tempfile
 import types
 import unittest as pyunit
 import warnings
-from collections.abc import Coroutine, Generator, Iterable
+from collections.abc import Callable, Coroutine, Generator, Iterable
 from dis import findlinestarts as _findlinestarts
-from typing import Any, Callable, NoReturn, TypeVar
+from typing import Any, NoReturn, TypeVar
 
 # Python 2.7 and higher has skip support built-in
 from unittest import SkipTest
