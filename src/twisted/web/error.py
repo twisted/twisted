@@ -22,13 +22,13 @@ __all__ = [
 
 
 from collections.abc import Sequence
-from typing import Optional, Union, cast
+from typing import cast
 
 from twisted.python.compat import nativeString
 from twisted.web._responses import RESPONSES
 
 
-def _codeToMessage(code: Union[int, bytes]) -> Optional[bytes]:
+def _codeToMessage(code: int | bytes) -> bytes | None:
     """
     Returns the response message corresponding to an HTTP code, or None
     if the code is unknown or unrecognized.
@@ -55,14 +55,14 @@ class Error(Exception):
     """
 
     status: bytes
-    message: Optional[bytes]
-    response: Optional[bytes]
+    message: bytes | None
+    response: bytes | None
 
     def __init__(
         self,
-        code: Union[int, bytes],
-        message: Optional[bytes] = None,
-        response: Optional[bytes] = None,
+        code: int | bytes,
+        message: bytes | None = None,
+        response: bytes | None = None,
     ) -> None:
         """
         Initializes a basic exception.
@@ -112,14 +112,14 @@ class PageRedirect(Error):
     @ivar location: The location of the redirect which was not followed.
     """
 
-    location: Optional[bytes]
+    location: bytes | None
 
     def __init__(
         self,
-        code: Union[int, bytes],
-        message: Optional[bytes] = None,
-        response: Optional[bytes] = None,
-        location: Optional[bytes] = None,
+        code: int | bytes,
+        message: bytes | None = None,
+        response: bytes | None = None,
+        location: bytes | None = None,
     ) -> None:
         """
         Initializes a page redirect exception.
@@ -154,14 +154,14 @@ class InfiniteRedirection(Error):
         not followed.
     """
 
-    location: Optional[bytes]
+    location: bytes | None
 
     def __init__(
         self,
-        code: Union[int, bytes],
-        message: Optional[bytes] = None,
-        response: Optional[bytes] = None,
-        location: Optional[bytes] = None,
+        code: int | bytes,
+        message: bytes | None = None,
+        response: bytes | None = None,
+        location: bytes | None = None,
     ) -> None:
         """
         Initializes an infinite redirection exception.
@@ -199,7 +199,7 @@ class RedirectWithNoLocation(Error):
     message: bytes
     uri: bytes
 
-    def __init__(self, code: Union[bytes, int], message: bytes, uri: bytes) -> None:
+    def __init__(self, code: bytes | int, message: bytes, uri: bytes) -> None:
         """
         Initializes a page redirect exception when no location is given.
 

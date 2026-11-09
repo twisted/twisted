@@ -4,13 +4,10 @@ Buffer byte streams.
 
 from collections.abc import Iterator
 from itertools import count
-from typing import TypeVar
 
 from attrs import Factory, define
 
 from twisted.protocols.amp import AMP, Command, Integer, String as Bytes
-
-T = TypeVar("T")
 
 
 class StreamOpen(Command):

@@ -10,11 +10,11 @@ Resource limiting policies.
 from __future__ import annotations
 
 import sys
-from typing import Callable, Concatenate, Generic, ParamSpec
+from typing import Callable, Concatenate, Generic, ParamSpec, Self
 
 from zope.interface import directlyProvides, providedBy
 
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from twisted.internet import error
 from twisted.internet.interfaces import (

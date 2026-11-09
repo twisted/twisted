@@ -11,8 +11,9 @@ instead of creating a thread pool directly.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from threading import Thread, current_thread
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from typing_extensions import ParamSpec, TypedDict
 

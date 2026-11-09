@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from twisted.conch.insults import helper
 from twisted.conch.insults.insults import (

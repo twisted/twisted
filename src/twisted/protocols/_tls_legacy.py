@@ -5,7 +5,7 @@ Handler for the various legacy things that a C{contextFactory} can be.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Callable, TypeAlias
 from warnings import warn
 
 from OpenSSL.SSL import Connection, Context
@@ -20,11 +20,11 @@ if TYPE_CHECKING:
     # Circular import.
     from twisted.protocols.tls import TLSMemoryBIOProtocol
 
-SomeConnectionCreator = Union[
-    IOpenSSLContextFactory,
-    IOpenSSLClientConnectionCreator,
-    IOpenSSLServerConnectionCreator,
-]
+SomeConnectionCreator: TypeAlias = (
+    IOpenSSLContextFactory
+    | IOpenSSLClientConnectionCreator
+    | IOpenSSLServerConnectionCreator
+)
 
 
 SingleArgFactory = Callable[["TLSMemoryBIOProtocol[Any]"], Connection]

@@ -6,11 +6,11 @@ Test HTTP/2 support.
 """
 
 import itertools
+from typing import TypeAlias
 
 from zope.interface import directlyProvides, providedBy
 
 import httpx
-from typing_extensions import TypeAlias
 
 from twisted.internet import defer, error, reactor, task
 from twisted.internet.address import IPv4Address

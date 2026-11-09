@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import binascii
 import struct
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 
 from zope.interface import implementer
 

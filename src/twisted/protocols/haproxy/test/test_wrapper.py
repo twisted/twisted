@@ -4,7 +4,7 @@
 """
 Test cases for L{twisted.protocols.haproxy.HAProxyProtocol}.
 """
-from typing import Any, Optional
+from typing import Any
 from unittest import mock
 
 from twisted.internet import address
@@ -30,8 +30,8 @@ class StaticProtocol(Protocol):
     """
 
     def __init__(self) -> None:
-        self.source: Optional[address.IAddress] = None
-        self.destination: Optional[address.IAddress] = None
+        self.source: address.IAddress | None = None
+        self.destination: address.IAddress | None = None
         self.data = b""
         self.disconnected = False
 

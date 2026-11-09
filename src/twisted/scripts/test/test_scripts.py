@@ -2,7 +2,7 @@
 # See LICENSE for details.
 
 """
-Tests for the command-line scripts in the top-level I{bin/} directory.
+Tests for command-line script entrypoints.
 
 Tests for actual functionality belong elsewhere, written in a way that doesn't
 involve launching child processes.

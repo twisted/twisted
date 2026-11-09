@@ -8,9 +8,9 @@ Tools for formatting logging events.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime as DateTime
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, cast
 
 from twisted.python._tzhelper import FixedOffsetTimeZone
 from twisted.python.failure import Failure
@@ -287,7 +287,7 @@ def _formatEvent(event: LogEvent) -> str:
         if "log_flattened" in event:
             return flatFormat(event)
 
-        format = cast(Optional[Union[str, bytes]], event.get("log_format", None))
+        format = cast(str | bytes | None, event.get("log_format", None))
         if format is None:
             return ""
 
@@ -334,7 +334,7 @@ def _formatSystem(event: LogEvent) -> str:
 
     @return: A formatted string representing the "log_system" key.
     """
-    system = cast(Optional[str], event.get("log_system", None))
+    system = cast(str | None, event.get("log_system", None))
     if system is None:
         level = event.get("log_level", None)
         if level is None:

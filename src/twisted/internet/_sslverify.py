@@ -9,7 +9,7 @@ from binascii import hexlify
 from collections.abc import Callable, Sequence
 from functools import lru_cache
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Self
 
 from zope.interface import Interface, implementer
 
@@ -311,9 +311,6 @@ def _handleattrhelper(Class, transport, methodName):
     return Class(cert)
 
 
-_Self = TypeVar("_Self", bound="Certificate")
-
-
 class Certificate(CertBase):
     """
     An x509 certificate.
@@ -333,17 +330,15 @@ class Certificate(CertBase):
 
     @classmethod
     def load(
-        Class: type[_Self],
+        cls,
         requestData: bytes,
         format: int = crypto.FILETYPE_ASN1,
         args: tuple[Any, ...] = (),
-    ) -> _Self:
+    ) -> Self:
         """
         Load a certificate from an ASN.1- or PEM-format string.
-
-        @rtype: C{Class}
         """
-        return Class(crypto.load_certificate(format, requestData), *args)
+        return cls(crypto.load_certificate(format, requestData), *args)
 
     # We can't use super() because it is old style still, so we have to hack
     # around things wanting to call the parent function
@@ -358,13 +353,11 @@ class Certificate(CertBase):
         return self.dump(crypto.FILETYPE_PEM)
 
     @classmethod
-    def loadPEM(Class, data: bytes) -> Certificate:
+    def loadPEM(cls, data: bytes) -> Self:
         """
         Load a certificate from a PEM-format data string.
-
-        @rtype: C{Class}
         """
-        return Class.load(data, crypto.FILETYPE_PEM)
+        return cls.load(data, crypto.FILETYPE_PEM)
 
     @classmethod
     def peerFromTransport(Class, transport):

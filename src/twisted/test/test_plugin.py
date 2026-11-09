@@ -13,9 +13,10 @@ import functools
 import os
 import sys
 import time
+from collections.abc import Callable
 from importlib import invalidate_caches as invalidateImportCaches
 from types import ModuleType
-from typing import Callable, TypedDict, TypeVar
+from typing import TypedDict
 
 from zope.interface import Interface
 
@@ -23,8 +24,6 @@ from twisted import plugin
 from twisted.python.filepath import FilePath
 from twisted.python.log import EventDict, addObserver, removeObserver, textFromEventDict
 from twisted.trial import unittest
-
-_T = TypeVar("_T")
 
 
 class ITestPlugin(Interface):

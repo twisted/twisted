@@ -38,6 +38,7 @@ async def main(reactor: Any) -> None:
     print("connecting...")
     await endpoint.connect(WebSocketClientDemo)
     print("connected!")
+    # Pause for ten seconds, then return:
     await deferLater(reactor, 10)
 
 

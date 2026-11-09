@@ -13,17 +13,15 @@ test is over.
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Union
+from typing import TypeAlias
 
 from zope.interface import implementer
-
-from typing_extensions import TypeAlias
 
 from twisted.python.components import proxyForInterface
 from twisted.python.failure import Failure
 from ..itrial import IReporterWithDurations, ITestCase
 
-ReporterFailure: TypeAlias = Union[Failure, tuple[type, Exception, TracebackType]]
+ReporterFailure: TypeAlias = Failure | tuple[type, Exception, TracebackType]
 
 
 @implementer(IReporterWithDurations)

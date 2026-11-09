@@ -272,20 +272,8 @@ class ConchTestForwardingPort(protocol.Protocol):
 def _makeArgs(args: list[str], mod: str = "conch") -> list[bytes]:
     start = [
         sys.executable,
-        "-c"
-        """
-### Twisted Preamble
-import sys, os
-path = os.path.abspath(sys.argv[0])
-while os.path.dirname(path) != path:
-    if os.path.basename(path).startswith('Twisted'):
-        sys.path.insert(0, path)
-        break
-    path = os.path.dirname(path)
-
-from twisted.conch.scripts.%s import run
-run()"""
-        % mod,
+        "-c",
+        f"from twisted.conch.scripts.{mod} import run; run()",
     ]
     return [each.encode("utf-8") for each in [*start, *args]]
 

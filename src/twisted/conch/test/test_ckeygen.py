@@ -10,8 +10,9 @@ import getpass
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from io import StringIO
-from typing import Callable, NoReturn
+from typing import NoReturn
 
 from twisted.conch.test.keydata import (
     privateECDSA_openssh,

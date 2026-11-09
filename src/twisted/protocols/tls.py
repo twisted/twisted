@@ -38,8 +38,8 @@ transports, such as UNIX sockets and stdio.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Callable, cast
+from collections.abc import Callable, Iterable
+from typing import cast
 
 from zope.interface import directlyProvides, implementer, providedBy
 
