@@ -107,4 +107,8 @@ If you leave the same server running, the one you just tested with your browser,
    received text: 'heartbeat 10'
    received text: 'heartbeat 11'
 
+.. note::
+
+   The example client will quit after ten seconds due to the line `await deferLater(reactor, 10)`. If you want the client to run forever, use `await twisted.internet.defer.Deferred()` instead.
+
 And now you have a functioning WebSocket server and client using Twisted!
