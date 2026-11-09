@@ -44,10 +44,10 @@ from stat import (
 from typing import (
     IO,
     TYPE_CHECKING,
-    Any,
     AnyStr,
     Generic,
     Literal,
+    Self,
     TypeVar,
     cast,
     overload,
@@ -76,7 +76,6 @@ if sys.version_info <= (3, 12):
 # modified for inclusion in the standard library.  --glyph
 
 _CREATE_FLAGS = os.O_EXCL | os.O_CREAT | os.O_RDWR | O_BINARY
-_Self = TypeVar("_Self", bound="AbstractFilePath[Any]")
 
 
 randomBytes = os.urandom
@@ -326,8 +325,6 @@ class AbstractFilePath(Generic[AnyStr]):
     @ivar path: Subclasses must set this variable.
     """
 
-    Selfish = TypeVar("Selfish", bound="AbstractFilePath[AnyStr]")
-
     path: AnyStr
 
     def getAccessTime(self) -> float:
@@ -415,7 +412,7 @@ class AbstractFilePath(Generic[AnyStr]):
             path = parent
             parent = parent.parent()
 
-    def children(self: _Self) -> Iterable[_Self]:
+    def children(self) -> Iterable[Self]:
         """
         List the children of this path object.
 
@@ -459,16 +456,16 @@ class AbstractFilePath(Generic[AnyStr]):
         result = []
         for name in subnames:
             # It's not possible to tell mypy that child/clone etc must be
-            # overridden to return respecializable forms of _Self, but they
+            # overridden to return respecializable forms of Self, but they
             # must, so we will say that they are.
-            child: _Self = self.child(name)  # type:ignore[assignment]
+            child: Self = self.child(name)  # type:ignore[assignment]
             result.append(child)
         return result
 
     def walk(
-        self: _Self,
-        descend: Callable[[_Self], bool] | None = None,
-    ) -> Iterable[_Self]:
+        self,
+        descend: Callable[[Self], bool] | None = None,
+    ) -> Iterable[Self]:
         """
         Yield myself, then each of my children, and each of those children's
         children in turn.
@@ -499,7 +496,7 @@ class AbstractFilePath(Generic[AnyStr]):
                 else:
                     yield c
 
-    def sibling(self: _Self, path: OtherAnyStr) -> AbstractFilePath[OtherAnyStr]:
+    def sibling(self, path: OtherAnyStr) -> AbstractFilePath[OtherAnyStr]:
         """
         Return a L{FilePath} with the same directory as this instance but with
         a basename of C{path}.
@@ -539,7 +536,7 @@ class AbstractFilePath(Generic[AnyStr]):
             path = path.child(name)
         return path
 
-    def segmentsFrom(self: _Self, ancestor: _Self) -> list[AnyStr]:
+    def segmentsFrom(self, ancestor: Self) -> list[AnyStr]:
         """
         Return a list of segments between a child and its ancestor.
 
@@ -559,7 +556,7 @@ class AbstractFilePath(Generic[AnyStr]):
         # work on win32 and for zipfiles; later I will deterimine if the
         # obvious fast implemenation does the right thing too
         f = self
-        p: _Self = f.parent()  # type:ignore[assignment]
+        p: Self = f.parent()  # type:ignore[assignment]
         segments: list[AnyStr] = []
         while f != ancestor and p != f:
             segments[0:0] = [f.basename()]
@@ -796,7 +793,7 @@ class FilePath(AbstractFilePath[AnyStr]):
 
     if TYPE_CHECKING:
 
-        def sibling(self: _Self, path: OtherAnyStr) -> FilePath[OtherAnyStr]:
+        def sibling(self, path: OtherAnyStr) -> FilePath[OtherAnyStr]:
             ...
 
         def descendant(self, segments: Sequence[OtherAnyStr]) -> FilePath[OtherAnyStr]:

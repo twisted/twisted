@@ -1,11 +1,9 @@
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-from typing import Optional
-
 
 class Enum:
-    group: Optional[str] = None
+    group: str | None = None
 
     def __init__(self, label: str) -> None:
         self.label = label

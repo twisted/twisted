@@ -5,8 +5,6 @@
 Tests for L{twisted.web._newclient}.
 """
 
-from typing import Optional
-
 from zope.interface import implementer
 from zope.interface.verify import verifyObject
 
@@ -199,7 +197,7 @@ class _HTTPParserTests:
     the task of parsing HTTP bytes.
     """
 
-    sep: Optional[bytes] = None
+    sep: bytes | None = None
 
     def test_statusCallback(self):
         """

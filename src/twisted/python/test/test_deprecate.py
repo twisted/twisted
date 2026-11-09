@@ -10,8 +10,8 @@ import inspect
 import sys
 import types
 import warnings
+from collections.abc import Callable
 from os.path import normcase
-from typing import Callable
 from warnings import catch_warnings, simplefilter
 
 try:

@@ -9,6 +9,7 @@ Test cases for twisted.names.
 import copy
 import operator
 import socket
+from collections.abc import Sequence
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
