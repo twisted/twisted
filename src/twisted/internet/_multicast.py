@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import socket
 import struct
-import sys
+from sys import byteorder
 from typing import Any
 
 from twisted.internet.abstract import isIPAddress, isIPv6Address
@@ -89,7 +89,7 @@ class MulticastMixin:
         i = self.socket.getsockopt(ipproto, multiif, blen)
 
         if self.addressFamily == socket.AF_INET6:
-            return int.from_bytes(i, sys.byteorder)
+            return int.from_bytes(i, byteorder)
         return socket.inet_ntop(self.addressFamily, i)
 
     def setOutgoingInterface(self, addr: str | int) -> Deferred[int]:
@@ -125,7 +125,7 @@ class MulticastMixin:
 
     def getTTL(self) -> int:
         ttl = self.socket.getsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
-        return int.from_bytes(ttl, sys.byteorder)
+        return int.from_bytes(ttl, byteorder)
 
     def setTTL(self, ttl: int) -> None:
         bttl = struct.pack("B", ttl)
