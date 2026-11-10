@@ -58,7 +58,9 @@ def getSerial(filename="/tmp/twisted-names.serial"):
 
 class FileAuthority(common.ResolverBase):
     """
-    An Authority that is loaded from a file.
+    An Authority that is loaded from a file. An abstraction over an
+    authoritative zone. Only manages names in the zone or
+    its children zones.
 
     This is an abstract class that implements record search logic. To create
     a functional resolver, subclass it and override the L{loadFile} method.
@@ -136,7 +138,8 @@ class FileAuthority(common.ResolverBase):
 
     def _lookup(self, name, cls, type, timeout=None):
         """
-        Determine a response to a particular DNS query.
+        Determine a response to a particular DNS query within the current
+        authoritative zone.
 
         @param name: The name which is being queried and for which to lookup a
             response.
@@ -153,16 +156,24 @@ class FileAuthority(common.ResolverBase):
         @param timeout: All processing is done locally and a result is
             available immediately, so the timeout value is ignored.
 
-        @return: A L{Deferred} that fires with a L{tuple} of three sets of
-            response records (to comprise the I{answer}, I{authority}, and
-            I{additional} sections of a DNS response) or with a L{Failure} if
-            there is a problem processing the query.
+        @return: A L{Deferred} that fires with a L{ResolverResponse}, or with a
+        L{Failure} if there is a problem processing the query.
         """
+        # Partially implements the algorithm from RFC 1034 section 4.3.2
+
+        # PTR queries are an exception, because the key in a PTR record
+        # is IP-like address. For example: `52.0.0.10.IN-ADDR.ARPA`
+        if not dns._isSubdomainOf(name, self.soa[0]) and type != dns.PTR:
+            return defer.fail(failure.Failure(error.DomainError(name)))
+
+        # 3. Start matching down, label by label, in the zone. [...]
+
+        resp = common.ResolverResponse()
         cnames = []
-        results = []
-        authority = []
-        additional = []
         default_ttl = max(self.soa[1].minimum, self.soa[1].expire)
+        soa_ttl = default_ttl
+        if self.soa[1].ttl is not None:
+            soa_ttl = self.soa[1].ttl
 
         domain_records = self.records.get(name.lower())
 
@@ -177,48 +188,72 @@ class FileAuthority(common.ResolverBase):
                     # NS record belong to a child zone: this is a referral.  As
                     # NS records are authoritative in the child zone, ours here
                     # are not.  RFC 2181, section 6.1.
-                    authority.append(
+                    resp.authority.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=False)
                     )
                 elif record.TYPE == type or type == dns.ALL_RECORDS:
-                    results.append(
+                    resp.answer.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
                 if record.TYPE == dns.CNAME:
                     cnames.append(
                         dns.RRHeader(name, record.TYPE, dns.IN, ttl, record, auth=True)
                     )
-            if not results:
-                results = cnames
+            if not resp.answer:
+                resp.answer = cnames
 
             # Sort of https://tools.ietf.org/html/rfc1034#section-4.3.2 .
             # See https://twistedmatrix.com/trac/ticket/6732
             additionalInformation = self._additionalRecords(
-                results, authority, default_ttl
+                resp.answer, resp.authority, default_ttl
             )
             if cnames:
-                results.extend(additionalInformation)
+                resp.answer.extend(additionalInformation)
             else:
-                additional.extend(additionalInformation)
+                resp.additional.extend(additionalInformation)
 
-            if not results and not authority:
+            if not resp.answer and not resp.authority:
                 # Empty response. Include SOA record to allow clients to cache
                 # this response. RFC 1034, sections 3.7 and 4.3.4, and RFC 2181
                 # section 7.1.
-                authority.append(
+                resp.authority.append(
                     dns.RRHeader(
                         self.soa[0], dns.SOA, dns.IN, ttl, self.soa[1], auth=True
                     )
                 )
-            return defer.succeed((results, authority, additional))
+
+            resp.response_code = dns.OK
+
+            return defer.succeed(resp)
         else:
+            # c. If at some label, a match is impossible (i.e., the
+            #    corresponding label does not exist), look to see if a
+            #    the "*" label exists.
+
+            #    If the "*" label does not exist, check whether the name
+            #    we are looking for is the original QNAME in the query
+            #    or a name we have followed due to a CNAME.  If the name
+            #    is original, set an authoritative name error in the
+            #    response and exit.  Otherwise just exit.
+
+            #    If the "*" label does exist, match RRs at that node
+            #    against QTYPE.  If any match, copy them into the answer
+            #    section, but set the owner of the RR to be QNAME, and
+            #    not the node with the "*" label.  Go to step 6.
+
             if dns._isSubdomainOf(name, self.soa[0]):
-                # We may be the authority and we didn't find it.
+                resp.response_code = dns.ENAME
+                resp.authority.append(
+                    dns.RRHeader(
+                        self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
+                    )
+                )
                 # XXX: The QNAME may also be in a delegated child zone. See
                 # #6581 and #6580
-                return defer.fail(failure.Failure(dns.AuthoritativeDomainError(name)))
+                return defer.succeed(resp)
+
             else:
-                # The QNAME is not a descendant of this zone. Fail with
+                # If the QNAME is not a descendant of the zone, fail with
                 # DomainError so that the next chained authority or
                 # resolver will be queried.
                 return defer.fail(failure.Failure(error.DomainError(name)))
@@ -232,7 +267,10 @@ class FileAuthority(common.ResolverBase):
                 soa_ttl = self.soa[1].ttl
             else:
                 soa_ttl = default_ttl
-            results = [
+
+            resp = common.ResolverResponse()
+
+            resp.answer = [
                 dns.RRHeader(
                     self.soa[0], dns.SOA, dns.IN, soa_ttl, self.soa[1], auth=True
                 )
@@ -244,11 +282,11 @@ class FileAuthority(common.ResolverBase):
                     else:
                         ttl = default_ttl
                     if rec.TYPE != dns.SOA:
-                        results.append(
+                        resp.answer.append(
                             dns.RRHeader(k, rec.TYPE, dns.IN, ttl, rec, auth=True)
                         )
-            results.append(results[0])
-            return defer.succeed((results, (), ()))
+            resp.answer.append(resp.answer[0])
+            return defer.succeed(resp)
         return defer.fail(failure.Failure(dns.DomainError(name)))
 
 
