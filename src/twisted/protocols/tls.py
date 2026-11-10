@@ -194,6 +194,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
     ) -> None:
         super().__init__(factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
+        self._backend = factory._backend
 
     def getHandle(self) -> Any | None:
         """
