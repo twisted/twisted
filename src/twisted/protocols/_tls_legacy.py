@@ -15,6 +15,8 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
     IOpenSSLServerConnectionCreator,
 )
+from ._tls_backend_abstract import TLSBackend
+from ._tls_backend_pyopenssl import PyOpenSSLBackend
 
 if TYPE_CHECKING:
     # Circular import.
@@ -75,7 +77,7 @@ def oldest(isClient: bool, creator: object) -> SingleArgFactory:
 
 def _convertToAppropriateFactory(
     isClient: bool, creator: SomeConnectionCreator
-) -> SingleArgFactory:
+) -> TLSBackend:
     """
     Upgrade a connection creator / context-factory-ish object into something
     with a signature like the most recent interface for building OpenSSL
@@ -107,4 +109,4 @@ def _convertToAppropriateFactory(
         connection.set_app_data(protocol)
         return connection
 
-    return connectionFactory
+    return PyOpenSSLBackend(lambda protocol: connectionFactory(protocol))

@@ -39,11 +39,9 @@ transports, such as UNIX sockets and stdio.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from typing import cast
+from typing import Any, cast
 
 from zope.interface import directlyProvides, implementer, providedBy
-
-from OpenSSL.SSL import Connection, Error, SysCallError, WantReadError, ZeroReturnError
 
 from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.interfaces import (
@@ -63,6 +61,7 @@ from twisted.internet.main import CONNECTION_LOST
 from twisted.internet.protocol import Protocol, connectionDone
 from twisted.protocols.policies import _P, ProtocolWrapper, WrappingFactory
 from twisted.python.failure import Failure
+from ._tls_backend_abstract import TLSBackend, TLSConnection
 from ._tls_legacy import SomeConnectionCreator, _convertToAppropriateFactory
 
 
@@ -108,22 +107,6 @@ class _ProducerMembrane:
         on.
         """
         self._producer.stopProducing()
-
-
-def _representsEOF(exceptionObject: Error) -> bool:
-    """
-    Does the given OpenSSL.SSL.Error represent an end-of-file?
-    """
-    reasonString: str
-    if isinstance(exceptionObject, SysCallError):
-        _, reasonString = exceptionObject.args
-    else:
-        errorQueue = exceptionObject.args[0]
-        if not errorQueue:
-            # This appears to be the behavior in OpenSSL 4.
-            return True
-        _, _, reasonString = errorQueue[-1]
-    return reasonString.casefold().startswith("unexpected eof")
 
 
 @implementer(ISystemHandle, INegotiated, ITransport)
@@ -200,6 +183,8 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
     # that would be wrong.
     factory: TLSMemoryBIOFactory[_P]
     transport: ITCPTransport | None
+    _tlsConnection: TLSConnection | None
+    _backend: TLSBackend
 
     def __init__(
         self,
@@ -210,7 +195,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         super().__init__(factory, wrappedProtocol)
         self._connectWrapped = _connectWrapped
 
-    def getHandle(self) -> Connection | None:
+    def getHandle(self) -> Any | None:
         """
         Return the L{OpenSSL.SSL.Connection} object being used to encrypt and
         decrypt this connection.
@@ -220,6 +205,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         different system handle may be returned by future versions of this
         method.
         """
+        # TODO: fix Any annotation
         return self._tlsConnection
 
     def makeConnection(self, transport: ITCPTransport) -> None:
@@ -227,7 +213,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         Connect this wrapper to the given transport and initialize the
         necessary L{OpenSSL.SSL.Connection} with a memory BIO.
         """
-        self._tlsConnection: Connection | None = self.factory._creatorCallable(self)
+        self._tlsConnection = self.factory._backend.createConnection(self)
         self._appSendBuffer = []
 
         # Add interfaces provided by the transport we are wrapping:
@@ -264,9 +250,9 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         assert self._tlsConnection is not None, "connection must be set if not aborted"
         try:
             self._tlsConnection.do_handshake()
-        except WantReadError:
+        except self._backend.WantReadError:
             self._flushSendBIO()
-        except Error:
+        except self._backend.Error:
             self._tlsShutdownFinished(Failure())
         else:
             self._handshakeDone = True
@@ -285,7 +271,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         assert self.transport is not None, "transport must be active"
         try:
             bytes = self._tlsConnection.bio_read(2**15)
-        except WantReadError:
+        except self._backend.WantReadError:
             # There may be nothing in the send BIO right now.
             pass
         else:
@@ -307,18 +293,18 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         while not self._lostTLSConnection:
             try:
                 data = self._tlsConnection.recv(2**15)
-            except WantReadError:
+            except self._backend.WantReadError:
                 # The newly received bytes might not have been enough to produce
                 # any application data.
                 break
-            except ZeroReturnError:
+            except self._backend.ZeroReturnError:
                 # TLS has shut down and no more TLS data will be received over
                 # this connection.
                 self._shutdownTLS()
                 # Passing in None means the user protocol's connnectionLost
                 # will get called with reason from underlying transport:
                 self._tlsShutdownFinished(None)
-            except Error:
+            except self._backend.Error:
                 # Something went pretty wrong.  For example, this might be a
                 # handshake failure during renegotiation (because there were no
                 # shared ciphers, because a certificate failed to verify, etc).
@@ -372,7 +358,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
         assert self.transport is not None, "transport must be active"
         try:
             shutdownSuccess = self._tlsConnection.shutdown()
-        except Error:
+        except self._backend.Error:
             # Mid-handshake, a call to shutdown() can result in a
             # WantWantReadError, or rather an SSL_ERR_WANT_READ; but pyOpenSSL
             # doesn't allow us to get at the error.  See:
@@ -385,6 +371,21 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
             # negotiation at all yet, in which case shutdown succeeds
             # immediately.
             self.transport.loseConnection()
+
+    def _representsEOF(self, exceptionObject: Any) -> bool:
+        """
+        Does the given OpenSSL.SSL.Error represent an end-of-file?
+        """
+        reasonString: str
+        if isinstance(exceptionObject, self._backend.SysCallError):
+            _, reasonString = exceptionObject.args
+        else:
+            errorQueue = exceptionObject.args[0]
+            if not errorQueue:
+                # This appears to be the behavior in OpenSSL 4.
+                return True
+            _, _, reasonString = errorQueue[-1]
+        return reasonString.casefold().startswith("unexpected eof")
 
     def _tlsShutdownFinished(self, reason: Failure | None) -> None:
         """
@@ -403,7 +404,7 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
             # Squash an EOF in violation of the TLS protocol into
             # ConnectionLost, so that applications which might run over
             # multiple protocols can recognize its type.
-            if _representsEOF(reason.value):
+            if self._representsEOF(reason.value):
                 reason = Failure(CONNECTION_LOST)
         if self._reason is None:
             self._reason = reason
@@ -555,10 +556,10 @@ class TLSMemoryBIOProtocol(ProtocolWrapper[_P]):
             toSend = bytes[alreadySent : alreadySent + bufferSize]
             try:
                 sent = self._tlsConnection.send(toSend)
-            except WantReadError:
+            except self._backend.WantReadError:
                 self._bufferedWrite(bytes[alreadySent:])
                 break
-            except Error:
+            except self._backend.Error:
                 # Pretend TLS connection disconnected, which will trigger
                 # disconnect of underlying transport. The error will be passed
                 # to the application protocol's connectionLost method.  The
@@ -786,8 +787,7 @@ class TLSMemoryBIOFactory(
     """
     L{TLSMemoryBIOFactory} adds TLS to connections.
 
-    @ivar _creatorCallable: A callable for creating an
-        L{OpenSSL.SSL.Connection} from a L{TLSMemoryBIOProtocol}.
+    @ivar _backend: A backend to instantiate a TLS connection.
     """
 
     protocol: type[TLSMemoryBIOProtocol[_P]] = BufferingTLSTransport[_P]
@@ -845,9 +845,7 @@ class TLSMemoryBIOFactory(
         """
         super().__init__(wrappedFactory)
 
-        self._creatorCallable: Callable[
-            [TLSMemoryBIOProtocol[_P]], Connection
-        ] = _convertToAppropriateFactory(isClient, contextFactory)
+        self._backend = _convertToAppropriateFactory(isClient, contextFactory)
 
         if clock is None:
             clock = _get_default_clock()

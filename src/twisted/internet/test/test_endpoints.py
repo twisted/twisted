@@ -4784,7 +4784,7 @@ def tlsHostnameFromEndpoint(
         Factory.forProtocol(Protocol)
     )
     protocol = tlsMemoryBIOFactory.buildProtocol(None)
-    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._backend.createConnection(
         protocol
     ).get_servername()
     assert tlsExtServerNameBytes is not None
