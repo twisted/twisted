@@ -46,6 +46,9 @@ class StdlibSSLConnection:
         name = self._connection.selected_alpn_protocol()
         return name.encode("ascii") if name is not None else None
 
+    def get_context(self) -> object:
+        return self._connection.context
+
 
 @dataclass(frozen=True)
 class StdlibSSLBackend:

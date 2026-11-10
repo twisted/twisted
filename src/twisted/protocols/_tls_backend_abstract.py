@@ -37,6 +37,9 @@ class TLSConnection(Protocol):
     def get_alpn_proto_negotiated(self) -> bytes | None:
         ...
 
+    def get_context(self) -> object:
+        ...
+
 
 class TLSBackend(Protocol):
     @property
