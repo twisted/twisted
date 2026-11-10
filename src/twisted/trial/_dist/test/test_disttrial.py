@@ -7,10 +7,10 @@ Tests for L{twisted.trial._dist.disttrial}.
 
 import os
 import sys
+from collections.abc import Callable
 from functools import partial
 from io import StringIO
 from os.path import sep
-from typing import Callable
 from unittest import TestCase as PyUnitTestCase
 
 from zope.interface import implementer, verify

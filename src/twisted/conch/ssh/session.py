@@ -15,9 +15,9 @@ import os
 import signal
 import struct
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import cached_property
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from zope.interface import implementer
 

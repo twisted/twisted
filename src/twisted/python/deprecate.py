@@ -94,11 +94,11 @@ __all__ = [
 
 import inspect
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dis import findlinestarts
 from functools import wraps
 from types import ModuleType
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, TypeVar, cast
 from warnings import warn, warn_explicit
 
 from incremental import Version, getVersionString

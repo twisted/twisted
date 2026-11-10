@@ -5,8 +5,6 @@
 """
 IProxyInfo implementation.
 """
-from typing import Optional
-
 from zope.interface import implementer
 
 import attr
@@ -30,5 +28,5 @@ class ProxyInfo:
     """
 
     header: bytes
-    source: Optional[IAddress]
-    destination: Optional[IAddress]
+    source: IAddress | None
+    destination: IAddress | None

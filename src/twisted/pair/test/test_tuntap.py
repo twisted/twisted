@@ -14,11 +14,10 @@ from errno import EAGAIN, EBADF, EINVAL, ENODEV, ENOENT, EPERM, EWOULDBLOCK
 from itertools import cycle
 from random import randrange
 from signal import SIGINT
-from typing import Optional
 
 from twisted.python.reflect import ObjectNotFound, namedAny
 
-platformSkip: Optional[str]
+platformSkip: str | None
 try:
     namedAny("fcntl.ioctl")
 except (ObjectNotFound, AttributeError):
