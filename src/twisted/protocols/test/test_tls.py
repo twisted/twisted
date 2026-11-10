@@ -373,8 +373,14 @@ class TLSMemoryBIOTests(TestCase):
         L{TLSMemoryBIOProtocol} instances provide L{ISSLTransport} and
         L{ISystemHandle}.
         """
-        # quick fake just for testing
-        proto = TLSMemoryBIOProtocol(None, None)  # type:ignore[type-var,arg-type]
+        proto = TLSMemoryBIOProtocol(
+            TLSMemoryBIOFactory(
+                optionsForClientTLS("example.com"),
+                True,
+                Factory.forProtocol(Protocol),
+            ),
+            Protocol(),
+        )
         self.assertTrue(ISSLTransport.providedBy(proto))
         self.assertTrue(ISystemHandle.providedBy(proto))
 
