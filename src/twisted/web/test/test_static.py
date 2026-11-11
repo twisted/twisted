@@ -816,7 +816,7 @@ class StaticMakeProducerTests(TestCase):
 
     def test_multipleUnsatisfiableRangesReturnsMultipleRangeStaticProducer(self):
         """
-        makeProducer still returns an instance of L{SingleRangeStaticProducer}
+        makeProducer still returns an instance of L{MultipleRangeStaticProducer}
         when the Range header requests multiple ranges, none of which are
         satisfiable.
         """
@@ -826,6 +826,7 @@ class StaticMakeProducerTests(TestCase):
         with resource.openForReading() as file:
             producer = resource.makeProducer(request, file)
             self.assertIsInstance(producer, static.MultipleRangeStaticProducer)
+            self.assertEqual(producer.rangeInfo, [])
 
     def test_multipleUnsatisfiableRangesSets416ReqestedRangeNotSatisfiable(self):
         """
