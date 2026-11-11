@@ -15,7 +15,7 @@ import time
 import warnings
 from collections.abc import Callable, Sequence
 from html import escape
-from typing import Any, Literal
+from typing import IO, Any, Literal
 from urllib.parse import quote, unquote
 
 from zope.interface import implementer
@@ -205,6 +205,7 @@ class File(resource.Resource, filepath.FilePath[str]):
     indexNames = ["index", "index.html", "index.htm", "index.rpy"]
     ignoredExts: Sequence[str]
 
+    type: str | None
     type = None
 
     def __init__(
@@ -487,7 +488,11 @@ class File(resource.Resource, filepath.FilePath[str]):
             request.setHeader(b"content-range", self._contentRange(offset, size))
         return offset, size
 
-    def _doMultipleRangeRequest(self, request, byteRanges):
+    def _doMultipleRangeRequest(
+        self,
+        request: http.Request,
+        byteRanges: list[tuple[int, int] | tuple[None, int] | tuple[int, None]],
+    ) -> list[tuple[(bytes, int, int)]]:
         """
         Set up the response for Range headers that specify a single range.
 
@@ -515,13 +520,13 @@ class File(resource.Resource, filepath.FilePath[str]):
         @return: See above.
         """
         matchingRangeFound = False
-        rangeInfo = []
+        rangeInfo: list[tuple[bytes, int, int]] = []
         contentLength = 0
         boundary = networkString(f"{int(time.time() * 1000000):x}{os.getpid():x}")
         if self.type:
             contentType = self.type
         else:
-            contentType = b"bytes"  # It's what Apache does...
+            contentType = "bytes"  # It's what Apache does...
         for start, end in byteRanges:
             partOffset, partSize = self._rangeToOffsetAndSize(start, end)
             if partOffset == partSize == 0:
@@ -551,7 +556,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             request.setHeader(
                 b"content-range", networkString("bytes */%d" % (self.getFileSize(),))
             )
-            return [], b""
+            return []
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
         request.setResponseCode(http.PARTIAL_CONTENT)
@@ -583,7 +588,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         if self.encoding:
             request.setHeader(b"content-encoding", networkString(self.encoding))
 
-    def makeProducer(self, request, fileForReading):
+    def makeProducer(
+        self, request: http.Request, fileForReading: IO[bytes]
+    ) -> StaticProducer:
         """
         Make a L{StaticProducer} that will produce the body of this response.
 
@@ -799,7 +806,14 @@ class MultipleRangeStaticProducer(StaticProducer):
     A L{StaticProducer} that writes several chunks of a file to the request.
     """
 
-    def __init__(self, request, fileObject, rangeInfo):
+    partBoundary: bytes | None
+
+    def __init__(
+        self,
+        request: http.Request,
+        fileObject: IO[bytes],
+        rangeInfo: list[tuple[bytes, int, int]],
+    ):
         """
         Initialize the instance.
 
@@ -814,17 +828,17 @@ class MultipleRangeStaticProducer(StaticProducer):
         StaticProducer.__init__(self, request, fileObject)
         self.rangeInfo = rangeInfo
 
-    def start(self):
+    def start(self) -> None:
         self.rangeIter = iter(self.rangeInfo)
         self._nextRange()
         self.request.registerProducer(self, 0)
 
-    def _nextRange(self):
+    def _nextRange(self) -> None:
         self.partBoundary, partOffset, self._partSize = next(self.rangeIter)
         self._partBytesWritten = 0
         self.fileObject.seek(partOffset)
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if not self.request:
             return
         data = []
