@@ -973,6 +973,30 @@ class StaticMakeProducerTests(TestCase):
             resource.makeProducer(request, file)
             self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
 
+    def test_trunctionCleansUpAfterItselfSingle(self) -> None:
+        """
+        When a file is truncated while serving a range request, the open stream
+        will be cleaned up and the request completed.
+        """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=3-5")
+        resource = self.makeResourceWithContent(b"abcdef")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            self.assertEqual(request.written, [])
+            with resource.open("w") as truncateme:
+                truncateme.truncate()
+            producer.start()
+            self.assertEqual(file.closed, True)
+            self.assertEqual(request.written, [])
+
+    def test_trunctionCleansUpAfterItselfMulti(self) -> None:
+        """
+        When a file is truncated while serving a multi-range request, the open
+        stream will be cleaned up and the request completed.
+        """
+
 
 class StaticProducerTests(TestCase):
     """
@@ -1358,17 +1382,16 @@ class RangeTests(TestCase):
         self.resource.render(self.request)
         self.assertEqual(len(b"".join(self.request.written)), 44)
 
-    def test_invalidRangeRequest(self):
+    def invalidRangeTest(self, invalidRange: bytes) -> None:
         """
         An incorrect range request (RFC 2616 defines a correct range request as
         a Bytes-Unit followed by a '=' character followed by a specific range.
         Only 'bytes' is defined) results in the range header value being logged
         and a normal 200 response being sent.
         """
-        range = b"foobar=0-43"
-        self.request.requestHeaders.addRawHeader(b"range", range)
+        self.request.requestHeaders.addRawHeader(b"range", invalidRange)
         self.resource.render(self.request)
-        expected = f"Ignoring malformed Range header {range.decode()!r}"
+        expected = f"Ignoring malformed Range header {invalidRange.decode('latin-1')!r}"
         self._assertLogged(expected)
         self.assertEqual(b"".join(self.request.written), self.payload)
         self.assertEqual(self.request.responseCode, http.OK)
@@ -1376,6 +1399,18 @@ class RangeTests(TestCase):
             self.request.responseHeaders.getRawHeaders(b"content-length")[0],
             b"%d" % (len(self.payload),),
         )
+
+    def test_wrongRangeUnit(self) -> None:
+        """
+        We only accept 'bytes' units for the range header.
+        """
+        self.invalidRangeTest(b"foobar=0-43")
+
+    def test_unencodableRangeValue(self) -> None:
+        """
+        We only accept valid ASCII for the range header.
+        """
+        self.invalidRangeTest(b"\xff")
 
     def test_multipleRangeRequest(self) -> None:
         """

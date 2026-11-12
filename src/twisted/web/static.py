@@ -613,7 +613,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         try:
             parsedRanges = self._parseRangeHeader(byteRange)
         except ValueError:
-            log.msg(f"Ignoring malformed Range header {byteRange.decode()!r}")
+            log.msg(f"Ignoring malformed Range header {byteRange.decode('charmap')!r}")
             self._setContentHeaders(request)
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
@@ -799,7 +799,7 @@ class SingleRangeStaticProducer(StaticProducer):
             # this .write will spin the reactor, calling .doWrite and then
             # .resumeProducing again, so be prepared for a re-entrant call
             self.request.write(data)
-        if self.request and self.bytesWritten == self.size:
+        if (self.request and self.bytesWritten == self.size) or (not data):
             self.request.unregisterProducer()
             self.request.finish()
             self.stopProducing()
