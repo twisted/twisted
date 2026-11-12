@@ -753,10 +753,11 @@ class NoRangeStaticProducer(StaticProducer):
     A L{StaticProducer} that writes the entire file to the request.
     """
 
-    def start(self):
+    def start(self) -> None:
+        assert self.request is not None
         self.request.registerProducer(self, False)
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if not self.request:
             return
         data = self.fileObject.read(self.bufferSize)
