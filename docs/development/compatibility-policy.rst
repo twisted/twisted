@@ -503,7 +503,7 @@ While the Trial bug is not fixed, to trigger test failures on unhandled deprecat
 
 .. code-block:: console
 
-    python -Werror::DeprecationWarning ./bin/trial twisted.conch
+    PYTHONWARNINGS=error::DeprecationWarning trial twisted
 
 There are several options for checking that a code is deprecated and that using it raises a :py:exc:`DeprecationWarning`.
 

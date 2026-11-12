@@ -10,7 +10,6 @@ import errno
 import random
 import socket
 from functools import wraps
-from typing import Optional
 from unittest import skipIf
 
 from zope.interface import implementer
@@ -71,7 +70,7 @@ class ClosingFactory(protocol.ServerFactory):
     """
 
     _cleanerUpper = None
-    port: Optional[interfaces.IListeningPort] = None
+    port: interfaces.IListeningPort | None = None
 
     def buildProtocol(self, conn):
         self._cleanerUpper = self.port.stopListening()
@@ -121,9 +120,9 @@ class MyProtocolFactoryMixin:
 
     protocolFactory = AccumulatingProtocol
 
-    protocolConnectionMade: Optional[defer.Deferred[AccumulatingProtocol]] = None
-    protocolConnectionLost: Optional[defer.Deferred[AccumulatingProtocol]] = None
-    lastProtocol: Optional[AccumulatingProtocol] = None
+    protocolConnectionMade: defer.Deferred[AccumulatingProtocol] | None = None
+    protocolConnectionLost: defer.Deferred[AccumulatingProtocol] | None = None
+    lastProtocol: AccumulatingProtocol | None = None
     called = 0
 
     def __init__(self):

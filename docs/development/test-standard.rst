@@ -63,71 +63,40 @@ What to Test, What Not to Test
 Running the Tests
 -----------------
 
-
-    
-
 How
 ~~~
 
+You can run the entire test suite, as Twisted would in CI, with `tox <https://tox.wiki/>`_ .
 
-    
-From the root of the Twisted source tree, run
-`Trial <https://twistedmatrix.com/trac/wiki/TwistedTrial>`_ :
-
-
-    
-
-
+There are numerous ``tox`` environments to test Twisted in its various supported configurations, but a good starting one would be ``nocov-alldeps``.
+This will run all of the tests, without generating code coverage, with all of Twisted's dependencies installed, using whatever your default version of Python is.
+You can run it like this:
 
 .. code-block:: console
 
-    
-    $ bin/trial twisted
+   $ tox -e withcov-alldeps
 
+However, for a faster edit/test cycle that does not involve repeatedly building Twisted and installing all of its dependencies from scratch, you may want to run just a subset of the test suite, in your existing development environment, on a specific set of tests.
 
+To do so, set up your virtual environment however you prefer to do so, then install an editable Twisted inside it and run :doc:`trial <../core/howto/trial>` on whatever module or package you're testing.  For example, if you're working on Conch, you could do:
 
-    
-You'll find that having something like this in your emacs init
-files is quite handy:
+.. code-block:: console
 
+    $ . .venv/bin/activate
+    (Twisted) $ trial -j auto --rterrors twisted.conch.test
 
+If you want to run everything in a single Python interpreter so that you can single-step debug the tests, leave out the ``-j auto`` option:
 
+.. code-block:: console
 
-
-::
-
-    
-    (defun runtests () (interactive)
-      (compile "python /somepath/Twisted/bin/trial /somepath/Twisted"))
-    
-    (global-set-key [(alt t)] 'runtests)
-
-
-    
+    (Twisted) $ trial --rterrors twisted.conch.test.test_window.ScrolledAreaTests.test_parent
 
 When
 ~~~~
 
+Our hosted continuous integration will take care of running most of the tests for you, so you can push a pull request and check out the results `on our Github Actions page <https://github.com/twisted/twisted/actions>`.
 
-    
-Always, always, *always* be sure `all the     tests pass <https://ronjeffries.com/xprog/classics/expunittestsat100/>`_ before committing any code.  If someone else
-checks out code at the start of a development session and finds
-failing tests, they will not be happy and may decide to *hunt you down* .
-
-    
-
-
-Since this is a geographically dispersed team, the person who can help
-you get your code working probably isn't in the room with you.  You may want
-to share your work in progress over the network, but you want to leave the
-main Git tree in good working order.
-So `use a branch <https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging>`_ ,
-and merge your changes back in only after your problem is solved and all the
-unit tests pass again.
-
-    
-
-
+However, it may be 10-15 minutes before you can get a result, and thus running some tests locally before you push anything can save you time and save the project CPU credits from a generous (but limited) budget.
 
 Adding a Test
 -------------

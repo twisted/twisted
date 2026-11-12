@@ -22,13 +22,12 @@ from asyncio import (
     Future,
     new_event_loop as _new_event_loop,
 )
-from collections.abc import Coroutine, Generator, Mapping
-from typing import Any, Callable, Literal, NoReturn, TypeVar, Union, cast
+from collections.abc import Callable, Coroutine, Generator, Mapping
+from typing import Any, Literal, NoReturn, TypeAlias, TypeVar, assert_type, cast
 
 from hamcrest import assert_that, empty, equal_to
 from hypothesis import given
 from hypothesis.strategies import integers
-from typing_extensions import TypeAlias, assert_type
 
 from twisted.internet import defer, reactor
 from twisted.internet.defer import (
@@ -269,7 +268,7 @@ class DeferredTests(unittest.SynchronousTestCase, ImmediateFailureMixin):
         self.assertEqual(self.errbackResults[1], {})
 
     def testDeferredList(self) -> None:
-        ResultList: TypeAlias = list[tuple[bool, Union[str, Failure]]]
+        ResultList: TypeAlias = list[tuple[bool, str | Failure]]
 
         defr1: Deferred[str] = Deferred()
         defr2: Deferred[str] = Deferred()

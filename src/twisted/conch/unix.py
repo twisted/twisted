@@ -16,7 +16,7 @@ import socket
 import struct
 import time
 import tty
-from typing import Callable
+from collections.abc import Callable
 
 from zope.interface import implementer
 

@@ -13,7 +13,8 @@ import sys
 import time
 import trace
 import warnings
-from typing import Callable, NoReturn
+from collections.abc import Callable
+from typing import NoReturn
 
 from twisted import plugin
 from twisted.application import app

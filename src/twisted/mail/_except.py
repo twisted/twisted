@@ -5,8 +5,6 @@
 Exceptions in L{twisted.mail}.
 """
 
-from typing import Optional
-
 
 class IMAP4Exception(Exception):
     pass
@@ -99,8 +97,8 @@ class SMTPClientError(SMTPError):
         self,
         code: int,
         resp: bytes,
-        log: Optional[bytes] = None,
-        addresses: Optional[object] = None,
+        log: bytes | None = None,
+        addresses: object | None = None,
         isFatal: bool = False,
         retry: bool = False,
     ):

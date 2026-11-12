@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import email.message
 import email.parser
+from collections.abc import Callable
 from email.message import Message
 from io import BytesIO, StringIO
-from typing import IO, AnyStr, Callable
+from typing import IO, AnyStr
 
 from twisted.mail import bounce
 from twisted.trial import unittest

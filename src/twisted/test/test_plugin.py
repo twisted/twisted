@@ -13,9 +13,10 @@ import functools
 import os
 import sys
 import time
+from collections.abc import Callable
 from importlib import invalidate_caches as invalidateImportCaches
 from types import ModuleType
-from typing import Callable, TypedDict
+from typing import TypedDict
 
 from zope.interface import Interface
 

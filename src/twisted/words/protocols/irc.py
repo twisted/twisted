@@ -50,7 +50,6 @@ import time
 import traceback
 from functools import reduce
 from os import path
-from typing import Optional
 
 from twisted.internet import protocol, reactor, task
 from twisted.persisted import styles
@@ -166,7 +165,7 @@ class _CommandDispatcherMixin:
     @ivar prefix: Command handler prefix, used to locate handler attributes
     """
 
-    prefix: Optional[str] = None
+    prefix: str | None = None
 
     def dispatch(self, commandName, *args):
         """
@@ -263,7 +262,7 @@ class IRC(protocol.Protocol):
     MAX_LENGTH = 16384
     hostname = None
 
-    encoding: Optional[str] = None
+    encoding: str | None = None
 
     def connectionMade(self):
         self.channels = []
@@ -3109,7 +3108,7 @@ class DccFileReceive(DccFileReceiveBasic):
     fileSize = -1
     destDir = "."
     overwrite = 0
-    fromUser: Optional[bytes] = None
+    fromUser: bytes | None = None
     queryData = None
 
     def __init__(

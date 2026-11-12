@@ -1,0 +1,1 @@
+``trial`` can now be run with the ``-j`` option and the environment variable ``PYTHONWARNINGS=error::DeprecationWarning`` set in order to fail your tests if any of your tests emit a deprecation warning.

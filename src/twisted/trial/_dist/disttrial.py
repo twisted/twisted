@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import os
 import sys
-from collections.abc import Awaitable, Iterable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from functools import partial
 from os.path import isabs
-from typing import Any, Callable, TextIO, cast
+from typing import Any, TextIO, cast
 from unittest import TestCase, TestSuite
 
 from attrs import define, field, frozen

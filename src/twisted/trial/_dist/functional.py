@@ -6,9 +6,9 @@ General functional-style helpers for disttrial.
 """
 from __future__ import annotations
 
-from collections.abc import Awaitable, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from functools import partial, wraps
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 from twisted.internet.defer import Deferred, succeed
 

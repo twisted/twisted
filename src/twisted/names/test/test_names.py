@@ -9,10 +9,10 @@ Test cases for twisted.names.
 import copy
 import operator
 import socket
+from collections.abc import Sequence
 from functools import partial, reduce
 from io import BytesIO
 from struct import pack
-from typing import Sequence
 
 from twisted.internet import defer, error, reactor
 from twisted.internet.defer import succeed

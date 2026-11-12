@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import inspect
 import warnings
-from typing import Callable
+from collections.abc import Callable
 
 from zope.interface import implementer
 

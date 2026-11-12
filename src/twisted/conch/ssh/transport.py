@@ -16,8 +16,9 @@ import hmac
 import struct
 import types
 import zlib
+from collections.abc import Callable
 from hashlib import md5, sha1, sha256, sha384, sha512
-from typing import TYPE_CHECKING, Any, Callable, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.backends import default_backend
@@ -69,8 +70,8 @@ def _mpFromBytes(data):
 
 
 # from https://github.com/python/typeshed/blob/703ed36d5a5c9505c903ea2182e6eed679d9bddb/stdlib/hmac.pyi#L9-L10
-_Hash = Any
-_DigestMod = Union[str, Callable[[], _Hash], types.ModuleType]
+_Hash: TypeAlias = Any
+_DigestMod: TypeAlias = str | Callable[[], _Hash] | types.ModuleType
 
 
 class _MACParams(tuple[_DigestMod, bytes, bytes, int]):

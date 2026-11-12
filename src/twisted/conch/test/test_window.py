@@ -3,7 +3,7 @@ Tests for the insults windowing module, L{twisted.conch.insults.window}.
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from twisted.conch.insults.insults import ServerProtocol
 from twisted.conch.insults.window import (

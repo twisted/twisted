@@ -8,8 +8,9 @@ Test cases for L{twisted.logger._format}.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from itertools import count
-from typing import Any, Callable
+from typing import Any
 
 try:
     from time import tzset

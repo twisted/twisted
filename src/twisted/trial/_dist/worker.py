@@ -11,8 +11,8 @@ This module implements the worker classes.
 from __future__ import annotations
 
 import os
-from collections.abc import Awaitable
-from typing import Any, Callable, Protocol, TextIO, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Any, Protocol, TextIO, TypeVar
 from unittest import TestCase
 
 from zope.interface import implementer

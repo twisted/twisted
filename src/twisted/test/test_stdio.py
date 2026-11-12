@@ -12,7 +12,8 @@ from __future__ import annotations
 import itertools
 import os
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from unittest import skipIf
 
 from twisted.internet import defer, error, protocol, reactor, stdio

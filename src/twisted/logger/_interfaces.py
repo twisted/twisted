@@ -5,11 +5,9 @@
 Logger interfaces.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from zope.interface import Interface
-
-from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from ._logger import Logger

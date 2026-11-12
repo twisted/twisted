@@ -8,7 +8,8 @@ Utilities and helpers for simulating a network
 from __future__ import annotations
 
 import itertools
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
 from twisted.internet.interfaces import IReactorTime, ITransport
 from twisted.internet.task import Clock

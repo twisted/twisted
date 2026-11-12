@@ -12,8 +12,9 @@ import os
 import sys
 import time
 import warnings
+from collections.abc import Callable
 from io import IOBase, StringIO, UnsupportedOperation
-from typing import Callable, Protocol
+from typing import Protocol
 
 from zope.interface import implementer
 
