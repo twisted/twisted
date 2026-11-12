@@ -996,6 +996,21 @@ class StaticMakeProducerTests(TestCase):
         When a file is truncated while serving a multi-range request, the open
         stream will be cleaned up and the request completed.
         """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=0-3,6-9,12-15")
+        resource = self.makeResourceWithContent(b"012345678901234567890123456789")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            producer.bufferSize = 4
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            self.assertEqual(request.written, [])
+            with resource.open("w") as truncateme:
+                truncateme.truncate()
+            producer.start()
+            soFar = b"".join(request.written)
+            # we aborted before we wrote the chunk
+            self.assertTrue(soFar.endswith(b"\r\n\r\n"))
+            self.assertEqual(file.closed, True)
 
 
 class StaticProducerTests(TestCase):

@@ -859,20 +859,26 @@ class MultipleRangeStaticProducer(StaticProducer):
     def resumeProducing(self) -> None:
         if not self.request:
             return
+        # the raw data we are going to write to the request in this
+        # resumeProducing call
         data = []
+        # the accumulated length of all the bytes in `data`
         dataLength = 0
+        # have we reached the last chunk
         done = False
         while dataLength < self.bufferSize:
             if self.partBoundary:
                 dataLength += len(self.partBoundary)
                 data.append(self.partBoundary)
                 self.partBoundary = None
-            p = self.fileObject.read(
-                min(
-                    self.bufferSize - dataLength,
-                    self._partSize - self._partBytesWritten,
-                )
+            toRead = min(
+                self.bufferSize,
+                self._partSize - self._partBytesWritten,
             )
+            p = self.fileObject.read(toRead)
+            if not p:
+                done = True
+                break
             self._partBytesWritten += len(p)
             dataLength += len(p)
             data.append(p)
