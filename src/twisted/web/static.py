@@ -715,25 +715,28 @@ class StaticProducer:
     Superclass for classes that implement the business of producing.
 
     @ivar request: The L{IRequest} to write the contents of the file to.
+
     @ivar fileObject: The file the contents of which to write to the request.
+
+    @ivar bufferSize: The size of the chunk to read from the file on each call.
     """
 
-    bufferSize = abstract.FileDescriptor.bufferSize
+    bufferSize: int = abstract.FileDescriptor.bufferSize
 
-    def __init__(self, request, fileObject):
+    def __init__(self, request: http.Request, fileObject: IO[bytes]) -> None:
         """
         Initialize the instance.
         """
-        self.request = request
+        self.request: http.Request | None = request
         self.fileObject = fileObject
 
-    def start(self):
+    def start(self) -> None:
         raise NotImplementedError(self.start)
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         raise NotImplementedError(self.resumeProducing)
 
-    def stopProducing(self):
+    def stopProducing(self) -> None:
         """
         Stop producing data.
 
@@ -772,25 +775,35 @@ class SingleRangeStaticProducer(StaticProducer):
     A L{StaticProducer} that writes a single chunk of a file to the request.
     """
 
-    def __init__(self, request, fileObject, offset, size):
+    def __init__(
+        self,
+        request: http.Request,
+        fileObject: IO[bytes],
+        offset: int,
+        size: int,
+    ) -> None:
         """
         Initialize the instance.
 
         @param request: See L{StaticProducer}.
+
         @param fileObject: See L{StaticProducer}.
+
         @param offset: The offset into the file of the chunk to be written.
+
         @param size: The size of the chunk to write.
         """
-        StaticProducer.__init__(self, request, fileObject)
+        super().__init__(request, fileObject)
         self.offset = offset
         self.size = size
 
-    def start(self):
+    def start(self) -> None:
+        assert self.request is not None, "request must be set to start producing"
         self.fileObject.seek(self.offset)
         self.bytesWritten = 0
         self.request.registerProducer(self, 0)
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         if not self.request:
             return
         data = self.fileObject.read(min(self.bufferSize, self.size - self.bytesWritten))
@@ -833,6 +846,7 @@ class MultipleRangeStaticProducer(StaticProducer):
         self.rangeInfo = rangeInfo
 
     def start(self) -> None:
+        assert self.request is not None, "request must be set to start producing"
         self.rangeIter = iter(self.rangeInfo)
         self._nextRange()
         self.request.registerProducer(self, 0)
