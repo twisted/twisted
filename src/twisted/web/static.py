@@ -868,20 +868,25 @@ class MultipleRangeStaticProducer(StaticProducer):
         done = False
         while dataLength < self.bufferSize:
             if self.partBoundary:
+                # We are *at* the part boundary; write out the header.
                 dataLength += len(self.partBoundary)
                 data.append(self.partBoundary)
                 self.partBoundary = None
-            toRead = min(
-                self.bufferSize,
-                self._partSize - self._partBytesWritten,
-            )
-            p = self.fileObject.read(toRead)
-            if not p:
-                done = True
-                break
-            self._partBytesWritten += len(p)
-            dataLength += len(p)
-            data.append(p)
+            if self._partSize:
+                # If the part has no size, it's just the trailer; otherwise we
+                # need to actually read some bytes from the file.
+                toRead = min(
+                    self.bufferSize,
+                    self._partSize - self._partBytesWritten,
+                )
+                assert toRead > 0
+                p = self.fileObject.read(toRead)
+                if not p:
+                    done = True
+                    break
+                self._partBytesWritten += len(p)
+                dataLength += len(p)
+                data.append(p)
             if self.request and self._partBytesWritten == self._partSize:
                 try:
                     self._nextRange()

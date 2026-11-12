@@ -1214,7 +1214,7 @@ class MultipleRangeStaticProducerTests(TestCase):
         producer = static.MultipleRangeStaticProducer(
             request, StringIO(content), [(b"a", 0, 2), (b"b", 5, 10), (b"c", 0, 0)]
         )
-        producer.bufferSize = 10
+        producer.bufferSize = 6
         # DummyRequest.registerProducer pulls all output from the producer, so
         # we just need to call start.
         producer.start()
