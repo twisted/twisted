@@ -4,6 +4,8 @@
 """
 Tests for L{twisted.web.static}.
 """
+from __future__ import annotations
+
 import errno
 import inspect
 import mimetypes
@@ -11,6 +13,7 @@ import os
 import re
 import sys
 import warnings
+from dataclasses import dataclass
 from io import BytesIO as StringIO
 from unittest import skipIf
 
@@ -27,6 +30,60 @@ from twisted.web._responses import FOUND
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test._util import _render
 from twisted.web.test.requesthelper import DummyRequest
+
+
+def extractMultipartBoundary(request: DummyRequest) -> bytes:
+    """
+    Extract the multipart boundary from the content-type header for a
+    multi-range response.
+    """
+    typeHeader = request.responseHeaders.getRawHeaders(b"content-type")
+    assert typeHeader is not None
+    result = re.match(
+        b'^multipart/byteranges; boundary="(.*)"$',
+        typeHeader[0],
+    )
+    assert result is not None, "boundary not found"
+    return result.group(1)
+
+
+def parseMultipartBody(
+    testCase: TestCase, body: bytes, boundary: bytes
+) -> list[OneRange]:
+    """
+    Parse C{body} as a multipart MIME response separated by C{boundary}.
+
+    Note that this with fail the calling test on certain syntactic
+    problems.
+    """
+    sep = b"\r\n--" + boundary
+    parts = body.split(sep)
+    testCase.assertEqual(b"", parts[0])
+    testCase.assertEqual(b"--\r\n", parts[-1])
+    parsed_parts = []
+    for part in parts[1:-1]:
+        before, header1, header2, blank, partBody = part.split(b"\r\n", 4)
+        headers = header1 + b"\n" + header2
+        testCase.assertEqual(b"", before)
+        testCase.assertEqual(b"", blank)
+        partTypeHeader = re.search(b"^content-type: (.*)$", headers, re.I | re.M)
+        assert partTypeHeader is not None
+        partContentTypeValue = partTypeHeader.group(1)
+        partRangeHeader = re.search(
+            b"^content-range: bytes ([0-9]+)-([0-9]+)/([0-9]+)$",
+            headers,
+            re.I | re.M,
+        )
+        assert partRangeHeader is not None
+        start, end, size = partRangeHeader.groups()
+        parsed_parts.append(
+            OneRange(
+                contentType=partContentTypeValue,
+                contentRange=(start, end, size),
+                body=partBody,
+            )
+        )
+    return parsed_parts
 
 
 class StaticDataTests(TestCase):
@@ -814,7 +871,9 @@ class StaticMakeProducerTests(TestCase):
             # static.File does content-encodings...
             self.assertNotIn(b"content-encoding", contentHeaders)
 
-    def test_multipleUnsatisfiableRangesReturnsMultipleRangeStaticProducer(self):
+    def test_multipleUnsatisfiableRangesReturnsMultipleRangeStaticProducer(
+        self,
+    ) -> None:
         """
         makeProducer still returns an instance of L{MultipleRangeStaticProducer}
         when the Range header requests multiple ranges, none of which are
@@ -828,7 +887,47 @@ class StaticMakeProducerTests(TestCase):
             self.assertIsInstance(producer, static.MultipleRangeStaticProducer)
             self.assertEqual(producer.rangeInfo, [])
 
-    def test_multipleUnsatisfiableRangesSets416ReqestedRangeNotSatisfiable(self):
+    def test_rangeEndTooBig(self) -> None:
+        """
+        If the end of the range is larger than the size of the file, we will
+        truncate to the size of the file.
+        """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=-20")
+        resource = self.makeResourceWithContent(b"abc")
+        with resource.openForReading() as file:
+            resource.makeProducer(request, file)
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            header = request.responseHeaders.getRawHeaders("content-range")
+            assert header is not None
+            [responseRange] = header
+            self.assertEqual(responseRange, "bytes 0-2/3")
+
+    def test_rangeEndTooBigMulti(self) -> None:
+        """
+        If the end of the range is larger than the size of the file, we should
+        get an unsatisfiable range.
+        """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=0-1,-20")
+        resource = self.makeResourceWithContent(b"abc")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            header = request.responseHeaders.getRawHeaders("content-range")
+            self.assertIs(header, None)
+            header = request.responseHeaders.getRawHeaders("content-type")
+            assert header is not None
+            producer.start()
+            producer.resumeProducing()
+            boundary = extractMultipartBoundary(request)
+            parts = parseMultipartBody(self, b"".join(request.written), boundary)
+            self.assertEqual([part.body for part in parts], [b"ab", b"abc"])
+            self.assertEqual(file.closed, True)
+
+    def test_multipleUnsatisfiableRangesSets416ReqestedRangeNotSatisfiable(
+        self,
+    ) -> None:
         """
         makeProducer sets the response code of the request to of 'Requested
         Range Not Satisfiable' when the Range header requests multiple ranges,
@@ -1104,6 +1203,13 @@ class MultipleRangeStaticProducerTests(TestCase):
         self.assertEqual([None], callbackList)
 
 
+@dataclass
+class OneRange:
+    contentType: bytes
+    contentRange: tuple[bytes, bytes, bytes]
+    body: bytes
+
+
 class RangeTests(TestCase):
     """
     Tests for I{Range-Header} support in L{twisted.web.static.File}.
@@ -1271,41 +1377,7 @@ class RangeTests(TestCase):
             b"%d" % (len(self.payload),),
         )
 
-    def parseMultipartBody(self, body, boundary):
-        """
-        Parse C{body} as a multipart MIME response separated by C{boundary}.
-
-        Note that this with fail the calling test on certain syntactic
-        problems.
-        """
-        sep = b"\r\n--" + boundary
-        parts = body.split(sep)
-        self.assertEqual(b"", parts[0])
-        self.assertEqual(b"--\r\n", parts[-1])
-        parsed_parts = []
-        for part in parts[1:-1]:
-            before, header1, header2, blank, partBody = part.split(b"\r\n", 4)
-            headers = header1 + b"\n" + header2
-            self.assertEqual(b"", before)
-            self.assertEqual(b"", blank)
-            partContentTypeValue = re.search(
-                b"^content-type: (.*)$", headers, re.I | re.M
-            ).group(1)
-            start, end, size = re.search(
-                b"^content-range: bytes ([0-9]+)-([0-9]+)/([0-9]+)$",
-                headers,
-                re.I | re.M,
-            ).groups()
-            parsed_parts.append(
-                {
-                    b"contentType": partContentTypeValue,
-                    b"contentRange": (start, end, size),
-                    b"body": partBody,
-                }
-            )
-        return parsed_parts
-
-    def test_multipleRangeRequest(self):
+    def test_multipleRangeRequest(self) -> None:
         """
         The response to a request for multiple bytes ranges is a MIME-ish
         multipart response.
@@ -1317,21 +1389,18 @@ class RangeTests(TestCase):
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
-        boundary = re.match(
-            b'^multipart/byteranges; boundary="(.*)"$',
-            self.request.responseHeaders.getRawHeaders(b"content-type")[0],
-        ).group(1)
-        parts = self.parseMultipartBody(b"".join(self.request.written), boundary)
+        boundary = extractMultipartBoundary(self.request)
+        parts = parseMultipartBody(self, b"".join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type), part[b"contentType"])
-            start, end, size = part[b"contentRange"]
+            self.assertEqual(networkString(self.resource.type), part.contentType)
+            start, end, size = part.contentRange
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), e)
             self.assertEqual(int(size), self.resource.getFileSize())
-            self.assertEqual(self.payload[s : e + 1], part[b"body"])
+            self.assertEqual(self.payload[s : e + 1], part.body)
 
-    def test_multipleRangeRequestWithRangeOverlappingEnd(self):
+    def test_multipleRangeRequestWithRangeOverlappingEnd(self) -> None:
         """
         The response to a request for multiple bytes ranges is a MIME-ish
         multipart response, even when one of the ranged falls off the end of
@@ -1344,19 +1413,16 @@ class RangeTests(TestCase):
         self.request.requestHeaders.addRawHeader(b"range", b"bytes=" + rangeHeaderValue)
         self.resource.render(self.request)
         self.assertEqual(self.request.responseCode, http.PARTIAL_CONTENT)
-        boundary = re.match(
-            b'^multipart/byteranges; boundary="(.*)"$',
-            self.request.responseHeaders.getRawHeaders(b"content-type")[0],
-        ).group(1)
-        parts = self.parseMultipartBody(b"".join(self.request.written), boundary)
+        boundary = extractMultipartBoundary(self.request)
+        parts = parseMultipartBody(self, b"".join(self.request.written), boundary)
         self.assertEqual(len(startEnds), len(parts))
         for part, (s, e) in zip(parts, startEnds):
-            self.assertEqual(networkString(self.resource.type), part[b"contentType"])
-            start, end, size = part[b"contentRange"]
+            self.assertEqual(networkString(self.resource.type), part.contentType)
+            start, end, size = part.contentRange
             self.assertEqual(int(start), s)
             self.assertEqual(int(end), min(e, self.resource.getFileSize() - 1))
             self.assertEqual(int(size), self.resource.getFileSize())
-            self.assertEqual(self.payload[s : e + 1], part[b"body"])
+            self.assertEqual(self.payload[s : e + 1], part.body)
 
     def test_implicitEnd(self):
         """

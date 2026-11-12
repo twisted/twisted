@@ -400,7 +400,9 @@ class File(resource.Resource, filepath.FilePath[str]):
             parsedRanges.append((start, end))
         return parsedRanges
 
-    def _rangeToOffsetAndSize(self, start, end):
+    def _rangeToOffsetAndSize(
+        self, start: int | None, end: int | None
+    ) -> tuple[int, int]:
         """
         Convert a start and end from a Range header to an offset and size.
 
@@ -431,7 +433,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         """
         size = self.getFileSize()
         if start is None:
-            start = size - end
+            start = max(0, size - end)
             end = size
         elif end is None:
             end = size
@@ -443,7 +445,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             start = end = 0
         return start, (end - start)
 
-    def _contentRange(self, offset, size):
+    def _contentRange(self, offset: int, size: int) -> bytes:
         """
         Return a string suitable for the value of a Content-Range header for a
         range with the given offset and size.
@@ -451,7 +453,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         The offset and size are not sanity checked in any way.
 
         @param offset: How far into this resource the range begins.
+
         @param size: How long the range is.
+
         @return: The value as appropriate for the value of a Content-Range
             header.
         """
