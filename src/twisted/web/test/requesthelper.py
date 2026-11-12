@@ -369,11 +369,11 @@ class DummyRequest:
         self.responseCode = code
         self.responseMessage = message
 
-    def setLastModified(self, when):
+    def setLastModified(self, when: float) -> None:
         assert (
             not self.written
-        ), "Last-Modified cannot be set after data has " "been written: {}.".format(
-            "@@@@".join(self.written)
+        ), "Last-Modified cannot be set after data has " "been written: {!r}.".format(
+            b"@@@@".join(self.written)
         )
 
     def setETag(self, tag):
