@@ -836,6 +836,53 @@ class StaticMakeProducerTests(TestCase):
             resource.makeProducer(request, file)
             self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
 
+    def test_noRangeFileError(self) -> None:
+        """
+        If the request is closed during a full-body response (one with no
+        ranges), the open file will be cleaned up.
+        """
+        request = DummyRequest([])
+        resource = self.makeResourceWithContent(b"abcdef")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            self.assertEqual(http.OK, request.responseCode)
+            request.finish()
+            with self.assertRaises(RuntimeError):
+                producer.start()
+            self.assertEqual(file.closed, True)
+
+    def test_singleRangeFileError(self) -> None:
+        """
+        If the request is closed during a single-range response, the open file
+        will be cleaned up.
+        """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=1-3")
+        resource = self.makeResourceWithContent(b"abcdef")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            request.finish()
+            with self.assertRaises(RuntimeError):
+                producer.start()
+            self.assertEqual(file.closed, True)
+
+    def test_multipleRangeFileError(self) -> None:
+        """
+        If the request is closed during a multi-range response, the open file
+        will be cleaned up.
+        """
+        request = DummyRequest([])
+        request.requestHeaders.addRawHeader(b"range", b"bytes=1-3,5-6")
+        resource = self.makeResourceWithContent(b"abcdef")
+        with resource.openForReading() as file:
+            producer = resource.makeProducer(request, file)
+            self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            request.finish()
+            with self.assertRaises(RuntimeError):
+                producer.start()
+            self.assertEqual(file.closed, True)
+
     def test_mutipleRangeSetsContentHeaders(self):
         """
         makeProducer when the Range header requests a single, satisfiable byte

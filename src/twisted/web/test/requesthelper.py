@@ -319,6 +319,8 @@ class DummyRequest:
     def write(self, data):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
+        if self.finished:
+            raise RuntimeError("Request.write must be called only before finish()")
         self.written.append(data)
 
     def notifyFinish(self) -> Deferred[None]:
