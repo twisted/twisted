@@ -9,22 +9,27 @@ Resource limiting policies.
 """
 from __future__ import annotations
 
-# system imports
 import sys
-from collections.abc import Callable
-from typing import Self
+from typing import Callable, Concatenate, Generic, ParamSpec, Self
 
 from zope.interface import directlyProvides, providedBy
 
 from typing_extensions import TypeVar
 
-from twisted.internet import error, interfaces
-from twisted.internet.interfaces import IAddress, ILoggingContext
+from twisted.internet import error
+from twisted.internet.interfaces import (
+    IAddress,
+    IConnector,
+    ILoggingContext,
+    IProtocol,
+    IProtocolFactory,
+)
 from twisted.internet.protocol import ClientFactory, Protocol, ServerFactory
 from twisted.python import log
+from twisted.python.failure import Failure
 
 
-def _wrappedLogPrefix(wrapper, wrapped):
+def _wrappedLogPrefix(wrapper: object, wrapped: object) -> str:
     """
     Compute a log prefix for a wrapper and the object it wraps.
 
@@ -37,7 +42,10 @@ def _wrappedLogPrefix(wrapper, wrapped):
     return f"{logPrefix} ({wrapper.__class__.__name__})"
 
 
-class ProtocolWrapper(Protocol):
+_P = TypeVar("_P", bound=IProtocol, default=IProtocol)
+
+
+class ProtocolWrapper(Generic[_P], Protocol):
     """
     Wraps protocol instances and acts as their transport as well.
 
@@ -50,9 +58,15 @@ class ProtocolWrapper(Protocol):
     """
 
     disconnecting = 0
+    # mypy bug, possibly due to circularity
+    factory: WrappingFactory[Self]  # type:ignore[type-var]
+    wrappedProtocol: _P
 
     def __init__(
-        self, factory: WrappingFactory[Self], wrappedProtocol: interfaces.IProtocol
+        self,
+        # same mypy bug as above.
+        factory: WrappingFactory[Self],  # type:ignore[type-var]
+        wrappedProtocol: _P,
     ):
         self.wrappedProtocol = wrappedProtocol
         self.factory = factory
@@ -118,7 +132,26 @@ class ProtocolWrapper(Protocol):
         self.wrappedProtocol = None
 
 
-WP = TypeVar("WP", bound=ProtocolWrapper, default=ProtocolWrapper)
+WP = TypeVar("WP", bound=ProtocolWrapper[IProtocol], default=ProtocolWrapper[IProtocol])
+_Params = ParamSpec("_Params")
+
+
+class _WrapsClientFactory(Protocol):
+    wrappedFactory: ClientFactory[ProtocolWrapper[IProtocol]]
+
+
+def _onlyForClientFactory(
+    x: Callable[Concatenate[_WrapsClientFactory, _Params], None], /
+) -> Callable[Concatenate[WrappingFactory[WP], _Params], None]:
+    """
+    Some methods of L{WrappingFactory} are only for L{WrappingFactory}
+    instances that wrap a L{ClientFactory} rather than a L{IProtocolFactory}.
+    These were implemented before Twisted had type-checking so this small
+    wrapper prevents type-checking errors without changing their
+    implementation; they can just raise an L{AttributeError} in an invalid
+    configuration.
+    """
+    return x  # type:ignore[return-value]
 
 
 class WrappingFactory(ClientFactory[WP]):
@@ -126,37 +159,48 @@ class WrappingFactory(ClientFactory[WP]):
     Wraps a factory and its protocols, and keeps track of them.
     """
 
+    wrappedFactory: IProtocolFactory
     protocol: Callable[..., WP] = ProtocolWrapper  # type:ignore[assignment]
+    protocols: dict[WP, int]
 
-    def __init__(self, wrappedFactory):
+    def __init__(self, wrappedFactory: IProtocolFactory) -> None:
         self.wrappedFactory = wrappedFactory
         self.protocols = {}
 
-    def logPrefix(self):
+    def logPrefix(self) -> str:
         """
         Generate a log prefix mentioning both the wrapped factory and this one.
         """
         return _wrappedLogPrefix(self, self.wrappedFactory)
 
-    def doStart(self):
+    def doStart(self) -> None:
         self.wrappedFactory.doStart()
-        ClientFactory.doStart(self)
+        super().doStart()
 
-    def doStop(self):
+    def doStop(self) -> None:
         self.wrappedFactory.doStop()
-        ClientFactory.doStop(self)
+        super().doStop()
 
-    def startedConnecting(self, connector):
+    @_onlyForClientFactory
+    def startedConnecting(self: _WrapsClientFactory, connector: IConnector) -> None:
         self.wrappedFactory.startedConnecting(connector)
 
-    def clientConnectionFailed(self, connector, reason):
+    @_onlyForClientFactory
+    def clientConnectionFailed(
+        self: _WrapsClientFactory, connector: IConnector, reason: Failure
+    ) -> None:
         self.wrappedFactory.clientConnectionFailed(connector, reason)
 
-    def clientConnectionLost(self, connector, reason):
+    @_onlyForClientFactory
+    def clientConnectionLost(
+        self: _WrapsClientFactory, connector: IConnector, reason: Failure
+    ) -> None:
         self.wrappedFactory.clientConnectionLost(connector, reason)
 
     def buildProtocol(self, addr: IAddress | None) -> WP:
-        return self.protocol(self, self.wrappedFactory.buildProtocol(addr))
+        return self.protocol(
+            self, self.wrappedFactory.buildProtocol(addr)  # type:ignore[arg-type]
+        )
 
     def registerProtocol(self, p):
         """
@@ -171,7 +215,7 @@ class WrappingFactory(ClientFactory[WP]):
         del self.protocols[p]
 
 
-class ThrottlingProtocol(ProtocolWrapper):
+class ThrottlingProtocol(ProtocolWrapper[_P]):
     """
     Protocol for L{ThrottlingFactory}.
     """
@@ -348,7 +392,7 @@ class ThrottlingFactory(WrappingFactory):
                 self.checkWriteBandwidthID.cancel()
 
 
-class SpewingProtocol(ProtocolWrapper):
+class SpewingProtocol(ProtocolWrapper[_P]):
     def dataReceived(self, data):
         log.msg("Received: %r" % data)
         ProtocolWrapper.dataReceived(self, data)
@@ -424,7 +468,7 @@ class LimitTotalConnectionsFactory(ServerFactory):
         self.connectionCount -= 1
 
 
-class TimeoutProtocol(ProtocolWrapper):
+class TimeoutProtocol(ProtocolWrapper[_P]):
     """
     Protocol that automatically disconnects when the connection is idle.
     """
@@ -535,7 +579,7 @@ class TimeoutFactory(WrappingFactory):
         return reactor.callLater(period, func)
 
 
-class TrafficLoggingProtocol(ProtocolWrapper):
+class TrafficLoggingProtocol(ProtocolWrapper[_P]):
     def __init__(self, factory, wrappedProtocol, logfile, lengthLimit=None, number=0):
         """
         @param factory: factory which created this protocol.
@@ -590,7 +634,7 @@ class TrafficLoggingProtocol(ProtocolWrapper):
         return ProtocolWrapper.loseConnection(self)
 
 
-class TrafficLoggingFactory(WrappingFactory):
+class TrafficLoggingFactory(WrappingFactory[TrafficLoggingProtocol]):
     protocol = TrafficLoggingProtocol
 
     _counter = 0

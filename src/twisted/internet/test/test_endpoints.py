@@ -15,7 +15,7 @@ from errno import EPERM
 from functools import cache
 from socket import AF_INET, AF_INET6, IPPROTO_TCP, SOCK_STREAM, AddressFamily, gaierror
 from types import FunctionType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 from unicodedata import normalize
 from unittest import skipIf
 
@@ -55,6 +55,7 @@ from twisted.internet.interfaces import (
     IConsumer,
     IHandshakeListener,
     IHostnameResolver,
+    IProtocol,
     IProtocolFactory,
     IPushProducer,
     IReactorPluggableNameResolver,
@@ -64,7 +65,12 @@ from twisted.internet.interfaces import (
     IStreamServerEndpoint,
     ITransport,
 )
-from twisted.internet.protocol import ClientFactory, Factory, Protocol
+from twisted.internet.protocol import (
+    ClientFactory,
+    Factory,
+    Protocol,
+    _ProtoWithFactory,
+)
 from twisted.internet.stdio import PipeAddress
 from twisted.internet.task import Clock
 from twisted.internet.tcp import makeBinding
@@ -586,7 +592,7 @@ class ClientEndpointTestCaseMixin(FakeTestBase):
         A client endpoint can connect and returns a deferred who gets called
         back with a protocol instance.
         """
-        expectedProto = object()
+        expectedProto = Protocol()
         mreactor = MemoryReactor()
         clientFactory: Any = object()
         ep, expectedArgs, ignoredDest = self.createClientEndpoint(
@@ -602,7 +608,7 @@ class ClientEndpointTestCaseMixin(FakeTestBase):
         self.assertConnectArgs(expectedClients[0], expectedArgs)
 
     def satisfyPendingConnect(
-        self, connectingFactory: Any, expectedProto: object
+        self, connectingFactory: Any, expectedProto: IProtocol
     ) -> None:
         """
         Satisfy the L{Deferred} returned from the endpoint under test's
@@ -3073,6 +3079,9 @@ class TLSWrapperFactoryChecker:
         return True
 
 
+_Proto = TypeVar("_Proto", bound=_ProtoWithFactory)
+
+
 @skipIf(skipSSL, skipSSLReason)
 class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
     """
@@ -3088,7 +3097,9 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
         return reactor.tcpServers
 
     def satisfyPendingConnect(
-        self, connectingFactory: Any, expectedProto: object
+        self,
+        connectingFactory: endpoints._WrappingFactory[TLSMemoryBIOFactory],
+        expectedProto: IProtocol,
     ) -> None:
         """
         Satisfy the pending connection deferred for the wrapper factory created
@@ -3099,7 +3110,10 @@ class TLSEndpointsTests(EndpointTestCaseMixin, unittest.TestCase):
             and is somewhat gross as a result.
         """
         connectingFactory._onConnection.callback(
-            TLSMemoryBIOProtocol(connectingFactory, expectedProto)
+            TLSMemoryBIOProtocol(
+                connectingFactory._wrappedFactory,
+                expectedProto,
+            )
         )
 
     def expectedClients(
@@ -3733,6 +3747,7 @@ class ServerStringTests(unittest.TestCase):
         proto = factory.buildProtocol(IPv4Address("TCP", "127.0.0.1", 1234))
         st = StringTransport()
         proto.makeConnection(st)
+        assert proto._tlsConnection is not None
         builtCtx = proto._tlsConnection.get_context()
         self.assertIsInstance(builtCtx, Context)
 
@@ -4783,7 +4798,7 @@ def tlsHostnameFromEndpoint(
         Factory.forProtocol(Protocol)
     )
     protocol = tlsMemoryBIOFactory.buildProtocol(None)
-    tlsExtServerNameBytes = tlsMemoryBIOFactory._creatorCallable(
+    tlsExtServerNameBytes = tlsMemoryBIOFactory._backend.createConnection(
         protocol
     ).get_servername()
     assert tlsExtServerNameBytes is not None

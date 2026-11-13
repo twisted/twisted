@@ -5,8 +5,7 @@ Handler for the various legacy things that a C{contextFactory} can be.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, Callable, TypeAlias
 from warnings import warn
 
 from OpenSSL.SSL import Connection, Context
@@ -16,6 +15,8 @@ from twisted.internet.interfaces import (
     IOpenSSLContextFactory,
     IOpenSSLServerConnectionCreator,
 )
+from ._tls_backend_abstract import TLSBackend
+from ._tls_backend_pyopenssl import PyOpenSSLBackend
 
 if TYPE_CHECKING:
     # Circular import.
@@ -28,7 +29,7 @@ SomeConnectionCreator: TypeAlias = (
 )
 
 
-SingleArgFactory = Callable[["TLSMemoryBIOProtocol"], Connection]
+SingleArgFactory = Callable[["TLSMemoryBIOProtocol[Any]"], Connection]
 
 
 class LegacyContextFactoryWarning(Warning):
@@ -76,7 +77,7 @@ def oldest(isClient: bool, creator: object) -> SingleArgFactory:
 
 def _convertToAppropriateFactory(
     isClient: bool, creator: SomeConnectionCreator
-) -> SingleArgFactory:
+) -> TLSBackend:
     """
     Upgrade a connection creator / context-factory-ish object into something
     with a signature like the most recent interface for building OpenSSL
@@ -108,4 +109,4 @@ def _convertToAppropriateFactory(
         connection.set_app_data(protocol)
         return connection
 
-    return connectionFactory
+    return PyOpenSSLBackend(lambda protocol: connectionFactory(protocol))

@@ -35,7 +35,6 @@ from twisted.internet.test.test_tcp import (
     ConnectToTCPListenerMixin,
     StreamTransportTestsMixin,
 )
-from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SkipTest
@@ -65,14 +64,12 @@ class TLSMixin:
 class ContextGeneratingMixin:
     import twisted
 
-    _pem = (
-        FilePath(networkString(twisted.__file__)).sibling(b"test").child(b"server.pem")
-    )
+    _pem = FilePath(twisted.__file__).sibling("test").child("server.pem")
     del twisted
 
     def getServerContext(self):
         """
-        Return a new SSL context suitable for use in a test server.
+        Return a new SSL Context Factory suitable for use in a test server.
         """
         pem = self._pem.getContent()
         cert = PrivateCertificate.load(

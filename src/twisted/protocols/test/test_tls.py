@@ -15,7 +15,7 @@ from zope.interface.verify import verifyObject
 
 from hypothesis import given, strategies as st
 
-from twisted.internet.interfaces import IOpenSSLContextFactory
+from twisted.internet.interfaces import IOpenSSLContextFactory, ITCPTransport
 from twisted.internet.task import Clock
 from twisted.python.compat import iterbytes
 from twisted.test.iosim import IOPump
@@ -373,7 +373,14 @@ class TLSMemoryBIOTests(TestCase):
         L{TLSMemoryBIOProtocol} instances provide L{ISSLTransport} and
         L{ISystemHandle}.
         """
-        proto = TLSMemoryBIOProtocol(None, None)
+        proto = TLSMemoryBIOProtocol(
+            TLSMemoryBIOFactory(
+                optionsForClientTLS("example.com"),
+                True,
+                Factory.forProtocol(Protocol),
+            ),
+            Protocol(),
+        )
         self.assertTrue(ISSLTransport.providedBy(proto))
         self.assertTrue(ISystemHandle.providedBy(proto))
 
@@ -383,22 +390,23 @@ class TLSMemoryBIOTests(TestCase):
         the transport they wrap.
         """
 
-        class ITransport(Interface):
+        class ICustomTransportFeatures(Interface):
             pass
 
-        class MyTransport:
-            def write(self, data):
-                pass
+        @implementer(ITCPTransport)
+        class MyTransport:  # type:ignore[misc]
+            def write(self, data: bytes) -> None:
+                ...
 
         clientFactory = ClientFactory()
         contextFactory = ClientTLSContext()
         wrapperFactory = TLSMemoryBIOFactory(contextFactory, True, clientFactory)
 
         transport = MyTransport()
-        directlyProvides(transport, ITransport)
+        directlyProvides(transport, ICustomTransportFeatures)
         tlsProtocol = TLSMemoryBIOProtocol(wrapperFactory, Protocol())
         tlsProtocol.makeConnection(transport)
-        self.assertTrue(ITransport.providedBy(tlsProtocol))
+        self.assertTrue(ICustomTransportFeatures.providedBy(tlsProtocol))
 
     def test_getHandle(self) -> None:
         """

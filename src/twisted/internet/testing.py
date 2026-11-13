@@ -43,7 +43,7 @@ from twisted.internet.interfaces import (
     IReactorUNIX,
     IReadDescriptor,
     IResolutionReceiver,
-    ITransport,
+    ITCPTransport,
     IUDPTransport,
     IWriteDescriptor,
 )
@@ -163,7 +163,7 @@ class FakeDatagramTransport:  # type:ignore[misc]
         self.written.append((packet, addr))
 
 
-@implementer(ITransport, IConsumer, IPushProducer)
+@implementer(ITCPTransport, IConsumer, IPushProducer)
 class StringTransport:
     """
     A transport implementation which buffers data in memory and keeps track of
@@ -185,6 +185,8 @@ class StringTransport:
 
     @ivar streaming: If a producer is currently registered, C{streaming} refers
         to the value of the second parameter passed to C{registerProducer}.
+
+    @ivar aborted: has this transport been aborted?
 
     @ivar hostAddr: L{None} or an object which will be returned as the host
         address of this transport.  If L{None}, a nasty tuple will be returned
@@ -321,6 +323,21 @@ class StringTransport:
     def resumeProducing(self):
         self._checkState()
         self.producerState = "producing"
+
+    def loseWriteConnection(self) -> None:
+        ...
+
+    def getTcpNoDelay(self) -> bool:
+        return False
+
+    def setTcpNoDelay(self, enabled: bool) -> None:
+        ...
+
+    def getTcpKeepAlive(self) -> bool:
+        return False
+
+    def setTcpKeepAlive(self, enabled: bool) -> None:
+        ...
 
 
 class StringTransportWithDisconnection(StringTransport):

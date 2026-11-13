@@ -19,7 +19,7 @@ import re
 import socket
 import warnings
 from collections.abc import Callable, Iterable, Sequence
-from typing import Any, ClassVar, Protocol as TypingProtocol, TypeVar
+from typing import Any, ClassVar, Generic, Protocol as TypingProtocol, TypeVar
 from unicodedata import normalize
 
 from zope.interface import directlyProvides, implementer
@@ -230,7 +230,10 @@ class _WrappingProtocol(Protocol):
         self._wrappedProtocol.handshakeCompleted()
 
 
-class _WrappingFactory(ClientFactory):
+_SomeFactory = TypeVar("_SomeFactory")
+
+
+class _WrappingFactory(ClientFactory[_WrappingProtocol], Generic[_SomeFactory]):
     """
     Wrap a factory in order to wrap the protocols it builds.
 
@@ -248,7 +251,7 @@ class _WrappingFactory(ClientFactory):
 
     protocol = _WrappingProtocol
 
-    def __init__(self, wrappedFactory: IProtocolFactory) -> None:
+    def __init__(self, wrappedFactory: _SomeFactory) -> None:
         """
         @param wrappedFactory: A provider of I{IProtocolFactory} whose
             buildProtocol method will be called and whose resulting protocol
