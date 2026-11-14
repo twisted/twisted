@@ -219,6 +219,17 @@ class OnDiskDatabaseTests(unittest.TestCase):
             self.assertRaises(KeyError, self.db.getUser, u.upper())
             self.assertEqual(self.db.getUser(u), (u, p))
 
+    def test_getUserWithStrUsername(self):
+        """
+        L{FilePasswordDB.getUser} accepts a native string username and looks
+        up the corresponding bytes entry in the password file without raising
+        a L{KeyError}.
+        """
+        self.db = checkers.FilePasswordDB(self.dbfile)
+        for u, p in self.users:
+            result = self.db.getUser(u.decode("ascii"))
+            self.assertEqual(result, (u, p))
+
     def testCaseInSensitivity(self):
         self.db = checkers.FilePasswordDB(self.dbfile, caseSensitive=False)
         for u, p in self.users:

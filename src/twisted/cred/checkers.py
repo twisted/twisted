@@ -291,6 +291,8 @@ class FilePasswordDB:
 
         @raises KeyError: When lookup of the username fails.
         """
+        if isinstance(username, str):
+            username = username.encode("ascii")
         if not self.caseSensitive:
             username = username.lower()
 
