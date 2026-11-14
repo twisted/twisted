@@ -292,6 +292,7 @@ class Server(_SendmsgMixin, tcp.Server):
 
     # UNIX transports inherit ITCPTransport for its socket-option methods, but
     # their endpoints are UNIXAddress instances rather than IP addresses.
+    # FIXME: https://github.com/twisted/twisted/issues/12369
     def getHost(self) -> address.UNIXAddress:  # type: ignore[override]
         return address.UNIXAddress(self.socket.getsockname())
 
@@ -501,6 +502,7 @@ class Client(_SendmsgMixin, tcp.BaseClient):
 
     # UNIX transports inherit ITCPTransport for its socket-option methods, but
     # their endpoints are UNIXAddress instances rather than IP addresses.
+    # FIXME: https://github.com/twisted/twisted/issues/12369
     def getPeer(self) -> address.UNIXAddress:  # type: ignore[override]
         return address.UNIXAddress(self.addr)
 
