@@ -918,7 +918,7 @@ class _AgentBase:
 
     def _requestWithEndpoint(
         self,
-        key: tuple[Hashable, ...],
+        key: Hashable,
         endpoint: IStreamClientEndpoint,
         method: bytes,
         parsedURI: URI,

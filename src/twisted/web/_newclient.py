@@ -361,7 +361,8 @@ class HTTPClientParser(HTTPParser):
 
     NO_BODY_CODES = {NO_CONTENT, NOT_MODIFIED}
 
-    # Using Any here because there is no common interface for decoders.
+    # Using Any here because there is no common interface for decoders (and
+    # there is only one of them anyway).
     _transferDecoders: dict[bytes, type[Any]] = {
         b"chunked": _ChunkedTransferDecoder,
     }
@@ -538,7 +539,7 @@ class HTTPClientParser(HTTPParser):
         self._responseDeferred.callback(self.response)
         del self._responseDeferred
 
-    def connectionLost(self, reason: Failure | None = None) -> None:
+    def connectionLost(self, reason: Failure | Exception | None = None) -> None:
         if self.bodyDecoder is not None:
             # Handle exceptions from both the body decoder itself and the
             # various invocations of _bodyDataFinished; treat them all as
@@ -1647,11 +1648,11 @@ class HTTP11ClientProtocol(Protocol):
                 # If callback throws exception, just log it and disconnect;
                 # keeping persistent connections around is an optimisation:
                 self.transport.loseConnection()
-            self._disconnectParser(reason)  # type: ignore[arg-type]
+            self._disconnectParser(reason)
 
     _finishResponse_TRANSMITTING = _finishResponse_WAITING
 
-    def _disconnectParser(self, reason: Failure) -> None:
+    def _disconnectParser(self, reason: Failure | Exception) -> None:
         """
         If there is still a parser, call its C{connectionLost} method with the
         given reason.  If there is not, do nothing.
