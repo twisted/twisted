@@ -57,16 +57,6 @@ class AddressTestCaseMixin:
         self.assertTrue(self.buildAddress() != self.buildDifferentAddress())
         self.assertTrue(self.buildDifferentAddress() != self.buildAddress())
 
-        def assertDeprecations(self, testMethod, message):
-        """
-        Assert that the a DeprecationWarning with the given message was
-        emitted against the given method.
-        """
-        warnings = self.flushWarnings([testMethod])
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(warnings[0]["message"], message)
-        self.assertEqual(len(warnings), 1)
-
 
 class HostnameAddressTests(TestCase, AddressTestCaseMixin):
     """
