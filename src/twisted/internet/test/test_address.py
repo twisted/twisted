@@ -12,7 +12,6 @@ from twisted.internet.address import (
     IPv6Address,
     UNIXAddress,
 )
-from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
