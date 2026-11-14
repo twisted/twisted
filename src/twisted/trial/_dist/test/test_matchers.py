@@ -2,8 +2,7 @@
 Tests for L{twisted.trial._dist.test.matchers}.
 """
 
-from collections.abc import Sequence
-from typing import Callable
+from collections.abc import Callable, Sequence
 
 from hamcrest import anything, assert_that, contains, contains_string, equal_to, not_
 from hamcrest.core.matcher import Matcher

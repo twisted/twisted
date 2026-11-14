@@ -10,9 +10,9 @@ Test reporter forwarding test results over trial distributed AMP commands.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from types import TracebackType
-from typing import Callable, Literal, TypeVar
+from typing import Literal, TypeVar
 from unittest import TestCase as PyUnitTestCase
 
 from attrs import Factory, define

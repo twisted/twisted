@@ -17,7 +17,7 @@ import socket
 import stat
 import struct
 from errno import EAGAIN, ECONNREFUSED, EINTR, EMSGSIZE, ENOBUFS, EWOULDBLOCK
-from typing import Any
+from typing import Any, cast
 
 from zope.interface import implementedBy, implementer, implementer_only
 
@@ -290,11 +290,15 @@ class Server(_SendmsgMixin, tcp.Server):
         proto.makeConnection(self)
         return self
 
-    def getHost(self):
+    # UNIX transports inherit ITCPTransport for its socket-option methods, but
+    # their endpoints are UNIXAddress instances rather than IP addresses.
+    # FIXME: https://github.com/twisted/twisted/issues/12369
+    def getHost(self) -> address.UNIXAddress:  # type: ignore[override]
         return address.UNIXAddress(self.socket.getsockname())
 
-    def getPeer(self):
-        return address.UNIXAddress(self.hostname or None)
+    def getPeer(self) -> address.UNIXAddress:  # type: ignore[override]
+        name = cast(bytes | str | None, self.hostname or None)
+        return address.UNIXAddress(name)
 
     def getTcpNoDelay(self):
         """
@@ -496,10 +500,13 @@ class Client(_SendmsgMixin, tcp.BaseClient):
             self._finishInit(None, None, error.BadFileError(filename), reactor)
         self._finishInit(self.doConnect, self.createInternetSocket(), None, reactor)
 
-    def getPeer(self):
+    # UNIX transports inherit ITCPTransport for its socket-option methods, but
+    # their endpoints are UNIXAddress instances rather than IP addresses.
+    # FIXME: https://github.com/twisted/twisted/issues/12369
+    def getPeer(self) -> address.UNIXAddress:  # type: ignore[override]
         return address.UNIXAddress(self.addr)
 
-    def getHost(self):
+    def getHost(self) -> address.UNIXAddress:  # type: ignore[override]
         return address.UNIXAddress(None)
 
     def getTcpNoDelay(self):

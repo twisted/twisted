@@ -375,12 +375,18 @@ class FileHandle(_ConsumerMixin, _LogOwner):
     def stopProducing(self):
         self.loseConnection()
 
-    def getHost(self):
-        # ITransport.getHost
+    def getHost(self) -> interfaces.IAddress:
+        """
+        This is not a complete implementation of L{ITransport.getHost}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
-    def getPeer(self):
-        # ITransport.getPeer
+    def getPeer(self) -> interfaces.IAddress:
+        """
+        This is not a complete implementation of L{ITransport.getPeer}.
+        Subclasses must override this method.
+        """
         raise NotImplementedError()
 
 

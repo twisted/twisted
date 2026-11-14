@@ -12,11 +12,11 @@ import collections
 import os
 import warnings
 import zlib
-from collections.abc import Hashable, Iterable
+from collections.abc import Callable, Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, Callable, Self, TypeVar
+from typing import TYPE_CHECKING, Self, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer

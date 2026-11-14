@@ -12,7 +12,8 @@ Interface definitions for L{twisted.web}.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from zope.interface import Attribute, Interface
 

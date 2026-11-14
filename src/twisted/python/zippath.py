@@ -13,12 +13,10 @@ import errno
 import os
 import time
 from collections.abc import Iterable
-from typing import IO, TYPE_CHECKING, Any, AnyStr, Generic, Literal, TypeVar
+from typing import IO, TYPE_CHECKING, AnyStr, Generic, Literal, Self, TypeVar
 from zipfile import ZipFile
 
 from zope.interface import implementer
-
-from typing_extensions import Self
 
 from twisted.python.compat import cmp, comparable
 from twisted.python.filepath import (
@@ -35,7 +33,6 @@ ZIP_PATH_SEP = "/"  # In zipfiles, "/" is universally used as the
 
 _ArchiveStr = TypeVar("_ArchiveStr", bytes, str)
 _ZipStr = TypeVar("_ZipStr", bytes, str)
-_ZipSelf = TypeVar("_ZipSelf", bound="ZipPath[Any, Any]")
 
 
 @comparable

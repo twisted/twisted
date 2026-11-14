@@ -377,22 +377,7 @@ For each "script" , that is, a program you expect a Twisted user to run from the
 #. Write a module in :py:mod:`twisted.scripts` which contains a callable global named ``run``.
    This will be called by the command line part with no arguments (it will usually read ``sys.argv`` ).
    Feel free to write more functions or classes in this module, if you feel they are useful to others.
-#. Create a file which contains a shebang line for Python.
-   This file should be placed in the ``bin/`` directory; for example, ``bin/twistd``.
-
-   .. code-block:: python
-
-       #!/usr/bin/env python
-
-
-To make sure that the script is portable across different UNIX like operating systems we use the ``/usr/bin/env`` command.
-The env command allows you to run a program in a modified environment.
-That way you don't have to search for a program via the ``PATH`` environment variable.
-This makes the script more portable but note that it is not a foolproof method.
-Always make sure that ``/usr/bin/env`` exists or use a softlink/symbolic link to point it to the correct path.
-Python's distutils will rewrite the shebang line upon installation so this policy only covers the source files in version control.
-
-#. For core scripts, add an entry point to ``[project.scripts]`` in ``pyproject.toml``:
+#. add an entry point to ``[project.scripts]`` in ``pyproject.toml``:
 
    .. code-block:: toml
 

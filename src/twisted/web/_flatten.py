@@ -8,15 +8,13 @@ complex or arbitrarily nested, as strings.
 """
 from __future__ import annotations
 
-from collections.abc import Coroutine, Generator, Mapping, Sequence
+from collections.abc import Callable, Coroutine, Generator, Mapping, Sequence
 from inspect import iscoroutine
 from io import BytesIO
 from sys import exc_info
 from traceback import extract_tb
 from types import FrameType, GeneratorType
-from typing import Any, Callable, TypeVar, Union, cast
-
-from typing_extensions import Never
+from typing import Any, Never, TypeAlias, TypeVar, cast
 
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python.compat import nativeString
@@ -34,21 +32,21 @@ However, since mypy doesn't support recursive type definitions (yet?),
 we'll put Any in the actual definition.
 """
 
-Flattenable = Union[
-    bytes,
-    str,
-    slot,
-    CDATA,
-    Comment,
-    Tag,
-    tuple[FlattenableRecursive, ...],
-    list[FlattenableRecursive],
-    Generator[FlattenableRecursive, Never, object],
-    CharRef,
-    Deferred[FlattenableRecursive],
-    Coroutine[Deferred[FlattenableRecursive], object, FlattenableRecursive],
-    IRenderable,
-]
+Flattenable: TypeAlias = (
+    bytes
+    | str
+    | slot
+    | CDATA
+    | Comment
+    | Tag
+    | tuple[FlattenableRecursive, ...]
+    | list[FlattenableRecursive]
+    | Generator[FlattenableRecursive, Never, object]
+    | CharRef
+    | Deferred[FlattenableRecursive]
+    | Coroutine[Deferred[FlattenableRecursive], object, FlattenableRecursive]
+    | IRenderable
+)
 """
 Type alias containing all types that can be flattened by L{flatten()}.
 """
@@ -223,7 +221,7 @@ def _flattenElement(
     # This is annotated as Generator[T, None, None] instead of Iterator[T]
     # because mypy does not consider an Iterator to be an instance of
     # GeneratorType.
-) -> Generator[Generator[Any, Any, Any] | Deferred[Flattenable], None, None]:
+) -> Generator[Generator[Any, Any, Any] | Deferred[Flattenable]]:
     """
     Make C{root} slightly more flat by yielding all its immediate contents as
     strings, deferreds or generators that are recursive calls to itself.
@@ -265,7 +263,7 @@ def _flattenElement(
         dataEscaper: Callable[[bytes | str], bytes] = dataEscaper,
         renderFactory: IRenderable | None = renderFactory,
         write: Callable[[bytes], object] = write,
-    ) -> Generator[Flattenable | Deferred[Flattenable], None, None]:
+    ) -> Generator[Flattenable | Deferred[Flattenable]]:
         return _flattenElement(
             request, newRoot, write, slotData, renderFactory, dataEscaper
         )

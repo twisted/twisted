@@ -67,8 +67,9 @@ import datetime
 import decimal
 import types
 import warnings
+from collections.abc import Callable
 from functools import reduce
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from zope.interface import implementer
 

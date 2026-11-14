@@ -16,11 +16,9 @@ import unittest as pyunit
 import warnings
 from collections import OrderedDict
 from types import TracebackType
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, TypeAlias
 
 from zope.interface import implementer
-
-from typing_extensions import TypeAlias
 
 from twisted.python import log, reflect
 from twisted.python.components import proxyForInterface
@@ -37,8 +35,8 @@ except ImportError:
     TestProtocolClient = None
 
 ExcInfo: TypeAlias = tuple[type[BaseException], BaseException, TracebackType]
-XUnitFailure = Union[ExcInfo, tuple[None, None, None]]
-TrialFailure = Union[XUnitFailure, Failure]
+XUnitFailure: TypeAlias = ExcInfo | tuple[None, None, None]
+TrialFailure: TypeAlias = XUnitFailure | Failure
 
 
 def _makeTodo(value: str) -> Todo:

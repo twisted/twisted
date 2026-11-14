@@ -13,9 +13,9 @@ import mimetypes
 import os
 import time
 import warnings
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from html import escape
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 from urllib.parse import quote, unquote
 
 from zope.interface import implementer

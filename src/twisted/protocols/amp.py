@@ -191,12 +191,13 @@ from __future__ import annotations
 import datetime
 import decimal
 import warnings
+from collections.abc import Callable
 from functools import partial
 from io import BytesIO
 from itertools import count
 from struct import pack
 from types import MethodType
-from typing import Any, Callable, ClassVar, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 from zope.interface import Interface, implementer
 

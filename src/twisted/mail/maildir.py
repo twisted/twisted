@@ -12,8 +12,9 @@ import io
 import os
 import socket
 import stat
+from collections.abc import Callable
 from hashlib import md5
-from typing import IO, Callable, overload
+from typing import IO, overload
 
 from zope.interface import Interface, implementer
 
