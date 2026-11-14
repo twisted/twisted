@@ -45,11 +45,11 @@ class BytesTestCase(TestCase):
     Override default method implementations to support byte paths.
     """
 
-    def mktemp(self) -> bytes:
+    def mktemp(self) -> bytes:  # type: ignore[override]
         """
         Return a temporary path, encoded as bytes.
         """
-        return TestCase.mktemp(self).encode("utf-8")  # type:ignore[no-any-return]
+        return TestCase.mktemp(self).encode("utf-8")
 
 
 class AbstractFilePathTests(BytesTestCase):

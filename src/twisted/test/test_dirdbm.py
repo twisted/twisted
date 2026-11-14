@@ -172,7 +172,7 @@ class DirDbmTests(unittest.TestCase):
         with self.path.child("aa.new").open(mode="w") as f:
             f.write(b"deleted")
 
-        dbm = dirdbm.DirDBM(self.path.path)
+        dbm = dirdbm.DirDBM(self.path.asBytesMode().path)
         self.assertEqual(dbm[b"key1"], b"value")
         self.assertEqual(dbm[b"key2"], b"correct")
         self.assertFalse(self.path.globChildren("*.new"))
@@ -212,7 +212,7 @@ class DirDbmTests(unittest.TestCase):
 class ShelfTests(DirDbmTests):
     def setUp(self) -> None:
         self.path = FilePath(self.mktemp())
-        self.dbm = dirdbm.Shelf(self.path.path)
+        self.dbm = dirdbm.Shelf(self.path.asBytesMode().path)
         self.items = (
             (b"abc", b"foo"),
             (b"/lalal", b"\000\001"),
