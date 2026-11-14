@@ -7,6 +7,8 @@ Test cases for L{twisted.logger._logger}.
 
 from __future__ import annotations
 
+import gc
+import weakref
 from typing import cast
 
 from zope.interface import implementer
@@ -350,3 +352,32 @@ class LoggerTests(unittest.TestCase):
         [logged] = events
         f = logged["log_failure"]
         self.assertEqual(f.type, KeyboardInterrupt)
+
+    def test_failureHandlerDoesNotRetainFailure(self) -> None:
+        """
+        The L{Logger.failureHandler} context manager does not retain a
+        reference to the handled L{Failure} or its exception after exiting.
+        """
+        events: list[LogEvent] = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = Logger(observer=logged)
+        failureHandler = log.failureHandler("hello")
+
+        class Resource:
+            pass
+
+        def failWithResource() -> weakref.ref[Resource]:
+            resource = Resource()
+            ref = weakref.ref(resource)
+            with failureHandler:
+                raise RuntimeError(resource)
+            return ref
+
+        resourceRef = failWithResource()
+        events.clear()
+        gc.collect()
+        self.assertIsNone(resourceRef())

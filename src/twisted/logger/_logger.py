@@ -94,9 +94,7 @@ class _FastFailCtxMgr:
         /,
     ) -> bool:
         if exc_type is not None:
-            failure = Failure()
-            self.failure = failure
-            self._fail(failure)
+            self._fail(Failure())
         return True
 
 

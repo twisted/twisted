@@ -1,0 +1,1 @@
+twisted.logger.Logger.failureHandler no longer retains a reference to the handled Failure on the context manager instance after exiting.
