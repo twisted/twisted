@@ -331,7 +331,7 @@ class XMLFileWithFilenameTests(TestCase, XMLLoaderTestsMixin):
         """
         fp = FilePath(self.mktemp())
         fp.setContent(self.templateString.encode("utf8"))
-        return XMLFile(fp.path)
+        return XMLFile(fp.path)  # type: ignore[arg-type]
 
 
 class FlattenIntegrationTests(FlattenTestCase):

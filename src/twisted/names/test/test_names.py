@@ -1252,20 +1252,17 @@ class BindAuthorityTests(unittest.TestCase):
         Create a new L{twisted.names.authority.BindAuthority} from C{s}.
 
         @param s: A string with BIND zone data.
-        @type s: L{bytes}
 
         @param asText: If True, treat path as text file, else as binary.
-        @type asText: L{bool}
 
         @return: a new bind authority
-        @rtype: L{twisted.names.authority.BindAuthority}
         """
+        fp: FilePath[str] | FilePath[bytes]
         if asText:
-            path = self.mktemp()
+            fp = FilePath(self.mktemp())
         else:
-            path = FilePath(self.mktemp()).asBytesMode().path
-        # Convert path to FilePath which handles both str and bytes
-        fp = FilePath(path)
+            fp = FilePath(self.mktemp()).asBytesMode()
+
         fp.setContent(s)
 
         return authority.BindAuthority(fp.path)
