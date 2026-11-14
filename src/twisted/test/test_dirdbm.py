@@ -16,7 +16,7 @@ from twisted.trial import unittest
 
 class DirDbmTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.path = FilePath(self.mktemp())
+        self.path = FilePath(self.mktemp()).asBytesMode()
         self.dbm = dirdbm.open(self.path.path)
         self.items: tuple[tuple[bytes, bytes | int | float | tuple[None, int]], ...] = (
             (b"abc", b"foo"),
@@ -92,7 +92,7 @@ class DirDbmTests(unittest.TestCase):
             f"items() didn't match: {repr(items)} != {repr(dbitems)}",
         )
 
-        copyPath = self.mktemp()
+        copyPath = self.mktemp().encode()
         d2 = d.copyTo(copyPath)
 
         copykeys = d.keys()
@@ -172,7 +172,7 @@ class DirDbmTests(unittest.TestCase):
         with self.path.child("aa.new").open(mode="w") as f:
             f.write(b"deleted")
 
-        dbm = dirdbm.DirDBM(self.path.asBytesMode().path)
+        dbm = dirdbm.DirDBM(self.path.path)
         self.assertEqual(dbm[b"key1"], b"value")
         self.assertEqual(dbm[b"key2"], b"correct")
         self.assertFalse(self.path.globChildren("*.new"))
@@ -211,8 +211,8 @@ class DirDbmTests(unittest.TestCase):
 
 class ShelfTests(DirDbmTests):
     def setUp(self) -> None:
-        self.path = FilePath(self.mktemp())
-        self.dbm = dirdbm.Shelf(self.path.asBytesMode().path)
+        self.path = FilePath(self.mktemp()).asBytesMode()
+        self.dbm = dirdbm.Shelf(self.path.path)
         self.items = (
             (b"abc", b"foo"),
             (b"/lalal", b"\000\001"),
