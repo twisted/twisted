@@ -291,7 +291,7 @@ class WebSocketClientEndpoint:
             target = str(h.replace(scheme="", host="", port=None))
             t.write(wsc.send(WSRequest(h.host, target)))
 
-        connected: _WebSocketWireProtocol[_WSP] = await endpoint.connect(
+        connected: _WebSocketWireProtocol[_WSP] = await endpoint.connect(  # type: ignore[assignment]
             ProtocolFactory.forProtocol(
                 lambda: _WebSocketWireProtocol(
                     WSConnection(ConnectionType.CLIENT),

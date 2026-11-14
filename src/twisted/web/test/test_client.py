@@ -9,6 +9,7 @@ from __future__ import annotations
 from zope.interface import implementer, verify
 
 from twisted.internet import defer, interfaces
+from twisted.internet.task import Clock
 from twisted.trial import unittest
 from twisted.web import client
 
@@ -42,7 +43,7 @@ class HTTPConnectionPoolTests(unittest.TestCase):
 
     def test_repr(self) -> None:
         """connection L{repr()} includes endpoint's L{repr()}"""
-        pool = client.HTTPConnectionPool(reactor=None)
+        pool = client.HTTPConnectionPool(reactor=Clock())
         ep = DummyEndPoint("this_is_probably_unique")
         d = pool.getConnection("someplace", ep)
         result = self.successResultOf(d)

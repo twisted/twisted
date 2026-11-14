@@ -16,7 +16,7 @@ from collections.abc import Callable, Hashable, Iterable
 from dataclasses import dataclass
 from functools import wraps
 from http.cookiejar import CookieJar
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Self, TypeVar
 from urllib.parse import urldefrag, urljoin, urlunparse as _urlunparse
 
 from zope.interface import implementer
@@ -29,7 +29,9 @@ from twisted.internet.abstract import isIPv6Address
 from twisted.internet.defer import Deferred
 from twisted.internet.endpoints import HostnameEndpoint, wrapClientTLS
 from twisted.internet.interfaces import (
+    Binding,
     IAddress,
+    IDelayedCall,
     IOpenSSLClientConnectionCreator,
     IOpenSSLContextFactory,
     IProtocol,
@@ -64,6 +66,8 @@ from twisted.web.iweb import (
 if TYPE_CHECKING:
     from http.client import HTTPMessage as _InfoType, HTTPResponse as _ResponseBase
     from urllib.request import Request as _RequestBase
+
+    from twisted.internet._sslverify import IOpenSSLTrustRoot
 else:
     _RequestBase = object
     _ResponseBase = object
@@ -337,7 +341,7 @@ class BrowserLikePolicyForHTTPS:
     SSL connection creator for web clients.
     """
 
-    def __init__(self, trustRoot=None):
+    def __init__(self, trustRoot: IOpenSSLTrustRoot | None = None):
         self._trustRoot = trustRoot
 
     @_requireSSL
@@ -637,7 +641,11 @@ class _HTTP11ClientFactory(protocol.Factory):
     @since: 11.1
     """
 
-    def __init__(self, quiescentCallback, metadata):
+    def __init__(
+        self,
+        quiescentCallback: Callable[[HTTP11ClientProtocol], None],
+        metadata: object,
+    ):
         self._quiescentCallback = quiescentCallback
         self._metadata = metadata
 
@@ -755,15 +763,15 @@ class HTTPConnectionPool:
 
     _factory = _HTTP11ClientFactory
     maxPersistentPerHost = 2
-    cachedConnectionTimeout = 240
+    cachedConnectionTimeout: float = 240
     retryAutomatically = True
     _log = Logger()
 
-    def __init__(self, reactor, persistent=True):
+    def __init__(self, reactor: IReactorTime, persistent: bool = True):
         self._reactor = reactor
         self.persistent = persistent
-        self._connections = {}
-        self._timeouts = {}
+        self._connections: dict[Hashable, list[HTTP11ClientProtocol]] = {}
+        self._timeouts: dict[HTTP11ClientProtocol, IDelayedCall] = {}
 
     def getConnection(
         self, key: Hashable, endpoint: IStreamClientEndpoint
@@ -798,7 +806,7 @@ class HTTPConnectionPool:
             if connection.state == "QUIESCENT":
                 if self.retryAutomatically:
                     newConnection = lambda: self._newConnection(key, endpoint)
-                    connection = _RetryingHTTP11ClientProtocol(
+                    connection = _RetryingHTTP11ClientProtocol(  # type: ignore[assignment]
                         connection, newConnection
                     )
                 return defer.succeed(connection)
@@ -823,15 +831,18 @@ class HTTPConnectionPool:
         )  # type:ignore[assignment]
         return result
 
-    def _removeConnection(self, key, connection):
+    def _removeConnection(
+        self, key: Hashable, connection: HTTP11ClientProtocol
+    ) -> None:
         """
         Remove a connection from the cache and disconnect it.
         """
+        assert connection.transport is not None
         connection.transport.loseConnection()
         self._connections[key].remove(connection)
         del self._timeouts[connection]
 
-    def _putConnection(self, key, connection):
+    def _putConnection(self, key: Hashable, connection: HTTP11ClientProtocol) -> None:
         """
         Return a persistent connection to the pool. This will be called by
         L{HTTP11ClientProtocol} when the connection becomes quiescent.
@@ -850,6 +861,7 @@ class HTTPConnectionPool:
         connections = self._connections.setdefault(key, [])
         if len(connections) == self.maxPersistentPerHost:
             dropped = connections.pop(0)
+            assert dropped.transport is not None
             dropped.transport.loseConnection()
             self._timeouts[dropped].cancel()
             del self._timeouts[dropped]
@@ -859,7 +871,7 @@ class HTTPConnectionPool:
         )
         self._timeouts[connection] = cid
 
-    def closeCachedConnections(self):
+    def closeCachedConnections(self) -> Deferred[None]:
         """
         Close all persistent connections and remove them from the pool.
 
@@ -906,7 +918,7 @@ class _AgentBase:
 
     def _requestWithEndpoint(
         self,
-        key: tuple[bytes, bytes, int],
+        key: Hashable,
         endpoint: IStreamClientEndpoint,
         method: bytes,
         parsedURI: URI,
@@ -1040,13 +1052,15 @@ class Agent(_AgentBase):
     @since: 9.0
     """
 
+    endpointFactory: IAgentEndpointFactory
+
     def __init__(
         self,
-        reactor,
-        contextFactory=BrowserLikePolicyForHTTPS(),
-        connectTimeout=None,
-        bindAddress=None,
-        pool=None,
+        reactor: IReactorTime,
+        contextFactory: IPolicyForHTTPS = BrowserLikePolicyForHTTPS(),
+        connectTimeout: float | None = None,
+        bindAddress: Binding | tuple[bytes | str, int] | bytes | None = None,
+        pool: HTTPConnectionPool | None = None,
     ):
         """
         Create an L{Agent}.
@@ -1075,7 +1089,7 @@ class Agent(_AgentBase):
         @type pool: L{HTTPConnectionPool}
         """
         if not IPolicyForHTTPS.providedBy(contextFactory):
-            warnings.warn(
+            warnings.warn(  # type: ignore[unreachable]
                 repr(contextFactory)
                 + " was passed as the HTTPS policy for an Agent, but it does "
                 "not provide IPolicyForHTTPS.  Since Twisted 14.0, you must "
@@ -1090,7 +1104,12 @@ class Agent(_AgentBase):
         self._init(reactor, endpointFactory, pool)
 
     @classmethod
-    def usingEndpointFactory(cls, reactor, endpointFactory, pool=None):
+    def usingEndpointFactory(
+        cls,
+        reactor: IReactorTime,
+        endpointFactory: IAgentEndpointFactory,
+        pool: HTTPConnectionPool | None = None,
+    ) -> Self:
         """
         Create a new L{Agent} that will use the endpoint factory to figure
         out how to connect to the server.
@@ -1115,7 +1134,12 @@ class Agent(_AgentBase):
         agent._init(reactor, endpointFactory, pool)
         return agent
 
-    def _init(self, reactor, endpointFactory, pool):
+    def _init(
+        self,
+        reactor: IReactorTime,
+        endpointFactory: IAgentEndpointFactory,
+        pool: HTTPConnectionPool | None,
+    ) -> None:
         """
         Initialize a new L{Agent}.
 
@@ -1138,7 +1162,7 @@ class Agent(_AgentBase):
         _AgentBase.__init__(self, reactor, pool)
         self._endpointFactory = endpointFactory
 
-    def _getEndpoint(self, uri):
+    def _getEndpoint(self, uri: URI) -> IStreamClientEndpoint:
         """
         Get an endpoint for the given URI, using C{self._endpointFactory}.
 
@@ -1194,13 +1218,24 @@ class ProxyAgent(_AgentBase):
     @since: 11.1
     """
 
-    def __init__(self, endpoint, reactor=None, pool=None):
+    def __init__(
+        self,
+        endpoint: IStreamClientEndpoint,
+        reactor: IReactorTime | None = None,
+        pool: HTTPConnectionPool | None = None,
+    ):
         if reactor is None:
             from twisted.internet import reactor
-        _AgentBase.__init__(self, reactor, pool)
+        _AgentBase.__init__(self, reactor, pool)  # type: ignore[arg-type]
         self._proxyEndpoint = endpoint
 
-    def request(self, method, uri, headers=None, bodyProducer=None):
+    def request(
+        self,
+        method: bytes,
+        uri: bytes,
+        headers: Headers | None = None,
+        bodyProducer: IBodyProducer | None = None,
+    ) -> Deferred[IResponse]:
         """
         Issue a new request via the configured proxy.
         """
