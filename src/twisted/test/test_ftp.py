@@ -1570,6 +1570,31 @@ class FTPServerPortDataConnectionTests(FTPServerPasvDataConnectionTests):
 
         return d.addCallback(checkDownload)
 
+    def test_PORTRejectsPrivilegedPort(self):
+        """
+        C{PORT} rejects requests to connect to privileged ports.
+        """
+        d = self._anonymousLogin()
+        addr = ftp.encodeHostPort("127.0.0.1", 21)
+        return self.assertCommandFailed(
+            "PORT " + addr,
+            ["504 Not implemented for parameter '%s'." % (addr,)],
+            chainDeferred=d,
+        )
+
+    def test_PORTRejectsMismatchedHost(self):
+        """
+        C{PORT} rejects requests to make data connection with ip address
+        that is not the control connection peer.
+        """
+        d = self._anonymousLogin()
+        addr = ftp.encodeHostPort("127.0.0.2", 20000)
+        return self.assertCommandFailed(
+            "PORT " + addr,
+            ["504 Not implemented for parameter '%s'." % (addr,)],
+            chainDeferred=d,
+        )
+
 
 class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
     """
@@ -1672,6 +1697,31 @@ class FTPServerEprtDataConnectionTests(FTPServerPasvDataConnectionTests):
         return self.assertCommandFailed(
             "EPRT |3|127.0.0.1|12345|",
             ["522 Network protocol not supported, use (1,2)"],
+            chainDeferred=d,
+        )
+
+    def test_EPRTRejectsPrivilegedPort(self):
+        """
+        C{EPRT} rejects requests to connect to privileged ports.
+        """
+        d = self._anonymousLogin()
+        addr = "|1|127.0.0.1|21|"
+        return self.assertCommandFailed(
+            "EPRT %s" % (addr,),
+            ["504 Not implemented for parameter '%s'." % (addr,)],
+            chainDeferred=d,
+        )
+
+    def test_EPRTRejectsMismatchedHost(self):
+        """
+        C{EPRT} rejects requests to make data connection with ip address
+        that is not the control connection peer.
+        """
+        d = self._anonymousLogin()
+        addr = "|1|127.0.0.2|20000|"
+        return self.assertCommandFailed(
+            "EPRT %s" % (addr,),
+            ["504 Not implemented for parameter '%s'." % (addr,)],
             chainDeferred=d,
         )
 
