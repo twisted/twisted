@@ -26,6 +26,7 @@ from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
 from twisted.trial.unittest import TestCase
 from twisted.web import http, resource, script, static
+from twisted.web._ranges import _parseRangeHeader
 from twisted.web._responses import FOUND
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test._util import _render
@@ -1365,7 +1366,7 @@ class RangeTests(TestCase):
         L{File._parseRangeHeader} raises L{ValueError} when passed
         syntactically invalid byte ranges.
         """
-        f = self.resource._parseRangeHeader
+        f = _parseRangeHeader
 
         # there's no =
         self.assertRaises(ValueError, f, b"bytes")
@@ -1393,51 +1394,47 @@ class RangeTests(TestCase):
         A single bytes range without an explicit stop position is parsed into a
         two-tuple giving the start position and L{None}.
         """
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=0-"), [(0, None)])
+        self.assertEqual(_parseRangeHeader(b"bytes=0-"), [(0, None)])
 
     def test_rangeMissingStart(self):
         """
         A single bytes range without an explicit start position is parsed into
         a two-tuple of L{None} and the end position.
         """
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=-3"), [(None, 3)])
+        self.assertEqual(_parseRangeHeader(b"bytes=-3"), [(None, 3)])
 
     def test_range(self):
         """
         A single bytes range with explicit start and stop positions is parsed
         into a two-tuple of those positions.
         """
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=2-5"), [(2, 5)])
+        self.assertEqual(_parseRangeHeader(b"bytes=2-5"), [(2, 5)])
 
     def test_rangeWithSpace(self):
         """
         A single bytes range with whitespace in allowed places is parsed in
         the same way as it would be without the whitespace.
         """
-        self.assertEqual(self.resource._parseRangeHeader(b" bytes=1-2 "), [(1, 2)])
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes =1-2 "), [(1, 2)])
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes= 1-2"), [(1, 2)])
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=1 -2"), [(1, 2)])
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=1- 2"), [(1, 2)])
-        self.assertEqual(self.resource._parseRangeHeader(b"bytes=1-2 "), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b" bytes=1-2 "), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b"bytes =1-2 "), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b"bytes= 1-2"), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b"bytes=1 -2"), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b"bytes=1- 2"), [(1, 2)])
+        self.assertEqual(_parseRangeHeader(b"bytes=1-2 "), [(1, 2)])
 
     def test_nullRangeElements(self):
         """
         If there are multiple byte ranges but only one is non-null, the
         non-null range is parsed and its start and stop returned.
         """
-        self.assertEqual(
-            self.resource._parseRangeHeader(b"bytes=1-2,\r\n, ,\t"), [(1, 2)]
-        )
+        self.assertEqual(_parseRangeHeader(b"bytes=1-2,\r\n, ,\t"), [(1, 2)])
 
     def test_multipleRanges(self):
         """
         If multiple byte ranges are specified their starts and stops are
         returned.
         """
-        self.assertEqual(
-            self.resource._parseRangeHeader(b"bytes=1-2,3-4"), [(1, 2), (3, 4)]
-        )
+        self.assertEqual(_parseRangeHeader(b"bytes=1-2,3-4"), [(1, 2), (3, 4)])
 
     def test_bodyLength(self):
         """

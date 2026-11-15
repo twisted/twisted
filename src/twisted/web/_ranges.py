@@ -5,12 +5,70 @@ Implementations of Range: header request logic for L{twisted.web.static}.
 
 from __future__ import annotations
 
-from typing import IO
+from typing import IO, NoReturn
 
 from zope.interface import implementer
 
 from twisted.internet import abstract, interfaces
 from twisted.web import http
+
+ranges = list[tuple[int, int] | tuple[None, int] | tuple[int, None]]
+
+
+def _parseRangeHeader(rangeHeader: bytes) -> ranges:
+    """
+    Parse the value of a Range header into (start, stop) pairs.
+
+    In a given pair, either of start or stop can be None, signifying that
+    no value was provided, but not both.
+
+    @return: A list C{[(start, stop)]} of pairs of length at least one.
+
+    @raise ValueError: if the header is syntactically invalid or if the
+        Bytes-Unit is anything other than "bytes'.
+    """
+    try:
+        kind, value = rangeHeader.split(b"=", 1)
+    except ValueError:
+        raise ValueError("Missing '=' separator")
+    kind = kind.strip()
+    if kind != b"bytes":
+        raise ValueError(f"Unsupported Bytes-Unit: {kind!r}")
+    unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
+    parsedRanges: ranges = []
+
+    def invalid() -> NoReturn:
+        raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
+
+    for byteRange in unparsedRanges:
+        start: int | None = None
+        end: int | None = None
+        try:
+            startBytes, endBytes = byteRange.split(b"-", 1)
+        except ValueError:
+            invalid()
+        if startBytes:
+            try:
+                start = int(startBytes)
+            except ValueError:
+                invalid()
+        if endBytes:
+            try:
+                end = int(endBytes)
+            except ValueError:
+                invalid()
+        match (start, end):
+            case (None, int(validEnd)):
+                parsedRanges.append((None, validEnd))
+            case (int(validStart), None):
+                parsedRanges.append((validStart, None))
+            case (int(validStart), int(validEnd)):
+                if start >= end:
+                    invalid()
+                parsedRanges.append((validStart, validEnd))
+            case _:  # (None, None)
+                invalid()
+    return parsedRanges
 
 
 @implementer(interfaces.IPullProducer)

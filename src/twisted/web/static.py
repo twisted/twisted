@@ -33,6 +33,7 @@ from ._ranges import (
     NoRangeStaticProducer,
     SingleRangeStaticProducer,
     StaticProducer,
+    _parseRangeHeader,
 )
 
 __all__ = [
@@ -368,57 +369,6 @@ class File(resource.Resource, filepath.FilePath[str]):
         """Return file size."""
         return self.getsize()
 
-    def _parseRangeHeader(self, range):
-        """
-        Parse the value of a Range header into (start, stop) pairs.
-
-        In a given pair, either of start or stop can be None, signifying that
-        no value was provided, but not both.
-
-        @return: A list C{[(start, stop)]} of pairs of length at least one.
-
-        @raise ValueError: if the header is syntactically invalid or if the
-            Bytes-Unit is anything other than "bytes'.
-        """
-        try:
-            kind, value = range.split(b"=", 1)
-        except ValueError:
-            raise ValueError("Missing '=' separator")
-        kind = kind.strip()
-        if kind != b"bytes":
-            raise ValueError(f"Unsupported Bytes-Unit: {kind!r}")
-        unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
-        parsedRanges = []
-        for byteRange in unparsedRanges:
-            try:
-                start, end = byteRange.split(b"-", 1)
-            except ValueError:
-                raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
-            if start:
-                try:
-                    start = int(start)
-                except ValueError:
-                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
-            else:
-                start = None
-            if end:
-                try:
-                    end = int(end)
-                except ValueError:
-                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
-            else:
-                end = None
-            if start is not None:
-                if end is not None and start > end:
-                    # Start must be less than or equal to end or it is invalid.
-                    raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
-            elif end is None:
-                # One or both of start and end must be specified.  Omitting
-                # both is invalid.
-                raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
-            parsedRanges.append((start, end))
-        return parsedRanges
-
     def _rangeToOffsetAndSize(
         self, start: int | None, end: int | None
     ) -> tuple[int, int]:
@@ -630,7 +580,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             request.setResponseCode(http.OK)
             return NoRangeStaticProducer(request, fileForReading)
         try:
-            parsedRanges = self._parseRangeHeader(byteRange)
+            parsedRanges = _parseRangeHeader(byteRange)
         except ValueError:
             log.msg(f"Ignoring malformed Range header {byteRange.decode('charmap')!r}")
             self._setContentHeaders(request)
