@@ -862,6 +862,8 @@ class StaticMakeProducerTests(TestCase):
         with resource.openForReading() as file:
             producer = resource.makeProducer(request, file)
             self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            # we provoke an error by causing request.finish() to be invoked
+            # early, which should raise an exception upon request.write.
             request.finish()
             with self.assertRaises(RuntimeError):
                 producer.start()
@@ -878,6 +880,8 @@ class StaticMakeProducerTests(TestCase):
         with resource.openForReading() as file:
             producer = resource.makeProducer(request, file)
             self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+            # we provoke an error by causing request.finish() to be invoked
+            # early, which should raise an exception upon request.write.
             request.finish()
             with self.assertRaises(RuntimeError):
                 producer.start()

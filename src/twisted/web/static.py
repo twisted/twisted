@@ -760,6 +760,27 @@ class NoRangeStaticProducer(StaticProducer):
     def resumeProducing(self) -> None:
         if not self.request:
             return
+        """
+        We need to close the file, and we need to finish the request.
+
+        we need to handle several different errors here:
+
+            - the file might have been closed outside of our control, in which
+              case we need to make sure that when .read() raises an error we
+              still notice and finish the request and don't leave it
+              outstanding.  This is unlikely and requires a state-corruption
+              bug somewhere else in the code, but it is I/O that _could_ happen
+              and we should account for it.
+
+            - the request might have already been finished, in which case both
+              .request.write() and .request.finish() will raise exceptions.  we
+              should probably handle errors from those too, although we *could*
+              find out that the request has already finished via
+              .notifyFinish().
+
+            - There's no reason that .close() should ever raise an exception,
+              stopProducing should be fine.
+        """
         data = self.fileObject.read(self.bufferSize)
         if data:
             # this .write will spin the reactor, calling .doWrite and then
@@ -800,6 +821,10 @@ class SingleRangeStaticProducer(StaticProducer):
 
     def start(self) -> None:
         assert self.request is not None, "request must be set to start producing"
+        """
+        If this file object is bad, we should handle that and inform the
+        request.
+        """
         self.fileObject.seek(self.offset)
         self.bytesWritten = 0
         self.request.registerProducer(self, 0)
@@ -807,6 +832,10 @@ class SingleRangeStaticProducer(StaticProducer):
     def resumeProducing(self) -> None:
         if not self.request:
             return
+        """
+        All the same error conditions as L{NoRangeStaticProducer}; no new ones
+        here, the only new one is seek().
+        """
         data = self.fileObject.read(min(self.bufferSize, self.size - self.bytesWritten))
         if data:
             self.bytesWritten += len(data)
@@ -855,6 +884,10 @@ class MultipleRangeStaticProducer(StaticProducer):
     def _nextRange(self) -> None:
         self.partBoundary, partOffset, self._partSize = next(self.rangeIter)
         self._partBytesWritten = 0
+        """
+        This might also raise an error, as explained above in
+        L{SingleRangeStaticProducer}.
+        """
         self.fileObject.seek(partOffset)
 
     def resumeProducing(self) -> None:
