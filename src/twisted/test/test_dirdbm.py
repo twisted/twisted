@@ -16,7 +16,7 @@ from twisted.trial import unittest
 
 class DirDbmTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.path = FilePath(self.mktemp())
+        self.path = FilePath(self.mktemp()).asBytesMode()
         self.dbm = dirdbm.open(self.path.path)
         self.items: tuple[tuple[bytes, bytes | int | float | tuple[None, int]], ...] = (
             (b"abc", b"foo"),
@@ -92,7 +92,7 @@ class DirDbmTests(unittest.TestCase):
             f"items() didn't match: {repr(items)} != {repr(dbitems)}",
         )
 
-        copyPath = self.mktemp()
+        copyPath = self.mktemp().encode()
         d2 = d.copyTo(copyPath)
 
         copykeys = d.keys()
@@ -211,7 +211,7 @@ class DirDbmTests(unittest.TestCase):
 
 class ShelfTests(DirDbmTests):
     def setUp(self) -> None:
-        self.path = FilePath(self.mktemp())
+        self.path = FilePath(self.mktemp()).asBytesMode()
         self.dbm = dirdbm.Shelf(self.path.path)
         self.items = (
             (b"abc", b"foo"),

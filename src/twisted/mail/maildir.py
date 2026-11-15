@@ -768,7 +768,7 @@ class MaildirDirdbmDomain(AbstractMaildirDomain):
     _credcheckers = None
 
     def __init__(
-        self, service: MailService, root: bytes, postmaster: bool = False
+        self, service: MailService, root: str | bytes, postmaster: bool = False
     ) -> None:
         """
         @param service: An email service.

@@ -12,7 +12,6 @@ from twisted.internet.address import (
     IPv6Address,
     UNIXAddress,
 )
-from twisted.python.compat import nativeString
 from twisted.python.runtime import platform
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
@@ -58,27 +57,11 @@ class AddressTestCaseMixin:
         self.assertTrue(self.buildAddress() != self.buildDifferentAddress())
         self.assertTrue(self.buildDifferentAddress() != self.buildAddress())
 
-    def assertDeprecations(self, testMethod, message):
-        """
-        Assert that the a DeprecationWarning with the given message was
-        emitted against the given method.
-        """
-        warnings = self.flushWarnings([testMethod])
-        self.assertEqual(warnings[0]["category"], DeprecationWarning)
-        self.assertEqual(warnings[0]["message"], message)
-        self.assertEqual(len(warnings), 1)
-
-
-class IPv4AddressTestCaseMixin(AddressTestCaseMixin):
-    addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
-
 
 class HostnameAddressTests(TestCase, AddressTestCaseMixin):
     """
     Test case for L{HostnameAddress}.
     """
-
-    addressArgSpec = (("hostname", "%s"), ("port", "%d"))
 
     def buildAddress(self):
         """
@@ -97,7 +80,7 @@ class HostnameAddressTests(TestCase, AddressTestCaseMixin):
         return HostnameAddress(b"example.net", 0)
 
 
-class IPv4AddressTCPTests(SynchronousTestCase, IPv4AddressTestCaseMixin):
+class IPv4AddressTCPTests(SynchronousTestCase):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"TCP"}
@@ -113,7 +96,7 @@ class IPv4AddressTCPTests(SynchronousTestCase, IPv4AddressTestCaseMixin):
         return IPv4Address("TCP", "127.0.0.2", 0)
 
 
-class IPv4AddressUDPTests(SynchronousTestCase, IPv4AddressTestCaseMixin):
+class IPv4AddressUDPTests(SynchronousTestCase):
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv4Address} instance with a C{"UDP"}
@@ -130,8 +113,6 @@ class IPv4AddressUDPTests(SynchronousTestCase, IPv4AddressTestCaseMixin):
 
 
 class IPv6AddressTests(SynchronousTestCase, AddressTestCaseMixin):
-    addressArgSpec = (("type", "%s"), ("host", "%r"), ("port", "%d"))
-
     def buildAddress(self):
         """
         Create an arbitrary new L{IPv6Address} instance with a C{"TCP"}
@@ -149,8 +130,6 @@ class IPv6AddressTests(SynchronousTestCase, AddressTestCaseMixin):
 
 @skipIf(unixSkip, "Platform doesn't support UNIX sockets.")
 class UNIXAddressTests(SynchronousTestCase):
-    addressArgSpec = (("name", "%r"),)
-
     def setUp(self):
         self._socketAddress = self.mktemp()
         self._otherAddress = self.mktemp()
@@ -174,8 +153,7 @@ class UNIXAddressTests(SynchronousTestCase):
         L{UNIXAddress} is for.
         """
         self.assertEqual(
-            repr(self.buildAddress()),
-            "UNIXAddress('%s')" % (nativeString(self._socketAddress)),
+            repr(self.buildAddress()), f"UNIXAddress('{self._socketAddress}')"
         )
 
     @skipIf(symlinkSkip, "Platform does not support symlinks")
@@ -233,8 +211,6 @@ class EmptyUNIXAddressTests(SynchronousTestCase, AddressTestCaseMixin):
     """
     Tests for L{UNIXAddress} operations involving a L{None} address.
     """
-
-    addressArgSpec = (("name", "%r"),)
 
     def setUp(self):
         self._socketAddress = self.mktemp()

@@ -1309,7 +1309,7 @@ class SynchronousTestCase(_Assertions):
 
         return result
 
-    def mktemp(self):
+    def mktemp(self) -> str:
         """
         Create a new path name which can be used for a new file or directory.
 
@@ -1322,7 +1322,6 @@ class SynchronousTestCase(_Assertions):
         closing it).
 
         @return: The newly created path
-        @rtype: C{str}
         """
         MAX_FILENAME = 32  # some platforms limit lengths of filenames
         base = os.path.join(
