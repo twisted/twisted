@@ -128,19 +128,16 @@ def _simpleContentHeaders(
     contentEncoding: str | None = None,
 ) -> None:
     """
-    Set simple Content-length and Content-type headers for this request.
-
-    This assumes that the request is returning either a full body or a simple
-    range.
+    Set simple Content-length and Content-type headers for this request, for
+    when the request is returning either a full body or a simple range.
 
     @param request: The L{twisted.web.http.Request} object.
 
-    @param size: The size of the response.  If not specified, default to
-        C{self.getFileSize()}.
+    @param size: The content-length to specify.
 
-    @param contentType: the content-type
+    @param contentType: The content-type, if any.
 
-    @param contentEncoding: the content-encoding
+    @param contentEncoding: The content-encoding, if any.
     """
     request.setHeader(b"content-length", b"%d" % (size,))
     if contentType:
@@ -360,9 +357,9 @@ class SingleRangeStaticProducer(StaticProducer):
 
 def _setupMultiRange(
     request: http.Request,
-    fileForReading: IO[bytes],
     byteRanges: ranges,
     fullFileSize: int,
+    fileForReading: IO[bytes],
     contentType: str | None,
 ) -> MultipleRangeStaticProducer:
     """
@@ -473,10 +470,7 @@ class MultipleRangeStaticProducer(StaticProducer):
             if self._partSize:
                 # If the part has no size, it's just the trailer; otherwise we
                 # need to actually read some bytes from the file.
-                toRead = min(
-                    self.bufferSize,
-                    self._partSize - self._partBytesWritten,
-                )
+                toRead = min(self.bufferSize, self._partSize - self._partBytesWritten)
                 assert toRead > 0
                 p = self.fileObject.read(toRead)
                 if not p:
@@ -521,5 +515,5 @@ def _setupRangeProducer(
             contentEncoding,
         )
     return _setupMultiRange(
-        request, fileForReading, parsedRanges, fullFileSize, contentType
+        request, parsedRanges, fullFileSize, fileForReading, contentType
     )
