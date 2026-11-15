@@ -73,10 +73,7 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
     In a given pair, either of start or stop can be None, signifying that
     no value was provided, but not both.
 
-    @return: A list C{[(start, stop)]} of pairs of length at least one.
-
-    @raise ValueError: if the header is syntactically invalid or if the
-        Bytes-Unit is anything other than "bytes'.
+    @return: A list C{[(start, stop)]} of pairs.
     """
 
     def invalid(reason: str | None = None) -> ranges:
