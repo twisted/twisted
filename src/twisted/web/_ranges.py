@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import os
 import time
-from typing import IO, NoReturn
+from typing import IO
 
 from zope.interface import implementer
 
 from twisted.internet import abstract, interfaces
 from twisted.python import log
-from twisted.python.compat import networkString
 from twisted.web import http
 
 validRange = tuple[int, int] | tuple[None, int] | tuple[int, None]
@@ -29,12 +28,12 @@ def _rangeToOffsetAndSize(
     This method checks that the resulting range overlaps with the size of the
     resource being served.
 
-    Either but not both of start or end can be L{None}:
+    Either but not both of start or end can be L{None}.
 
-        - Omitted start means that the end value is actually a start value
+        - start=L{None} means that the end value is actually a start value
           relative to the end of the resource.
 
-        - Omitted end means the end of the resource should be the end of the
+        - end=L{None} means the end of the resource should be the end of the
           range.
 
     End is interpreted as inclusive, per RFC 2616.
@@ -79,18 +78,20 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
     @raise ValueError: if the header is syntactically invalid or if the
         Bytes-Unit is anything other than "bytes'.
     """
+
+    def invalid(reason: str | None = None) -> ranges:
+        log.msg(f"Ignoring malformed Range header {rangeHeader.decode('charmap')!r}")
+        return []
+
     try:
         kind, value = rangeHeader.split(b"=", 1)
     except ValueError:
-        raise ValueError("Missing '=' separator")
+        return invalid("missing = separator")
     kind = kind.strip()
     if kind != b"bytes":
-        raise ValueError(f"Unsupported Bytes-Unit: {kind!r}")
+        return invalid(f"Unsupported Bytes-Unit: {kind!r}")
     unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
     parsedRanges: ranges = []
-
-    def invalid() -> NoReturn:
-        raise ValueError(f"Invalid Byte-Range: {byteRange!r}")
 
     for byteRange in unparsedRanges:
         start: int | None = None
@@ -98,17 +99,17 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
         try:
             startBytes, endBytes = byteRange.split(b"-", 1)
         except ValueError:
-            invalid()
+            return invalid()
         if startBytes:
             try:
                 start = int(startBytes)
             except ValueError:
-                invalid()
+                return invalid()
         if endBytes:
             try:
                 end = int(endBytes)
             except ValueError:
-                invalid()
+                return invalid()
         match (start, end):
             case (None, int(validEnd)):
                 parsedRanges.append((None, validEnd))
@@ -116,18 +117,18 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
                 parsedRanges.append((validStart, None))
             case (int(validStart), int(validEnd)):
                 if start >= end:
-                    invalid()
+                    return invalid()
                 parsedRanges.append((validStart, validEnd))
             case _:  # (None, None)
-                invalid()
+                return invalid()
     return parsedRanges
 
 
 def _simpleContentHeaders(
     request: http.Request,
     size: int,
-    contentType: str | None,
-    contentEncoding: str | None,
+    contentType: str | None = None,
+    contentEncoding: str | None = None,
 ) -> None:
     """
     Set simple Content-length and Content-type headers for this request.
@@ -190,6 +191,18 @@ class StaticProducer:
         self.request = None
 
 
+def _setupNoRange(
+    request: http.Request,
+    fullFileSize: int,
+    fileForReading: IO[bytes],
+    contentType: str | None,
+    contentEncoding: str | None,
+) -> NoRangeStaticProducer:
+    request.setResponseCode(http.OK)
+    _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
+    return NoRangeStaticProducer(request, fileForReading)
+
+
 class NoRangeStaticProducer(StaticProducer):
     """
     A L{StaticProducer} that writes the entire file to the request.
@@ -247,17 +260,24 @@ def _contentRange(offset: int, size: int, fullFileSize: int) -> bytes:
 
     @param fullFileSize: How long the entire resource is.
 
-    @return: The value as appropriate for the value of a Content-Range
-        header.
+    @return: The value as appropriate for the value of a Content-Range header.
     """
     return b"bytes %d-%d/%d" % (offset, offset + size - 1, fullFileSize)
+
+
+def _notSatisfiableFor(request: http.Request, fullFileSize: int) -> None:
+    request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
+    request.setHeader(b"content-range", b"bytes */%d" % (fullFileSize,))
 
 
 def _setupSingleRange(
     request: http.Request,
     startAndEnd: validRange,
     fullFileSize: int,
-) -> tuple[int, int]:
+    fileForReading: IO[bytes],
+    contentType: str | None,
+    contentEncoding: str | None,
+) -> SingleRangeStaticProducer:
     """
     Set up the response for Range headers that specify a single range.
 
@@ -277,14 +297,12 @@ def _setupSingleRange(
     start, end = startAndEnd
     offset, size = _rangeToOffsetAndSize(fullFileSize, start, end)
     if offset == size == 0:
-        # This range doesn't overlap with any of this resource, so the
-        # request is unsatisfiable.
-        request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
-        request.setHeader(b"content-range", b"bytes */%d" % (fullFileSize,))
+        _notSatisfiableFor(request, fullFileSize)
     else:
         request.setResponseCode(http.PARTIAL_CONTENT)
         request.setHeader(b"content-range", _contentRange(offset, size, fullFileSize))
-    return offset, size
+    _simpleContentHeaders(request, size, contentType, contentEncoding)
+    return SingleRangeStaticProducer(request, fileForReading, offset, size)
 
 
 class SingleRangeStaticProducer(StaticProducer):
@@ -345,29 +363,17 @@ class SingleRangeStaticProducer(StaticProducer):
 
 def _setupMultiRange(
     request: http.Request,
+    fileForReading: IO[bytes],
     byteRanges: ranges,
     fullFileSize: int,
     contentType: str | None,
-) -> list[tuple[(bytes, int, int)]]:
+) -> MultipleRangeStaticProducer:
     """
-    Set up the response for Range headers that specify a single range.
+    Set up the response for Range headers that specify multiple ranges.
 
-    This method checks if the request is satisfiable and sets the response
-    code and Content-Type and Content-Length headers appropriately.  The
-    return value, which is a little complicated, indicates which parts of
-    the resource to return and the boundaries that should separate the
-    parts.
-
-    In detail, the return value is a tuple rangeInfo C{rangeInfo} is a list
-    of 3-tuples C{(partSeparator, partOffset, partSize)}.  The response to
-    this request should be, for each element of C{rangeInfo},
-    C{partSeparator} followed by C{partSize} bytes of the resource starting
-    at C{partOffset}.  Each C{partSeparator} includes the MIME-style
-    boundary and the part-specific Content-type and Content-range headers.
-    It is convenient to return the separator as a concrete string from this
-    method, because this method needs to compute the number of bytes that
-    will make up the response to be able to set the Content-Length header
-    of the response accurately.
+    This method checks if the request is satisfiable and sets the response code
+    and Content-Type and Content-Length headers appropriately.  It creates a
+    L{MultipleRangeStaticProducer} to produce the response.
 
     @param request: The Request object.
 
@@ -377,42 +383,36 @@ def _setupMultiRange(
 
     @return: See above.
     """
-    matchingRangeFound = False
     rangeInfo: list[tuple[bytes, int, int]] = []
     contentLength = 0
-    boundary = networkString(f"{int(time.time() * 1000000):x}{os.getpid():x}")
-    if contentType:
-        contentType = contentType
-    else:
-        contentType = "bytes"  # It's what Apache does...
+    boundary = f"{int(time.time() * 1000000):x}{os.getpid():x}".encode()
+    if not contentType:
+        contentType = "bytes"  # Do what Apache HTTPD does.
     for start, end in byteRanges:
         partOffset, partSize = _rangeToOffsetAndSize(fullFileSize, start, end)
         if partOffset == partSize == 0:
             continue
         contentLength += partSize
-        matchingRangeFound = True
-        partContentRange = _contentRange(partOffset, partSize, fullFileSize)
         partSeparator = (
-            b"\r\n" b"--%s\r\n" b"Content-type: %s\r\n" b"Content-range: %s\r\n" b"\r\n"
-        ) % (boundary, contentType.encode(), partContentRange)
+            b"\r\n--%s\r\n" b"Content-type: %s\r\n" b"Content-range: %s\r\n" b"\r\n"
+        ) % (
+            boundary,
+            contentType.encode(),
+            _contentRange(partOffset, partSize, fullFileSize),
+        )
         contentLength += len(partSeparator)
         rangeInfo.append((partSeparator, partOffset, partSize))
-    if not matchingRangeFound:
-        request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
-        request.setHeader(b"content-length", b"0")
-        request.setHeader(
-            b"content-range", networkString("bytes */%d" % (fullFileSize,))
-        )
-        return []
-    finalBoundary = b"\r\n--" + boundary + b"--\r\n"
-    rangeInfo.append((finalBoundary, 0, 0))
-    request.setResponseCode(http.PARTIAL_CONTENT)
-    request.setHeader(
-        b"content-type",
-        networkString(f'multipart/byteranges; boundary="{boundary.decode()}"'),
-    )
-    request.setHeader(b"content-length", b"%d" % (contentLength + len(finalBoundary),))
-    return rangeInfo
+    contentType = None
+    if rangeInfo:
+        finalBoundary = b"\r\n--" + boundary + b"--\r\n"
+        rangeInfo.append((finalBoundary, 0, 0))
+        request.setResponseCode(http.PARTIAL_CONTENT)
+        contentLength += len(finalBoundary)
+        contentType = f'multipart/byteranges; boundary="{boundary.decode()}"'
+    else:
+        _notSatisfiableFor(request, fullFileSize)
+    _simpleContentHeaders(request, contentLength, contentType)
+    return MultipleRangeStaticProducer(request, fileForReading, rangeInfo)
 
 
 class MultipleRangeStaticProducer(StaticProducer):
@@ -509,20 +509,20 @@ def _setupRangeProducer(
     contentEncoding: str | None,
 ) -> StaticProducer:
     byteRange = request.getHeader(b"range")
-    parsedRanges = None
-    if byteRange is not None:
-        try:
-            parsedRanges = _parseRangeHeader(byteRange)
-        except ValueError:
-            log.msg(f"Ignoring malformed Range header {byteRange.decode('charmap')!r}")
-    if parsedRanges is None:
-        _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
-        request.setResponseCode(http.OK)
-        return NoRangeStaticProducer(request, fileForReading)
+    parsedRanges = _parseRangeHeader(byteRange or b"")
+    if len(parsedRanges) == 0:
+        return _setupNoRange(
+            request, fullFileSize, fileForReading, contentType, contentEncoding
+        )
     if len(parsedRanges) == 1:
-        offset, size = _setupSingleRange(request, parsedRanges[0], fullFileSize)
-        _simpleContentHeaders(request, size, contentType, contentEncoding)
-        return SingleRangeStaticProducer(request, fileForReading, offset, size)
-    else:
-        rangeInfo = _setupMultiRange(request, parsedRanges, fullFileSize, contentType)
-        return MultipleRangeStaticProducer(request, fileForReading, rangeInfo)
+        return _setupSingleRange(
+            request,
+            parsedRanges[0],
+            fullFileSize,
+            fileForReading,
+            contentType,
+            contentEncoding,
+        )
+    return _setupMultiRange(
+        request, fileForReading, parsedRanges, fullFileSize, contentType
+    )

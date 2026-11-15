@@ -1361,33 +1361,32 @@ class RangeTests(TestCase):
         self.assertEqual(logItem["message"][0], expected)
         self.assertEqual(self.catcher, [], f"An additional log occurred: {logItem!r}")
 
-    def test_invalidRanges(self):
+    def test_invalidRanges(self) -> None:
         """
-        L{File._parseRangeHeader} raises L{ValueError} when passed
-        syntactically invalid byte ranges.
+        L{File._parseRangeHeader} parses all invalid byte ranges as C{[]}.
         """
-        f = _parseRangeHeader
-
         # there's no =
-        self.assertRaises(ValueError, f, b"bytes")
+        self.assertEqual(_parseRangeHeader(b"bytes"), [])
 
         # unknown isn't a valid Bytes-Unit
-        self.assertRaises(ValueError, f, b"unknown=1-2")
+        self.assertEqual(_parseRangeHeader(b"unknown=1-2"), [])
 
         # there's no - in =stuff
-        self.assertRaises(ValueError, f, b"bytes=3")
+        self.assertEqual(_parseRangeHeader(b"bytes=3"), [])
 
         # both start and end are empty
-        self.assertRaises(ValueError, f, b"bytes=-")
+        self.assertEqual(_parseRangeHeader(b"bytes=-"), [])
 
         # start isn't an integer
-        self.assertRaises(ValueError, f, b"bytes=foo-")
+        self.assertEqual(_parseRangeHeader(b"bytes=foo-"), [])
 
         # end isn't an integer
-        self.assertRaises(ValueError, f, b"bytes=-foo")
+        self.assertEqual(_parseRangeHeader(b"bytes=-foo"), [])
 
         # end isn't equal to or greater than start
-        self.assertRaises(ValueError, f, b"bytes=5-4")
+        self.assertEqual(_parseRangeHeader(b"bytes=5-4"), [])
+
+        # todo: better logging, test for logging
 
     def test_rangeMissingStop(self):
         """
