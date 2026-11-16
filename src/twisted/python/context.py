@@ -12,7 +12,6 @@ retrieve 'value'.
 This is thread-safe.
 """
 
-
 from threading import local
 
 defaultContextDict: dict[type[object], dict[str, str]] = {}

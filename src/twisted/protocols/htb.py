@@ -15,7 +15,6 @@ shaper for the Linux kernel<http://luxik.cdi.cz/~devik/qos/htb/>}.
     HOWTO<http://lartc.org/howto/lartc.qdisc.classless.html#AEN682>}
 """
 
-
 # TODO: Investigate whether we should be using os.times()[-1] instead of
 # time.time.  time.time, it has been pointed out, can go backwards.  Is
 # the same true of os.times?

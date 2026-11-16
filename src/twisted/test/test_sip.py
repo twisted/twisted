@@ -19,27 +19,20 @@ except BaseException:
 from zope.interface import implementer
 
 # request, prefixed by random CRLFs
-request1 = (
-    "\n\r\n\n\r"
-    + """\
+request1 = "\n\r\n\n\r" + """\
 INVITE sip:foo SIP/2.0
 From: mo
 To: joe
 Content-Length: 4
 
-abcd""".replace(
-        "\n", "\r\n"
-    )
-)
+abcd""".replace("\n", "\r\n")
 
 # request, no content-length
 request2 = """INVITE sip:foo SIP/2.0
 From: mo
 To: joe
 
-1234""".replace(
-    "\n", "\r\n"
-)
+1234""".replace("\n", "\r\n")
 
 # request, with garbage after
 request3 = """INVITE sip:foo SIP/2.0
@@ -49,9 +42,7 @@ Content-Length: 4
 
 1234
 
-lalalal""".replace(
-    "\n", "\r\n"
-)
+lalalal""".replace("\n", "\r\n")
 
 # three requests
 request4 = """INVITE sip:foo SIP/2.0
@@ -69,9 +60,7 @@ From: foo
 To: bar
 Content-Length: 4
 
-1234""".replace(
-    "\n", "\r\n"
-)
+1234""".replace("\n", "\r\n")
 
 # response, no content
 response1 = """SIP/2.0 200 OK
@@ -79,9 +68,7 @@ From:  foo
 To:bar
 Content-Length: 0
 
-""".replace(
-    "\n", "\r\n"
-)
+""".replace("\n", "\r\n")
 
 # short header version
 request_short = """\
@@ -90,17 +77,13 @@ f: mo
 t: joe
 l: 4
 
-abcd""".replace(
-    "\n", "\r\n"
-)
+abcd""".replace("\n", "\r\n")
 
 request_natted = """\
 INVITE sip:foo SIP/2.0
 Via: SIP/2.0/UDP 10.0.0.1:5060;rport
 
-""".replace(
-    "\n", "\r\n"
-)
+""".replace("\n", "\r\n")
 
 # multiline headers (example from RFC 3621).
 response_multiline = """\
@@ -118,9 +101,7 @@ CSeq: 314159 INVITE
 Contact: <sip:bob@192.0.2.4>
 Content-Type: application/sdp
 Content-Length: 0
-\n""".replace(
-    "\n", "\r\n"
-)
+\n""".replace("\n", "\r\n")
 
 
 class TestRealm:

@@ -6,6 +6,7 @@
 """
 Protocol wrapper that provides HAProxy PROXY protocol support.
 """
+
 from typing import Self
 
 from twisted.internet import interfaces

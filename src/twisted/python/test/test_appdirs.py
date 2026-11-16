@@ -5,7 +5,6 @@
 Tests for the data directory support.
 """
 
-
 try:
     from twisted.python import _appdirs
 except ImportError:

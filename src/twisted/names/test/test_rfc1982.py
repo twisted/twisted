@@ -5,7 +5,6 @@
 Test cases for L{twisted.names.rfc1982}.
 """
 
-
 import calendar
 from datetime import datetime
 from functools import partial

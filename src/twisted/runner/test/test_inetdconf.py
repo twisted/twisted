@@ -17,21 +17,17 @@ class ServicesConfTests(unittest.TestCase):
     def setUp(self) -> None:
         self.servicesFilename1 = self.mktemp()
         with open(self.servicesFilename1, "w") as f:
-            f.write(
-                """
+            f.write("""
             # This is a comment
             http            80/tcp          www www-http    # WorldWideWeb HTTP
             http            80/udp          www www-http
             http            80/sctp
-            """
-            )
+            """)
         self.servicesFilename2 = self.mktemp()
         with open(self.servicesFilename2, "w") as f:
-            f.write(
-                """
+            f.write("""
             https           443/tcp                # http protocol over TLS/SSL
-            """
-            )
+            """)
 
     def test_parseDefaultFilename(self) -> None:
         """

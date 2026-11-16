@@ -26,7 +26,6 @@ To run the script:
     $ python ircLogBot.py <channel> <file>
 """
 
-
 import sys
 
 # system imports

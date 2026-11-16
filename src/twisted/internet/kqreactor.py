@@ -274,7 +274,7 @@ class KQueueReactor(posixbase.PosixReactorBase):
         """
         why = None
         inRead = False
-        (filter, flags, data, fflags) = (
+        filter, flags, data, fflags = (
             event.filter,
             event.flags,
             event.data,

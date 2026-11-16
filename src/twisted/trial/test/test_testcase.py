@@ -6,7 +6,6 @@ Direct unit tests for L{twisted.trial.unittest.SynchronousTestCase} and
 L{twisted.trial.unittest.TestCase}.
 """
 
-
 from twisted.trial.unittest import SynchronousTestCase, TestCase
 
 

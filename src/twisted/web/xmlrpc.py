@@ -11,7 +11,6 @@ Maintainer: Itamar Shtull-Trauring
 @type Fault: L{xmlrpclib.Fault}
 """
 
-
 # System Imports
 import base64
 import xmlrpc.client as xmlrpclib

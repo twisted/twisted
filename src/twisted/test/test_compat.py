@@ -6,7 +6,6 @@
 Tests for L{twisted.python.compat}.
 """
 
-
 import codecs
 import io
 import sys
@@ -368,7 +367,7 @@ class StringTests(SynchronousTestCase):
         C{nativeString} raises a C{UnicodeError} if input bytes are not ASCII
         decodable.
         """
-        self.assertRaises(UnicodeError, nativeString, b"\xFF")
+        self.assertRaises(UnicodeError, nativeString, b"\xff")
 
     def test_nonASCIIUnicodeToString(self):
         """

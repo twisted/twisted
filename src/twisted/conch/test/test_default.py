@@ -5,7 +5,6 @@
 Tests for L{twisted.conch.client.default}.
 """
 
-
 import sys
 from unittest import skipIf
 

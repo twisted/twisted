@@ -4,6 +4,7 @@
 """
 Tests for the command-line interfaces to conch.
 """
+
 from unittest import skipIf
 
 from twisted.python.reflect import requireModule

@@ -402,7 +402,7 @@ class LocalWorkerTests(TestCase):
             self.addCleanup(worker._outLog.close)
             self.addCleanup(worker._errLog.close)
 
-            expected = "Here comes the \N{sun}!"
+            expected = "Here comes the \N{SUN}!"
             amp.testWrite(expected)
 
         self.assertEqual(

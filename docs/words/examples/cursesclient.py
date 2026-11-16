@@ -52,7 +52,6 @@ class CursesStdIO:
 
 
 class IRC(IRCClient):
-
     """A protocol object for IRC"""
 
     nickname = "testcurses"
@@ -76,7 +75,6 @@ class IRC(IRCClient):
 
 
 class IRCFactory(ClientFactory):
-
     """
     Factory used for creating IRC protocol objects
     """

@@ -6,7 +6,6 @@
 Test methods in twisted.internet.threads and reactor thread APIs.
 """
 
-
 import os
 import sys
 import time
@@ -413,7 +412,7 @@ class StartupBehaviorTests(TestCase):
             progfile.write(_callBeforeStartupProgram % {"reactor": reactor.__module__})
 
         def programFinished(result):
-            (out, err, reason) = result
+            out, err, reason = result
             if reason.check(error.ProcessTerminated):
                 self.fail(f"Process did not exit cleanly (out: {out} err: {err})")
 

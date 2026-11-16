@@ -6,7 +6,6 @@ Tests for L{twisted.application} and its interaction with
 L{twisted.persisted.sob}.
 """
 
-
 import copy
 import os
 import pickle

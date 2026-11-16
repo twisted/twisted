@@ -9,7 +9,6 @@ Don't use this outside of Twisted.
 Maintainer: Christopher Armstrong
 """
 
-
 import os
 
 # errors

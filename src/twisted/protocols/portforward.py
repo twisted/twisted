@@ -5,6 +5,7 @@
 """
 A simple port forwarder.
 """
+
 from __future__ import annotations
 
 from twisted.internet import protocol
@@ -35,7 +36,7 @@ class Proxy(protocol.Protocol):
 
 
 class ProxyClient(Proxy):
-    factory: protocol.Factory[ProxyClient]  # type:ignore
+    factory: protocol.Factory[ProxyClient]  # type: ignore
 
     def connectionMade(self) -> None:
         assert self.peer is not None
@@ -45,11 +46,11 @@ class ProxyClient(Proxy):
         # flow control (this stops connections from filling
         # this proxy memory when one side produces data at a
         # higher rate than the other can consume).
-        self.transport.registerProducer(self.peer.transport, True)  # type:ignore
-        self.peer.transport.registerProducer(self.transport, True)  # type:ignore
+        self.transport.registerProducer(self.peer.transport, True)  # type: ignore
+        self.peer.transport.registerProducer(self.transport, True)  # type: ignore
 
         # We're connected, everybody can read to their hearts content.
-        self.peer.transport.resumeProducing()  # type:ignore
+        self.peer.transport.resumeProducing()  # type: ignore
 
 
 class ProxyClientFactory(protocol.ClientFactory[ProxyClient]):
@@ -79,7 +80,7 @@ class ProxyServer(Proxy):
     clientProtocolFactory = ProxyClientFactory
     reactor = None
     transport: _MakeTypesHappy
-    factory: ProxyFactory  # type:ignore[assignment]
+    factory: ProxyFactory  # type: ignore[assignment]
     endpoint: IStreamServerEndpoint | None
 
     def connectionMade(self) -> None:

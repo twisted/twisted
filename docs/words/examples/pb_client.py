@@ -17,7 +17,6 @@ To run the script:
 
 """
 
-
 import sys
 
 from twisted.cred import credentials

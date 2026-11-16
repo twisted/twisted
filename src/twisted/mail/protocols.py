@@ -5,6 +5,7 @@
 """
 Mail protocol support.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -366,7 +367,7 @@ class POP3Factory(protocol.ServerFactory):
         L{VirtualPOP3}.
     """
 
-    protocol = VirtualPOP3  # type:ignore[assignment]
+    protocol = VirtualPOP3  # type: ignore[assignment]
     service = None
 
     def __init__(self, service):

@@ -7,7 +7,6 @@
 Protocol agnostic implementations of SASL authentication mechanisms.
 """
 
-
 import binascii
 import os
 import random

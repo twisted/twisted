@@ -6,7 +6,6 @@ Tests for implementations of L{IReactorUDP} and the UDP parts of
 L{IReactorSocket}.
 """
 
-
 import socket
 
 from zope.interface import implementer

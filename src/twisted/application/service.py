@@ -14,7 +14,6 @@ a sibling).
 Maintainer: Moshe Zadka
 """
 
-
 from zope.interface import Attribute, Interface, implementer
 
 from twisted.internet import defer
@@ -322,26 +321,20 @@ class IProcess(Interface):
     Represents parameters for how processes should be run.
     """
 
-    processName = Attribute(
-        """
+    processName = Attribute("""
         A C{str} giving the name the process should have in ps (or L{None}
         to leave the name alone).
-        """
-    )
+        """)
 
-    uid = Attribute(
-        """
+    uid = Attribute("""
         An C{int} giving the user id as which the process should run (or
         L{None} to leave the UID alone).
-        """
-    )
+        """)
 
-    gid = Attribute(
-        """
+    gid = Attribute("""
         An C{int} giving the group id as which the process should run (or
         L{None} to leave the GID alone).
-        """
-    )
+        """)
 
 
 @implementer(IProcess)

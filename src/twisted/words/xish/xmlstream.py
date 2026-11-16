@@ -31,7 +31,6 @@ Maintainer: Ralph Meijer
 @type STREAM_START_EVENT: L{str}.
 """
 
-
 from sys import intern
 from typing import Type
 

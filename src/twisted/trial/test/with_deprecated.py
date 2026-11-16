@@ -2,7 +2,6 @@
 This module has a deprecated module attribute.
 """
 
-
 from incremental import Version
 
 from twisted.python.deprecate import deprecatedModuleAttribute

@@ -4,6 +4,7 @@
 """
 Tests for Trial's interaction with the Python warning system.
 """
+
 from __future__ import annotations
 
 import sys
@@ -297,13 +298,11 @@ class FlushWarningsTests(SynchronousTestCase):
         )
         package.makedirs()
         package.child(b"__init__.py").setContent(b"")
-        package.child(b"missingsourcefile.py").setContent(
-            b"""
+        package.child(b"missingsourcefile.py").setContent(b"""
 import warnings
 def foo():
     warnings.warn("oh no")
-"""
-        )
+""")
         pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)
@@ -338,13 +337,11 @@ def foo():
         )
         package.makedirs()
         package.child(b"__init__.py").setContent(b"")
-        package.child(b"module.py").setContent(
-            b"""
+        package.child(b"module.py").setContent(b"""
 import warnings
 def foo():
     warnings.warn("oh no")
-"""
-        )
+""")
         pathEntry = package.parent().path.decode("utf-8")
         sys.path.insert(0, pathEntry)
         self.addCleanup(sys.path.remove, pathEntry)

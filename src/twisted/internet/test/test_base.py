@@ -415,7 +415,6 @@ class DelayedCallDebugTests(DelayedCallMixin, TestCase):
 
 
 class TestSpySignalCapturingReactor(ReactorBase):
-
     """
     Subclass of ReactorBase to capture signals delivered to the
     reactor for inspection.
@@ -429,7 +428,6 @@ class TestSpySignalCapturingReactor(ReactorBase):
 
 @skipIf(not signal, "signal module not available")
 class ReactorBaseSignalTests(TestCase):
-
     """
     Tests to exercise ReactorBase's signal exit reporting path.
     """

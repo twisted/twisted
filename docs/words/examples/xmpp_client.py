@@ -9,7 +9,6 @@ To run the script:
 $ python xmpp_client.py <jid> <secret>
 """
 
-
 import sys
 
 from twisted.internet.defer import Deferred

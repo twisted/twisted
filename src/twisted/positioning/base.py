@@ -7,7 +7,6 @@ Generic positioning base classes.
 @since: 14.0
 """
 
-
 from collections.abc import Sequence
 from functools import partial
 from operator import attrgetter

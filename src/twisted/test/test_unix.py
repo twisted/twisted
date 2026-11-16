@@ -5,7 +5,6 @@
 Tests for implementations of L{IReactorUNIX} and L{IReactorUNIXDatagram}.
 """
 
-
 import os
 import socket
 import sys
