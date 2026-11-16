@@ -235,6 +235,11 @@ class NoRangeStaticProducer(StaticProducer):
             # this .write will spin the reactor, calling .doWrite and then
             # .resumeProducing again, so be prepared for a re-entrant call
             self.request.write(data)
+            """
+            There's another bug here: we just keep writing until the data runs
+            out.  Which means that if someone appends to the file, we will
+            write longer than content-length.
+            """
         else:
             self.request.unregisterProducer()
             self.request.finish()
@@ -260,6 +265,10 @@ def _contentRange(offset: int, size: int, fullFileSize: int) -> bytes:
 
 
 def _notSatisfiableFor(request: http.Request, fullFileSize: int) -> None:
+    """
+    The given request is not satisfiable, according to the RFC.  Set an
+    appropriate response code and content-range header.
+    """
     request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
     request.setHeader(b"content-range", b"bytes */%d" % (fullFileSize,))
 
@@ -305,11 +314,7 @@ class SingleRangeStaticProducer(StaticProducer):
     """
 
     def __init__(
-        self,
-        request: http.Request,
-        fileObject: IO[bytes],
-        offset: int,
-        size: int,
+        self, request: http.Request, fileObject: IO[bytes], offset: int, size: int
     ) -> None:
         """
         Initialize the instance.
