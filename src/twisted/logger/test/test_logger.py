@@ -7,6 +7,8 @@ Test cases for L{twisted.logger._logger}.
 
 from __future__ import annotations
 
+import gc
+import weakref
 from typing import cast
 
 from zope.interface import implementer
@@ -350,3 +352,39 @@ class LoggerTests(unittest.TestCase):
         [logged] = events
         f = logged["log_failure"]
         self.assertEqual(f.type, KeyboardInterrupt)
+
+    def test_failureHandlerDoesNotRetainFailure(self) -> None:
+        """
+        The L{Logger.failureHandler} context manager does not retain the
+        L{Failure} it handled.  The handler is meant to be shared and kept
+        alive at module scope, so retaining the failure would also keep
+        everything referenced by the failing code's frames alive until
+        the next failure occurs.
+        """
+        events = []
+
+        @implementer(ILogObserver)
+        def logged(event: LogEvent) -> None:
+            events.append(event)
+
+        log = Logger(observer=logged)
+        failureHandler = log.failureHandler("hello")
+
+        class Sentinel:
+            pass
+
+        references = []
+
+        def raiseWithSentinel() -> None:
+            sentinel = Sentinel()
+            references.append(weakref.ref(sentinel))
+            raise ValueError()
+
+        with failureHandler:
+            raiseWithSentinel()
+
+        self.assertEqual(len(events), 1)
+        [sentinelReference] = references
+        events[:] = []
+        gc.collect()
+        self.assertIs(sentinelReference(), None)

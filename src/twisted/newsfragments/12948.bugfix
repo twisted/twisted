@@ -1,0 +1,1 @@
+twisted.logger's Logger.failureHandler context manager no longer retains the Failure it handled on the (shared, module-scope) context manager instance, so objects referenced by the failing code's frames can be garbage collected after the failure is logged.

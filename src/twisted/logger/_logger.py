@@ -94,9 +94,12 @@ class _FastFailCtxMgr:
         /,
     ) -> bool:
         if exc_type is not None:
-            failure = Failure()
-            self.failure = failure
-            self._fail(failure)
+            # Do not store the failure on self: instances of this class
+            # are shared and long-lived (they are meant to be created at
+            # module scope), so retaining it would keep the failure's
+            # traceback - and everything referenced by its frames - alive
+            # until the next failure.
+            self._fail(Failure())
         return True
 
 
