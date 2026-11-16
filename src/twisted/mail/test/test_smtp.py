@@ -736,6 +736,64 @@ class EmptyLineTests(TestCase):
         self.assertEqual(out[1], b"500 Error: bad syntax")
 
 
+class TransformChunkTests(TestCase):
+    """
+    Tests for period escaping in L{smtp.SMTPClient.transformChunk} when a
+    message is sent in more than one chunk.
+    """
+
+    def _transform(self, chunks):
+        """
+        Pass C{chunks} through a new client's C{transformChunk} in order
+        and return the joined result.
+        """
+        client = smtp.SMTPClient(b"localhost")
+        client.resetTimeout = lambda: None
+        return b"".join(client.transformChunk(chunk) for chunk in chunks)
+
+    def test_periodAtChunkBoundary(self):
+        """
+        A period beginning a line at the start of a chunk is escaped even
+        though the line ending that precedes it was in the previous chunk,
+        so the message body cannot end the DATA phase early.
+        """
+        message = b"x" * (basic.FileSender.CHUNK_SIZE - 1) + b"\n.\nmore body\n"
+        size = basic.FileSender.CHUNK_SIZE
+        chunks = [message[i : i + size] for i in range(0, len(message), size)]
+        wire = self._transform(chunks)
+        self.assertNotIn(b"\r\n.\r\n", wire)
+        self.assertIn(b"\r\n..\r\n", wire)
+
+    def test_periodAtStartOfMessage(self):
+        """
+        A period at the very start of the message is escaped.
+        """
+        wire = self._transform([b".\n", b"body\n"])
+        self.assertEqual(wire, b"..\r\nbody\r\n")
+
+    def test_periodNotAtStartOfLine(self):
+        """
+        A period in the middle of a line is not escaped, even when it is
+        the first byte of a chunk.
+        """
+        wire = self._transform([b"abc", b".def\n"])
+        self.assertEqual(wire, b"abc.def\r\n")
+
+    def test_chunkedMatchesSingleChunk(self):
+        """
+        Transforming a message in two chunks gives the same result as
+        transforming it in one chunk, wherever the split occurs.
+        """
+        message = b"first line\n.single dot line\n" + b"x" * 100 + b"\n.\nlast\n"
+        expected = self._transform([message])
+        for split in range(1, len(message)):
+            self.assertEqual(
+                self._transform([message[:split], message[split:]]),
+                expected,
+                f"split at {split}",
+            )
+
+
 class TimeoutTests(TestCase, LoopbackMixin):
     """
     Check that SMTP client factories correctly use the timeout.

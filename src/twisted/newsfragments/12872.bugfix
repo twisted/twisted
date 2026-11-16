@@ -1,0 +1,1 @@
+twisted.mail.smtp.SMTPClient and twisted.mail.pop3.POP3 now escape a period that begins a line at the start of a chunk (its line ending was in the previous chunk, or it is the start of the message), so a message body line consisting of a single period can no longer end the DATA phase early when it falls on a FileSender chunk boundary.

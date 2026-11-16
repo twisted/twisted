@@ -458,6 +458,10 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
 
     _highest = 0
 
+    # Whether the next chunk passed to transformChunk begins at the start
+    # of a line of the message being sent.
+    _atStartOfLine = True
+
     def connectionMade(self):
         """
         Send a greeting to the client after the connection has been made.
@@ -1109,6 +1113,7 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
             fp = fpWrapper(fp)
             self.successResponse(successResponse(resp))
             s = basic.FileSender()
+            self._atStartOfLine = True
             d = s.beginFileTransfer(fp, self.transport, self.transformChunk)
 
             def cbFileTransfer(lastsent):
@@ -1183,7 +1188,17 @@ class POP3(basic.LineOnlyReceiver, policies.TimeoutMixin):
         @rtype: L{bytes}
         @return: The transformed string.
         """
-        return chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if not chunk:
+            return chunk
+        atStartOfLine = self._atStartOfLine
+        self._atStartOfLine = chunk.endswith(b"\n")
+        chunk = chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if atStartOfLine and chunk.startswith(b"."):
+            # The period begins a line, but the CRLF that precedes it was
+            # in the previous chunk (or this is the start of the message),
+            # so the replacement above could not escape it.
+            chunk = b"." + chunk
+        return chunk
 
     def finishedFileTransfer(self, lastsent):
         """

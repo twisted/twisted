@@ -953,6 +953,10 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         # if any. Otherwise, `None`.
         self._failureReason = None
 
+        # Whether the next chunk passed to transformChunk begins at the
+        # start of a line of the message being sent.
+        self._atStartOfLine = True
+
     def sendLine(self, line):
         # Log sendLine only if you are in debug mode for performance
         if self.debug:
@@ -1080,6 +1084,7 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
 
     def smtpState_data(self, code, resp):
         s = basic.FileSender()
+        self._atStartOfLine = True
         d = s.beginFileTransfer(self.getMailData(), self.transport, self.transformChunk)
 
         def ebTransfer(err):
@@ -1113,7 +1118,17 @@ class SMTPClient(basic.LineReceiver, policies.TimeoutMixin):
         being made sending the message body, the client will not time out.
         """
         self.resetTimeout()
-        return chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if not chunk:
+            return chunk
+        atStartOfLine = self._atStartOfLine
+        self._atStartOfLine = chunk.endswith(b"\n")
+        chunk = chunk.replace(b"\n", b"\r\n").replace(b"\r\n.", b"\r\n..")
+        if atStartOfLine and chunk.startswith(b"."):
+            # The period begins a line, but the CRLF that precedes it was in
+            # the previous chunk (or this is the start of the message), so
+            # the replacement above could not escape it.
+            chunk = b"." + chunk
+        return chunk
 
     def finishedFileTransfer(self, lastsent):
         if lastsent != b"\n":
