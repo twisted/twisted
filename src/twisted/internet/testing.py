@@ -7,6 +7,7 @@ Assorted functionality which is commonly useful when writing unit tests.
 """
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Callable, Coroutine, Generator, Iterator, Sequence
 from dataclasses import dataclass
 from io import BytesIO
@@ -40,6 +41,7 @@ from twisted.internet.interfaces import (
     IReactorSocket,
     IReactorSSL,
     IReactorTCP,
+    IReactorUDP,
     IReactorUNIX,
     IReadDescriptor,
     IResolutionReceiver,
@@ -47,7 +49,7 @@ from twisted.internet.interfaces import (
     IUDPTransport,
     IWriteDescriptor,
 )
-from twisted.internet.protocol import ClientFactory
+from twisted.internet.protocol import ClientFactory, DatagramProtocol
 from twisted.internet.task import Clock
 from twisted.logger import ILogObserver, LogEvent, LogPublisher
 from twisted.protocols import basic
@@ -153,14 +155,34 @@ class LineSendingProtocol(basic.LineReceiver):
 
 @implementer(IUDPTransport)
 # Implementation is incomplete; please add additional methods as time allows.
-class FakeDatagramTransport:  # type:ignore[misc]
-    noAddr = object()
+class FakeDatagramTransport:
+    """
+    Create a fake matching L{IUDPTransport}.
+    """
 
-    def __init__(self):
-        self.written = []
+    noAddr = ("", 0)
+    _isBroadcastAllowed = False
 
-    def write(self, packet, addr=noAddr):
-        self.written.append((packet, addr))
+    def __init__(self) -> None:
+        self.written: list[tuple[bytes, tuple[str, int]]] = []
+
+    def write(self, packet: bytes, addr: tuple[str, int] | None = noAddr) -> None:
+        self.written.append((packet, addr if addr is not None else ("0.0.0.0", 0)))
+
+    def connect(self, host: str, port: int) -> None:
+        ...
+
+    def getHost(self) -> IPv4Address | IPv6Address:
+        return IPv4Address("UDP", "0.0.0.0", 0)
+
+    def stopListening(self) -> Deferred[None] | None:
+        ...
+
+    def setBroadcastAllowed(self, enabled: bool) -> None:
+        self._isBroadcastAllowed = enabled
+
+    def getBroadcastAllowed(self) -> bool:
+        return self._isBroadcastAllowed
 
 
 @implementer(ITransport, IConsumer, IPushProducer)
@@ -381,6 +403,23 @@ class _FakePort:
         return self._hostAddress
 
 
+@implementer(IListeningPort)
+@dataclass
+class _MemoryReactorUDPListener:
+    _memr: MemoryReactor
+    _host: IPv4Address | IPv6Address
+    _isListening: bool = True
+
+    def getHost(self) -> IPv4Address | IPv6Address:
+        return self._host
+
+    def startListening(self) -> None:
+        self._isListening = True
+
+    def stopListening(self) -> None:
+        self._isListening = False
+
+
 @implementer(IConnector)
 class _FakeConnector:
     """
@@ -472,6 +511,7 @@ class SynchronousResolver:
 @implementer(
     IReactorCore,
     IReactorTCP,
+    IReactorUDP,
     IReactorSSL,
     IReactorUNIX,
     IReactorSocket,
@@ -555,6 +595,7 @@ class MemoryReactor:
 
         self.tcpClients = []
         self.tcpServers = []
+        self.udpListeners = []
         self.sslClients = []
         self.sslServers = []
         self.unixClients = []
@@ -732,6 +773,25 @@ class MemoryReactor:
             address = IPv4Address("TCP", "0.0.0.0", port)
         return _FakePort(address)
 
+    udpListeners: list[tuple[int, DatagramProtocol, str, int, FakeDatagramTransport]]
+
+    def listenUDP(
+        self,
+        port: int,
+        protocol: DatagramProtocol,
+        interface: str = "0.0.0.0",
+        maxPacketSize: int = 8192,
+    ) -> IListeningPort:
+        address = (
+            IPv6Address("UDP", interface, port)
+            if isIPv6Address(interface)
+            else IPv4Address("UDP", interface, port)
+        )
+        transport = FakeDatagramTransport()
+        self.udpListeners.append((port, protocol, interface, maxPacketSize, transport))
+        protocol.makeConnection(transport)
+        return _MemoryReactorUDPListener(self, address)
+
     def connectTCP(self, host, port, factory, timeout=30, bindAddress=None):
         """
         Fake L{IReactorTCP.connectTCP}, that logs the call and
@@ -837,6 +897,40 @@ class MemoryReactor:
         self.readers.clear()
         self.writers.clear()
         return result
+
+    def deliverUDPTraffic(self) -> int:
+        """
+        Deliver all pending UDP traffic between senders and receivers
+        registered on this reactor.
+        """
+        deliveredCount = 1
+        totalDelivered = 0
+        while deliveredCount:
+            deliveredCount = 0
+            # TODO: enumerate dropped packets
+            # TODO: maybe integrate with IOPump
+            deliver: dict[
+                tuple[str, int], list[tuple[tuple[str, int], bytes]]
+            ] = defaultdict(list)
+            receivers = {}
+            for (
+                port,
+                dgramproto,
+                interface,
+                maxPacketSize,
+                transport,
+            ) in self.udpListeners:
+                transport.written, written = [], transport.written
+                for packet, key in written:
+                    deliver[key].append(((interface, port), packet))
+                receivers[(interface, port)] = dgramproto
+            for key, packets in deliver.items():
+                for srcaddr, packet in packets:
+                    deliveredCount += 1
+                    totalDelivered += 1
+                    receiver = receivers[key]
+                    receiver.datagramReceived(packet, srcaddr)
+        return totalDelivered
 
 
 for iface in implementedBy(MemoryReactor):

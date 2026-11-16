@@ -113,7 +113,6 @@ class SecondaryAuthority(FileAuthority):
     """
 
     transferring = False
-    soa = records = None
     _port = 53
     _reactor = None
 

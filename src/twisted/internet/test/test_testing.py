@@ -23,7 +23,7 @@ from twisted.internet.interfaces import (
     IReactorUNIX,
     ITransport,
 )
-from twisted.internet.protocol import ClientFactory, Factory
+from twisted.internet.protocol import ClientFactory, DatagramProtocol, Factory
 from twisted.internet.testing import (
     MemoryReactor,
     NonStreamingProducer,
@@ -350,6 +350,27 @@ class ReactorTests(TestCase):
         # already running.
         reactor.callWhenRunning(f, 2)
         self.assertEqual(called, [1, 2])
+
+    def test_udpState(self) -> None:
+        """
+        L{MemoryReactor.listenUDP} will connect the new UDP listener to a
+        transport.
+        """
+        proto = DatagramProtocol()
+        reactor = MemoryReactor()
+        listener = reactor.listenUDP(4321, proto, interface="127.0.0.9")
+        self.assertEqual(listener.getHost(), IPv4Address("UDP", "127.0.0.9", 4321))
+        self.assertEqual(listener._isListening, True)  # type:ignore[attr-defined]
+        listener.stopListening()
+        self.assertEqual(listener._isListening, False)  # type:ignore[attr-defined]
+        listener.startListening()
+        self.assertEqual(listener._isListening, True)  # type:ignore[attr-defined]
+        [[port, proto, interface, size, transport]] = reactor.udpListeners
+        self.assertIs(transport, proto.transport)
+        self.assertEqual(transport.getBroadcastAllowed(), False)
+        transport.setBroadcastAllowed(True)
+        self.assertEqual(transport.getBroadcastAllowed(), True)
+        self.assertIsInstance(transport.getHost(), IPv4Address)
 
 
 class TestConsumer:

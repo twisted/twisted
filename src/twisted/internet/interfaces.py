@@ -964,7 +964,10 @@ class IReactorUDP(Interface):
     """
 
     def listenUDP(
-        port: int, protocol: DatagramProtocol, interface: str, maxPacketSize: int
+        port: int,
+        protocol: DatagramProtocol,
+        interface: str = "",
+        maxPacketSize: int = ...,
     ) -> IListeningPort:
         """
         Connects a given L{DatagramProtocol} to the given numeric UDP port.
