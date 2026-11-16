@@ -1573,6 +1573,21 @@ class DirectoryListerTests(TestCase):
 </tr>"""
         self.assertIn(body, data)
 
+    def test_renderUnsupportedMethod(self):
+        """
+        L{static.DirectoryLister} rejects requests using a method other
+        than I{GET} or I{HEAD}, such as I{CONNECT}, with
+        L{UnsupportedMethod} instead of serving the listing.
+        """
+        path = FilePath(self.mktemp())
+        path.makedirs()
+
+        lister = static.DirectoryLister(path.path)
+        for method in (b"CONNECT", b"POST", b"PUT", b"DELETE"):
+            request = self._request(b"foo")
+            request.method = method
+            self.assertRaises(UnsupportedMethod, lister.render, request)
+
     def test_renderFiltered(self):
         """
         L{static.DirectoryLister} takes an optional C{dirs} argument that

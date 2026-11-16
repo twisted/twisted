@@ -1,0 +1,1 @@
+twisted.web.static.DirectoryLister no longer serves directory listings in response to arbitrary HTTP methods: it now only responds to GET and HEAD, and rejects other methods such as CONNECT with UnsupportedMethod (501), matching how twisted.web.static.File already handles unsupported methods for files.

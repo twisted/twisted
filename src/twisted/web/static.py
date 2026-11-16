@@ -1050,9 +1050,14 @@ h1 {padding: 0.1em; background-color: #777; color: white; border-bottom: thin wh
             tableContent.append(self.linePattern % element)
         return tableContent
 
-    def render(self, request):
+    def render_GET(self, request):
         """
         Render a listing of the content of C{self.path}.
+
+        Only I{GET} (and I{HEAD}, via the default implementation) are
+        supported; any other method, such as I{CONNECT}, is rejected with
+        L{error.UnsupportedMethod} by L{resource.Resource.render}, as it
+        is for the files themselves.
         """
         request.setHeader(b"content-type", b"text/html; charset=utf-8")
         if self.dirs is None:
