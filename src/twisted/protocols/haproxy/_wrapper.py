@@ -17,7 +17,7 @@ from ._v1parser import V1Parser
 from ._v2parser import V2Parser
 
 
-class HAProxyProtocolWrapper(policies.ProtocolWrapper):
+class HAProxyProtocolWrapper(policies.ProtocolWrapper[policies._P]):
     """
     A Protocol wrapper that provides HAProxy support.
 
@@ -28,8 +28,8 @@ class HAProxyProtocolWrapper(policies.ProtocolWrapper):
 
     def __init__(
         self,
-        factory: policies.WrappingFactory[Self],
-        wrappedProtocol: interfaces.IProtocol,
+        factory: policies.WrappingFactory[Self],  # type:ignore[type-var]
+        wrappedProtocol: policies._P,
     ):
         super().__init__(factory, wrappedProtocol)
         self._proxyInfo: _info.ProxyInfo | None = None

@@ -1177,13 +1177,15 @@ class OpenSSLOptionsTests(OpenSSLOptionsTestsMixin, TestCase):
         callback runs, even if it explodes with a totally unexpected error.
         """
         f = protocol.Factory.forProtocol(protocol.Protocol)
+        built = f.buildProtocol(IPv4Address("TCP", "192.168.1.1", 8123))
+        assert built is not None
         proto = TLSMemoryBIOProtocol(
             TLSMemoryBIOFactory(
                 optionsForClientTLS("just-testing"),
                 True,
                 f,
             ),
-            f.buildProtocol(IPv4Address("TCP", "192.168.1.1", 8123)),
+            built,
         )
         r = ref(proto)
         # intentional type check failure
