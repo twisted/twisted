@@ -486,7 +486,11 @@ class CopiedFailure(RemoteCopy, failure.Failure):
     """
 
     def setCopyableState(self, state):
-        state["_parents"] = state.pop("parents")
+        # Failures serialized by older versions of Twisted may not carry
+        # a "parents" entry at all; the attribute is computed lazily from
+        # the type in that case, so only translate it when present.
+        if "parents" in state:
+            state["_parents"] = state.pop("parents")
         return super().setCopyableState(state)
 
     def printTraceback(self, file=None, elideFrameworkCode=0, detail="default"):

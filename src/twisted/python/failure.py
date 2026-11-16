@@ -480,8 +480,13 @@ class Failure(BaseException):
     def __setstate__(self, state):
         if "stack" in state:
             state.pop("stack")
-        state["_parents"] = state.pop("parents")
-        state["_frames"] = state.pop("frames")
+        # States produced by older versions of Twisted may lack the
+        # "parents" or "frames" entries; both attributes are computed
+        # lazily when missing, so only translate them when present.
+        if "parents" in state:
+            state["_parents"] = state.pop("parents")
+        if "frames" in state:
+            state["_frames"] = state.pop("frames")
         self.__dict__.update(state)
 
     def __getstate__(self):

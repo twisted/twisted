@@ -967,6 +967,33 @@ class FilePagerizer(pb.Referenceable):
         self.args = self.kw = None
 
 
+class CopiedFailureTests(unittest.SynchronousTestCase):
+    """
+    Tests for L{pb.CopiedFailure}.
+    """
+
+    def test_setCopyableStateWithoutParents(self):
+        """
+        L{pb.CopiedFailure.setCopyableState} accepts a state whose
+        serialized failure has no C{parents} entry - as received from
+        peers running other Twisted versions, for example when a failure
+        is forwarded between them - instead of raising L{KeyError}.  The
+        missing attribute is computed lazily from the failure type.
+        """
+        state = {
+            "type": b"builtins.ValueError",
+            "value": "boom",
+            "traceback": "Traceback unavailable\n",
+            "frames": [],
+            "stack": [],
+            "tb": None,
+        }
+        copied = pb.CopiedFailure.__new__(pb.CopiedFailure)
+        copied.setCopyableState(state)
+        self.assertEqual(copied.value, "boom")
+        self.assertEqual(copied.parents, [b"builtins.ValueError"])
+
+
 class PagingTests(unittest.TestCase):
     """
     Test pb objects sending data by pages.

@@ -1,0 +1,1 @@
+Receiving a twisted.spread.pb CopiedFailure (or unpickling a twisted.python.failure.Failure) whose serialized state lacks the "parents" or "frames" entries - as can happen when failures are exchanged between different Twisted versions - no longer raises KeyError; the missing attributes are computed lazily instead.

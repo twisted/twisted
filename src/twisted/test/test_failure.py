@@ -575,6 +575,26 @@ class FailureTests(SynchronousTestCase):
         f = failure.Failure(ComparableException("hello"))
         self.assertEqual(f.__getstate__()["parents"], f.parents)
 
+    def test_setStateWithoutParentsOrFrames(self) -> None:
+        """
+        L{failure.Failure.__setstate__} accepts states which lack the
+        C{parents} or C{frames} entries - as produced by other Twisted
+        versions - instead of raising L{KeyError}; the missing attributes
+        are computed lazily.
+        """
+        state = {
+            "type": ComparableException,
+            "value": ComparableException("hello"),
+            "tb": None,
+        }
+        restored = failure.Failure.__new__(failure.Failure)
+        restored.__setstate__(state)
+        self.assertEqual(
+            restored.parents,
+            failure.Failure(ComparableException("hello")).parents,
+        )
+        self.assertEqual(restored.frames, [])
+
     def test_settableFrames(self) -> None:
         """
         C{Failure.frames} can be set, both before and after pickling.
