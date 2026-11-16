@@ -7,7 +7,6 @@
 Cred plugin for an in-memory user database.
 """
 
-
 from zope.interface import implementer
 
 from twisted import plugin

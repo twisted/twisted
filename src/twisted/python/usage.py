@@ -11,6 +11,7 @@ For information on how to use it, see
 U{http://twistedmatrix.com/projects/core/documentation/howto/options.html},
 or doc/core/howto/options.xhtml in your Twisted directory.
 """
+
 from __future__ import annotations
 
 import getopt
@@ -176,7 +177,7 @@ class Options(dict[str, Any]):
         ]
 
         for c in collectors:
-            (longOpt, shortOpt, docs, settings, synonyms, dispatch) = c()
+            longOpt, shortOpt, docs, settings, synonyms, dispatch = c()
             self.longOpt.extend(longOpt)
             self.shortOpt = self.shortOpt + shortOpt
             self.docs.update(docs)

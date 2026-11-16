@@ -8,7 +8,6 @@ Twisted Python Roots: an abstract hierarchy representation for Twisted.
 Maintainer: Glyph Lefkowitz
 """
 
-
 from twisted.python import reflect
 
 

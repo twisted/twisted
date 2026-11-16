@@ -5,7 +5,6 @@
 POSIX implementation of local network interface enumeration.
 """
 
-
 import socket
 import sys
 from ctypes import (

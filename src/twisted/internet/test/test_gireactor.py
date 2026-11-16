@@ -5,6 +5,7 @@
 GObject Introspection reactor tests; i.e. `gireactor` module for gio/glib/gtk
 integration.
 """
+
 from __future__ import annotations
 
 from unittest import skipIf

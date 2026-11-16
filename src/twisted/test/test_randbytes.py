@@ -4,6 +4,7 @@
 """
 Test cases for L{twisted.python.randbytes}.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -14,11 +15,9 @@ from twisted.trial import unittest
 
 
 class _SupportsAssertions(Protocol):
-    def assertEqual(self, a: object, b: object) -> object:
-        ...
+    def assertEqual(self, a: object, b: object) -> object: ...
 
-    def assertNotEqual(self, a: object, b: object) -> object:
-        ...
+    def assertNotEqual(self, a: object, b: object) -> object: ...
 
 
 class SecureRandomTestCaseBase:

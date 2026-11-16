@@ -5,7 +5,6 @@
 Tests for twisted.internet.glibbase.
 """
 
-
 import sys
 
 from twisted.internet._glibbase import ensureNotImported

@@ -6,7 +6,6 @@
 hosts(5) support.
 """
 
-
 from twisted.internet import defer
 from twisted.internet.abstract import isIPAddress, isIPv6Address
 from twisted.names import common, dns

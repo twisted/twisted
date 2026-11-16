@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_consumer} to test
 that process transports implement IConsumer properly.
 """
 
-
 import sys
 
 from twisted.internet import protocol, stdio

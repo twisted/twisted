@@ -111,7 +111,7 @@ class OptionsTests(SynchronousTestCase):
             # ours from the threaded resolver cleanup
             from twisted.internet import reactor
 
-            newTimedCalls = reactor._newTimedCalls  # type:ignore[attr-defined]
+            newTimedCalls = reactor._newTimedCalls  # type: ignore[attr-defined]
 
             for x in newTimedCalls:
                 self.assertEqual(x.func.__func__, ThreadedResolver._cleanup)

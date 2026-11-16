@@ -107,7 +107,7 @@ class IdentServer(basic.LineOnlyReceiver):
         ).addErrback(self._ebLookup, portOnServer, portOnClient)
 
     def _cbLookup(self, result, sport, cport):
-        (sysName, userId) = result
+        sysName, userId = result
         self.sendLine("%d, %d : USERID : %s : %s" % (sport, cport, sysName, userId))
 
     def _ebLookup(self, failure, sport, cport):
@@ -151,7 +151,7 @@ class ProcServerMixin:
     SYSTEM_NAME = "LINUX"
 
     try:
-        from pwd import getpwuid  # type:ignore[misc]
+        from pwd import getpwuid  # type: ignore[misc]
 
         def getUsername(self, uid, getpwuid=getpwuid):
             return getpwuid(uid)[0]

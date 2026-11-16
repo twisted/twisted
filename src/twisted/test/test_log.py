@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.python.log}.
 """
+
 from __future__ import annotations
 
 import calendar
@@ -327,8 +328,7 @@ class _LogPublisherTestCaseMixinBase(Protocol):
 
     def assertIsInstance(
         self, instance: object, classOrTuple: type, message: str
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class LogPublisherTestCaseMixin:
@@ -666,7 +666,7 @@ class FileObserverTests(LogPublisherTestCaseMixin, unittest.SynchronousTestCase)
             # in a weird edge case.  Ideally we would cover it in a
             # test-for-this-test but it normally shouldn't be run.
             if eventDict["isError"]:  # pragma: no cover
-                sys.__stdout__.write(  # type:ignore[union-attr]
+                sys.__stdout__.write(  # type: ignore[union-attr]
                     eventDict["failure"].getTraceback()
                 )
 

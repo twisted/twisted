@@ -1585,8 +1585,7 @@ class TLSProducerTests(TestCase):
             def __repr__(self) -> str:
                 return "has get context but broken"
 
-            def getContext(self) -> None:
-                ...
+            def getContext(self) -> None: ...
 
         class JustBroken:
             def __repr__(self) -> str:

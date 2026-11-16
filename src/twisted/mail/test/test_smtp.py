@@ -4,6 +4,7 @@
 """
 Test cases for twisted.mail.smtp module.
 """
+
 from __future__ import annotations
 
 import base64

@@ -6,6 +6,7 @@ Interfaces for L{twisted.mail}.
 
 @since: 16.5
 """
+
 from __future__ import annotations
 
 from typing import overload
@@ -143,12 +144,10 @@ class IMailboxPOP3(Interface):
     """
 
     @overload
-    def listMessages() -> list[int]:
-        ...
+    def listMessages() -> list[int]: ...
 
     @overload
-    def listMessages(i: int) -> int:
-        ...
+    def listMessages(i: int) -> int: ...
 
     def listMessages(i: int | None = None) -> int | list[int]:
         """

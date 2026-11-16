@@ -96,8 +96,7 @@ else:
 
     if TYPE_CHECKING:
         # never called on anything but Windows.
-        def _isreserved(x: AnyStr) -> bool:
-            ...
+        def _isreserved(x: AnyStr) -> bool: ...
 
 
 def _windowsChecks(path: AnyStr, norm: AnyStr) -> None:
@@ -458,7 +457,7 @@ class AbstractFilePath(Generic[AnyStr]):
             # It's not possible to tell mypy that child/clone etc must be
             # overridden to return respecializable forms of Self, but they
             # must, so we will say that they are.
-            child: Self = self.child(name)  # type:ignore[assignment]
+            child: Self = self.child(name)  # type: ignore[assignment]
             result.append(child)
         return result
 
@@ -531,7 +530,7 @@ class AbstractFilePath(Generic[AnyStr]):
 
         @since: 10.2
         """
-        path: AbstractFilePath[OtherAnyStr] = self  # type:ignore[assignment]
+        path: AbstractFilePath[OtherAnyStr] = self  # type: ignore[assignment]
         for name in segments:
             path = path.child(name)
         return path
@@ -556,12 +555,12 @@ class AbstractFilePath(Generic[AnyStr]):
         # work on win32 and for zipfiles; later I will deterimine if the
         # obvious fast implemenation does the right thing too
         f = self
-        p: Self = f.parent()  # type:ignore[assignment]
+        p: Self = f.parent()  # type: ignore[assignment]
         segments: list[AnyStr] = []
         while f != ancestor and p != f:
             segments[0:0] = [f.basename()]
             f = p
-            p = p.parent()  # type:ignore[assignment]
+            p = p.parent()  # type: ignore[assignment]
         if f == ancestor and segments:
             return segments
         raise ValueError(f"{ancestor!r} not parent of {self!r}")
@@ -793,33 +792,26 @@ class FilePath(AbstractFilePath[AnyStr]):
 
     if TYPE_CHECKING:
 
-        def sibling(self, path: OtherAnyStr) -> FilePath[OtherAnyStr]:
-            ...
+        def sibling(self, path: OtherAnyStr) -> FilePath[OtherAnyStr]: ...
 
-        def descendant(self, segments: Sequence[OtherAnyStr]) -> FilePath[OtherAnyStr]:
-            ...
+        def descendant(
+            self, segments: Sequence[OtherAnyStr]
+        ) -> FilePath[OtherAnyStr]: ...
 
-        def parents(self) -> Iterable[FilePath[AnyStr]]:
-            ...
+        def parents(self) -> Iterable[FilePath[AnyStr]]: ...
 
         # provided by @comparable
-        def __gt__(self, other: object) -> bool:
-            ...
+        def __gt__(self, other: object) -> bool: ...
 
-        def __ge__(self, other: object) -> bool:
-            ...
+        def __ge__(self, other: object) -> bool: ...
 
-        def __lt__(self, other: object) -> bool:
-            ...
+        def __lt__(self, other: object) -> bool: ...
 
-        def __le__(self, other: object) -> bool:
-            ...
+        def __le__(self, other: object) -> bool: ...
 
-        def __eq__(self, other: object) -> bool:
-            ...
+        def __eq__(self, other: object) -> bool: ...
 
-        def __ne__(self, other: object) -> bool:
-            ...
+        def __ne__(self, other: object) -> bool: ...
 
     def clonePath(
         self, path: OtherAnyStr, alwaysCreate: bool = False
@@ -1595,7 +1587,7 @@ class FilePath(AbstractFilePath[AnyStr]):
     def __cmp__(self, other: object) -> int | NotImplementedType:
         if not isinstance(other, FilePath):
             # https://github.com/python/mypy/issues/18914
-            return NotImplemented  # type:ignore[no-any-return]
+            return NotImplemented  # type: ignore[no-any-return]
         return cmp(self.path, other.path)
 
     def createDirectory(self) -> None:
@@ -1635,12 +1627,12 @@ class FilePath(AbstractFilePath[AnyStr]):
         return cast(IO[bytes], os.fdopen(fdint, "w+b"))
 
     @overload
-    def temporarySibling(self) -> FilePath[AnyStr]:
-        ...
+    def temporarySibling(self) -> FilePath[AnyStr]: ...
 
     @overload
-    def temporarySibling(self, extension: OtherAnyStr | None) -> FilePath[OtherAnyStr]:
-        ...
+    def temporarySibling(
+        self, extension: OtherAnyStr | None
+    ) -> FilePath[OtherAnyStr]: ...
 
     def temporarySibling(
         self, extension: OtherAnyStr | None = None
@@ -1666,7 +1658,7 @@ class FilePath(AbstractFilePath[AnyStr]):
         if extension is None:
             # It's not possible to provide a default type argument which is why
             # the overload is required.
-            ext = self.path[0:0]  # type:ignore[assignment]
+            ext = self.path[0:0]  # type: ignore[assignment]
         else:
             ext = extension
         ourPath = self._getPathAsSameTypeAs(ext)

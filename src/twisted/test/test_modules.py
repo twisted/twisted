@@ -5,6 +5,7 @@
 Tests for twisted.python.modules, abstract access to imported or importable
 objects.
 """
+
 from __future__ import annotations
 
 import compileall
@@ -27,8 +28,7 @@ from twisted.trial.unittest import TestCase
 
 
 class _SupportsWalkModules(Protocol):
-    def walkModules(self, importPackages: bool) -> Generator[modules.PythonModule]:
-        ...
+    def walkModules(self, importPackages: bool) -> Generator[modules.PythonModule]: ...
 
 
 class TwistedModulesTestCase(TwistedModulesMixin, TestCase):

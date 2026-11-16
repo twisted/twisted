@@ -5,7 +5,6 @@
 Tests for basic constructs of L{twisted.cred.credentials}.
 """
 
-
 from twisted.cred.credentials import (
     IUsernameHashedPassword,
     IUsernamePassword,

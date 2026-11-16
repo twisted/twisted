@@ -4,6 +4,7 @@
 """
 Shiny new words service maker
 """
+
 from __future__ import annotations
 
 import socket

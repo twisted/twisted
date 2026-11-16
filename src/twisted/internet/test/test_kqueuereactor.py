@@ -4,6 +4,7 @@
 """
 Tests for L{twisted.internet.kqueuereactor}.
 """
+
 from __future__ import annotations
 
 import errno

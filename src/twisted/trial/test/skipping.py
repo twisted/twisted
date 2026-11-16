@@ -11,7 +11,6 @@ See the L{twisted.trial.test.test_tests} module docstring for details about how
 this code is arranged.
 """
 
-
 from twisted.trial.unittest import FailTest, SkipTest, SynchronousTestCase, TestCase
 
 

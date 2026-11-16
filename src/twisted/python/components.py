@@ -29,7 +29,6 @@ which allow access to only the parts of another class defined by a specified
 interface.
 """
 
-
 from io import StringIO
 
 # zope3 imports

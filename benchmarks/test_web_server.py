@@ -50,18 +50,14 @@ def http11_server_empty_request(resource, benchmark):
         transport = StringTransport()
         protocol = factory.buildProtocol(None)
         protocol.makeConnection(transport)
-        protocol.dataReceived(
-            b"""\
+        protocol.dataReceived(b"""\
 GET / HTTP/1.1
 Host: example.com
 User-Agent: XXX
 Time: XXXX
 Content-Length: 0
 
-""".replace(
-                b"\n", b"\r\n"
-            )
-        )
+""".replace(b"\n", b"\r\n"))
         assert b"200 OK" in transport.io.getvalue()
 
     benchmark(go)
@@ -111,19 +107,13 @@ def test_http11_server_chunked_request(benchmark):
     """
     Benchmark receipt of a largeish chunked request.
     """
-    request = (
-        b"""\
+    request = b"""\
 GET / HTTP/1.1
 Host: example.com
 user-agent: XXX
 Transfer-encoding: chunked
 
-""".replace(
-            b"\n", b"\r\n"
-        )
-        + b"d\r\nHello, world!\r\n" * 100
-        + b"0\r\n\r\n"
-    )
+""".replace(b"\n", b"\r\n") + b"d\r\nHello, world!\r\n" * 100 + b"0\r\n\r\n"
     data = Data(b"Goodbye!\n", b"text/plain")
     factory = server.Site(data)
 
@@ -193,16 +183,12 @@ def test_http11_server_chunked_response(benchmark):
         transport = transportFactory()
         protocol = factory.buildProtocol(None)
         protocol.makeConnection(transport)
-        protocol.dataReceived(
-            b"""\
+        protocol.dataReceived(b"""\
 GET / HTTP/1.1
 host: example.com
 accept: *
 
-""".replace(
-                b"\n", b"\r\n"
-            )
-        )
+""".replace(b"\n", b"\r\n"))
         return transport
 
     # Sanity-check that the benchmark logic produces a chunked response.

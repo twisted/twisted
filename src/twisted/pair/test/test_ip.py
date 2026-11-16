@@ -79,10 +79,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"
@@ -144,10 +144,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"
@@ -161,10 +161,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x06\x07\x08\x09"
             + b"\x05\x04\x03\x02"
@@ -234,10 +234,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"
@@ -264,10 +264,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"
@@ -368,10 +368,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0A"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0a"  # protocol
             + b"FE"  # checksum
             + b"\x06\x07\x08\x09"
             + b"\x05\x04\x03\x02"
@@ -385,10 +385,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"
@@ -402,10 +402,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0F"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0f"  # protocol
             + b"FE"  # checksum
             + b"\x06\x07\x08\x09"
             + b"\x05\x04\x03\x02"
@@ -419,10 +419,10 @@ class IPTests(unittest.TestCase):
             b"\x54"  # ihl version
             + b"\x07"  # tos
             + b"\x00\x1a"  # tot_len
-            + b"\xDE\xAD"  # id
-            + b"\xBE\xEF"  # frag_off
-            + b"\xC0"  # ttl
-            + b"\x0A"  # protocol
+            + b"\xde\xad"  # id
+            + b"\xbe\xef"  # frag_off
+            + b"\xc0"  # ttl
+            + b"\x0a"  # protocol
             + b"FE"  # checksum
             + b"\x05\x06\x07\x08"
             + b"\x01\x02\x03\x04"

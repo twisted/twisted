@@ -9,7 +9,6 @@ The source-code-marshallin'est abstract-object-serializin'est persister
 this side of Marmalade!
 """
 
-
 import copyreg as copy_reg
 import re
 import types

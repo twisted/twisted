@@ -7,7 +7,6 @@
 Event Dispatching and Callback utilities.
 """
 
-
 from twisted.python import log
 from twisted.words.xish import xpath
 

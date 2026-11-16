@@ -5,6 +5,7 @@
 """
 IProxyInfo implementation.
 """
+
 from zope.interface import implementer
 
 import attr

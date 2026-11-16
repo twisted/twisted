@@ -5,6 +5,7 @@
 """
 Parser for 'haproxy:' string endpoint.
 """
+
 from collections.abc import Mapping
 
 from zope.interface import implementer

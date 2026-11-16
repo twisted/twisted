@@ -5,7 +5,6 @@
 Tests for L{twisted.application.service}.
 """
 
-
 from zope.interface import implementer
 from zope.interface.exceptions import BrokenImplementation
 from zope.interface.verify import verifyObject

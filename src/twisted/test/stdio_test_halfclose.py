@@ -8,7 +8,6 @@ L{twisted.test.test_stdio.StandardInputOutputTests.test_readConnectionLost} to
 test that IHalfCloseableProtocol.readConnectionLost works for stdio transports.
 """
 
-
 import sys
 
 from zope.interface import implementer

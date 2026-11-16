@@ -7,6 +7,7 @@ Implementation of the lowest-level Resource class.
 
 See L{twisted.web.pages} for some utility implementations.
 """
+
 from __future__ import annotations
 
 __all__ = [
@@ -39,12 +40,10 @@ class IResource(Interface):
     A web resource.
     """
 
-    isLeaf = Attribute(
-        """
+    isLeaf = Attribute("""
         Signal if this IResource implementor is a "leaf node" or not. If True,
         getChildWithDefault will not be called on this Resource.
-        """
-    )
+        """)
 
     def getChildWithDefault(name, request):
         """

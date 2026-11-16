@@ -105,8 +105,7 @@ CSFinalByte = _makeControlFunctionSymbols(
         ["EF", "SIMD", "DSR"],
         ["EA", None, "DAQ"],
     ],
-    doc=textwrap.dedent(
-        """
+    doc=textwrap.dedent("""
     Symbolic constants for all control sequence final bytes
     that do not imply intermediate bytes.  This happens to cover
     movement control sequences.
@@ -115,8 +114,7 @@ CSFinalByte = _makeControlFunctionSymbols(
     Character Sets", 5th Edition (June 1991).
 
     Each L{ValueConstant} maps a control sequence name to L{bytes}
-    """
-    ),
+    """),
 )
 
 
@@ -141,16 +139,14 @@ C1SevenBit = _makeControlFunctionSymbols(
         ["SS2", "PM"],
         ["SS3", "APC"],
     ],
-    doc=textwrap.dedent(
-        """
+    doc=textwrap.dedent("""
     Symbolic constants for all 7 bit versions of the C1 control functions
 
     See page 9 "Standard ECMA 48: Control Functions for Coded
     Character Sets", 5th Edition (June 1991).
 
     Each L{ValueConstant} maps a control sequence name to L{bytes}
-    """
-    ),
+    """),
 )
 
 

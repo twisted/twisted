@@ -556,7 +556,7 @@ class OpenSSHClientMixin:
             + " 127.0.0.1 "
             + remoteCommand
         )
-        port: int = self.conchServer.getHost().port  # type:ignore[attr-defined]
+        port: int = self.conchServer.getHost().port  # type: ignore[attr-defined]
         cmds = (cmdline % port).split()
         encodedCmds = []
         for cmd in cmds:

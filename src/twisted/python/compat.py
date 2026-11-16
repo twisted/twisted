@@ -21,7 +21,6 @@ the latest version of Python directly from your code, if possible.
     Python 3)
 """
 
-
 import inspect
 import os
 import platform

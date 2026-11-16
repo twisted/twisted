@@ -7,7 +7,6 @@ See how fast deferreds are.
 This is mainly useful to compare cdefer.Deferred to defer.Deferred
 """
 
-
 from timer import timeit
 
 from twisted.internet import defer

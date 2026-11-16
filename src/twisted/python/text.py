@@ -108,7 +108,7 @@ def greedyWrap(inString, width=80):
             else:
                 # We've gone too far, stop the line one word back.
                 ptr_line = ptr_line - 1
-            (l, inWords) = (inWords[0:ptr_line], inWords[ptr_line:])
+            l, inWords = (inWords[0:ptr_line], inWords[ptr_line:])
             outLines.append(" ".join(l))
 
             ptr_line = 0

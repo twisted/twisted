@@ -39,7 +39,7 @@ class MyPP(protocol.ProcessProtocol):
         print("outConnectionLost! The child closed their stdout!")
         # now is the time to examine what they wrote
         # print("I saw them write:", self.data)
-        (dummy, lines, words, chars, file) = re.split(r"\s+", self.data)
+        dummy, lines, words, chars, file = re.split(r"\s+", self.data)
         print("I saw %s lines" % lines)
 
     def errConnectionLost(self):

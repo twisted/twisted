@@ -11,6 +11,7 @@ Lookup the reverse DNS pointer records for one or more IP addresses.
 
 IPADDRESS: An IPv4 or IPv6 address.
 """
+
 import socket
 import sys
 
