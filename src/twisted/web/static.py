@@ -7,7 +7,6 @@ Static resources for L{twisted.web}.
 """
 from __future__ import annotations
 
-import errno
 import itertools
 import mimetypes
 import os
@@ -390,10 +389,9 @@ class File(resource.Resource, filepath.FilePath[str]):
             contentEncoding=self.encoding,
         )
 
-    def render_GET(self, request):
+    def _commonReadPreflight(self, request: http.Request) -> tuple[bool, Any]:
         """
-        Begin sending the contents of this L{File} (or a subset of the
-        contents, based on the 'range' header) to the given request.
+        The logic common to C{GET} and C{HEAD} requests.
         """
         self.restat(False)
 
@@ -406,20 +404,27 @@ class File(resource.Resource, filepath.FilePath[str]):
             )
 
         if not self.exists():
-            return self.childNotFound.render(request)
+            return False, self.childNotFound.render(request)
 
         if self.isdir():
-            return self.redirect(request)
+            return False, self.redirect(request)
 
         request.setHeader(b"accept-ranges", b"bytes")
+        return (True, None)
+
+    def render_GET(self, request: http.Request) -> Any:
+        """
+        Begin sending the contents of this L{File} (or a subset of the
+        contents, based on the 'range' header) to the given request.
+        """
+        keepGoing, earlyResult = self._commonReadPreflight(request)
+        if not keepGoing:
+            return earlyResult
 
         try:
             fileForReading = self.openForReading()
-        except OSError as e:
-            if e.errno == errno.EACCES:
-                return self.forbidden.render(request)
-            else:
-                raise
+        except PermissionError:
+            return self.forbidden.render(request)
 
         # I am now holding a hot potato; this file MUST be closed in order to
         # not leak a resource, but where do I close it?
@@ -431,21 +436,33 @@ class File(resource.Resource, filepath.FilePath[str]):
             fileForReading.close()
             return b""
 
-        if request.method == b"HEAD":
-            # Set the content headers here, rather than making a producer.
-            _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
-            # We've opened the file to make sure it's accessible, so close it
-            # now that we don't need it.
-            fileForReading.close()
-            return b""
-
         producer = self.makeProducer(request, fileForReading)
         producer.start()
 
         # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
-    render_HEAD = render_GET
+    def render_HEAD(self, request: http.Request) -> Any:
+        """
+        Get the status of this file and return a HEAD response.
+        """
+        keepGoing, earlyResult = self._commonReadPreflight(request)
+        if not keepGoing:
+            return earlyResult
+
+        try:
+            # This arguably ought to be using C{os.access} since there's no
+            # LBYL here, but FilePath doesn't expose that for us (yet?).
+            with self.openForReading():
+                pass
+        except PermissionError:
+            return self.forbidden.render(request)
+
+        # Set the content headers here, rather than making a producer.
+        _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
+        # We've opened the file to make sure it's accessible, so close it
+        # now that we don't need it.
+        return b""
 
     def redirect(self, request):
         return redirectTo(_addSlash(request), request)
