@@ -971,7 +971,6 @@ class StaticMakeProducerTests(TestCase):
             header = request.responseHeaders.getRawHeaders("content-type")
             assert header is not None
             producer.start()
-            producer.resumeProducing()
             boundary = extractMultipartBoundary(request)
             parts = parseMultipartBody(self, b"".join(request.written), boundary)
             self.assertEqual([part.body for part in parts], [b"ab", b"abc"])

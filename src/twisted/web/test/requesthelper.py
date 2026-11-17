@@ -20,6 +20,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IAddress, ISSLTransport
 from twisted.internet.task import Clock
 from twisted.python.deprecate import deprecated
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.web._responses import FOUND
 from twisted.web.http_headers import Headers
@@ -214,7 +215,7 @@ class DummyRequest:
     written: list[bytes]
     prepath: list[bytes]
     args: dict[bytes, list[bytes]]
-    _finishedDeferreds: list[Deferred[None]]
+    _finishedDeferreds: list[Deferred[None]] | None
 
     def registerProducer(self, prod, s):
         """
@@ -323,6 +324,8 @@ class DummyRequest:
             raise RuntimeError("Request.write must be called only before finish()")
         self.written.append(data)
 
+    _whatFinished: Failure | None = None
+
     def notifyFinish(self) -> Deferred[None]:
         """
         Return a L{Deferred} which is called back with L{None} when the request
@@ -330,7 +333,10 @@ class DummyRequest:
         C{finish} yet.
         """
         finished: Deferred[None] = Deferred()
-        self._finishedDeferreds.append(finished)
+        if self._finishedDeferreds is None:
+            finished.callback(self._whatFinished)
+        else:
+            self._finishedDeferreds.append(finished)
         return finished
 
     def finish(self):
@@ -350,6 +356,7 @@ class DummyRequest:
         Errback and L{Deferreds} waiting for finish notification.
         """
         if self._finishedDeferreds is not None:
+            self._whatFinished = reason
             observers = self._finishedDeferreds
             self._finishedDeferreds = None
             for obs in observers:
