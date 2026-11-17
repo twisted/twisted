@@ -14,9 +14,9 @@ from collections.abc import Sequence
 from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
+from typing import Any
 from unittest import skipIf
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
-from urllib.parse import urlparse, urlunsplit
+from urllib.parse import clear_cache, urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
@@ -40,7 +40,7 @@ from twisted.python.failure import Failure
 from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import http, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
@@ -3011,7 +3011,7 @@ class ClientStatusParsingTests(unittest.TestCase):
         self.assertEqual(c.message, b"")
 
 
-class RequestTests(unittest.TestCase, ResponseTestMixin):
+class RequestTests(SynchronousTestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
@@ -3815,6 +3815,19 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
         self.assertRaises(RuntimeError, req.finish)
+
+    def test_notifyFinishAfterFinish(self) -> None:
+        """
+        Calling L{Request.notifyFinish} after L{Request.connectionLost} has
+        been called results in the returned L{Deferred} being fired
+        synchronously, so that code which attaches to a request mid-flight can
+        clean up properly regardless of state.
+        """
+        channel: Any = DummyChannel()
+        req = http.Request(channel, False)
+        req.connectionLost(Failure(ConnectionLost("The end.")))
+        finished = req.notifyFinish()
+        self.assertIsNone(self.successResultOf(finished))
 
     def test_writeAfterConnectionLost(self):
         """
