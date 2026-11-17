@@ -174,7 +174,7 @@ class StaticFileTests(TestCase):
         file = static.File(path.path)
         self.assertRaises(UnsupportedMethod, file.render, request)
 
-    def test_notFound(self):
+    def test_notFoundChild(self) -> None:
         """
         If a request is made which encounters a L{File} before a final segment
         which does not correspond to any file in the path the L{File} was
@@ -186,14 +186,9 @@ class StaticFileTests(TestCase):
 
         request = DummyRequest([b"foobar"])
         child = resource.getChildForRequest(file, request)
-
         d = self._render(child, request)
-
-        def cbRendered(ignored):
-            self.assertEqual(request.responseCode, 404)
-
-        d.addCallback(cbRendered)
-        return d
+        self.successResultOf(d)
+        self.assertEqual(request.responseCode, 404)
 
     def test_emptyChild(self):
         """
@@ -254,7 +249,7 @@ class StaticFileTests(TestCase):
         return d
 
     @skipIf(platform.isWindows(), "Cannot remove read permission on Windows")
-    def test_forbiddenResource(self):
+    def test_forbiddenResource(self) -> None:
         """
         If the file in the filesystem which would satisfy a request cannot be
         read, L{File.render} sets the HTTP response code to I{FORBIDDEN}.
@@ -268,14 +263,36 @@ class StaticFileTests(TestCase):
         base.chmod(0)
 
         file = static.File(base.path)
-        request = DummyRequest([b""])
-        d = self._render(file, request)
 
-        def cbRendered(ignored):
+        def check(method: bytes) -> None:
+            request = DummyRequest([b""])
+            request.method = method
+            d = self._render(file, request)
+            self.successResultOf(d)
             self.assertEqual(request.responseCode, 403)
 
-        d.addCallback(cbRendered)
-        return d
+        check(b"GET")
+        check(b"HEAD")
+
+    def test_notFoundSelf(self) -> None:
+        """
+        If a static.File is created I{itself} with a nonexistent path in the
+        filesystem, it will render a 404 when requested directly for both HEAD
+        and GET requests.
+        """
+        temp = FilePath(self.mktemp())
+        nope = temp.child("does-not-exist")
+        file = static.File(nope.path)
+
+        def check(method: bytes) -> None:
+            request = DummyRequest([b""])
+            request.method = method
+            d = self._render(file, request)
+            self.successResultOf(d)
+            self.assertEqual(request.responseCode, 404)
+
+        check(b"GET")
+        check(b"HEAD")
 
     def test_undecodablePath(self):
         """
