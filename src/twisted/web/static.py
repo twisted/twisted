@@ -26,14 +26,31 @@ from twisted.python.url import URL
 from twisted.python.util import InsensitiveDict
 from twisted.web import http, resource, server
 from twisted.web.util import redirectTo
-from ._ranges import (
+
+# isort: off
+
+# Disabling isort here because it mangles and reorders comments, and each of
+# these imports has its own explanation.
+
+# Incidentally re-exported because these were previously part of the public
+# API.  Not mentioned in __all__.
+from ._ranges import (  # noqa:F401
     MultipleRangeStaticProducer,
     NoRangeStaticProducer,
     SingleRangeStaticProducer,
-    StaticProducer,
-    _setupRangeProducer,
-    _simpleContentHeaders,
 )
+
+# This one is re-exported on purpose below, because it's part of a public type
+# signature.
+from ._ranges import StaticProducer
+
+# This is our main *current* entry point into the _ranges module.
+from ._ranges import _setupRangeProducer
+
+# Called by request_HEAD to produce the same headers as request_GET.
+from ._ranges import _simpleContentHeaders
+
+# isort: on
 
 __all__ = [
     "dangerousPathError",
@@ -43,12 +60,8 @@ __all__ = [
     "Registry",
     "loadMimeTypes",
     "File",
-    # Re-export all the range proudcers that used to be defined here. We maybe
-    # should deprecate and remove these to reduce API surface.
+    # Intentionally exported because this is the type in a public interface.
     "StaticProducer",
-    "NoRangeStaticProducer",
-    "SingleRangeStaticProducer",
-    "MultipleRangeStaticProducer",
 ]
 
 dangerousPathError = resource._UnsafeNoResource("Invalid request URL.")
@@ -391,7 +404,19 @@ class File(resource.Resource, filepath.FilePath[str]):
 
     def _commonReadPreflight(self, request: http.Request) -> tuple[bool, Any]:
         """
-        The logic common to C{GET} and C{HEAD} requests.
+        The pre-flight logic common to C{GET} and C{HEAD} requests:
+
+            1. determine the content-type
+
+            2. determine whether this file exists at all
+
+            3. determine whether this file is a directory and ought to serve a
+               slash-adding redirect rather than static content
+
+            4. finally, set the accept-ranges header and return
+
+        @return: a 2-tuple of a boolean of "should we keep going" and what to
+            return if we should not keep going.
         """
         self.restat(False)
 
