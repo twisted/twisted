@@ -20,7 +20,8 @@ from unittest import skipIf
 from zope.interface.verify import verifyObject
 
 from twisted.internet import abstract, interfaces
-from twisted.python import compat, log
+from twisted.logger import capturedLogs, formatEvent
+from twisted.python import compat
 from twisted.python.compat import networkString
 from twisted.python.filepath import FilePath
 from twisted.python.runtime import platform
@@ -1355,27 +1356,11 @@ class RangeTests(TestCase):
         )
         path.setContent(self.payload)
         self.file = path.open()
+        self.addCleanup(self.file.close)
         self.resource = static.File(self.file.name)
         self.resource.isLeaf = 1
         self.request = DummyRequest([b""])
         self.request.uri = self.file.name
-        self.catcher = []
-        log.addObserver(self.catcher.append)
-
-    def tearDown(self):
-        """
-        Clean up the resource file and the log observer.
-        """
-        self.file.close()
-        log.removeObserver(self.catcher.append)
-
-    def _assertLogged(self, expected):
-        """
-        Asserts that a given log message occurred with an expected message.
-        """
-        logItem = self.catcher.pop()
-        self.assertEqual(logItem["message"][0], expected)
-        self.assertEqual(self.catcher, [], f"An additional log occurred: {logItem!r}")
 
     def test_invalidRanges(self) -> None:
         """
@@ -1468,9 +1453,12 @@ class RangeTests(TestCase):
         and a normal 200 response being sent.
         """
         self.request.requestHeaders.addRawHeader(b"range", invalidRange)
-        self.resource.render(self.request)
-        expected = f"Ignoring malformed Range header {invalidRange.decode('latin-1')!r}"
-        self._assertLogged(expected)
+        with capturedLogs() as l:
+            self.resource.render(self.request)
+        self.assertEqual(
+            [formatEvent(each) for each in l],
+            [f"Ignoring malformed Range header {invalidRange.decode('latin-1')!r}"],
+        )
         self.assertEqual(b"".join(self.request.written), self.payload)
         self.assertEqual(self.request.responseCode, http.OK)
         self.assertEqual(

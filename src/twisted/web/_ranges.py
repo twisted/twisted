@@ -12,8 +12,10 @@ from typing import IO
 from zope.interface import implementer
 
 from twisted.internet import abstract, interfaces
-from twisted.python import log
+from twisted.logger import Logger
 from twisted.web import http
+
+log = Logger()
 
 validRange = tuple[int, int] | tuple[None, int] | tuple[int, None]
 ranges = list[validRange]
@@ -77,7 +79,10 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
     """
 
     def invalid(reason: str | None = None) -> ranges:
-        log.msg(f"Ignoring malformed Range header {rangeHeader.decode('charmap')!r}")
+        log.warn(
+            "Ignoring malformed Range header {rangeHeader!r}",
+            rangeHeader=rangeHeader.decode("charmap"),
+        )
         return []
 
     try:
@@ -410,12 +415,16 @@ class MultipleRangeStaticProducer(StaticProducer):
         Initialize the instance.
 
         @param request: See L{StaticProducer}.
+
         @param fileObject: See L{StaticProducer}.
-        @param rangeInfo: A list of tuples C{[(boundary, offset, size)]}
-            where:
-             - C{boundary} will be written to the request first.
-             - C{offset} the offset into the file of chunk to write.
-             - C{size} the size of the chunk to write.
+
+        @param rangeInfo: A list of tuples C{[(boundary, offset, size)]} where:
+
+            - C{boundary} will be written to the request first.
+
+            - C{offset} the offset into the file of chunk to write.
+
+            - C{size} the size of the chunk to write.
         """
         StaticProducer.__init__(self, request, fileObject)
         self.rangeInfo = rangeInfo
@@ -477,26 +486,25 @@ class MultipleRangeStaticProducer(StaticProducer):
 
 def _setupRangeProducer(
     request: http.Request,
-    fileForReading: IO[bytes],
-    fullFileSize: int,
+    openFile: IO[bytes],
+    fileSize: int,
     contentType: str | None,
     contentEncoding: str | None,
 ) -> StaticProducer:
-    byteRange = request.getHeader(b"range")
-    parsedRanges = _parseRangeHeader(byteRange or b"")
-    if len(parsedRanges) == 0:
-        return _setupNoRange(
-            request, fullFileSize, fileForReading, contentType, contentEncoding
-        )
-    if len(parsedRanges) == 1:
-        return _setupSingleRange(
-            request,
-            parsedRanges[0],
-            fullFileSize,
-            fileForReading,
-            contentType,
-            contentEncoding,
-        )
-    return _setupMultiRange(
-        request, parsedRanges, fullFileSize, fileForReading, contentType
-    )
+    """
+    Determine an appropriate L{IProducer} implementation to use, create it, and
+    set up any headers on the given L{http.Request}.
+    """
+    match _parseRangeHeader(request.getHeader(b"range") or b""):
+        case []:
+            return _setupNoRange(
+                request, fileSize, openFile, contentType, contentEncoding
+            )
+        case [oneRange]:
+            return _setupSingleRange(
+                request, oneRange, fileSize, openFile, contentType, contentEncoding
+            )
+        case list(parsedRanges):
+            return _setupMultiRange(
+                request, parsedRanges, fileSize, openFile, contentType
+            )

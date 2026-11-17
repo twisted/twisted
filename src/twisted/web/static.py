@@ -397,7 +397,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         return _setupRangeProducer(
             request,
             fileForReading,
-            fullFileSize=self.getFileSize(),
+            fileSize=self.getFileSize(),
             contentType=self.type,
             contentEncoding=self.encoding,
         )
