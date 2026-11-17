@@ -114,7 +114,7 @@ from email import message_from_bytes
 from email.message import EmailMessage, Message
 from io import BufferedIOBase, BytesIO, TextIOWrapper
 from time import gmtime, time
-from typing import AnyStr, Protocol as TypingProtocol
+from typing import AnyStr, BinaryIO, Protocol as TypingProtocol
 from urllib.parse import (
     ParseResultBytes,
     unquote_to_bytes as unquote,
@@ -914,7 +914,8 @@ class Request:
     lastModified = None
     args = None
     path: bytes = None  # type:ignore[assignment]
-    content = None
+    content: BinaryIO | None = None
+    channel: HTTPChannel | None
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
@@ -974,8 +975,16 @@ class Request:
                 # win32 suckiness, no idea why it does this
                 pass
             del self.content
+        self._doFinishNotify(None)
+
+    _wasFinishNotified: bool = False
+    _finishNotifyResult: None | Failure = None
+
+    def _doFinishNotify(self, why: Failure | None) -> None:
+        self._wasFinishNotified = True
+        self._finishNotifyResult = why
         for d in self.notifications:
-            d.callback(None)
+            d.callback(why)
         self.notifications = []
 
     # methods for channel - end users should not use these
@@ -1214,8 +1223,12 @@ class Request:
             successfully or with an error if the request is interrupted by an
             error (for example, the client closing the connection prematurely).
         """
-        self.notifications.append(Deferred())
-        return self.notifications[-1]
+        result: Deferred[None] = Deferred()
+        if self._wasFinishNotified:
+            result.callback(self._finishNotifyResult)
+        else:
+            self.notifications.append(result)
+        return result
 
     def finish(self):
         """
@@ -1724,7 +1737,7 @@ class Request:
         self._authorize()
         return self.password
 
-    def connectionLost(self, reason):
+    def connectionLost(self, reason: Failure) -> None:
         """
         There is no longer a connection for this request to respond over.
         Clean up anything which can't be useful anymore.
@@ -1733,9 +1746,7 @@ class Request:
         self.channel = None
         if self.content is not None:
             self.content.close()
-        for d in self.notifications:
-            d.errback(reason)
-        self.notifications = []
+        self._doFinishNotify(reason)
 
     def loseConnection(self):
         """

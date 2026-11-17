@@ -3767,17 +3767,17 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         req.registerProducer(producer, False)
         self.assertEqual([(producer, False)], req.transport.producers)
 
-    def test_connectionLostNotification(self):
+    def test_connectionLostNotification(self) -> None:
         """
         L{Request.connectionLost} triggers all finish notification Deferreds
         and cleans up per-request state.
         """
-        d = DummyChannel()
+        d: Any = DummyChannel()
         request = http.Request(d, True)
         finished = request.notifyFinish()
         request.connectionLost(Failure(ConnectionLost("Connection done")))
         self.assertIdentical(request.channel, None)
-        return self.assertFailure(finished, ConnectionLost)
+        self.failureResultOf(finished, ConnectionLost)
 
     def test_finishNotification(self):
         """
@@ -3825,9 +3825,10 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         """
         channel: Any = DummyChannel()
         req = http.Request(channel, False)
-        req.connectionLost(Failure(ConnectionLost("The end.")))
+        it = Failure(ConnectionLost("The end."))
+        req.connectionLost(it)
         finished = req.notifyFinish()
-        self.assertIsNone(self.successResultOf(finished))
+        self.assertIdentical(it, self.failureResultOf(finished))
 
     def test_writeAfterConnectionLost(self):
         """
