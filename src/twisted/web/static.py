@@ -33,7 +33,7 @@ from twisted.web.util import redirectTo
 # these imports has its own explanation.
 
 # Incidentally re-exported because these were previously part of the public
-# API.  Not mentioned in __all__.
+# API.  Not mentioned in __all__, but not deprecated yet.
 from ._ranges import (  # noqa:F401
     MultipleRangeStaticProducer,
     NoRangeStaticProducer,
