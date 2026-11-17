@@ -320,8 +320,7 @@ class DummyRequest:
     def write(self, data):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
-        if self.finished:
-            raise RuntimeError("Request.write must be called only before finish()")
+        assert not self.finished, "Request.write must be called only before finish()"
         self.written.append(data)
 
     _whatFinished: Failure | None = None
