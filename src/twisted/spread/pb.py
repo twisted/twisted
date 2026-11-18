@@ -1257,10 +1257,10 @@ def respond(challenge, password):
     @param password: A password.
     @return: The password hashed twice.
     """
-    m = md5()
+    m = md5(usedforsecurity=False)
     m.update(password)
     hashedPassword = m.digest()
-    m = md5()
+    m = md5(usedforsecurity=False)
     m.update(hashedPassword)
     m.update(challenge)
     doubleHashedPassword = m.digest()
@@ -1273,7 +1273,7 @@ def challenge():
     @return: Some random data.
     """
     crap = bytes(random.randint(65, 90) for x in range(random.randrange(15, 25)))
-    crap = md5(crap).digest()
+    crap = md5(crap, usedforsecurity=False).digest()
     return crap
 
 
@@ -1620,7 +1620,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
         @param password: The password.
         @return: L{_PortalAuthChallenger.checkMD5Password}
         """
-        return self.checkMD5Password(md5(password).digest())
+        return self.checkMD5Password(md5(password, usedforsecurity=False).digest())
 
     def checkMD5Password(self, md5Password):
         """
@@ -1630,7 +1630,7 @@ class _PortalAuthChallenger(Referenceable, _JellyableAvatarMixin):
         @rtype: L{bool}
         @return: L{True} if password matches.
         """
-        md = md5()
+        md = md5(usedforsecurity=False)
         md.update(md5Password)
         md.update(self.challenge)
         correct = md.digest()
