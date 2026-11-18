@@ -156,13 +156,21 @@ class ResolverBase:
     def getHostByName(self, name, timeout=None, effort=10):
         name = dns.domainString(name)
         # XXX - respect timeout
-        # XXX - this should do A and AAAA lookups, not ANY (see RFC 8482).
-        # https://twistedmatrix.com/trac/ticket/9691
-        d = self.lookupAllRecords(name, timeout)
-        d.addCallback(self._cbRecords, name, effort)
+        d = self.lookupAddress(name, timeout)
+        d.addCallback(self._cbRecordsA, name, effort, timeout)
         return d
 
-    def _cbRecords(self, records, name, effort):
+    def _cbRecordsA(self, records, name, effort, timeout):
+        (ans, auth, add) = records
+        result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
+        if not result:
+            # if A lookup doesn't provide IP then lookup AAAA
+            d = self.lookupIPV6Address(name, timeout)
+            d.addCallback(self._cbRecordsAAAA, name, effort)
+            return d
+        return result
+
+    def _cbRecordsAAAA(self, records, name, effort):
         (ans, auth, add) = records
         result = extractRecord(self, dns.Name(name), ans + auth + add, effort)
         if not result:
