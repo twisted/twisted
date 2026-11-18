@@ -1,0 +1,1 @@
+twisted.internet.endpoint.serverFromString now supports defining a cipher list. 
