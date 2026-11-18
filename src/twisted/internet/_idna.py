@@ -28,7 +28,7 @@ def _idnaBytes(text: str) -> bytes:
     except ImportError:
         return text.encode("idna")
     else:
-        return idna.encode(text)
+        return idna.encode(text, uts46=True, transitional=True)
 
 
 def _idnaText(octets: bytes) -> str:
@@ -48,4 +48,4 @@ def _idnaText(octets: bytes) -> str:
     except ImportError:
         return octets.decode("idna")
     else:
-        return idna.decode(octets)
+        return idna.decode(octets, uts46=True)
