@@ -23,7 +23,7 @@ ValidRanges = list[ValidRange]
 MimeRanges = list[tuple[bytes, int, int]]
 
 
-def _rangeToOffsetAndSize(
+def _rangeToOffsetAndLength(
     size: int, start: int | None, end: int | None
 ) -> tuple[int, int]:
     """
@@ -45,6 +45,8 @@ def _rangeToOffsetAndSize(
     If this range doesn't overlap with any of this resource, C{(0, 0)} is
     returned, which is not otherwise a value return value.
 
+    @param size: The total size of the resource.
+
     @param start: The start value from the header, or L{None} if one was not
         present.
 
@@ -55,19 +57,20 @@ def _rangeToOffsetAndSize(
         resource the range begins and size is how long the range is, or C{(0,
         0)} if the range does not overlap this resource.
     """
-    if start is None:
-        assert end is not None, "start and end cannot both be None"
-        start = max(0, size - end)
-        end = size
-    elif end is None:
-        end = size
-    elif end < size:
-        end += 1
-    elif end > size:
-        end = size
-    if start >= size:
-        start = end = 0
-    return start, (end - start)
+    match (start, end):
+        case (int(offset), int(ending)):
+            # range is inclusive so length is increased by 1
+            ending = ending + 1 if ending < size else size
+        case (None, int(fromEnd)):
+            offset = max(0, size - fromEnd)
+            ending = size
+        case (int(offset), None):
+            ending = size
+        case (None, None):
+            assert False, "cannot happen"
+    if offset >= size:
+        return (0, 0)
+    return (offset, ending - offset)
 
 
 def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
@@ -264,7 +267,7 @@ def _setupSingleRange(
         == size == 0 indicates that the request is not satisfiable.
     """
     start, end = startAndEnd
-    offset, size = _rangeToOffsetAndSize(fullFileSize, start, end)
+    offset, size = _rangeToOffsetAndLength(fullFileSize, start, end)
     if offset == size == 0:
         _notSatisfiableFor(request, fullFileSize)
     else:
@@ -365,7 +368,7 @@ def _setupMultiRange(
     if not contentType:
         contentType = "bytes"  # Do what Apache HTTPD does.
     for start, end in byteRanges:
-        partOffset, partSize = _rangeToOffsetAndSize(fullFileSize, start, end)
+        partOffset, partSize = _rangeToOffsetAndLength(fullFileSize, start, end)
         if partOffset == partSize == 0:
             continue
         contentLength += partSize
