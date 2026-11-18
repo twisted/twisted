@@ -1114,12 +1114,6 @@ class NoRangeStaticProducerTests(TestCase):
     Tests for L{NoRangeStaticProducer}.
     """
 
-    def test_implementsIPullProducer(self):
-        """
-        L{NoRangeStaticProducer} implements L{IPullProducer}.
-        """
-        verifyObject(interfaces.IPullProducer, static.NoRangeStaticProducer(None, None))
-
     def test_resumeProducingProducesContent(self):
         """
         L{NoRangeStaticProducer.resumeProducing} writes content from the

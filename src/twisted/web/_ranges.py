@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import time
+from io import SEEK_END, SEEK_SET
 from typing import IO
 
 from zope.interface import implementer
@@ -204,32 +205,10 @@ def _setupNoRange(
     fileForReading: IO[bytes],
     contentType: str | None,
     contentEncoding: str | None,
-) -> NoRangeStaticProducer:
+) -> SingleRangeStaticProducer:
     request.setResponseCode(http.OK)
     _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
-    return NoRangeStaticProducer(request, fileForReading)
-
-
-class NoRangeStaticProducer(StaticProducer):
-    """
-    A L{StaticProducer} that writes the entire file to the request.
-    """
-
-    def resumeProducing(self) -> None:
-        if self.request is None:
-            raise RuntimeError("request must not be done to resume producing")
-        data = self.fileObject.read(self.bufferSize)
-        if data:
-            # this .write will spin the reactor, calling .doWrite and then
-            # .resumeProducing again, so be prepared for a re-entrant call
-            self.request.write(data)
-            """
-            There's another bug here: we just keep writing until the data runs
-            out.  Which means that if someone appends to the file, we will
-            write longer than content-length.
-            """
-        else:
-            self.request.finish()
+    return SingleRangeStaticProducer(request, fileForReading, 0, fullFileSize)
 
 
 def _contentRange(offset: int, size: int, fullFileSize: int) -> bytes:
@@ -342,6 +321,19 @@ class SingleRangeStaticProducer(StaticProducer):
             self.request.write(data)
         if (self.request and self.bytesWritten == self.size) or (not data):
             self.request.finish()
+
+
+class NoRangeStaticProducer(SingleRangeStaticProducer):
+    """
+    Only re-exposed to satisfy existing tests and API compatibility surface.
+    """
+
+    def __init__(self, request: http.Request, fileObject: IO[bytes]) -> None:
+        here = fileObject.tell()
+        fileObject.seek(SEEK_END, 0)
+        size = fileObject.tell()
+        fileObject.seek(SEEK_SET, here)
+        super().__init__(request, fileObject, 0, size)
 
 
 def _setupMultiRange(
