@@ -39,10 +39,27 @@ class SSHConnection(service.SSHService):
     @ivar deferreds: a L{dict} mapping a local channel ID to a C{list} of
         C{Deferreds} for outstanding channel requests.  Also, the 'global'
         key stores the C{list} of pending global request C{Deferred}s.
+    @ivar MINIMUM_PACKET_SIZE: the minimum allowed size for an SSH packet.
+        When the server returns an SSH_CHANNEL_OPEN_CONFIRMATION with a smaller
+        value, the connection is closed.  Should be greater than 0.
+        Allows setting a lower value for backward compatibility with
+        legacy/embedded SSH servers.
+    @ivar MAXIMUM_PACKET_SIZE: the maximum allowed size for an SSH packet.
+        When the server returns an SSH_CHANNEL_OPEN_CONFIRMATION with a larger
+        value, the connection is closed.
+        Reject large packet to prevent filling up the memory.
+        Allows setting a larger value for better performance.
     """
 
     name = b"ssh-connection"
     _log = Logger()
+
+    # RFC 4253 Section-6.1
+    # https://datatracker.ietf.org/doc/html/rfc4253#section-6.1
+    MINIMUM_PACKET_SIZE = 32768
+    # RFC 4253 Section-6.1 only talks about reasonable size.
+    # Behave like OpenSSH.
+    MAXIMUM_PACKET_SIZE = 256 * 1024
 
     def __init__(self):
         self.localChannelID = 0  # this is the current # to use for channel ID
@@ -195,11 +212,29 @@ class SSHConnection(service.SSHService):
         (localChannel, remoteChannel, windowSize, maxPacket) = struct.unpack(
             ">4L", packet[:16]
         )
+
         specificData = packet[16:]
         channel = self.channels[localChannel]
-        channel.conn = self
         self.localToRemoteChannel[localChannel] = remoteChannel
         self.channelsToRemoteChannel[channel] = remoteChannel
+
+        if maxPacket < self.MINIMUM_PACKET_SIZE:
+            channel.openFailed(
+                error.ConchError("server requested maximum packet size too small")
+            )
+            self.sendEOF(channel)
+            self.sendClose(channel)
+            return
+
+        if maxPacket > self.MAXIMUM_PACKET_SIZE:
+            channel.openFailed(
+                error.ConchError("server requested maximum packet size too big")
+            )
+            self.sendEOF(channel)
+            self.sendClose(channel)
+            return
+
+        channel.conn = self
         channel.remoteWindowLeft = windowSize
         channel.remoteMaxPacket = maxPacket
         channel.channelOpen(specificData)
