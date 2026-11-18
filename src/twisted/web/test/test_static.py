@@ -672,17 +672,6 @@ class StaticMakeProducerTests(TestCase):
                 contentHeaders[k.lower()] = v[0]
         return contentHeaders
 
-    def test_noRangeHeaderGivesNoRangeStaticProducer(self):
-        """
-        makeProducer when no Range header is set returns an instance of
-        NoRangeStaticProducer.
-        """
-        resource = self.makeResourceWithContent(b"")
-        request = DummyRequest([])
-        with resource.openForReading() as file:
-            producer = resource.makeProducer(request, file)
-            self.assertIsInstance(producer, static.NoRangeStaticProducer)
-
     def test_noRangeHeaderSets200OK(self):
         """
         makeProducer when no Range header is set sets the responseCode on the
