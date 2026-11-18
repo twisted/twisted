@@ -330,9 +330,9 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
 
     def __init__(self, request: http.Request, fileObject: IO[bytes]) -> None:
         here = fileObject.tell()
-        fileObject.seek(SEEK_END, 0)
+        fileObject.seek(0, SEEK_END)
         size = fileObject.tell()
-        fileObject.seek(SEEK_SET, here)
+        fileObject.seek(here, SEEK_SET)
         super().__init__(request, fileObject, 0, size)
 
 
