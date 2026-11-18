@@ -406,14 +406,16 @@ class File(resource.Resource, filepath.FilePath[str]):
         """
         The pre-flight logic common to C{GET} and C{HEAD} requests:
 
-            1. determine the content-type
+            1. refresh filesystem stat() information
 
-            2. determine whether this file exists at all
+            2. determine the content-type
 
-            3. determine whether this file is a directory and ought to serve a
+            3. determine whether this file exists at all
+
+            4. determine whether this file is a directory and ought to serve a
                slash-adding redirect rather than static content
 
-            4. finally, set the accept-ranges header and return
+            5. finally, set the accept-ranges header and return
 
         @return: a 2-tuple of a boolean of "should we keep going" and what to
             return if we should not keep going.
