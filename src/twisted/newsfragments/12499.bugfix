@@ -1,0 +1,1 @@
+In case of cancelling deferred returned from twisted.web.client.readBody() suppressed unhandled exception in twisted.web.client_ReadBodyProtocol.connectionLost method
