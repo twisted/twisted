@@ -224,8 +224,26 @@ class DNSServerFactory(protocol.ServerFactory):
             authority = []
         if additional is None:
             additional = []
+
+        # This authoritativeAnswer logic might not be entirely correct
+        # In RFC 1035 section 4.1.1 it states:
+        #       Authoritative Answer - this bit is valid in responses,
+        #       and specifies that the responding name server is an
+        #       authority for the domain name in question section.
+        #
+        #       Note that the contents of the answer section may have
+        #       multiple owner names because of aliases.  The AA bit
+        #       corresponds to the name which matches the query name, or
+        #       the first owner name in the answer section.
+        # So, we should look at the queried domain and check that it is in the
+        # zone for which the resolver is authoritative.
+
         authoritativeAnswer = False
         for x in answers:
+            if x.isAuthoritative():
+                authoritativeAnswer = True
+                break
+        for x in authority:
             if x.isAuthoritative():
                 authoritativeAnswer = True
                 break
@@ -269,7 +287,7 @@ class DNSServerFactory(protocol.ServerFactory):
         is C{>1}.
 
         @param response: Answer records, authority records and additional records
-        @type response: L{tuple} of L{list} of L{dns.RRHeader} instances
+        @type response: L{ResolverResponse} instance
 
         @param protocol: The DNS protocol instance to which to send a response
             message.
@@ -283,9 +301,14 @@ class DNSServerFactory(protocol.ServerFactory):
             or L{None} if C{protocol} is a stream protocol.
         @type address: L{tuple} or L{None}
         """
-        ans, auth, add = response
+        rcode, ans, auth, add = (
+            response.response_code,
+            response.answer,
+            response.authority,
+            response.additional,
+        )
         response = self._responseFromMessage(
-            message=message, rCode=dns.OK, answers=ans, authority=auth, additional=add
+            message=message, rCode=rcode, answers=ans, authority=auth, additional=add
         )
         self.sendReply(protocol, response, address)
 
