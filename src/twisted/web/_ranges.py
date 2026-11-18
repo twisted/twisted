@@ -18,8 +18,9 @@ from twisted.web import http
 
 log = Logger()
 
-validRange = tuple[int, int] | tuple[None, int] | tuple[int, None]
-ranges = list[validRange]
+ValidRange = tuple[int, int] | tuple[None, int] | tuple[int, None]
+ValidRanges = list[ValidRange]
+MimeRanges = list[tuple[bytes, int, int]]
 
 
 def _rangeToOffsetAndSize(
@@ -69,7 +70,7 @@ def _rangeToOffsetAndSize(
     return start, (end - start)
 
 
-def _parseRangeHeader(rangeHeader: bytes) -> ranges:
+def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
     """
     Parse the value of a Range header into (start, stop) pairs.
 
@@ -79,7 +80,7 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
     @return: A list C{[(start, stop)]} of pairs.
     """
 
-    def invalid(reason: str | None = None) -> ranges:
+    def invalid(reason: str | None = None) -> ValidRanges:
         log.warn(
             "Ignoring malformed Range header {rangeHeader!r}",
             rangeHeader=rangeHeader.decode("charmap"),
@@ -94,7 +95,7 @@ def _parseRangeHeader(rangeHeader: bytes) -> ranges:
     if kind != b"bytes":
         return invalid(f"Unsupported Bytes-Unit: {kind!r}")
     unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
-    parsedRanges: ranges = []
+    parsedRanges: ValidRanges = []
 
     for byteRange in unparsedRanges:
         start: int | None = None
@@ -240,7 +241,7 @@ def _notSatisfiableFor(request: http.Request, fullFileSize: int) -> None:
 
 def _setupSingleRange(
     request: http.Request,
-    startAndEnd: validRange,
+    startAndEnd: ValidRange,
     fullFileSize: int,
     fileForReading: IO[bytes],
     contentType: str | None,
@@ -338,7 +339,7 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
 
 def _setupMultiRange(
     request: http.Request,
-    byteRanges: ranges,
+    byteRanges: ValidRanges,
     fullFileSize: int,
     fileForReading: IO[bytes],
     contentType: str | None,
@@ -358,7 +359,7 @@ def _setupMultiRange(
 
     @return: See above.
     """
-    rangeInfo: list[tuple[bytes, int, int]] = []
+    rangeInfo: MimeRanges = []
     contentLength = 0
     boundary = f"{int(time.time() * 1000000):x}{os.getpid():x}".encode()
     if not contentType:
@@ -401,7 +402,7 @@ class MultipleRangeStaticProducer(StaticProducer):
         self,
         request: http.Request,
         fileObject: IO[bytes],
-        rangeInfo: list[tuple[bytes, int, int]],
+        rangeInfo: MimeRanges,
     ):
         """
         Initialize the instance.
