@@ -476,7 +476,7 @@ def _setupRangeProducer(
             return _setupSingleRange(
                 request, oneRange, fileSize, openFile, contentType, contentEncoding
             )
-        case list(parsedRanges):
+        case [*parsedRanges]:
             return _setupMultiRange(
                 request, parsedRanges, fileSize, openFile, contentType
             )
