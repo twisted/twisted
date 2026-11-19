@@ -846,8 +846,14 @@ def _getContentFile(length):
 _hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 
 
-@implementer(interfaces.IConsumer, _IDeprecatedHTTPChannelToRequestInterface)
-class Request:
+@implementer(
+    IRequest,
+    interfaces.IConsumer,
+    _IDeprecatedHTTPChannelToRequestInterface,
+)
+# Ignoring the nominal non-compliance with the zope interface here, since
+# fixing the type annotations is a big project.
+class Request:  # type:ignore[misc]
     """
     A HTTP request.
 

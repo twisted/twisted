@@ -32,6 +32,7 @@ from twisted.python.deprecate import deprecated
 from twisted.python.reflect import prefixedMethodNames
 from twisted.web._responses import FORBIDDEN, NOT_FOUND
 from twisted.web.error import UnsupportedMethod
+from twisted.web.iweb import IRequest
 
 
 class IResource(Interface):
@@ -319,7 +320,7 @@ class _UnsafeErrorPageBase(Resource):
     @type detail: C{str}
     """
 
-    template = """
+    template: str = """
 <html>
   <head><title>%(code)s - %(brief)s</title></head>
   <body>
@@ -335,15 +336,13 @@ class _UnsafeErrorPageBase(Resource):
         self.brief = brief
         self.detail = detail
 
-    def render(self, request):
+    def render(self, request: IRequest) -> bytes:
         request.setResponseCode(self.code)
         request.setHeader(b"content-type", b"text/html; charset=utf-8")
         interpolated = self.template % dict(
             code=self.code, brief=self.brief, detail=self.detail
         )
-        if isinstance(interpolated, str):
-            return interpolated.encode("utf-8")
-        return interpolated
+        return interpolated.encode("utf-8")
 
     def getChild(self, chnam, request):
         return self

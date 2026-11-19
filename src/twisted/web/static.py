@@ -404,7 +404,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             contentEncoding=self.encoding,
         )
 
-    def _commonReadPreflight(self, request: http.Request) -> Any | None:
+    def _commonReadPreflight(self, request: http.Request) -> bytes | None:
         """
         Perform pre-flight checks common to C{GET} and C{HEAD} requests,
         executed before any file is opened for permission checks.
@@ -462,7 +462,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
         return b""
 
-    def redirect(self, request):
+    def redirect(self, request: http.Request) -> bytes:
         return redirectTo(_addSlash(request), request)
 
     def listNames(self):
