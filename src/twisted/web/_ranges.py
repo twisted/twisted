@@ -88,7 +88,6 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
     if not matched:
         return invalid()
     parsedRanges: ValidRanges = []
-
     for byteRange in filter(None, map(bytes.strip, matched.groups()[0].split(b","))):
         matched = oneRangeRE.fullmatch(byteRange)
         if not matched:
@@ -202,7 +201,9 @@ def _setupNoRange(
     contentEncoding: str | None,
 ) -> SingleRangeStaticProducer:
     """
-    Set up the given request to respond to a request with no C{Range} header.
+    Update the given C{request}, which has no C{Range} header, for a response
+    that includes the entire given file, and create a
+    L{SingleRangeStaticProducer} that will produce that entire file.
     """
     request.setResponseCode(OK)
     _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
@@ -236,7 +237,7 @@ def _notSatisfiableFor(request: Request, fullFileSize: int) -> None:
 
 def _setupSingleRange(
     request: Request,
-    startAndEnd: ValidRange,
+    oneRange: ValidRange,
     fullFileSize: int,
     fileForReading: IO[bytes],
     contentType: str | None,
@@ -257,7 +258,7 @@ def _setupSingleRange(
     @return: A 2-tuple of the offset and length of the range to return.  offset
         == length == 0 indicates that the request is not satisfiable.
     """
-    offset, length = _rangeToOffsetAndLength(fullFileSize, startAndEnd)
+    offset, length = _rangeToOffsetAndLength(fullFileSize, oneRange)
     if length == 0:
         _notSatisfiableFor(request, fullFileSize)
     else:
@@ -296,6 +297,9 @@ class SingleRangeStaticProducer(StaticProducer):
         super().start()
 
     def resumeProducing(self) -> None:
+        """
+        Write some remaining bytes to the request up until the end of the file.
+        """
         if self.request is None:
             raise RuntimeError("request must not be done to resume producing")
         data = self.fileObject.read(min(self.bufferSize, self.size - self.bytesWritten))
@@ -331,8 +335,7 @@ def _setupMultiRange(
     Set up the response for Range headers that specify multiple ranges.
 
     This method checks if the request is satisfiable and sets the response code
-    and Content-Type and Content-Length headers appropriately.  It creates a
-    L{MultipleRangeStaticProducer} to produce the response.
+    and C{Content-Type} and C{Content-Length} headers appropriately.
 
     @param request: The HTTP request object.
 
@@ -340,7 +343,13 @@ def _setupMultiRange(
         header.  For each range, at most one of C{start} and C{end} may be
         L{None}.
 
-    @return: See above.
+    @param fullFileSize: The size of the underlying file.
+
+    @param fileForReading: The already-open file to seek around for reading.
+
+    @param contentType: the C{Content-Type} of the underlying file.
+
+    @return: a L{MultipleRangeStaticProducer} that will produce the response.
     """
     rangeInfo: MimeRanges = []
     contentLength = 0
@@ -402,6 +411,9 @@ class MultipleRangeStaticProducer(StaticProducer):
         self.rangeInfo = rangeInfo
 
     def start(self) -> None:
+        """
+        Begin a multipart response to a multi-range request.
+        """
         self.rangeIter = iter(self.rangeInfo)
         self._nextRange()
         super().start()
@@ -466,6 +478,19 @@ def _setupRangeProducer(
     """
     Determine an appropriate L{IPullProducer} implementation to use, create it,
     and set up any headers on the given L{http.Request}.
+
+    @param request: The request to write the response to.
+
+    @param openFile: The already-opened file to read from.
+
+    @param fileSize: The size of the file.
+
+    @param contentType: The C{Content-Type} of the given file.
+
+    @param contentEncoding: The C{Content-Encoding} of the given file.
+
+    @return: an instance of a subclass of L{StaticProducer} that will produce
+        the appropriate range indicated by the C{request}.
     """
     match _parseRangeHeader(request.getHeader(b"range") or b""):
         case []:
