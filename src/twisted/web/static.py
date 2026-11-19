@@ -411,7 +411,6 @@ class File(resource.Resource, filepath.FilePath[str]):
             return if we should not keep going.
         """
         self.restat(False)
-
         if self.type is None:
             self.type, self.encoding = getTypeAndEncoding(
                 self.basename(),
@@ -419,16 +418,12 @@ class File(resource.Resource, filepath.FilePath[str]):
                 self.contentEncodings,
                 self.defaultType,
             )
-
         if not self.exists():
             return False, self.childNotFound.render(request)
-
         if self.isdir():
             return False, self.redirect(request)
-
         if request.setLastModified(self.getModificationTime()) is http.CACHED:
             return False, b""
-
         request.setHeader(b"accept-ranges", b"bytes")
         return (True, None)
 
