@@ -942,7 +942,7 @@ class StaticMakeProducerTests(TestCase):
                 producer.start()
             self.assertEqual(file.closed, True)
 
-    def test_singleRangeDeferredWriteError(self) -> None:
+    def test_singleRangeDeferredReadError(self) -> None:
         request = DummyRequest([])
         request._produceSynchronously = False
         request.requestHeaders.addRawHeader(b"range", b"bytes=5-24")
@@ -983,6 +983,54 @@ class StaticMakeProducerTests(TestCase):
             with self.assertRaises(RuntimeError):
                 producer.start()
             self.assertEqual(file.closed, True)
+
+    def test_multiRangeDeferredSeekError(self) -> None:
+        request = DummyRequest([])
+        request._produceSynchronously = False
+        request.requestHeaders.addRawHeader(b"range", b"bytes=5-9,15-20,25-30")
+        exampleContent = b"abcdef" * 10
+        resource = self.makeResourceWithContent(exampleContent)
+        file = BreakAfterAWhile(exampleContent)
+        file.seekBreakCount = 2
+        file.readBreakCount = 20
+        producer = resource.makeProducer(request, file)
+        producer.bufferSize = 5
+        self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+        producer.start()
+        self.assertIs(request.producer, producer)
+        # 1 seek
+        producer.resumeProducing()
+        # 2 seek
+        producer.resumeProducing()
+        # break
+        producer.resumeProducing()
+        self.assertEqual(request.finished, 1)
+        errors = self.flushLoggedErrors(IOError)
+        self.assertEqual(len(errors), 1)
+
+    def test_multiRangeDeferredReadError(self) -> None:
+        request = DummyRequest([])
+        request._produceSynchronously = False
+        request.requestHeaders.addRawHeader(b"range", b"bytes=5-9,15-20,25-30")
+        exampleContent = b"abcdef" * 10
+        resource = self.makeResourceWithContent(exampleContent)
+        file = BreakAfterAWhile(exampleContent)
+        file.seekBreakCount = 20
+        file.readBreakCount = 2
+        producer = resource.makeProducer(request, file)
+        producer.bufferSize = 5
+        self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+        producer.start()
+        self.assertIs(request.producer, producer)
+        # 1 seek
+        producer.resumeProducing()
+        # 2 seek
+        producer.resumeProducing()
+        # break
+        producer.resumeProducing()
+        self.assertEqual(request.finished, 1)
+        errors = self.flushLoggedErrors(IOError)
+        self.assertEqual(len(errors), 1)
 
     def test_mutipleRangeSetsContentHeaders(self):
         """

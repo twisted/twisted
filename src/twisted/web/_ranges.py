@@ -454,8 +454,9 @@ class MultipleRangeStaticProducer(StaticProducer):
                 # If the part has no size, it's just the trailer; otherwise we
                 # need to actually read some bytes from the file.
                 toRead = min(self.bufferSize, self._partLength - self._partBytesWritten)
-                bytesRead = self.fileObject.read(toRead)
-                if not bytesRead:
+                with log.failuresHandled("reading data for multi-range file") as op:
+                    bytesRead = self.fileObject.read(toRead)
+                if op.failed or not bytesRead:
                     done = True
                     break
                 self._partBytesWritten += len(bytesRead)
@@ -465,6 +466,10 @@ class MultipleRangeStaticProducer(StaticProducer):
                 try:
                     self._nextRange()
                 except StopIteration:
+                    done = True
+                    break
+                except BaseException:
+                    log.failure("while seeking to the next range")
                     done = True
                     break
         self.request.write(b"".join(data))
