@@ -436,12 +436,10 @@ class File(resource.Resource, filepath.FilePath[str]):
         """
         if (earlyResult := self._commonReadPreflight(request)) is not None:
             return earlyResult
-
         try:
             fileForReading = self.openForReading()
         except PermissionError:
             return self.forbidden.render(request)
-
         try:
             producer = self.makeProducer(request, fileForReading)
             producer.start()
@@ -454,15 +452,13 @@ class File(resource.Resource, filepath.FilePath[str]):
         """
         Get the status of this file and return a HEAD response.
         """
-        if (earlyResult := self._commonReadPreflight(request)) is not None:
-            return earlyResult
-
+        if self._commonReadPreflight(request) is not None:
+            return b""
         try:
             with self.openForReading():
                 pass
         except PermissionError:
             return self.forbidden.render(request)
-
         _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
         return b""
 
