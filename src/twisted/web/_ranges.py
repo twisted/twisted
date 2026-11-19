@@ -251,9 +251,9 @@ def _setupSingleRange(
 
     @param request: The Request object.
 
-    @param startAndEnd: A 2-tuple of start of the byte range as specified by
-        the header and the end of the byte range as specified by the header.
-        At most one of the start and end may be L{None}.
+    @param oneRange: A 2-tuple of start of the byte range as specified by the
+        header and the end of the byte range as specified by the header.  At
+        most one of the start and end may be L{None}.
 
     @return: A 2-tuple of the offset and length of the range to return.  offset
         == length == 0 indicates that the request is not satisfiable.
