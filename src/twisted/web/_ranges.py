@@ -30,7 +30,7 @@ MimeRanges = list[tuple[bytes, int, int]]
 
 def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[int, int]:
     """
-    Convert a L{(start, end)} from a Range header to an offset and length.
+    Convert a C{(start, end)} from a Range header to an offset and length.
 
     Either but not both of start or end can be L{None}.
 
