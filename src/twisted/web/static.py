@@ -404,18 +404,8 @@ class File(resource.Resource, filepath.FilePath[str]):
 
     def _commonReadPreflight(self, request: http.Request) -> tuple[bool, Any]:
         """
-        The pre-flight logic common to C{GET} and C{HEAD} requests:
-
-            1. refresh filesystem stat() information
-
-            2. determine the content-type
-
-            3. determine whether this file exists at all
-
-            4. determine whether this file is a directory and ought to serve a
-               slash-adding redirect rather than static content
-
-            5. finally, set the accept-ranges header and return
+        Perform pre-flight checks common to C{GET} and C{HEAD} requests,
+        executed before any file is opened for permission checks.
 
         @return: a 2-tuple of a boolean of "should we keep going" and what to
             return if we should not keep going.
