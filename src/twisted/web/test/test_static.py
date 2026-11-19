@@ -35,6 +35,25 @@ from twisted.web.test._util import _render
 from twisted.web.test.requesthelper import DummyRequest
 
 
+class BreakAfterAWhile(StringIO):
+    seekBreakCount: int = 0
+    readBreakCount: int = 0
+    seekCount: int = 0
+    readCount: int = 0
+
+    def seek(self, offset: int, whence: int = os.SEEK_SET) -> int:
+        self.seekCount += 1
+        if self.seekCount > self.seekBreakCount:
+            raise IOError("seek broke after a while")
+        return super().seek(offset, whence)
+
+    def read(self, size: int | None = -1) -> bytes:
+        self.readCount += 1
+        if self.readCount > self.readBreakCount:
+            raise IOError("read broke after a while")
+        return super().read(size)
+
+
 def extractMultipartBoundary(request: DummyRequest) -> bytes:
     """
     Extract the multipart boundary from the content-type header for a
@@ -922,6 +941,28 @@ class StaticMakeProducerTests(TestCase):
             with self.assertRaises(RuntimeError):
                 producer.start()
             self.assertEqual(file.closed, True)
+
+    def test_singleRangeDeferredWriteError(self) -> None:
+        request = DummyRequest([])
+        request._produceSynchronously = False
+        request.requestHeaders.addRawHeader(b"range", b"bytes=5-24")
+        exampleContent = b"abcdef" * 10
+        resource = self.makeResourceWithContent(exampleContent)
+        file = BreakAfterAWhile(exampleContent)
+        file.seekBreakCount = 10
+        file.readBreakCount = 2
+        producer = resource.makeProducer(request, file)
+        producer.bufferSize = 5
+        self.assertEqual(http.PARTIAL_CONTENT, request.responseCode)
+        producer.start()
+        self.assertIs(request.producer, producer)
+        # 1 read
+        producer.resumeProducing()
+        # 2 read
+        producer.resumeProducing()
+        # break
+        producer.resumeProducing()
+        self.assertEqual(request.finished, 1)
 
     def test_multipleRangeFileError(self) -> None:
         """
