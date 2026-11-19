@@ -334,7 +334,7 @@ def _setupMultiRange(
     and Content-Type and Content-Length headers appropriately.  It creates a
     L{MultipleRangeStaticProducer} to produce the response.
 
-    @param request: The Request object.
+    @param request: The HTTP request object.
 
     @param byteRanges: A list of C{(start, end)} values as specified by the
         header.  For each range, at most one of C{start} and C{end} may be

@@ -390,7 +390,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         This method will also set the response code and Content-* headers.
 
         @param request: The L{twisted.web.http.Request} object.
+
         @param fileForReading: The file object containing the resource.
+
         @return: A L{StaticProducer}.  Calling C{.start()} on this will begin
             producing the response.
         """
@@ -402,7 +404,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             contentEncoding=self.encoding,
         )
 
-    def _commonReadPreflight(self, request: http.Request) -> tuple[bool, Any]:
+    def _commonReadPreflight(self, request: http.Request) -> Any | None:
         """
         Perform pre-flight checks common to C{GET} and C{HEAD} requests,
         executed before any file is opened for permission checks.
@@ -419,21 +421,20 @@ class File(resource.Resource, filepath.FilePath[str]):
                 self.defaultType,
             )
         if not self.exists():
-            return False, self.childNotFound.render(request)
+            return self.childNotFound.render(request)
         if self.isdir():
-            return False, self.redirect(request)
+            return self.redirect(request)
         if request.setLastModified(self.getModificationTime()) is http.CACHED:
-            return False, b""
+            return b""
         request.setHeader(b"accept-ranges", b"bytes")
-        return (True, None)
+        return None
 
     def render_GET(self, request: http.Request) -> Any:
         """
         Begin sending the contents of this L{File} (or a subset of the
         contents, based on the 'range' header) to the given request.
         """
-        keepGoing, earlyResult = self._commonReadPreflight(request)
-        if not keepGoing:
+        if (earlyResult := self._commonReadPreflight(request)) is not None:
             return earlyResult
 
         try:
@@ -441,16 +442,19 @@ class File(resource.Resource, filepath.FilePath[str]):
         except PermissionError:
             return self.forbidden.render(request)
 
-        producer = self.makeProducer(request, fileForReading)
-        producer.start()
+        try:
+            producer = self.makeProducer(request, fileForReading)
+            producer.start()
+        except BaseException:
+            fileForReading.close()
+            raise
         return server.NOT_DONE_YET
 
     def render_HEAD(self, request: http.Request) -> Any:
         """
         Get the status of this file and return a HEAD response.
         """
-        keepGoing, earlyResult = self._commonReadPreflight(request)
-        if not keepGoing:
+        if (earlyResult := self._commonReadPreflight(request)) is not None:
             return earlyResult
 
         try:

@@ -353,6 +353,41 @@ class StaticFileTests(TestCase):
 
         self.assertEqual(markerResponse, result)
 
+    def test_makeProducer_customize(self) -> None:
+        """
+        The producer mechanism is customizable and overridable.
+
+        @note: this is testing functionality which was previously exposed but
+            is I{probably} not a great integration point for any customization.
+            However, we are also testing here the behavior of potentially
+            unforseen bugs in relatively intricate parsing logic.
+        """
+
+        opened = False
+        openFile = StringIO()
+
+        class CustomMakeProducer(static.File):
+            def openForReading(self) -> IO[bytes]:
+                nonlocal opened
+                assert not opened
+                opened = True
+                return openFile
+
+            def makeProducer(
+                self, request: http.Request, fileForReading: IO[bytes]
+            ) -> static.StaticProducer:
+                raise RuntimeError("oops")
+
+        tmpf = self.mktemp()
+        with open(tmpf, "wb") as f:
+            f.write(b"hello world")
+        custom = CustomMakeProducer(tmpf)
+        request = DummyRequest([b""])
+        with self.assertRaises(RuntimeError):
+            custom.render(request)
+        self.assertEqual(opened, True)
+        self.assertEqual(openFile.closed, True)
+
     def test_indexNames(self):
         """
         If a request is made which encounters a L{File} before a final empty
@@ -627,7 +662,7 @@ class StaticFileTests(TestCase):
         the request.
         """
         fakeFile, file = self._makeFilePathWithStringIO()
-        request = DummyRequest([b"file-contents"])
+        request = DummyRequest([b""])
         request.method = b"HEAD"
         self.successResultOf(_render(file, request))
         self.assertEqual(b"".join(request.written), b"")
@@ -638,7 +673,7 @@ class StaticFileTests(TestCase):
         A GET request that is cached does not open the file.
         """
         fakeFile, file = self._makeFilePathWithStringIO()
-        request = DummyRequest([b"file-contents"])
+        request = DummyRequest([b""])
         request.method = b"GET"
         # This request will always return saying that it is cached
         request.setLastModified = (  # type:ignore[method-assign]
