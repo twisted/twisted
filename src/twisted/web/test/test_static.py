@@ -355,12 +355,14 @@ class StaticFileTests(TestCase):
 
     def test_makeProducer_customize(self) -> None:
         """
-        The producer mechanism is customizable and overridable.
+        If a subclass overrides L{static.File.makeProducer}, GET requests will
+        invoke it to create the producer that will write to the body; if it
+        raises an exception, the file will be closed.
 
-        @note: this is testing functionality which was previously exposed but
-            is I{probably} not a great integration point for any customization.
-            However, we are also testing here the behavior of potentially
-            unforseen bugs in relatively intricate parsing logic.
+        @note: this is testing functionality which was previouslye exposed but
+            is I{probably} not a great integration point for application
+            customization.  However, we are also testing here the behavior of
+            potentially unforseen bugs in relatively intricate parsing logic.
         """
 
         opened = False

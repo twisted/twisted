@@ -34,6 +34,8 @@ also useful for HTTP clients (such as the chunked encoding parser).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 __all__ = [
     "SWITCHING",
     "OK",
@@ -199,12 +201,14 @@ from twisted.web.http_headers import (
 from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
 
 try:
-    from twisted.web._http2 import H2Connection
+    from twisted.web._http2 import H2Connection, H2Stream
 
     H2_ENABLED = True
 except ImportError:
     H2_ENABLED = False
 
+if TYPE_CHECKING:
+    from twisted.web.server import Site
 
 # A common request timeout -- 1 minute. This is roughly what nginx uses, and
 # so it seems to be a good choice for us too.
@@ -906,7 +910,7 @@ class Request:  # type:ignore[misc]
     @type _log: L{twisted.logger.Logger}
     """
 
-    producer = None
+    producer: None | interfaces.IProducer = None
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
@@ -916,12 +920,12 @@ class Request:  # type:ignore[misc]
     startedWriting = 0
     chunked = 0
     sentLength = 0  # content-length of response, or total bytes sent via chunking
-    etag = None
-    lastModified = None
-    args = None
+    etag: bytes | None = None
+    lastModified: float | None = None
+    args: dict[bytes, list[bytes]] | None = None
     path: bytes = None  # type:ignore[assignment]
     content: BinaryIO | None = None
-    channel: HTTPChannel | None
+    channel: HTTPChannel | H2Stream | None
     _forceSSL = 0
     _disconnected = False
     _log = Logger()
@@ -929,7 +933,7 @@ class Request:  # type:ignore[misc]
 
     def __init__(
         self,
-        channel: HTTPChannel,
+        channel: HTTPChannel | H2Stream,
         queued: object = _QUEUED_SENTINEL,
         parsePOSTFormSubmission: bool = True,
     ) -> None:
@@ -962,16 +966,19 @@ class Request:  # type:ignore[misc]
         self.queued = queued
         self._parsePOSTFormSubmission = parsePOSTFormSubmission
 
-    def _cleanup(self):
+    def _cleanup(self) -> None:
         """
         Called when have finished responding and are no longer queued.
         """
         if self.producer:
             self._log.failure(
                 "",
-                Failure(RuntimeError(f"Producer was not unregistered for {self.uri}")),
+                Failure(
+                    RuntimeError(f"Producer was not unregistered for {self.uri!r}")
+                ),
             )
             self.unregisterProducer()
+        assert self.channel is not None
         self.channel.requestDone(self)
         del self.channel
         if self.content is not None:
@@ -1050,7 +1057,7 @@ class Request:  # type:ignore[misc]
         """
         self.content.write(data)
 
-    def requestReceived(self, command, path, version):
+    def requestReceived(self, command: bytes, path: bytes, version: bytes) -> None:
         """
         Called by channel when all data has been received.
 
@@ -1066,6 +1073,7 @@ class Request:  # type:ignore[misc]
         @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
+        assert self.content is not None
         clength = self.content.tell()
         self.content.seek(0, 0)
         self.args = {}
@@ -1082,9 +1090,10 @@ class Request:  # type:ignore[misc]
 
         # Argument processing
         args = self.args
-        ctype = self.requestHeaders.getRawHeaders(b"Content-Type")
-        if ctype is not None:
-            ctype = ctype[0]
+        if (ctypeHdr := self.requestHeaders.getRawHeaders(b"Content-Type")) is not None:
+            ctype = ctypeHdr[0]
+        else:
+            ctype = None
 
         if (
             self.method == b"POST"
@@ -1103,6 +1112,7 @@ class Request:  # type:ignore[misc]
                     self.args.update(_getMultiPartArgs(content, ctype))
                 except _MultiPartParseException:
                     # It was a bad request.
+                    assert self.channel is not None
                     self.channel._respondToBadRequestAndDisconnect()
                     return
 
@@ -1136,7 +1146,7 @@ class Request:  # type:ignore[misc]
 
     # consumer interface
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(self, producer: interfaces.IProducer, streaming: bool) -> None:
         """
         Register a producer.
         """
@@ -1148,12 +1158,14 @@ class Request:  # type:ignore[misc]
 
         self.streamingProducer = streaming
         self.producer = producer
+        assert self.channel is not None
         self.channel.registerProducer(producer, streaming)
 
-    def unregisterProducer(self):
+    def unregisterProducer(self) -> None:
         """
         Unregister the producer.
         """
+        assert self.channel is not None
         self.channel.unregisterProducer()
         self.producer = None
 
@@ -1236,7 +1248,7 @@ class Request:  # type:ignore[misc]
             self.notifications.append(result)
         return result
 
-    def finish(self):
+    def finish(self) -> None:
         """
         Indicate that all response data has been written to this L{Request}.
         """
@@ -1253,6 +1265,7 @@ class Request:  # type:ignore[misc]
             # write headers
             self.write(b"")
 
+        assert self.channel is not None
         if self.chunked:
             # write last chunk and closing CRLF
             self.channel.write(b"0\r\n\r\n")
@@ -1265,12 +1278,11 @@ class Request:  # type:ignore[misc]
         if not self.queued:
             self._cleanup()
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Write some data as a result of an HTTP request.  The first
         time this is called, it writes out response data.
 
-        @type data: C{bytes}
         @param data: Some bytes to be sent as part of the response body.
         """
         if self.finished:
@@ -1319,20 +1331,22 @@ class Request:  # type:ignore[misc]
             if self.cookies:
                 self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
+            assert self.channel is not None
             self.channel.writeHeaders(version, code, reason, self.responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
-                self.write = lambda data: None
+                self.write = lambda data: None  # type:ignore[method-assign]
                 return
 
             # for certain result codes, we should never return any data
             if self.code in NO_BODY_CODES:
-                self.write = lambda data: None
+                self.write = lambda data: None  # type:ignore[method-assign]
                 return
 
         self.sentLength = self.sentLength + len(data)
         if data:
+            assert self.channel is not None
             if self.chunked:
                 self.channel.writeSequence(toChunk(data))
             else:
@@ -1497,7 +1511,7 @@ class Request:  # type:ignore[misc]
         self.setResponseCode(FOUND)
         self.setHeader(b"Location", url)
 
-    def setLastModified(self, when):
+    def setLastModified(self, when: float) -> None | str:
         """
         Set the C{Last-Modified} time for the response to this request.
 
@@ -1534,7 +1548,7 @@ class Request:  # type:ignore[misc]
                 return CACHED
         return None
 
-    def setETag(self, etag):
+    def setETag(self, etag: bytes) -> None | str:
         """
         Set an C{entity tag} for the outgoing response.
 
@@ -1558,8 +1572,8 @@ class Request:  # type:ignore[misc]
 
         tags = self.getHeader(b"If-None-Match")
         if tags:
-            tags = tags.split()
-            if (etag in tags) or (b"*" in tags):
+            tagList = tags.split()
+            if (etag in tagList) or (b"*" in tagList):
                 self.setResponseCode(
                     ((self.method in (b"HEAD", b"GET")) and NOT_MODIFIED)
                     or PRECONDITION_FAILED
@@ -1754,7 +1768,7 @@ class Request:  # type:ignore[misc]
             self.content.close()
         self._doFinishNotify(reason)
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """
         Pass the loseConnection through to the underlying channel.
         """
@@ -2183,7 +2197,7 @@ class _ChunkedTransferDecoder:
             )
 
 
-@implementer(interfaces.IPushProducer)
+@implementer(interfaces.IPushProducer, interfaces.IConsumer)
 class _NoPushProducer:
     """
     A no-op version of L{interfaces.IPushProducer}, used to abstract over the
@@ -2225,6 +2239,14 @@ class _NoPushProducer:
         IProducer.stopProducing
         """
 
+    def write(self, data: bytes) -> None:
+        """
+        Discard some bytes.
+        """
+
+
+_noProducer = _NoPushProducer()
+
 
 @implementer(interfaces.ITransport, interfaces.IPushProducer, interfaces.IConsumer)
 class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
@@ -2264,7 +2286,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         L{interfaces.IPushProducer}, or a null implementation of
         L{interfaces.IPushProducer}.  Used to attempt to prevent the transport
         from producing excess data when we're responding to a request.
-    @type _networkProducer: L{interfaces.IPushProducer}
+
+    @ivar _networkConsumer: Either the transport, if it provides
+        L{interfaces.IConsumer}, or a null implementation of
+        L{interfaces.IConsumer}.  Used to attempt to prevent the transport from
+        producing excess data when we're responding to a request.
 
     @ivar _requestProducer: If the L{Request} object or anything it calls
         registers itself as an L{interfaces.IProducer}, it will be stored here.
@@ -2279,8 +2305,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         many requests without ever reading responses.  Essentially, if the
         client never reads our responses we will eventually stop reading its
         requests.
-
-    @type _requestProducer: L{interfaces.IPushProducer}
 
     @ivar _requestProducerStreaming: A boolean that tracks whether the producer
         on the L{Request} side of this channel has registered itself as a
@@ -2349,7 +2373,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _receivedHeaderCount = 0
     _receivedHeaderSize = 0
     _requestProducer = None
-    _requestProducerStreaming = None
+    _requestProducerStreaming: bool | None = None
     _waitingForTransport = False
     _abortingCall = None
     _optimisticEagerReadSize = 0x4000
@@ -2362,14 +2386,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self._dataBuffer = []
         self._transferDecoder = None
 
-    def connectionMade(self):
+    def connectionMade(self) -> None:
         if ITCPTransport.providedBy(self.transport):
             self.transport.setTcpNoDelay(True)
         self.setTimeout(self.timeOut)
-        self._networkProducer = interfaces.IPushProducer(
-            self.transport, _NoPushProducer()
-        )
-        self._networkProducer.registerProducer(self, True)
+        self._networkProducer = interfaces.IPushProducer(self.transport, _noProducer)
+        self._networkConsumer = interfaces.IConsumer(self.transport, _noProducer)
+        self._networkConsumer.registerProducer(self, True)
 
     def dataReceived(self, data):
         self.resetTimeout()
@@ -2832,7 +2855,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         return self.transport.getHost()
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """
         Closes the connection. Will write any data that is pending to be sent
         on the network, but if this response has not yet been written to the
@@ -2840,8 +2863,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        self._networkProducer.unregisterProducer()
-        return self.transport.loseConnection()
+        self._networkConsumer.unregisterProducer()
+        assert self.transport is not None
+        self.transport.loseConnection()
 
     def registerProducer(self, producer, streaming):
         """
@@ -2885,7 +2909,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not streaming:
             producer.startStreaming()
 
-    def unregisterProducer(self):
+    def unregisterProducer(self) -> None:
         """
         Stop consuming data from a producer, without disconnecting.
 
@@ -2895,6 +2919,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         if not self._requestProducerStreaming:
+            # If the *actual* producer for this request is a pull
+            # (not-streaming) producer, then we have converted it into a push
+            # producer with _PullToPush.  _PullToPush maintains internal state
+            # to schedule its own calls to resumeProducing from the reactor.
+            # So we call the .stopStreaming method, exclusive to _PullToPush,
+            # to clean up _that_ state, since it is not appropriate to call
+            # stopProducing inside unregisterProducer.
             self._requestProducer.stopStreaming()
 
         self._requestProducer = None
@@ -3153,10 +3184,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
 
     _negotiatedProtocol = None
     _requestFactory = Request
-    _factory = None
-    _site = None
+    _factory: HTTPFactory = None  # type:ignore[assignment]
+    _site: Site = None  # type:ignore[assignment]
     _timeOut = None
-    _callLater = None
+    _callLater: Callable[
+        [float, Callable[[], None]], IDelayedCall
+    ] = None  # type:ignore[assignment]
+    _channel: HTTPChannel | H2Connection
 
     @property
     def factory(self):
@@ -3257,13 +3291,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         self._callLater = value
         self._channel.callLater = value
 
-    def dataReceived(self, data):
+    def dataReceived(self, data: bytes) -> None:
         """
         An override of L{IProtocol.dataReceived} that checks what protocol we're
         using.
         """
         if self._negotiatedProtocol is None:
-            negotiatedProtocol = getattr(
+            negotiatedProtocol: bytes | None = getattr(
                 self._channel.transport, "negotiatedProtocol", b"http/1.1"
             )
 
@@ -3273,12 +3307,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
             if negotiatedProtocol == b"h2":
                 if not H2_ENABLED:
                     raise ValueError("Negotiated HTTP/2 without support.")
+                assert isinstance(self._channel, HTTPChannel)
 
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                networkProducer = self._channel._networkProducer
-                networkProducer.unregisterProducer()
+                networkConsumer = self._channel._networkConsumer
+                networkConsumer.unregisterProducer()
 
                 # Cancel the old channel's timeout.
                 self._channel.setTimeout(None)
@@ -3289,13 +3324,13 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
                 self._channel.site = self._site
                 self._channel.factory = self._factory
                 self._channel.timeOut = self._timeOut
-                self._channel.callLater = self._callLater
+                self._channel.callLater = self._callLater  # type:ignore[method-assign]
                 self._channel.makeConnection(transport)
 
                 # Register the H2Connection as the transport's
                 # producer, so that the transport can apply back
                 # pressure.
-                networkProducer.registerProducer(self._channel, True)
+                networkConsumer.registerProducer(self._channel, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert (
@@ -3304,7 +3339,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
 
             self._negotiatedProtocol = negotiatedProtocol
 
-        return self._channel.dataReceived(data)
+        self._channel.dataReceived(data)
 
 
 def _genericHTTPChannelProtocolFactory(
