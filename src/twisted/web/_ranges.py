@@ -60,13 +60,13 @@ def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[in
         0)} if the range does not overlap this resource.
     """
     match rangeHeaderValue:
-        case (int(offset), int(endInclusive)):
-            ending = endInclusive + 1 if endInclusive < size else size
         case (None, int(fromEnd)):
-            offset = max(0, size - fromEnd)
             ending = size
+            offset = max(0, size - fromEnd)
         case (int(offset), None):
             ending = size
+        case (int(offset), int(endInclusive)):
+            ending = endInclusive + 1 if endInclusive < size else size
     return (offset, ending - offset) if offset < size and offset != ending else (0, 0)
 
 
