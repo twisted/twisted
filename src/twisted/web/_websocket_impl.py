@@ -539,6 +539,7 @@ class WebSocketResource(Resource):
         assert wsprot is not None, "connection not accepted by twisted"
         toSend = handshake.send(AcceptConnection())
         wscon = handshake.connection
+        assert request.channel is not None, "channel must be active"
         t = request.channel.transport
         assert t is not None, "channel transport not connected"
         assert wscon is not None, "connection not accepted by wsproto"
