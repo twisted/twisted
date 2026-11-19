@@ -6,6 +6,7 @@ Implementation of C{Range:} header request logic for L{twisted.web.static}.
 from __future__ import annotations
 
 import os
+import re
 import time
 from io import SEEK_END, SEEK_SET
 from typing import IO
@@ -31,6 +32,8 @@ MimeRanges = list[tuple[bytes, int, int]]
 # ValidRange = tuple[None, int] | tuple[int, None] | tuple[int, int]
 
 log = Logger()
+rangeHeaderRE = re.compile(rb"\s*bytes\s*=\s*(.*)", re.DOTALL)
+oneRangeRE = re.compile(rb"\s*(\d*)\s*-\s*(\d*)\s*")
 
 
 def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[int, int]:
@@ -38,34 +41,26 @@ def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[in
     Convert an RFC2616-style C{(start, end)} from a C{Range} header to an
     offset (a location to seek to) and a length (a number of bytes to read).
 
-    Either, but not both, of C{start} or C{end} can be L{None}.
-
-        - C{start}=L{None} means that C{end} is actually a start value relative
-          to the end of the resource.
-
-        - C{end}=L{None} means the end of the resource should be the end of the
-          range.
-
-    End is I{inclusive}, per RFC 2616.  If this range doesn't overlap with any
-    of this resource, C{(0, 0)} is returned, which is not otherwise a value
-    return value.
-
     @param size: The total size of the resource being served.
 
     @param rangeHeaderValue: The C{(start, end)} values as parsed from the
-        header.
+        header.  Either, but not both, of C{start} or C{end} can be L{None}.
 
-    @return: C{(offset, size)} where offset is how far into this resource this
-        resource the range begins and size is how long the range is, or C{(0,
-        0)} if the range does not overlap this resource.
+    @return: C{(offset, length)} where C{offset} is a count of bytes from the
+        beginning of this resource where the requested range begins, and
+        C{length} is the number of bytes to read; or, C{(0, 0)}, if the given
+        range does not overlap the given size.
     """
     match rangeHeaderValue:
         case (None, int(fromEnd)):
+            # empty 'start' means 'end' is actually a count from the end
             ending = size
             offset = max(0, size - fromEnd)
         case (int(offset), None):
+            # empty 'end' means 'end' is the end of the resource
             ending = size
         case (int(offset), int(endInclusive)):
+            # we have both; 'end' is inclusive, so count is +1
             ending = endInclusive + 1 if endInclusive < size else size
     return (offset, ending - offset) if offset < size and offset != ending else (0, 0)
 
@@ -77,46 +72,34 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
     In a given pair, either of start or stop can be None, signifying that no
     value was provided, but not both.
 
-    @param rangeHeader: The text content of the C{Range} header.
+    @param rangeHeader: The contents of a C{Range} header to parse.
 
     @return: A list C{[(start, stop)]} of pairs.
     """
 
-    def invalid(reason: str | None = None) -> ValidRanges:
+    def invalid() -> ValidRanges:
         log.warn(
             "Ignoring malformed Range header {rangeHeader!r}",
             rangeHeader=rangeHeader.decode("charmap"),
         )
         return []
 
-    try:
-        kind, value = rangeHeader.split(b"=", 1)
-    except ValueError:
-        return invalid("missing = separator")
-    kind = kind.strip()
-    if kind != b"bytes":
-        return invalid(f"Unsupported Bytes-Unit: {kind!r}")
-    unparsedRanges = list(filter(None, map(bytes.strip, value.split(b","))))
+    matched = rangeHeaderRE.fullmatch(rangeHeader)
+    if not matched:
+        return invalid()
     parsedRanges: ValidRanges = []
 
-    for byteRange in unparsedRanges:
-        start: int | None = None
-        end: int | None = None
-        try:
-            startBytes, endBytes = byteRange.split(b"-", 1)
-            if startBytes:
-                start = int(startBytes)
-            if endBytes:
-                end = int(endBytes)
-        except ValueError:
+    for byteRange in filter(None, map(bytes.strip, matched.groups()[0].split(b","))):
+        matched = oneRangeRE.fullmatch(byteRange)
+        if not matched:
             return invalid()
-        match (start, end):
+        match [int(each) if each else None for each in matched.groups()]:
             case (None, int(validEnd)):
                 parsedRanges.append((None, validEnd))
             case (int(validStart), None):
                 parsedRanges.append((validStart, None))
             case (int(validStart), int(validEnd)):
-                if start >= end:
+                if validStart >= validEnd:
                     return invalid()
                 parsedRanges.append((validStart, validEnd))
             case _:  # (None, None)
@@ -167,11 +150,20 @@ class StaticProducer:
     def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
         """
         Initialize the instance.
+
+        @param request: the HTTP request to process.
+
+        @param fileObject: The already-open file object to send to the given
+            request.
         """
         self.request: Request | None = request
         self.fileObject = fileObject
 
     def start(self) -> None:
+        """
+        Begin sending the contents of this L{StaticProducer}'s file to its
+        request.
+        """
         request = self.request
         assert request is not None, "request must be not-None to start"
 
@@ -183,6 +175,9 @@ class StaticProducer:
         request.registerProducer(self, False)
 
     def resumeProducing(self) -> None:
+        """
+        Subclasses must implement this.
+        """
         raise NotImplementedError(self.resumeProducing)
 
     def stopProducing(self) -> None:
@@ -191,7 +186,9 @@ class StaticProducer:
 
         @note: this I{should} be called when the consumer (i.e. the
             L{http.Request}) is done consuming, but that is not done
-            automatically for non-streaming (pull) producers such as this one.
+            automatically for non-streaming (pull) producers such as this one,
+            so instead the L{StaticProducer.start} method sets up the request
+            to notify when finished.
         """
         self.fileObject.close()
         self.request = None
@@ -204,6 +201,9 @@ def _setupNoRange(
     contentType: str | None,
     contentEncoding: str | None,
 ) -> SingleRangeStaticProducer:
+    """
+    Set up the given request to respond to a request with no C{Range} header.
+    """
     request.setResponseCode(OK)
     _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
     return SingleRangeStaticProducer(request, fileForReading, 0, fullFileSize)
@@ -258,7 +258,7 @@ def _setupSingleRange(
         == length == 0 indicates that the request is not satisfiable.
     """
     offset, length = _rangeToOffsetAndLength(fullFileSize, startAndEnd)
-    if offset == length == 0:
+    if length == 0:
         _notSatisfiableFor(request, fullFileSize)
     else:
         request.setResponseCode(PARTIAL_CONTENT)
@@ -309,6 +309,7 @@ class SingleRangeStaticProducer(StaticProducer):
 class NoRangeStaticProducer(SingleRangeStaticProducer):
     """
     Only re-exposed to satisfy existing tests and API compatibility surface.
+    No longer used in the request-handling pipeline anywhere.
     """
 
     def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
@@ -348,7 +349,7 @@ def _setupMultiRange(
         contentType = "bytes"  # Do what Apache HTTPD does.
     for eachRange in byteRanges:
         partOffset, partLength = _rangeToOffsetAndLength(fullFileSize, eachRange)
-        if partOffset == partLength == 0:
+        if partLength == 0:
             continue
         contentLength += partLength
         partSeparator = (
@@ -406,15 +407,22 @@ class MultipleRangeStaticProducer(StaticProducer):
         super().start()
 
     def _nextRange(self) -> None:
+        """
+        It's time to start producing a new range; update the state to do so,
+        and seek the file to the appropriate place.
+
+        @raise StopIteration: when we have no further parts to produce.
+        """
         self.partBoundary, partOffset, self._partLength = next(self.rangeIter)
         self._partBytesWritten = 0
-        """
-        This might also raise an error, as explained above in
-        L{SingleRangeStaticProducer}.
-        """
         self.fileObject.seek(partOffset)
 
     def resumeProducing(self) -> None:
+        """
+        Read data from the file and write data to the request until we have
+        written C{self.bufferSize} bytes of data, or until we are out of bytes
+        to write, at which point, finish the request.
+        """
         if self.request is None:
             raise RuntimeError("request must not be done to resume producing")
         data = []  # the raw data we are going to write to the request
