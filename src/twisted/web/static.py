@@ -443,8 +443,6 @@ class File(resource.Resource, filepath.FilePath[str]):
 
         producer = self.makeProducer(request, fileForReading)
         producer.start()
-
-        # and make sure the connection doesn't get closed
         return server.NOT_DONE_YET
 
     def render_HEAD(self, request: http.Request) -> Any:
@@ -456,17 +454,12 @@ class File(resource.Resource, filepath.FilePath[str]):
             return earlyResult
 
         try:
-            # This arguably ought to be using C{os.access} since there's no
-            # LBYL here, but FilePath doesn't expose that for us (yet?).
             with self.openForReading():
                 pass
         except PermissionError:
             return self.forbidden.render(request)
 
-        # Set the content headers here, rather than making a producer.
         _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
-        # We've opened the file to make sure it's accessible, so close it
-        # now that we don't need it.
         return b""
 
     def redirect(self, request):
