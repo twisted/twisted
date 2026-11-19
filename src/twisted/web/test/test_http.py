@@ -16,7 +16,7 @@ from io import BytesIO, TextIOWrapper
 from itertools import cycle
 from typing import Any
 from unittest import skipIf
-from urllib.parse import clear_cache, urlparse, urlunsplit
+from urllib.parse import urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
 from zope.interface.verify import verifyObject
@@ -2954,6 +2954,8 @@ class QueryArgumentsTests(unittest.TestCase):
             self.assertIsInstance(params, bytes)
             self.assertIsInstance(query, bytes)
             self.assertIsInstance(fragment, bytes)
+
+        from urllib.parse import clear_cache
 
         # With caching, unicode then str
         clear_cache()
