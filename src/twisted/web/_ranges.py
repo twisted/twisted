@@ -302,11 +302,15 @@ class SingleRangeStaticProducer(StaticProducer):
         """
         if self.request is None:
             raise RuntimeError("request must not be done to resume producing")
-        data = self.fileObject.read(min(self.bufferSize, self.size - self.bytesWritten))
-        if data:
-            self.bytesWritten += len(data)
-            self.request.write(data)
-        if (self.bytesWritten == self.size) or (not data):
+        data = b""
+        with log.failuresHandled("while reading data for static file") as op:
+            data = self.fileObject.read(
+                min(self.bufferSize, self.size - self.bytesWritten)
+            )
+            if data:
+                self.bytesWritten += len(data)
+                self.request.write(data)
+        if (self.bytesWritten == self.size) or (not data) or op.failed:
             self.request.finish()
 
 

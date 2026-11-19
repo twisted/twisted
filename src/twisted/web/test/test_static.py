@@ -963,6 +963,8 @@ class StaticMakeProducerTests(TestCase):
         # break
         producer.resumeProducing()
         self.assertEqual(request.finished, 1)
+        errors = self.flushLoggedErrors(IOError)
+        self.assertEqual(len(errors), 1)
 
     def test_multipleRangeFileError(self) -> None:
         """
