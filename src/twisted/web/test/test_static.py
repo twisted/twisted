@@ -15,6 +15,7 @@ import sys
 import warnings
 from dataclasses import dataclass
 from io import BytesIO as StringIO
+from typing import IO
 from unittest import skipIf
 
 from zope.interface.verify import verifyObject
@@ -599,45 +600,53 @@ class StaticFileTests(TestCase):
             [b"http://dummy/folder/#baz?foo=bar"],
         )
 
-    def _makeFilePathWithStringIO(self):
+    def _makeFilePathWithStringIO(self) -> tuple[StringIO, static.File]:
         """
         Create a L{File} that when opened for reading, returns a L{StringIO}.
 
         @return: 2-tuple of the opened "file" and the L{File}.
         @rtype: L{tuple}
         """
+        self._fileEverOpened = False
         fakeFile = StringIO()
         path = FilePath(self.mktemp())
         path.touch()
         file = static.File(path.path)
+
         # Open our file instead of a real one
-        file.open = lambda: fakeFile
+        def opened() -> IO[bytes]:
+            self._fileEverOpened = True
+            return fakeFile
+
+        file.open = opened  # type:ignore[method-assign,assignment]
         return fakeFile, file
 
-    def test_HEADClosesFile(self):
+    def test_HEADClosesFile(self) -> None:
         """
         A HEAD request opens the file, gets the size, and then closes it after
         the request.
         """
         fakeFile, file = self._makeFilePathWithStringIO()
-        request = DummyRequest([""])
+        request = DummyRequest([b"file-contents"])
         request.method = b"HEAD"
         self.successResultOf(_render(file, request))
         self.assertEqual(b"".join(request.written), b"")
         self.assertTrue(fakeFile.closed)
 
-    def test_cachedRequestClosesFile(self):
+    def test_cachedRequestDoesntOpenFile(self) -> None:
         """
-        A GET request that is cached closes the file after the request.
+        A GET request that is cached does not open the file.
         """
         fakeFile, file = self._makeFilePathWithStringIO()
-        request = DummyRequest([""])
+        request = DummyRequest([b"file-contents"])
         request.method = b"GET"
         # This request will always return saying that it is cached
-        request.setLastModified = lambda _: http.CACHED
+        request.setLastModified = (  # type:ignore[method-assign]
+            lambda _: http.CACHED  # type:ignore[assignment]
+        )
         self.successResultOf(_render(file, request))
         self.assertEqual(b"".join(request.written), b"")
-        self.assertTrue(fakeFile.closed)
+        self.assertEqual(self._fileEverOpened, False)
 
 
 class StaticMakeProducerTests(TestCase):

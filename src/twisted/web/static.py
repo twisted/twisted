@@ -436,6 +436,9 @@ class File(resource.Resource, filepath.FilePath[str]):
         if self.isdir():
             return False, self.redirect(request)
 
+        if request.setLastModified(self.getModificationTime()) is http.CACHED:
+            return False, b""
+
         request.setHeader(b"accept-ranges", b"bytes")
         return (True, None)
 
@@ -452,16 +455,6 @@ class File(resource.Resource, filepath.FilePath[str]):
             fileForReading = self.openForReading()
         except PermissionError:
             return self.forbidden.render(request)
-
-        # I am now holding a hot potato; this file MUST be closed in order to
-        # not leak a resource, but where do I close it?
-
-        if request.setLastModified(self.getModificationTime()) is http.CACHED:
-            # `setLastModified` also sets the response code for us, so if the
-            # request is cached, we close the file now that we've made sure that
-            # the request would otherwise succeed and return an empty body.
-            fileForReading.close()
-            return b""
 
         producer = self.makeProducer(request, fileForReading)
         producer.start()

@@ -464,8 +464,8 @@ def _setupRangeProducer(
     contentEncoding: str | None,
 ) -> StaticProducer:
     """
-    Determine an appropriate L{IProducer} implementation to use, create it, and
-    set up any headers on the given L{http.Request}.
+    Determine an appropriate L{IPullProducer} implementation to use, create it,
+    and set up any headers on the given L{http.Request}.
     """
     match _parseRangeHeader(request.getHeader(b"range") or b""):
         case []:
