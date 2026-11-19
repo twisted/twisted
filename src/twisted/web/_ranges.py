@@ -14,30 +14,36 @@ from zope.interface import implementer
 
 from twisted.internet import abstract, interfaces
 from twisted.logger import Logger
-from twisted.web import http
-
-log = Logger()
+from twisted.web.http import (
+    OK,
+    PARTIAL_CONTENT,
+    REQUESTED_RANGE_NOT_SATISFIABLE,
+    Request,
+)
 
 ValidRange = tuple[int | None, int | None]
-
-# type signature is intentionally wrong; should be this:
-# https://github.com/python/mypy/issues/22511
-# ValidRange = tuple[None, int] | tuple[int, None] | tuple[int, int]
-
 ValidRanges = list[ValidRange]
 MimeRanges = list[tuple[bytes, int, int]]
+
+# ValidRange is intentionally wrongly typed due to
+# <https://github.com/python/mypy/issues/22511>; it should be this:
+
+# ValidRange = tuple[None, int] | tuple[int, None] | tuple[int, int]
+
+log = Logger()
 
 
 def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[int, int]:
     """
-    Convert a C{(start, end)} from a Range header to an offset and length.
+    Convert an RFC2616-style C{(start, end)} from a C{Range} header to an
+    offset (a location to seek to) and a length (a number of bytes to read).
 
-    Either but not both of start or end can be L{None}.
+    Either, but not both, of C{start} or C{end} can be L{None}.
 
-        - start=L{None} means that the end value is actually a start value
-          relative to the end of the resource.
+        - C{start}=L{None} means that C{end} is actually a start value relative
+          to the end of the resource.
 
-        - end=L{None} means the end of the resource should be the end of the
+        - C{end}=L{None} means the end of the resource should be the end of the
           range.
 
     End is I{inclusive}, per RFC 2616.  If this range doesn't overlap with any
@@ -46,7 +52,8 @@ def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[in
 
     @param size: The total size of the resource being served.
 
-    @param rangeHeaderValue: The (start,end) values as parsed from the header.
+    @param rangeHeaderValue: The C{(start, end)} values as parsed from the
+        header.
 
     @return: C{(offset, size)} where offset is how far into this resource this
         resource the range begins and size is how long the range is, or C{(0,
@@ -60,15 +67,17 @@ def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[in
             ending = size
         case (int(offset), None):
             ending = size
-    return (offset, ending - offset) if offset < size else (0, 0)
+    return (offset, ending - offset) if offset < size and offset != ending else (0, 0)
 
 
 def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
     """
     Parse the value of a Range header into (start, stop) pairs.
 
-    In a given pair, either of start or stop can be None, signifying that
-    no value was provided, but not both.
+    In a given pair, either of start or stop can be None, signifying that no
+    value was provided, but not both.
+
+    @param rangeHeader: The text content of the C{Range} header.
 
     @return: A list C{[(start, stop)]} of pairs.
     """
@@ -95,18 +104,12 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
         end: int | None = None
         try:
             startBytes, endBytes = byteRange.split(b"-", 1)
+            if startBytes:
+                start = int(startBytes)
+            if endBytes:
+                end = int(endBytes)
         except ValueError:
             return invalid()
-        if startBytes:
-            try:
-                start = int(startBytes)
-            except ValueError:
-                return invalid()
-        if endBytes:
-            try:
-                end = int(endBytes)
-            except ValueError:
-                return invalid()
         match (start, end):
             case (None, int(validEnd)):
                 parsedRanges.append((None, validEnd))
@@ -122,24 +125,24 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
 
 
 def _simpleContentHeaders(
-    request: http.Request,
-    size: int,
+    request: Request,
+    length: int,
     contentType: str | None = None,
     contentEncoding: str | None = None,
 ) -> None:
     """
-    Set simple Content-length and Content-type headers for this request, for
-    when the request is returning either a full body or a simple range.
+    Set simple C{Content-Length} and C{Content-Type} headers for this request,
+    for when the request is returning either a full body or a single range.
 
     @param request: The L{twisted.web.http.Request} object.
 
-    @param size: The content-length to specify.
+    @param length: The C{Content-Length} to specify.
 
-    @param contentType: The content-type, if any.
+    @param contentType: The C{Content-Type}, if any.
 
-    @param contentEncoding: The content-encoding, if any.
+    @param contentEncoding: The C{Content-Encoding}, if any.
     """
-    request.setHeader(b"content-length", b"%d" % (size,))
+    request.setHeader(b"content-length", b"%d" % (length,))
     if contentType:
         request.setHeader(b"content-type", contentType.encode())
     if contentEncoding:
@@ -151,7 +154,8 @@ class StaticProducer:
     """
     Superclass for classes that implement the business of producing.
 
-    @ivar request: The L{IRequest} to write the contents of the file to.
+    @ivar request: The L{IRequest} to write the contents of the file to, or
+        C{None} if the writing is done.
 
     @ivar fileObject: The file the contents of which to write to the request.
 
@@ -160,11 +164,11 @@ class StaticProducer:
 
     bufferSize: int = abstract.FileDescriptor.bufferSize
 
-    def __init__(self, request: http.Request, fileObject: IO[bytes]) -> None:
+    def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
         """
         Initialize the instance.
         """
-        self.request: http.Request | None = request
+        self.request: Request | None = request
         self.fileObject = fileObject
 
     def start(self) -> None:
@@ -185,55 +189,53 @@ class StaticProducer:
         """
         Stop producing data.
 
-        L{twisted.internet.interfaces.IProducer.stopProducing}
-        is called when our consumer has died, and subclasses also call this
-        method when they are done producing data.
+        @note: this I{should} be called when the consumer (i.e. the
+            L{http.Request}) is done consuming, but that is not done
+            automatically for non-streaming (pull) producers such as this one.
         """
         self.fileObject.close()
         self.request = None
 
 
 def _setupNoRange(
-    request: http.Request,
+    request: Request,
     fullFileSize: int,
     fileForReading: IO[bytes],
     contentType: str | None,
     contentEncoding: str | None,
 ) -> SingleRangeStaticProducer:
-    request.setResponseCode(http.OK)
+    request.setResponseCode(OK)
     _simpleContentHeaders(request, fullFileSize, contentType, contentEncoding)
     return SingleRangeStaticProducer(request, fileForReading, 0, fullFileSize)
 
 
-def _contentRange(offset: int, size: int, fullFileSize: int) -> bytes:
+def _contentRange(offset: int, length: int, resourceSize: int) -> bytes:
     """
-    Return a string suitable for the value of a Content-Range header for a
-    range with the given offset and size.
-
-    The offset and size are not sanity checked in any way.
+    Construct a C{Content-Range} header.
 
     @param offset: How far into this resource the range begins.
 
-    @param size: How long the range is.
+    @param length: How long the range is.
 
-    @param fullFileSize: How long the entire resource is.
+    @param resourceSize: How long the entire resource is.
 
-    @return: The value as appropriate for the value of a Content-Range header.
+    @return: a string suitable for the value of a C{Content-Range} header for a
+        range with the given offset, length, and resource size.
     """
-    return b"bytes %d-%d/%d" % (offset, offset + size - 1, fullFileSize)
+    return b"bytes %d-%d/%d" % (offset, offset + length - 1, resourceSize)
 
 
-def _notSatisfiableFor(request: http.Request, fullFileSize: int) -> None:
+def _notSatisfiableFor(request: Request, fullFileSize: int) -> None:
     """
     The given request is not satisfiable, according to the RFC.  Set an
     appropriate response code and content-range header.
     """
-    request.setResponseCode(http.REQUESTED_RANGE_NOT_SATISFIABLE)
+    request.setResponseCode(REQUESTED_RANGE_NOT_SATISFIABLE)
     request.setHeader(b"content-range", b"bytes */%d" % (fullFileSize,))
 
 
 def _setupSingleRange(
-    request: http.Request,
+    request: Request,
     startAndEnd: ValidRange,
     fullFileSize: int,
     fileForReading: IO[bytes],
@@ -241,11 +243,10 @@ def _setupSingleRange(
     contentEncoding: str | None,
 ) -> SingleRangeStaticProducer:
     """
-    Set up the response for Range headers that specify a single range.
+    Set up the response for C{Range} headers that specify a single range.
 
     This method checks if the request is satisfiable and sets the response code
-    and Content-Range header appropriately.  The return value indicates which
-    part of the resource to return.
+    and C{Content-Range} header appropriately.
 
     @param request: The Request object.
 
@@ -253,14 +254,14 @@ def _setupSingleRange(
         the header and the end of the byte range as specified by the header.
         At most one of the start and end may be L{None}.
 
-    @return: A 2-tuple of the offset and size of the range to return.  offset
-        == size == 0 indicates that the request is not satisfiable.
+    @return: A 2-tuple of the offset and length of the range to return.  offset
+        == length == 0 indicates that the request is not satisfiable.
     """
     offset, length = _rangeToOffsetAndLength(fullFileSize, startAndEnd)
     if offset == length == 0:
         _notSatisfiableFor(request, fullFileSize)
     else:
-        request.setResponseCode(http.PARTIAL_CONTENT)
+        request.setResponseCode(PARTIAL_CONTENT)
         request.setHeader(b"content-range", _contentRange(offset, length, fullFileSize))
     _simpleContentHeaders(request, length, contentType, contentEncoding)
     return SingleRangeStaticProducer(request, fileForReading, offset, length)
@@ -272,7 +273,7 @@ class SingleRangeStaticProducer(StaticProducer):
     """
 
     def __init__(
-        self, request: http.Request, fileObject: IO[bytes], offset: int, size: int
+        self, request: Request, fileObject: IO[bytes], offset: int, size: int
     ) -> None:
         """
         Initialize the instance.
@@ -310,7 +311,7 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
     Only re-exposed to satisfy existing tests and API compatibility surface.
     """
 
-    def __init__(self, request: http.Request, fileObject: IO[bytes]) -> None:
+    def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
         here = fileObject.tell()
         fileObject.seek(0, SEEK_END)
         size = fileObject.tell()
@@ -319,7 +320,7 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
 
 
 def _setupMultiRange(
-    request: http.Request,
+    request: Request,
     byteRanges: ValidRanges,
     fullFileSize: int,
     fileForReading: IO[bytes],
@@ -362,7 +363,7 @@ def _setupMultiRange(
     if rangeInfo:
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
-        request.setResponseCode(http.PARTIAL_CONTENT)
+        request.setResponseCode(PARTIAL_CONTENT)
         contentLength += len(finalBoundary)
         contentType = f'multipart/byteranges; boundary="{boundary.decode()}"'
     else:
@@ -379,11 +380,8 @@ class MultipleRangeStaticProducer(StaticProducer):
     partBoundary: bytes | None
 
     def __init__(
-        self,
-        request: http.Request,
-        fileObject: IO[bytes],
-        rangeInfo: MimeRanges,
-    ):
+        self, request: Request, fileObject: IO[bytes], rangeInfo: MimeRanges
+    ) -> None:
         """
         Initialize the instance.
 
@@ -391,13 +389,13 @@ class MultipleRangeStaticProducer(StaticProducer):
 
         @param fileObject: See L{StaticProducer}.
 
-        @param rangeInfo: A list of tuples C{[(boundary, offset, size)]} where:
+        @param rangeInfo: A list of tuples C{[(boundary, offset, length)]} where:
 
                 - C{boundary} will be written to the request first.
 
                 - C{offset} the offset into the file of chunk to write.
 
-                - C{size} the size of the chunk to write.
+                - C{length} the length of the chunk to write.
         """
         StaticProducer.__init__(self, request, fileObject)
         self.rangeInfo = rangeInfo
@@ -408,7 +406,7 @@ class MultipleRangeStaticProducer(StaticProducer):
         super().start()
 
     def _nextRange(self) -> None:
-        self.partBoundary, partOffset, self._partSize = next(self.rangeIter)
+        self.partBoundary, partOffset, self._partLength = next(self.rangeIter)
         self._partBytesWritten = 0
         """
         This might also raise an error, as explained above in
@@ -428,13 +426,10 @@ class MultipleRangeStaticProducer(StaticProducer):
                 dataLength += len(self.partBoundary)
                 data.append(self.partBoundary)
                 self.partBoundary = None
-            if self._partSize:
+            if self._partLength:
                 # If the part has no size, it's just the trailer; otherwise we
                 # need to actually read some bytes from the file.
-                toRead = min(self.bufferSize, self._partSize - self._partBytesWritten)
-                assert (
-                    toRead > 0
-                ), f"part={self._partSize} written={self._partBytesWritten}"
+                toRead = min(self.bufferSize, self._partLength - self._partBytesWritten)
                 bytesRead = self.fileObject.read(toRead)
                 if not bytesRead:
                     done = True
@@ -442,7 +437,7 @@ class MultipleRangeStaticProducer(StaticProducer):
                 self._partBytesWritten += len(bytesRead)
                 dataLength += len(bytesRead)
                 data.append(bytesRead)
-            if self._partBytesWritten == self._partSize:
+            if self._partBytesWritten == self._partLength:
                 try:
                     self._nextRange()
                 except StopIteration:
@@ -454,7 +449,7 @@ class MultipleRangeStaticProducer(StaticProducer):
 
 
 def _setupRangeProducer(
-    request: http.Request,
+    request: Request,
     openFile: IO[bytes],
     fileSize: int,
     contentType: str | None,
