@@ -52,6 +52,7 @@ from twisted.web.client import (
     Response,
     _StandardEndpointFactory,
 )
+from twisted.web.http import HTTPChannel
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IAgentEndpointFactory, IPolicyForHTTPS
 from twisted.web.resource import Resource
@@ -544,6 +545,9 @@ class WebSocketResource(Resource):
         assert t is not None, "channel transport not connected"
         assert wscon is not None, "connection not accepted by wsproto"
         wireProto = _WebSocketWireProtocol(wscon, serverBootstrap, wsprot)
+        assert isinstance(
+            request.channel, HTTPChannel
+        ), "can only negotiate websockets over HTTP/1.1."
         request.channel._protocolUpgradeForWebsockets(wireProto)
         t.write(toSend)
         wsprot.negotiationFinished()
