@@ -1354,17 +1354,17 @@ class Request:  # type:ignore[misc]
 
     def addCookie(
         self,
-        k,
-        v,
-        expires=None,
-        domain=None,
-        path=None,
-        max_age=None,
-        comment=None,
-        secure=None,
-        httpOnly=False,
-        sameSite=None,
-    ):
+        k: bytes | str,
+        v: bytes | str,
+        expires: bytes | str | None = None,
+        domain: bytes | str | None = None,
+        path: bytes | str | None = None,
+        max_age: bytes | str | None = None,
+        comment: bytes | str | None = None,
+        secure: bool | None = None,
+        httpOnly: bool | None = False,
+        sameSite: bytes | str | None = None,
+    ) -> None:
         """
         Set an outgoing HTTP cookie.
 
@@ -1373,39 +1373,29 @@ class Request:  # type:ignore[misc]
         L{twisted.web.server.Session} class for details.
 
         @param k: cookie name
-        @type k: L{bytes} or L{str}
 
         @param v: cookie value
-        @type v: L{bytes} or L{str}
 
         @param expires: cookie expire attribute value in
             "Wdy, DD Mon YYYY HH:MM:SS GMT" format
-        @type expires: L{bytes} or L{str}
 
         @param domain: cookie domain
-        @type domain: L{bytes} or L{str}
 
         @param path: cookie path
-        @type path: L{bytes} or L{str}
 
         @param max_age: cookie expiration in seconds from reception
-        @type max_age: L{bytes} or L{str}
 
         @param comment: cookie comment
-        @type comment: L{bytes} or L{str}
 
         @param secure: direct browser to send the cookie on encrypted
             connections only
-        @type secure: L{bool}
 
         @param httpOnly: direct browser not to expose cookies through channels
             other than HTTP (and HTTPS) requests
-        @type httpOnly: L{bool}
 
         @param sameSite: One of L{None} (default), C{'lax'}, C{'none'} or C{'strict'}.
         Direct browsers not to send this cookie on cross-origin requests.
         See: U{https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value}
-        @type sameSite: L{None}, L{bytes} or L{str}
 
         @raise ValueError: If the value for C{sameSite} is not supported.
         """
@@ -1472,8 +1462,9 @@ class Request:  # type:ignore[misc]
         """
         Set the HTTP response code.
 
-        @type code: L{int}
-        @type message: L{bytes}
+        @param code: the HTTP response code to set.
+
+        @param message: the HTTP response message to set.
         """
         self.code = code
         if message is not None:
@@ -1481,15 +1472,13 @@ class Request:  # type:ignore[misc]
         else:
             self.code_message = RESPONSES.get(code, b"Unknown Status")
 
-    def setHeader(self, name, value):
+    def setHeader(self, name: bytes | str, value: bytes | str) -> None:
         """
         Set an HTTP response header.  Overrides any previously set values for
         this header.
 
-        @type name: L{bytes} or L{str}
         @param name: The name of the header for which to set the value.
 
-        @type value: L{bytes} or L{str}
         @param value: The value to set for the named header. A L{str} will be
             UTF-8 encoded, which may not interoperable with other
             implementations. Avoid passing non-ASCII characters if possible.
@@ -1515,20 +1504,20 @@ class Request:  # type:ignore[misc]
         """
         Set the C{Last-Modified} time for the response to this request.
 
-        If I am called more than once, I ignore attempts to set
-        Last-Modified earlier, only replacing the Last-Modified time
-        if it is to a later value.
+        If I am called more than once, I ignore attempts to set Last-Modified
+        earlier, only replacing the Last-Modified time if it is to a later
+        value.
 
-        If I am a conditional request, I may modify my response code
-        to L{NOT_MODIFIED} if appropriate for the time given.
+        If I am a conditional request, I may modify my response code to
+        L{NOT_MODIFIED} if appropriate for the time given.
 
-        @param when: The last time the resource being returned was
-            modified, in seconds since the epoch.
-        @type when: number
-        @return: If I am a I{If-Modified-Since} conditional request and
-            the time given is not newer than the condition, I return
-            L{http.CACHED<CACHED>} to indicate that you should write no
-            body.  Otherwise, I return a false value.
+        @param when: The last time the resource being returned was modified, in
+            seconds since the epoch.
+
+        @return: If I am a I{If-Modified-Since} conditional request and the
+            time given is not newer than the condition, I return
+            L{http.CACHED<CACHED>} to indicate that you should write no body.
+            Otherwise, I return a false value.
         """
         # time.time() may be a float, but the HTTP-date strings are
         # only good for whole seconds.
@@ -1552,20 +1541,19 @@ class Request:  # type:ignore[misc]
         """
         Set an C{entity tag} for the outgoing response.
 
-        That's \"entity tag\" as in the HTTP/1.1 C{ETag} header, \"used
-        for comparing two or more entities from the same requested
-        resource.\"
+        That's \"entity tag\" as in the HTTP/1.1 C{ETag} header, \"used for
+        comparing two or more entities from the same requested resource.\"
 
-        If I am a conditional request, I may modify my response code
-        to L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate
-        for the tag given.
+        If I am a conditional request, I may modify my response code to
+        L{NOT_MODIFIED} or L{PRECONDITION_FAILED}, if appropriate for the tag
+        given.
 
         @param etag: The entity tag for the resource being returned.
-        @type etag: string
-        @return: If I am a C{If-None-Match} conditional request and
-            the tag matches one in the request, I return
-            L{http.CACHED<CACHED>} to indicate that you should write
-            no body.  Otherwise, I return a false value.
+
+        @return: If I am a C{If-None-Match} conditional request and the tag
+            matches one in the request, I return L{http.CACHED<CACHED>} to
+            indicate that you should write no body.  Otherwise, I return a
+            false value.
         """
         if etag:
             self.etag = etag
