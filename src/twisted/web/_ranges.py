@@ -18,19 +18,19 @@ from twisted.web import http
 
 log = Logger()
 
-ValidRange = tuple[int, int] | tuple[None, int] | tuple[int, None]
+ValidRange = tuple[int | None, int | None]
+
+# type signature is intentionally wrong; should be this:
+# https://github.com/python/mypy/issues/22511
+# ValidRange = tuple[None, int] | tuple[int, None] | tuple[int, int]
+
 ValidRanges = list[ValidRange]
 MimeRanges = list[tuple[bytes, int, int]]
 
 
-def _rangeToOffsetAndLength(
-    size: int, start: int | None, end: int | None
-) -> tuple[int, int]:
+def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[int, int]:
     """
-    Convert a start and end from a Range header to an offset and size.
-
-    This method checks that the resulting range overlaps with the size of the
-    resource being served.
+    Convert a L{(start, end)} from a Range header to an offset and length.
 
     Either but not both of start or end can be L{None}.
 
@@ -40,37 +40,27 @@ def _rangeToOffsetAndLength(
         - end=L{None} means the end of the resource should be the end of the
           range.
 
-    End is interpreted as inclusive, per RFC 2616.
+    End is I{inclusive}, per RFC 2616.  If this range doesn't overlap with any
+    of this resource, C{(0, 0)} is returned, which is not otherwise a value
+    return value.
 
-    If this range doesn't overlap with any of this resource, C{(0, 0)} is
-    returned, which is not otherwise a value return value.
+    @param size: The total size of the resource being served.
 
-    @param size: The total size of the resource.
-
-    @param start: The start value from the header, or L{None} if one was not
-        present.
-
-    @param end: The end value from the header, or L{None} if one was not
-        present.
+    @param rangeHeaderValue: The (start,end) values as parsed from the header.
 
     @return: C{(offset, size)} where offset is how far into this resource this
         resource the range begins and size is how long the range is, or C{(0,
         0)} if the range does not overlap this resource.
     """
-    match (start, end):
-        case (int(offset), int(ending)):
-            # range is inclusive so length is increased by 1
-            ending = ending + 1 if ending < size else size
+    match rangeHeaderValue:
+        case (int(offset), int(endInclusive)):
+            ending = endInclusive + 1 if endInclusive < size else size
         case (None, int(fromEnd)):
             offset = max(0, size - fromEnd)
             ending = size
         case (int(offset), None):
             ending = size
-        case (None, None):
-            assert False, "cannot happen"
-    if offset >= size:
-        return (0, 0)
-    return (offset, ending - offset)
+    return (offset, ending - offset) if offset < size else (0, 0)
 
 
 def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
@@ -266,15 +256,14 @@ def _setupSingleRange(
     @return: A 2-tuple of the offset and size of the range to return.  offset
         == size == 0 indicates that the request is not satisfiable.
     """
-    start, end = startAndEnd
-    offset, size = _rangeToOffsetAndLength(fullFileSize, start, end)
-    if offset == size == 0:
+    offset, length = _rangeToOffsetAndLength(fullFileSize, startAndEnd)
+    if offset == length == 0:
         _notSatisfiableFor(request, fullFileSize)
     else:
         request.setResponseCode(http.PARTIAL_CONTENT)
-        request.setHeader(b"content-range", _contentRange(offset, size, fullFileSize))
-    _simpleContentHeaders(request, size, contentType, contentEncoding)
-    return SingleRangeStaticProducer(request, fileForReading, offset, size)
+        request.setHeader(b"content-range", _contentRange(offset, length, fullFileSize))
+    _simpleContentHeaders(request, length, contentType, contentEncoding)
+    return SingleRangeStaticProducer(request, fileForReading, offset, length)
 
 
 class SingleRangeStaticProducer(StaticProducer):
@@ -367,20 +356,20 @@ def _setupMultiRange(
     boundary = f"{int(time.time() * 1000000):x}{os.getpid():x}".encode()
     if not contentType:
         contentType = "bytes"  # Do what Apache HTTPD does.
-    for start, end in byteRanges:
-        partOffset, partSize = _rangeToOffsetAndLength(fullFileSize, start, end)
-        if partOffset == partSize == 0:
+    for eachRange in byteRanges:
+        partOffset, partLength = _rangeToOffsetAndLength(fullFileSize, eachRange)
+        if partOffset == partLength == 0:
             continue
-        contentLength += partSize
+        contentLength += partLength
         partSeparator = (
             b"\r\n--%s\r\n" b"Content-type: %s\r\n" b"Content-range: %s\r\n" b"\r\n"
         ) % (
             boundary,
             contentType.encode(),
-            _contentRange(partOffset, partSize, fullFileSize),
+            _contentRange(partOffset, partLength, fullFileSize),
         )
         contentLength += len(partSeparator)
-        rangeInfo.append((partSeparator, partOffset, partSize))
+        rangeInfo.append((partSeparator, partOffset, partLength))
     contentType = None
     if rangeInfo:
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
