@@ -359,7 +359,6 @@ def _setupMultiRange(
         )
         contentLength += len(partSeparator)
         rangeInfo.append((partSeparator, partOffset, partLength))
-    contentType = None
     if rangeInfo:
         finalBoundary = b"\r\n--" + boundary + b"--\r\n"
         rangeInfo.append((finalBoundary, 0, 0))
@@ -394,11 +393,11 @@ class MultipleRangeStaticProducer(StaticProducer):
 
         @param rangeInfo: A list of tuples C{[(boundary, offset, size)]} where:
 
-            - C{boundary} will be written to the request first.
+                - C{boundary} will be written to the request first.
 
-            - C{offset} the offset into the file of chunk to write.
+                - C{offset} the offset into the file of chunk to write.
 
-            - C{size} the size of the chunk to write.
+                - C{size} the size of the chunk to write.
         """
         StaticProducer.__init__(self, request, fileObject)
         self.rangeInfo = rangeInfo
@@ -420,16 +419,12 @@ class MultipleRangeStaticProducer(StaticProducer):
     def resumeProducing(self) -> None:
         if self.request is None:
             raise RuntimeError("request must not be done to resume producing")
-        # the raw data we are going to write to the request in this
-        # resumeProducing call
-        data = []
-        # the accumulated length of all the bytes in `data`
-        dataLength = 0
-        # have we reached the last chunk
-        done = False
+        data = []  # the raw data we are going to write to the request
+        dataLength = 0  # the accumulated length of all the bytes in `data`
+        done = False  # have we reached the last chunk
         while dataLength < self.bufferSize:
             if self.partBoundary:
-                # We are *at* the part boundary; write out the header.
+                # We are *at* the part boundary; write out the boundary header.
                 dataLength += len(self.partBoundary)
                 data.append(self.partBoundary)
                 self.partBoundary = None
@@ -440,13 +435,13 @@ class MultipleRangeStaticProducer(StaticProducer):
                 assert (
                     toRead > 0
                 ), f"part={self._partSize} written={self._partBytesWritten}"
-                p = self.fileObject.read(toRead)
-                if not p:
+                bytesRead = self.fileObject.read(toRead)
+                if not bytesRead:
                     done = True
                     break
-                self._partBytesWritten += len(p)
-                dataLength += len(p)
-                data.append(p)
+                self._partBytesWritten += len(bytesRead)
+                dataLength += len(bytesRead)
+                data.append(bytesRead)
             if self._partBytesWritten == self._partSize:
                 try:
                     self._nextRange()
