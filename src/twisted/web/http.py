@@ -2372,7 +2372,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _savedTimeOut = None
     _receivedHeaderCount = 0
     _receivedHeaderSize = 0
-    _requestProducer = None
+    _requestProducer: interfaces.IPushProducer | None = None
     _requestProducerStreaming: bool | None = None
     _waitingForTransport = False
     _abortingCall = None
@@ -2867,7 +2867,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         assert self.transport is not None
         self.transport.loseConnection()
 
-    def registerProducer(self, producer, streaming):
+    def registerProducer(self, producer: interfaces.IProducer, streaming: bool) -> None:
         """
         Register to receive data from a producer.
 
@@ -2900,14 +2900,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 "unregistered." % (producer, self._requestProducer)
             )
 
+        pushProducer: interfaces.IPushProducer
         if not streaming:
-            producer = _PullToPush(producer, self)
+            pushConverter = _PullToPush(producer, self)
+            pushProducer = pushConverter
+        else:
+            # 'streaming' is an assertion that this interface is provided
+            pushProducer = producer  # type:ignore[assignment]
 
-        self._requestProducer = producer
+        self._requestProducer = pushProducer
         self._requestProducerStreaming = streaming
 
         if not streaming:
-            producer.startStreaming()
+            pushConverter.startStreaming()
 
     def unregisterProducer(self) -> None:
         """
@@ -2917,21 +2922,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         """
         if self._requestProducer is None:
             return
-
-        if not self._requestProducerStreaming:
-            # If the *actual* producer for this request is a pull
-            # (not-streaming) producer, then we have converted it into a push
-            # producer with _PullToPush.  _PullToPush maintains internal state
-            # to schedule its own calls to resumeProducing from the reactor.
-            # So we call the .stopStreaming method, exclusive to _PullToPush,
-            # to clean up _that_ state, since it is not appropriate to call
-            # stopProducing inside unregisterProducer.
-            self._requestProducer.stopStreaming()
-
+        self._requestProducer.pauseProducing()
         self._requestProducer = None
         self._requestProducerStreaming = None
 
-    def stopProducing(self):
+    def stopProducing(self) -> None:
         """
         Stop producing data.
 
@@ -2943,7 +2938,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self._requestProducer is not None:
             self._requestProducer.stopProducing()
 
-    def pauseProducing(self):
+    def pauseProducing(self) -> None:
         """
         Pause producing data.
 
@@ -2978,13 +2973,13 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._handlingRequest:
             self._networkProducer.pauseProducing()
 
-    def resumeProducing(self):
+    def resumeProducing(self) -> None:
         """
         Resume producing data.
 
         This will be called by the transport when the send buffer has dropped
-        enough to actually send more data. When this happens we can unpause any
-        outstanding L{Request} producers we have, and also unpause our
+        enough to actually send more data.  When this happens we can unpause
+        any outstanding L{Request} producer we have, and also unpause our
         transport.
         """
         self._waitingForTransport = False
@@ -2997,14 +2992,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if not self._handlingRequest:
             self._networkProducer.resumeProducing()
 
-    def _send100Continue(self):
+    def _send100Continue(self) -> None:
         """
         Sends a 100 Continue response, used to signal to clients that further
         processing will be performed.
         """
+        assert self.transport is not None
         self.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
 
-    def _respondToBadRequestAndDisconnect(self):
+    def _respondToBadRequestAndDisconnect(self) -> None:
         """
         This is a quick and dirty way of responding to bad requests.
 
@@ -3012,6 +3008,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         whole request from the client before sending a polite bad request
         response, even in the case when clients send tons of data.
         """
+        assert self.transport is not None
         self.transport.write(b"HTTP/1.1 400 Bad Request\r\n\r\n")
         self.loseConnection()
 
