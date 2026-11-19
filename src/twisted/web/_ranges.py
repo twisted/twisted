@@ -290,11 +290,6 @@ class SingleRangeStaticProducer(StaticProducer):
         self.size = size
 
     def start(self) -> None:
-        assert self.request is not None, "request must be set to start producing"
-        """
-        If this file object is bad, we should handle that and inform the
-        request.
-        """
         self.fileObject.seek(self.offset)
         self.bytesWritten = 0
         super().start()
@@ -302,17 +297,11 @@ class SingleRangeStaticProducer(StaticProducer):
     def resumeProducing(self) -> None:
         if self.request is None:
             raise RuntimeError("request must not be done to resume producing")
-        """
-        All the same error conditions as L{NoRangeStaticProducer}; no new ones
-        here, the only new one is seek().
-        """
         data = self.fileObject.read(min(self.bufferSize, self.size - self.bytesWritten))
         if data:
             self.bytesWritten += len(data)
-            # this .write will spin the reactor, calling .doWrite and then
-            # .resumeProducing again, so be prepared for a re-entrant call
             self.request.write(data)
-        if (self.request and self.bytesWritten == self.size) or (not data):
+        if (self.bytesWritten == self.size) or (not data):
             self.request.finish()
 
 
