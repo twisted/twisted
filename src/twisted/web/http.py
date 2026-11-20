@@ -2912,7 +2912,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         if self._requestProducer is None:
             return
         if isinstance(self._requestProducer, _PullToPush):
-            self._requestProducer.stopProducing()
+            self._requestProducer.stopStreaming()
         self._requestProducer = None
         self._requestProducerStreaming = None
 
