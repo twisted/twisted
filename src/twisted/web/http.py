@@ -1305,38 +1305,39 @@ class Request:  # type:ignore[misc]
             version = self.clientproto
             code = b"%d" % (self.code,)
             reason = self.code_message
+            responseHeaders = self.responseHeaders
 
             # if we don't have a content length, we send data in
             # chunked mode, so that we can support pipelining in
             # persistent connections.
             if (
                 (version == b"HTTP/1.1")
-                and (self.responseHeaders.getRawHeaders(b"Content-Length") is None)
+                and (responseHeaders.getRawHeaders(b"Content-Length") is None)
                 and self.method != b"HEAD"
                 and self.code not in NO_BODY_CODES
             ):
-                self.responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
+                responseHeaders.setRawHeaders("Transfer-Encoding", [b"chunked"])
                 self.chunked = 1
 
             if self.lastModified is not None:
-                if self.responseHeaders.hasHeader(b"Last-Modified"):
+                if responseHeaders.hasHeader(b"Last-Modified"):
                     self._log.info(
                         "Warning: last-modified specified both in"
                         " header list and lastModified attribute."
                     )
                 else:
-                    self.responseHeaders.setRawHeaders(
+                    responseHeaders.setRawHeaders(
                         b"Last-Modified", [datetimeToString(self.lastModified)]
                     )
 
             if self.etag is not None:
-                self.responseHeaders.setRawHeaders(b"ETag", [self.etag])
+                responseHeaders.setRawHeaders(b"ETag", [self.etag])
 
             if self.cookies:
-                self.responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
+                responseHeaders.setRawHeaders(b"Set-Cookie", self.cookies)
 
             assert self.channel is not None
-            self.channel.writeHeaders(version, code, reason, self.responseHeaders)
+            self.channel.writeHeaders(version, code, reason, responseHeaders)
 
             # if this is a "HEAD" request, we shouldn't return any data
             if self.method == b"HEAD":
