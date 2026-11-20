@@ -1972,6 +1972,28 @@ class ParsingTests(unittest.TestCase):
             req = requests.pop()
             self.assertEqual((u, p), req.credentials)
 
+    def test_basicAuthPasswordFirst(self) -> None:
+        """
+        C{.getUser()} and C{.getPassword()} can be called in either order
+        (either can notice the need to do the underlying authorization parsing
+        if it isn't cached yet).
+        """
+        requests = []
+
+        class Request(http.Request):
+            def process(self):
+                pw = self.getPassword()
+                un = self.getUser()
+                self.credentials = (un, pw)
+                requests.append(self)
+
+        for u, p in [(b"foo", b"bar"), (b"hello", b"there:z")]:
+            s = base64.b64encode(b":".join((u, p)))
+            f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
+            self.runRequest(f, Request, 0)
+            req = requests.pop()
+            self.assertEqual((u, p), req.credentials)
+
     def test_headers(self):
         """
         Headers received by L{HTTPChannel} in a request are made available to
