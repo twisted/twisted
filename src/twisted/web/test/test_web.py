@@ -488,6 +488,22 @@ class ConditionalTests(unittest.TestCase):
         self.assertEqual(httpBody(result), b"")
         self.assertEqual(httpHeader(result, b"Content-Type"), b"image/jpeg")
 
+    def test_modifiedWithContentType(self) -> None:
+        """
+        If the content is modified (the etag was not matched) then the regular
+        response body is returned.
+        """
+        for line in [
+            b"GET /with-content-type HTTP/1.1",
+            b"If-None-Match: NotMatchingTag",
+            b"",
+        ]:
+            self.channel.dataReceived(line + b"\r\n")
+        result = self.transport.getvalue()
+        self.assertEqual(httpCode(result), http.OK)
+        self.assertEqual(httpBody(result), b"correct")
+        self.assertEqual(httpHeader(result, b"Content-Type"), b"image/jpeg")
+
 
 class RequestTests(unittest.TestCase):
     """
