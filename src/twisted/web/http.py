@@ -848,6 +848,7 @@ def _getContentFile(length):
 
 
 _hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
+_handleCloseFails = Logger().failureHandler("while closing upload file")
 
 
 @implementer(
@@ -993,11 +994,11 @@ class Request:  # type:ignore[misc]
         """
         self._wasFinishNotified = True
         self._finishNotifyResult = why
-        if self.content is not None:
-            with self._log.failuresHandled("while closing upload content"):
+        if (content := self.content) is not None:
+            with _handleCloseFails:
                 # Closing a file open for writing can raise exceptions due to
                 # buffered writes (most commonly ENOSPC but other stuff too).
-                self.content.close()
+                content.close()
             del self.content
         for d in self.notifications:
             d.callback(why)
