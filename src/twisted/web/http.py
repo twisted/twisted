@@ -1560,8 +1560,7 @@ class Request:  # type:ignore[misc]
             indicate that you should write no body.  Otherwise, I return a
             false value.
         """
-        if etag:
-            self.etag = etag
+        self.etag = etag
 
         tags = self.getHeader(b"If-None-Match")
         if tags:
