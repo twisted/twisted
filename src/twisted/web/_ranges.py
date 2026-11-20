@@ -62,6 +62,8 @@ def _rangeToOffsetAndLength(size: int, rangeHeaderValue: ValidRange) -> tuple[in
         case (int(offset), int(endInclusive)):
             # we have both; 'end' is inclusive, so count is +1
             ending = endInclusive + 1 if endInclusive < size else size
+        case _:
+            assert False, f"range of unexpected type {rangeHeaderValue}"
     return (offset, ending - offset) if offset < size and offset != ending else (0, 0)
 
 
@@ -501,7 +503,7 @@ def _setupRangeProducer(
     @return: an instance of a subclass of L{StaticProducer} that will produce
         the appropriate range indicated by the C{request}.
     """
-    match _parseRangeHeader(request.getHeader(b"range") or b""):
+    match (it := _parseRangeHeader(request.getHeader(b"range") or b"")):
         case []:
             return _setupNoRange(
                 request, fileSize, openFile, contentType, contentEncoding
@@ -514,3 +516,5 @@ def _setupRangeProducer(
             return _setupMultiRange(
                 request, parsedRanges, fileSize, openFile, contentType
             )
+        case _:
+            assert False, f"range of unexpected type {it}"
