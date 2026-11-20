@@ -819,6 +819,7 @@ class SecurityTests(unittest.TestCase):
 
         req.setResponseCode(200)
         req.finish()
+        req.connectionLost(Failure(ConnectionLost()))
         self.assertFalse(req.isSecure())
 
 
@@ -3934,6 +3935,18 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         req.registerProducer(DummyProducer(), True)
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
+
+    def test_unregisterAfterConnectionLost(self) -> None:
+        """
+        L{Request.unregisterProducer} will remove a reference to the producer even if the connection is done.
+        """
+        req = http.Request(DummyChannel(), False)  # type:ignore[arg-type]
+        req.transport = StringTransport()
+        req.registerProducer(DummyProducer(), True)  # type:ignore[arg-type]
+        req.connectionLost(Failure(ConnectionLost("bye")))
+        self.assertIsNot(req.producer, None)
+        req.unregisterProducer()
+        self.assertIs(req.producer, None)
 
     def test_stopFactoryInvalidState(self) -> None:
         """

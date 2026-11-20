@@ -971,6 +971,9 @@ class Request:  # type:ignore[misc]
         """
         Called when have finished responding and are no longer queued.
         """
+        assert self.channel is not None
+        self.channel.requestDone(self)
+        self._doFinishNotify(None)
         if self.producer:
             self._log.failure(
                 "",
@@ -979,10 +982,6 @@ class Request:  # type:ignore[misc]
                 ),
             )
             self.unregisterProducer()
-        assert self.channel is not None
-        self.channel.requestDone(self)
-        del self.channel
-        self._doFinishNotify(None)
 
     _wasFinishNotified: bool = False
     _finishNotifyResult: None | Failure = None
@@ -1169,8 +1168,8 @@ class Request:  # type:ignore[misc]
         """
         Unregister the producer.
         """
-        assert self.channel is not None
-        self.channel.unregisterProducer()
+        if self.channel is not None:
+            self.channel.unregisterProducer()
         self.producer = None
 
     # The following is the public interface that people should be
@@ -1755,8 +1754,8 @@ class Request:  # type:ignore[misc]
         Clean up anything which can't be useful anymore.
         """
         self._disconnected = True
-        self.channel = None
         self._doFinishNotify(reason)
+        self.channel = None
 
     def loseConnection(self) -> None:
         """
