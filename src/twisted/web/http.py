@@ -989,7 +989,7 @@ class Request:  # type:ignore[misc]
 
     def _doFinishNotify(self, why: Failure | None) -> None:
         """
-        Notify all pending L{Deferreds} returned from L{Request.notifyFinish},
+        Notify all pending L{Deferred}s returned from L{Request.notifyFinish},
         and close any temporary upload files.
         """
         self._wasFinishNotified = True
