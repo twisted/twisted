@@ -369,6 +369,7 @@ class H2Connection(Protocol, TimeoutMixin):
         Tells the L{H2Connection} that it has produced too much data to process
         for the time being, and to stop until resumeProducing() is called.
         """
+        assert self._consumerBlocked is None, "pauseProducing cannot be called twice"
         self._consumerBlocked = Deferred()
         # Ensure pending control data (if any) are sent first.
         self._consumerBlocked.addCallback(self._flushBufferedControlData)
