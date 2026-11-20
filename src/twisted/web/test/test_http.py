@@ -4539,6 +4539,20 @@ class ChannelProductionTests(unittest.TestCase):
         channel.stopProducing()
         self.assertEqual(producer.events, ["stop"])
 
+    def test_HTTPChannelStopNothingProducer(self) -> None:
+        """
+        If there is not a request producer registered with L{HTTPChannel},
+        calling C{stopProducing} is a no-op.
+        """
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DelayedHTTPHandler
+        )
+        # Feed a request in to spawn a Request object, then grab it.
+        channel.dataReceived(self.request)
+        self.assertEqual(len(channel.requests), 1)
+        channel.stopProducing()
+        # We have no assertions to make, beyond "no exception occurred".
+
     def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
         """
         When L{HTTPChannel} has C{pauseProducing} called on it by the transport
