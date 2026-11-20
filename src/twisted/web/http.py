@@ -981,21 +981,24 @@ class Request:  # type:ignore[misc]
         assert self.channel is not None
         self.channel.requestDone(self)
         del self.channel
-        if self.content is not None:
-            try:
-                self.content.close()
-            except OSError:
-                # win32 suckiness, no idea why it does this
-                pass
-            del self.content
         self._doFinishNotify(None)
 
     _wasFinishNotified: bool = False
     _finishNotifyResult: None | Failure = None
 
     def _doFinishNotify(self, why: Failure | None) -> None:
+        """
+        Notify all pending L{Deferreds} returned from L{Request.notifyFinish},
+        and close any temporary upload files.
+        """
         self._wasFinishNotified = True
         self._finishNotifyResult = why
+        if self.content is not None:
+            with self._log.failuresHandled("while closing upload content"):
+                # Closing a file open for writing can raise exceptions due to
+                # buffered writes (most commonly ENOSPC but other stuff too).
+                self.content.close()
+            del self.content
         for d in self.notifications:
             d.callback(why)
         self.notifications = []
@@ -1752,8 +1755,6 @@ class Request:  # type:ignore[misc]
         """
         self._disconnected = True
         self.channel = None
-        if self.content is not None:
-            self.content.close()
         self._doFinishNotify(reason)
 
     def loseConnection(self) -> None:
