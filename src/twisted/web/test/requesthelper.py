@@ -17,9 +17,10 @@ from incremental import Version
 
 from twisted.internet.address import IPv4Address, IPv6Address
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IAddress, ISSLTransport
+from twisted.internet.interfaces import IAddress, IPullProducer, ISSLTransport
 from twisted.internet.task import Clock
 from twisted.python.deprecate import deprecated
+from twisted.python.failure import Failure
 from twisted.trial import unittest
 from twisted.web._responses import FOUND
 from twisted.web.http_headers import Headers
@@ -185,7 +186,7 @@ class DummyChannel:
 
 class DummyRequest:
     """
-    Represents a dummy or fake request. See L{twisted.web.server.Request}.
+    Represents a dummy or fake request.  See L{twisted.web.server.Request}.
 
     @ivar _finishedDeferreds: L{None} or a C{list} of L{Deferreds} which will
         be called back with L{None} when C{finish} is called or which will be
@@ -205,6 +206,11 @@ class DummyRequest:
 
     @type written: C{list} of C{bytes}
     @ivar written: The bytes which have been written to the request.
+
+    @ivar _produceSynchronously: If True (the default),
+        L{DummyRequest.registerProducer} will synchronously call
+        C{.resumeProducing()} on its producer until
+        L{DummyRequest.unregisterProducer} is called.  If False,
     """
 
     uri = b"http://dummy/"
@@ -214,7 +220,9 @@ class DummyRequest:
     written: list[bytes]
     prepath: list[bytes]
     args: dict[bytes, list[bytes]]
-    _finishedDeferreds: list[Deferred[None]]
+    _registeredProducer: IPullProducer | None
+    _finishedDeferreds: list[Deferred[None]] | None
+    _produceSynchronously: bool = True
 
     def registerProducer(self, prod, s):
         """
@@ -227,12 +235,15 @@ class DummyRequest:
         @param s: Whether or not the producer is streaming.
         """
         # XXX: Handle IPushProducers
-        self.go = 1
-        while self.go:
-            prod.resumeProducing()
+        self.producer = prod
+        if self._produceSynchronously:
+            self.go = 1
+            while self.go:
+                prod.resumeProducing()
 
     def unregisterProducer(self):
         self.go = 0
+        self.producer = None
 
     def __init__(
         self,
@@ -319,7 +330,10 @@ class DummyRequest:
     def write(self, data):
         if not isinstance(data, bytes):
             raise TypeError("write() only accepts bytes")
+        assert not self.finished, "Request.write must be called only before finish()"
         self.written.append(data)
+
+    _whatFinished: Failure | None = None
 
     def notifyFinish(self) -> Deferred[None]:
         """
@@ -328,7 +342,10 @@ class DummyRequest:
         C{finish} yet.
         """
         finished: Deferred[None] = Deferred()
-        self._finishedDeferreds.append(finished)
+        if self._finishedDeferreds is None:
+            finished.callback(self._whatFinished)
+        else:
+            self._finishedDeferreds.append(finished)
         return finished
 
     def finish(self):
@@ -348,6 +365,7 @@ class DummyRequest:
         Errback and L{Deferreds} waiting for finish notification.
         """
         if self._finishedDeferreds is not None:
+            self._whatFinished = reason
             observers = self._finishedDeferreds
             self._finishedDeferreds = None
             for obs in observers:
@@ -369,11 +387,11 @@ class DummyRequest:
         self.responseCode = code
         self.responseMessage = message
 
-    def setLastModified(self, when):
+    def setLastModified(self, when: float) -> None:
         assert (
             not self.written
-        ), "Last-Modified cannot be set after data has " "been written: {}.".format(
-            "@@@@".join(self.written)
+        ), "Last-Modified cannot be set after data has " "been written: {!r}.".format(
+            b"@@@@".join(self.written)
         )
 
     def setETag(self, tag):

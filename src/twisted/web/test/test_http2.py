@@ -3035,7 +3035,7 @@ class HTTP2RapidResetTests(unittest.TestCase, HTTP2TestHelpers):
         connection = H2Connection(reactor)
         # requestFactory is assigned by the factory at runtime, so it is not
         # visible to mypy on H2Connection here.
-        connection.requestFactory = DummyHTTPHandlerProxy  # type: ignore[attr-defined]
+        connection.requestFactory = DummyHTTPHandlerProxy
         transport = StringTransport()
         connection.makeConnection(transport)
         frameFactory = FrameFactory()

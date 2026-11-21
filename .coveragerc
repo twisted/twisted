@@ -21,3 +21,4 @@ exclude_lines =
     if TYPE_CHECKING
     \s*\.\.\.$
     raise NotImplementedError
+    case _:\n\s*assert False.*

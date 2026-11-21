@@ -14,8 +14,8 @@ from collections.abc import Sequence
 from functools import partial
 from io import BytesIO, TextIOWrapper
 from itertools import cycle
+from typing import Any
 from unittest import skipIf
-from urllib.parse import clear_cache  # type: ignore[attr-defined]
 from urllib.parse import urlparse, urlunsplit
 
 from zope.interface import directlyProvides, providedBy, provider
@@ -40,7 +40,7 @@ from twisted.python.failure import Failure
 from twisted.python.log import logfile as legacyGlobalLogFile
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
-from twisted.trial.unittest import TestCase
+from twisted.trial.unittest import SynchronousTestCase, TestCase
 from twisted.web import http, iweb
 from twisted.web.http import PotentialDataLoss, _DataLoss, _IdentityTransferDecoder
 from twisted.web.test.requesthelper import (
@@ -819,6 +819,7 @@ class SecurityTests(unittest.TestCase):
 
         req.setResponseCode(200)
         req.finish()
+        req.connectionLost(Failure(ConnectionLost()))
         self.assertFalse(req.isSecure())
 
 
@@ -1972,6 +1973,28 @@ class ParsingTests(unittest.TestCase):
             req = requests.pop()
             self.assertEqual((u, p), req.credentials)
 
+    def test_basicAuthPasswordFirst(self) -> None:
+        """
+        C{.getUser()} and C{.getPassword()} can be called in either order
+        (either can notice the need to do the underlying authorization parsing
+        if it isn't cached yet).
+        """
+        requests = []
+
+        class Request(http.Request):
+            def process(self):
+                pw = self.getPassword()
+                un = self.getUser()
+                self.credentials = (un, pw)
+                requests.append(self)
+
+        for u, p in [(b"foo", b"bar"), (b"hello", b"there:z")]:
+            s = base64.b64encode(b":".join((u, p)))
+            f = b"GET / HTTP/1.0\nAuthorization: Basic " + s + b"\n\n"
+            self.runRequest(f, Request, 0)
+            req = requests.pop()
+            self.assertEqual((u, p), req.credentials)
+
     def test_headers(self):
         """
         Headers received by L{HTTPChannel} in a request are made available to
@@ -2955,6 +2978,8 @@ class QueryArgumentsTests(unittest.TestCase):
             self.assertIsInstance(query, bytes)
             self.assertIsInstance(fragment, bytes)
 
+        from urllib.parse import clear_cache
+
         # With caching, unicode then str
         clear_cache()
         for url in urls():
@@ -3011,7 +3036,7 @@ class ClientStatusParsingTests(unittest.TestCase):
         self.assertEqual(c.message, b"")
 
 
-class RequestTests(unittest.TestCase, ResponseTestMixin):
+class RequestTests(SynchronousTestCase, ResponseTestMixin):
     """
     Tests for L{http.Request}
     """
@@ -3767,17 +3792,17 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.registerProducer(producer, False)
         self.assertEqual([(producer, False)], req.transport.producers)
 
-    def test_connectionLostNotification(self):
+    def test_connectionLostNotification(self) -> None:
         """
         L{Request.connectionLost} triggers all finish notification Deferreds
         and cleans up per-request state.
         """
-        d = DummyChannel()
+        d: Any = DummyChannel()
         request = http.Request(d, True)
         finished = request.notifyFinish()
         request.connectionLost(Failure(ConnectionLost("Connection done")))
         self.assertIdentical(request.channel, None)
-        return self.assertFailure(finished, ConnectionLost)
+        self.failureResultOf(finished, ConnectionLost)
 
     def test_finishNotification(self):
         """
@@ -3815,6 +3840,20 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req = http.Request(channel, False)
         req.connectionLost(Failure(ConnectionLost("The end.")))
         self.assertRaises(RuntimeError, req.finish)
+
+    def test_notifyFinishAfterFinish(self) -> None:
+        """
+        Calling L{Request.notifyFinish} after L{Request.connectionLost} has
+        been called results in the returned L{Deferred} being fired
+        synchronously, so that code which attaches to a request mid-flight can
+        clean up properly regardless of state.
+        """
+        channel: Any = DummyChannel()
+        req = http.Request(channel, False)
+        it = Failure(ConnectionLost("The end."))
+        req.connectionLost(it)
+        finished = req.notifyFinish()
+        self.assertIdentical(it, self.failureResultOf(finished))
 
     def test_writeAfterConnectionLost(self):
         """
@@ -3897,6 +3936,18 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
+    def test_unregisterAfterConnectionLost(self) -> None:
+        """
+        L{Request.unregisterProducer} will remove a reference to the producer even if the connection is done.
+        """
+        req = http.Request(DummyChannel(), False)  # type:ignore[arg-type]
+        req.transport = StringTransport()
+        req.registerProducer(DummyProducer(), True)  # type:ignore[arg-type]
+        req.connectionLost(Failure(ConnectionLost("bye")))
+        self.assertIsNot(req.producer, None)
+        req.unregisterProducer()
+        self.assertIs(req.producer, None)
+
     def test_stopFactoryInvalidState(self) -> None:
         """
         L{http.HTTPFactory.stopFactory} is a no-op (that does not raise an
@@ -3952,7 +4003,8 @@ class RequestTests(unittest.TestCase, ResponseTestMixin):
         for x in val:
             proto.dataReceived(x)
 
-        proto._channel.requests[0].finish()
+        # we're just testing HTTP/1.1 here, not HTTP/2
+        proto._channel.requests[0].finish()  # type:ignore[union-attr]
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
@@ -4499,6 +4551,20 @@ class ChannelProductionTests(unittest.TestCase):
         # The transport now stops production. This stops the request producer.
         channel.stopProducing()
         self.assertEqual(producer.events, ["stop"])
+
+    def test_HTTPChannelStopNothingProducer(self) -> None:
+        """
+        If there is not a request producer registered with L{HTTPChannel},
+        calling C{stopProducing} is a no-op.
+        """
+        channel, transport = self.buildChannelAndTransport(
+            StringTransport(), DelayedHTTPHandler
+        )
+        # Feed a request in to spawn a Request object, then grab it.
+        channel.dataReceived(self.request)
+        self.assertEqual(len(channel.requests), 1)
+        channel.stopProducing()
+        # We have no assertions to make, beyond "no exception occurred".
 
     def test_HTTPChannelPropagatesProducingFromTransportToTransport(self):
         """
