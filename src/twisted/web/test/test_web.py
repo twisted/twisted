@@ -14,8 +14,9 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
-from twisted.internet.task import Clock
+from twisted.internet.task import Clock, deferLater
 from twisted.internet.testing import EventLoggingObserver, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python import failure, reflect
@@ -1907,10 +1908,13 @@ class QueueResource(Resource):
 
     def __init__(self) -> None:
         super().__init__()
+        self.hasBegun: Deferred[None] = Deferred()
         self.dispatchedRequests: list[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.dispatchedRequests.append(request)
+        hasBegun, self.hasBegun = self.hasBegun, Deferred()
+        hasBegun.callback(None)
         return NOT_DONE_YET
 
 
@@ -1959,14 +1963,24 @@ class TestRFC9112Section932(unittest.TestCase):
         proto = site.buildProtocol(None)
         serverTransport = StringTransport()
         proto.makeConnection(serverTransport)
-        self.addCleanup(proto.connectionLost, failure.Failure(ConnectionDone()))
+
+        async def lostInFreshStack() -> None:
+            from twisted.internet import reactor
+
+            await deferLater(reactor, 0.01)
+            proto.connectionLost(failure.Failure(ConnectionDone()))
+
+        self.addCleanup(lambda: Deferred.fromCoroutine(lostInFreshStack()))
         paths = (b"/first", b"/second")
 
+        begun = qr.hasBegun
         # Handle arbitrary number of paths below
         proto.dataReceived(
             b"".join(b"GET %s HTTP/1.1\r\nHost: a\r\n\r\n" % path for path in paths)
         )
         for index, path in enumerate(paths):
+            await begun
+            begun = qr.hasBegun
             self.assertEqual(len(qr.dispatchedRequests), index + 1)
             request = qr.dispatchedRequests[index]
 
