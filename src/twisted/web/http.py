@@ -971,8 +971,8 @@ class Request:  # type:ignore[misc]
         """
         Called when have finished responding and are no longer queued.
         """
-        assert self.channel is not None
-        self.channel.requestDone(self)
+        channel = self.channel
+        assert channel is not None
         self._doFinishNotify(None)
         if self.producer:
             self._log.failure(
@@ -982,6 +982,8 @@ class Request:  # type:ignore[misc]
                 ),
             )
             self.unregisterProducer()
+        self.channel = None
+        channel.requestDone(self)
 
     _wasFinishNotified: bool = False
     _finishNotifyResult: None | Failure = None
@@ -1153,6 +1155,11 @@ class Request:  # type:ignore[misc]
         """
         Register a producer.
         """
+        if self.channel is None:
+            raise RuntimeError(
+                "cannot register a producer when this request does not own the channel"
+            )
+
         if self.producer:
             raise ValueError(
                 "registering producer %s before previous one (%s) was "
@@ -1161,7 +1168,6 @@ class Request:  # type:ignore[misc]
 
         self.streamingProducer = streaming
         self.producer = producer
-        assert self.channel is not None
         self.channel.registerProducer(producer, streaming)
 
     def unregisterProducer(self) -> None:

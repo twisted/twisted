@@ -14,6 +14,7 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
+from twisted.internet.error import ConnectionDone
 from twisted.internet.task import Clock
 from twisted.internet.testing import EventLoggingObserver, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
@@ -1912,6 +1913,37 @@ class QueueResource(Resource):
         return NOT_DONE_YET
 
 
+@implementer(interfaces.IPushProducer)
+class CustomProducer:
+    def stopProducing(self):
+        ...
+
+    def resumeProducing(self):
+        ...
+
+    def pauseProducing(self):
+        ...
+
+
+class ProducerRegistrationSequencingResource(Resource):
+    def __init__(self) -> None:
+        super().__init__()
+        self.dispatchedRequests: list[Request] = []
+        self.aProducer = CustomProducer()
+        self.finished: list[failure.Failure | None] = []
+
+    def render_GET(self, request: Request) -> int:
+        self.dispatchedRequests.append(request)
+        request.registerProducer(self.aProducer, True)
+
+        def finishUp(result: failure.Failure | None) -> None:
+            self.finished.append(result)
+            request.unregisterProducer()
+
+        request.notifyFinish().addBoth(finishUp)
+        return NOT_DONE_YET
+
+
 class TestRFC9112Section932(unittest.TestCase):
     """
     Verify that HTTP/1.1 request ordering is preserved.
@@ -1967,3 +1999,75 @@ class TestRFC9112Section932(unittest.TestCase):
         # second request is dispatched right away.
         qr.dispatchedRequests[0].finish()
         self.assertEqual(len(qr.dispatchedRequests), 2)
+
+    def test_pipelineEndCleanup(self) -> None:
+        """
+        At the moment that the Deferred fired by notifyFinish() is called:
+
+            1. request.write() is a no-op; the request is finished and no
+               further data can be sent to the connection.
+
+            2. request.unregisterProducer()
+        """
+        first = ProducerRegistrationSequencingResource()
+        second = ProducerRegistrationSequencingResource()
+        root = Resource()
+        root.putChild(b"first", first)
+        root.putChild(b"second", second)
+        site = Site(root)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        self.addCleanup(proto.connectionLost, failure.Failure(ConnectionDone()))
+        paths = (b"/first", b"/second")
+        proto.dataReceived(
+            b"".join(b"GET %s HTTP/1.1\r\nHost: a\r\n\r\n" % path for path in paths)
+        )
+        self.assertEqual(len(first.dispatchedRequests), 1)
+        self.assertEqual(len(second.dispatchedRequests), 0)
+        handling = first.dispatchedRequests[0]
+        self.assertIs(handling.producer, first.aProducer)
+        handling.finish()
+        self.assertIs(handling.producer, None)
+        self.assertEqual(len(second.dispatchedRequests), 1)
+        handling = second.dispatchedRequests[0]
+        self.assertIs(handling.producer, second.aProducer)
+        handling.finish()
+        self.assertIs(handling.producer, None)
+        response = serverTransport.io.getvalue()
+        self.assertEqual(response.count(b"HTTP/1.1 200 OK\r\n"), 2, response)
+
+    def test_registerProducerOnWrongRequest(self) -> None:
+        """
+        Registering a producer on a previously-finished request will raise a
+        L{RuntimeError} even if no current producer exists.
+        """
+        first = ProducerRegistrationSequencingResource()
+        second = QueueResource()
+        root = Resource()
+        root.putChild(b"first", first)
+        root.putChild(b"second", second)
+        site = Site(root)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        self.addCleanup(proto.connectionLost, failure.Failure(ConnectionDone()))
+        paths = (b"/first", b"/second")
+        proto.dataReceived(
+            b"".join(b"GET %s HTTP/1.1\r\nHost: a\r\n\r\n" % path for path in paths)
+        )
+        self.assertEqual(len(first.dispatchedRequests), 1)
+        self.assertEqual(len(second.dispatchedRequests), 0)
+        handling = first.dispatchedRequests[0]
+        self.assertIs(handling.producer, first.aProducer)
+        handling.finish()
+        self.assertIs(handling.producer, None)
+        self.assertEqual(len(second.dispatchedRequests), 1)
+        with self.assertRaises(RuntimeError):
+            handling.registerProducer(first.aProducer, True)
+        self.assertIs(handling.producer, None)
+        handling = second.dispatchedRequests[0]
+        handling.finish()
+        self.assertIs(handling.producer, None)
+        response = serverTransport.io.getvalue()
+        self.assertEqual(response.count(b"HTTP/1.1 200 OK\r\n"), 2, response)
