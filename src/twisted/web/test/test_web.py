@@ -27,6 +27,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Request, Site
 from twisted.web.static import Data
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
+from .._ranges import SingleRangeStaticProducer
 from ._util import assertIsFilesystemTemporary
 
 
@@ -1948,6 +1949,39 @@ class TestRFC9112Section932(unittest.TestCase):
     """
     Verify that HTTP/1.1 request ordering is preserved.
     """
+
+    async def test_pipelinedStaticProducers(self) -> None:
+        """
+        Two pipelined requests can both stream a response.
+        """
+        qr = QueueResource()
+        site = Site(qr)
+        proto = site.buildProtocol(None)
+        serverTransport = StringTransport()
+        proto.makeConnection(serverTransport)
+        self.addCleanup(proto.connectionLost, failure.Failure(ConnectionDone()))
+        paths = (b"/first", b"/second")
+
+        # Handle arbitrary number of paths below
+        proto.dataReceived(
+            b"".join(b"GET %s HTTP/1.1\r\nHost: a\r\n\r\n" % path for path in paths)
+        )
+        for index, path in enumerate(paths):
+            self.assertEqual(len(qr.dispatchedRequests), index + 1)
+            request = qr.dispatchedRequests[index]
+
+            # Make sure the request is processed in correct order
+            self.assertEqual(request.path, path)
+
+            finished = request.notifyFinish()
+            producer = SingleRangeStaticProducer(request, BytesIO(b"x"), 0, 1)
+            producer.start()
+
+            # Wait for the response from the request
+            await finished
+
+        response = serverTransport.value()
+        self.assertEqual(response.count(b"HTTP/1.1 200 OK\r\n"), len(paths), response)
 
     def test_multipleRequestsInOneSegment(self) -> None:
         """
