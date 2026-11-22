@@ -1001,9 +1001,9 @@ class Request:  # type:ignore[misc]
                 # buffered writes (most commonly ENOSPC but other stuff too).
                 content.close()
             del self.content
-        for d in self.notifications:
+        toNotify, self.notifications = self.notifications, []
+        for d in toNotify:
             d.callback(why)
-        self.notifications = []
 
     # methods for channel - end users should not use these
 
