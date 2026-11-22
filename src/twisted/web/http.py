@@ -356,12 +356,6 @@ def urlparse(url: bytes) -> ParseResultBytes:
     if isinstance(url, str):  # type:ignore[unreachable]
         raise TypeError("url must be bytes, not unicode")
     scheme, netloc, path, params, query, fragment = _urlparse(url)
-    if isinstance(scheme, str):  # type:ignore[unreachable]
-        scheme = scheme.encode("ascii")  # type:ignore[unreachable]
-        netloc = netloc.encode("ascii")
-        path = path.encode("ascii")
-        query = query.encode("ascii")
-        fragment = fragment.encode("ascii")
     return ParseResultBytes(scheme, netloc, path, params, query, fragment)
 
 
