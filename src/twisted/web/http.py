@@ -340,27 +340,24 @@ def _getMultiPartArgs(content: bytes, ctype: bytes) -> dict[bytes, list[bytes]]:
     return result
 
 
-def urlparse(url):
+def urlparse(url: bytes) -> ParseResultBytes:
     """
     Parse an URL into six components.
 
     This is similar to C{urlparse.urlparse}, but rejects C{str} input
     and always produces C{bytes} output.
 
-    @type url: C{bytes}
-
     @raise TypeError: The given url was a C{str} string instead of a
         C{bytes}.
 
     @return: The scheme, net location, path, params, query string, and fragment
         of the URL - all as C{bytes}.
-    @rtype: C{ParseResultBytes}
     """
-    if isinstance(url, str):
+    if isinstance(url, str):  # type:ignore[unreachable]
         raise TypeError("url must be bytes, not unicode")
     scheme, netloc, path, params, query, fragment = _urlparse(url)
-    if isinstance(scheme, str):
-        scheme = scheme.encode("ascii")
+    if isinstance(scheme, str):  # type:ignore[unreachable]
+        scheme = scheme.encode("ascii")  # type:ignore[unreachable]
         netloc = netloc.encode("ascii")
         path = path.encode("ascii")
         query = query.encode("ascii")
