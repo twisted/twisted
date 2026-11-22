@@ -2303,13 +2303,11 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         asked us to stop producing.  This is used to keep track of what we're
         waiting for: if the transport has asked us to stop producing then we
         don't want to unpause the transport until it asks us to produce again.
-    @type _waitingForTransport: L{bool}
 
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
         the transport down cleanly to give up and forcibly terminate it.  This
         is only used when we time a connection out, to prevent errors causing
         the FD to get leaked.  If this is L{None}, we will wait forever.
-    @type abortTimeout: L{int}
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
@@ -2344,7 +2342,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     maxHeaders = 500
     totalHeadersSize = 16384
-    abortTimeout = 15
+    abortTimeout: int = 15
 
     length: int | None = 0
     persistent = 1
@@ -2360,7 +2358,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _receivedHeaderSize = 0
     _requestProducer: interfaces.IPushProducer | None = None
     _requestProducerStreaming: bool | None = None
-    _waitingForTransport = False
+    _waitingForTransport: bool = False
     _abortingCall = None
     _optimisticEagerReadSize: int = 0x4000
     _log = Logger()
