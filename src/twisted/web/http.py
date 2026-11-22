@@ -3116,17 +3116,15 @@ def proxiedLogFormatter(timestamp, request):
     return combinedLogFormatter(timestamp, _XForwardedForRequest(request))
 
 
-class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # type: ignore[misc]
+class _NegotiatedHTTPVersionProtocol(proxyForInterface(IProtocol, "_actualProtocol")):  # type: ignore[misc]
     """
-    A proxy object that wraps one of the HTTP protocol objects, and switches
-    between them depending on TLS negotiated protocol.
+    A protocol that determines whether we are parsing HTTP/1.1 or HTTP/2, and
+    based on that information, instantiates an underlying L{IProtocol} that can
+    parse the relevant version.
 
     @ivar _negotiatedProtocol: The protocol negotiated with ALPN, if any.
 
-    @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
-        is backing this object.  By default this is a L{HTTPChannel}, but if a
-        HTTP protocol upgrade takes place this may be a different channel
-        object.  Must implement L{IProtocol}.
+    @ivar _actualProtocol: The HTTP/1.1 or HTTP/2 protocol implementation.
 
     @ivar _requestFactory: A callable to use to build L{IRequest} objects.
 
@@ -3147,19 +3145,20 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
     _callLater: Callable[
         [float, Callable[[], None]], IDelayedCall
     ] = None  # type:ignore[assignment]
-    _channel: HTTPChannel | H2Connection
+    _actualProtocol: HTTPChannel | H2Connection
 
     @property
-    def factory(self):
+    def factory(self) -> HTTPFactory:
         """
-        @see: L{_genericHTTPChannelProtocolFactory}
+        The relayed C{factory} attribute from the underlying protocol
+        implementation.
         """
-        return self._channel.factory
+        return self._actualProtocol.factory
 
     @factory.setter
-    def factory(self, value):
+    def factory(self, value: HTTPFactory) -> None:
         self._factory = value
-        self._channel.factory = value
+        self._actualProtocol.factory = value
 
     @property
     def requestFactory(self):
@@ -3168,7 +3167,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
 
         Retries the object from the current backing channel.
         """
-        return self._channel.requestFactory
+        return self._actualProtocol.requestFactory
 
     @requestFactory.setter
     def requestFactory(self, value):
@@ -3182,7 +3181,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         @type value: A L{callable} returning L{IRequest}
         """
         self._requestFactory = value
-        self._channel.requestFactory = value
+        self._actualProtocol.requestFactory = value
 
     @property
     def site(self):
@@ -3191,7 +3190,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
 
         Returns the site object from the backing channel.
         """
-        return self._channel.site
+        return self._actualProtocol.site
 
     @site.setter
     def site(self, value):
@@ -3205,14 +3204,14 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         @type value: L{twisted.web.server.Site}
         """
         self._site = value
-        self._channel.site = value
+        self._actualProtocol.site = value
 
     @property
     def timeOut(self):
         """
         The idle timeout for the backing channel.
         """
-        return self._channel.timeOut
+        return self._actualProtocol.timeOut
 
     @timeOut.setter
     def timeOut(self, value):
@@ -3226,7 +3225,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         @type value: L{int} or L{float}
         """
         self._timeOut = value
-        self._channel.timeOut = value
+        self._actualProtocol.timeOut = value
 
     @property
     def callLater(self):
@@ -3234,7 +3233,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         A value for the C{callLater} callback. This callback is used by the
         L{twisted.protocols.policies.TimeoutMixin} to handle timeouts.
         """
-        return self._channel.callLater
+        return self._actualProtocol.callLater
 
     @callLater.setter
     def callLater(self, value):
@@ -3246,7 +3245,7 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         @type value: L{callable}
         """
         self._callLater = value
-        self._channel.callLater = value
+        self._actualProtocol.callLater = value
 
     def dataReceived(self, data: bytes) -> None:
         """
@@ -3254,40 +3253,46 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
         using.
         """
         if self._negotiatedProtocol is None:
+            # This transport attribute comes from
+            # L{twisted.internet.interfaces.INegotiated} on TLS transports.
             negotiatedProtocol: bytes | None = getattr(
-                self._channel.transport, "negotiatedProtocol", b"http/1.1"
+                self._actualProtocol.transport, "negotiatedProtocol", b"http/1.1"
             )
 
             if negotiatedProtocol is None:
                 negotiatedProtocol = b"http/1.1"
 
             if negotiatedProtocol == b"h2":
+                # We negotiated HTTP/2, and this is our first time being
+                # invoked; time to switch protocol.
                 if not H2_ENABLED:
                     raise ValueError("Negotiated HTTP/2 without support.")
-                assert isinstance(self._channel, HTTPChannel)
+                assert isinstance(self._actualProtocol, HTTPChannel)
 
                 # We need to make sure that the HTTPChannel is unregistered
                 # from the transport so that the H2Connection can register
                 # itself if possible.
-                networkConsumer = self._channel._networkConsumer
+                networkConsumer = self._actualProtocol._networkConsumer
                 networkConsumer.unregisterProducer()
 
                 # Cancel the old channel's timeout.
-                self._channel.setTimeout(None)
+                self._actualProtocol.setTimeout(None)
 
-                transport = self._channel.transport
-                self._channel = H2Connection()
-                self._channel.requestFactory = self._requestFactory
-                self._channel.site = self._site
-                self._channel.factory = self._factory
-                self._channel.timeOut = self._timeOut
-                self._channel.callLater = self._callLater  # type:ignore[method-assign]
-                self._channel.makeConnection(transport)
+                transport = self._actualProtocol.transport
+                self._actualProtocol = H2Connection()
+                self._actualProtocol.requestFactory = self._requestFactory
+                self._actualProtocol.site = self._site
+                self._actualProtocol.factory = self._factory
+                self._actualProtocol.timeOut = self._timeOut
+                self._actualProtocol.callLater = (  # type:ignore[method-assign]
+                    self._callLater
+                )
+                self._actualProtocol.makeConnection(transport)
 
                 # Register the H2Connection as the transport's
                 # producer, so that the transport can apply back
                 # pressure.
-                networkConsumer.registerProducer(self._channel, True)
+                networkConsumer.registerProducer(self._actualProtocol, True)
             else:
                 # Only HTTP/2 and HTTP/1.1 are supported right now.
                 assert (
@@ -3296,16 +3301,16 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
 
             self._negotiatedProtocol = negotiatedProtocol
 
-        self._channel.dataReceived(data)
+        self._actualProtocol.dataReceived(data)
 
 
-def _genericHTTPChannelProtocolFactory(
-    self: HTTPFactory,
-) -> _GenericHTTPChannelProtocol:
+def _negotiatedHTTPVersionProtocol(self: HTTPFactory) -> _NegotiatedHTTPVersionProtocol:
     """
-    Returns an appropriately initialized _GenericHTTPChannelProtocol.
+    Returns a L{_NegotiatedHTTPVersionProtocol} initialized to initially / by
+    default speak HTTP/1.1, but switch to HTTP/2 if its transport negotiates
+    it.
     """
-    return _GenericHTTPChannelProtocol(HTTPChannel())
+    return _NegotiatedHTTPVersionProtocol(HTTPChannel())
 
 
 class _MinimalLogFile(TypingProtocol):
@@ -3323,7 +3328,7 @@ class _MinimalLogFile(TypingProtocol):
 value: type[_MinimalLogFile] = TextIOWrapper
 
 
-class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
+class HTTPFactory(protocol.ServerFactory[_NegotiatedHTTPVersionProtocol]):
     """
     Factory for HTTP server.
 
@@ -3346,12 +3351,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
         timeouts and compute logging timestamps.
     """
 
-    # We need to ignore the mypy error here, because
-    # _genericHTTPChannelProtocolFactory is a callable which returns a proxy
-    # to a Protocol, instead of a concrete Protocol object, as expected in
-    # the protocol.Factory interface
-    protocol = _genericHTTPChannelProtocolFactory
-
+    protocol = _negotiatedHTTPVersionProtocol
     logPath = None
     _logFile: _MinimalLogFile | None = None
 
@@ -3435,7 +3435,7 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
 
     def buildProtocol(
         self, addr: IAddress | None
-    ) -> _GenericHTTPChannelProtocol | None:
+    ) -> _NegotiatedHTTPVersionProtocol | None:
         p = super().buildProtocol(addr)
 
         # This is a bit of a hack to ensure that the HTTPChannel timeouts

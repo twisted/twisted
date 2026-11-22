@@ -165,7 +165,7 @@ class H2Connection(Protocol, TimeoutMixin):
     def connectionMade(self):
         """
         Called by the reactor when a connection is received. May also be called
-        by the L{twisted.web.http._GenericHTTPChannelProtocol} during upgrade
+        by the L{twisted.web.http._NegotiatedHTTPVersionProtocol} during upgrade
         to HTTP/2.
         """
         if ITCPTransport.providedBy(self.transport):

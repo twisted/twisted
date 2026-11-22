@@ -26,6 +26,7 @@ from incremental import Version
 
 from twisted.internet import address
 from twisted.internet.error import ConnectionDone, ConnectionLost
+from twisted.internet.interfaces import IReactorTime
 from twisted.internet.task import Clock
 from twisted.internet.testing import (
     EventLoggingObserver,
@@ -191,25 +192,25 @@ class LoopbackHTTPClient(http.HTTPClient):
         self.transport.write(b"0123456789")
 
 
-def parametrizeTimeoutMixin(protocol, reactor):
+def parametrizeTimeoutMixin(
+    protocol: http._NegotiatedHTTPVersionProtocol, reactor: IReactorTime
+) -> http._NegotiatedHTTPVersionProtocol:
     """
     Parametrizes the L{TimeoutMixin} so that it works with whatever reactor is
     being used by the test.
 
-    @param protocol: A L{_GenericHTTPChannel} or something implementing a
-        similar interface.
-    @type protocol: L{_GenericHTTPChannel}
+    @param protocol: A L{_NegotiatedHTTPVersionProtocol} or something
+        implementing a similar interface.
 
     @param reactor: An L{IReactorTime} implementation.
-    @type reactor: L{IReactorTime}
 
     @return: The C{channel}, with its C{callLater} method patched.
     """
     # This is a terrible violation of the abstraction later of
-    # _genericHTTPChannelProtocol, but we need to do it because
+    # _negotiatedHTTPVersionProtocol, but we need to do it because
     # policies.TimeoutMixin doesn't accept a reactor on the object.
     # See https://twistedmatrix.com/trac/ticket/8488
-    protocol._channel.callLater = reactor.callLater
+    protocol._actualProtocol.callLater = reactor.callLater  # type:ignore[assignment]
     return protocol
 
 
@@ -393,7 +394,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         transport = StringTransport()
         factory = http.HTTPFactory()
         protocol = factory.buildProtocol(None)
-        protocol._channel.abortTimeout = None
+        protocol._actualProtocol.abortTimeout = None
         protocol = parametrizeTimeoutMixin(protocol, clock)
         protocol.makeConnection(transport)
         protocol.dataReceived(b"POST / HTTP/1.0\r\nContent-Length: 2\r\n\r\n")
@@ -823,10 +824,10 @@ class SecurityTests(unittest.TestCase):
         self.assertFalse(req.isSecure())
 
 
-class GenericHTTPChannelTests(unittest.TestCase):
+class NegotiatedHTTPChannelTests(unittest.TestCase):
     """
-    Tests for L{http._genericHTTPChannelProtocol}, a L{HTTPChannel}-alike which
-    can handle different HTTP protocol channels.
+    Tests for L{http._negotiatedHTTPVersionProtocol}, a L{HTTPChannel}-alike
+    which can handle different HTTP protocol channels.
     """
 
     requests = (
@@ -843,7 +844,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         Run a request using the specific instance of a transport. Returns the
         negotiated protocol string.
         """
-        a = http._genericHTTPChannelProtocolFactory(b"")
+        a = http._negotiatedHTTPVersionProtocol(b"")
         a.requestFactory = DummyHTTPHandlerProxy
         a.makeConnection(t)
         # one byte at a time, to stress it.
@@ -860,7 +861,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         """
         clock = Clock()
 
-        a = http._genericHTTPChannelProtocolFactory(b"")
+        a = http._negotiatedHTTPVersionProtocol(b"")
         a.requestFactory = DummyHTTPHandlerProxy
 
         # Set the original timeout to be 100s
@@ -973,13 +974,13 @@ class GenericHTTPChannelTests(unittest.TestCase):
         """
         The C{factory} attribute is taken from the inner channel.
         """
-        a = http._genericHTTPChannelProtocolFactory(b"")
-        a._channel.factory = b"Foo"
+        a = http._negotiatedHTTPVersionProtocol(b"")
+        a._actualProtocol.factory = b"Foo"
         self.assertEqual(a.factory, b"Foo")
 
-    def test_GenericHTTPChannelPropagatesCallLater(self):
+    def test_negotiatedPropagatesCallLater(self):
         """
-        If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
+        If C{callLater} is patched onto the L{http._NegotiatedHTTPVersionProtocol}
         then we need to propagate it through to the backing channel.
         """
         clock = Clock()
@@ -987,12 +988,12 @@ class GenericHTTPChannelTests(unittest.TestCase):
         protocol = factory.buildProtocol(None)
 
         self.assertEqual(protocol.callLater, clock.callLater)
-        self.assertEqual(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol._actualProtocol.callLater, clock.callLater)
 
     @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
-    def test_genericHTTPChannelCallLaterUpgrade(self):
+    def test_negotiatedCallLaterUpgrade(self):
         """
-        If C{callLater} is patched onto the L{http._GenericHTTPChannelProtocol}
+        If C{callLater} is patched onto the L{http._NegotiatedHTTPVersionProtocol}
         then we need to propagate it across onto a new backing channel after
         upgrade.
         """
@@ -1001,7 +1002,7 @@ class GenericHTTPChannelTests(unittest.TestCase):
         protocol = factory.buildProtocol(None)
 
         self.assertEqual(protocol.callLater, clock.callLater)
-        self.assertEqual(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol._actualProtocol.callLater, clock.callLater)
 
         transport = StringTransport()
         transport.negotiatedProtocol = b"h2"
@@ -1012,36 +1013,39 @@ class GenericHTTPChannelTests(unittest.TestCase):
         protocol.dataReceived(b"P")
 
         self.assertEqual(protocol.callLater, clock.callLater)
-        self.assertEqual(protocol._channel.callLater, clock.callLater)
+        self.assertEqual(protocol._actualProtocol.callLater, clock.callLater)
 
     @skipIf(not http.H2_ENABLED, "HTTP/2 support not present")
-    def test_unregistersProducer(self):
+    def test_unregistersProducer(self) -> None:
         """
-        The L{_GenericHTTPChannelProtocol} will unregister its proxy channel
+        The L{_NegotiatedHTTPVersionProtocol} will unregister its proxy channel
         from the transport if upgrade is negotiated.
         """
         transport = StringTransport()
-        transport.negotiatedProtocol = b"h2"
+        # Clumsily (legacy-style, since the tested behavior is predicated on
+        # attribute existence rather than actually implementing the protocol)
+        # emulate L{twisted.internet.interfaces.INegotiated}
+        transport.negotiatedProtocol = b"h2"  # type:ignore[attr-defined]
 
-        genericProtocol = http._genericHTTPChannelProtocolFactory(b"")
-        genericProtocol.requestFactory = DummyHTTPHandlerProxy
-        genericProtocol.makeConnection(transport)
+        negotiatedProtocol = http._negotiatedHTTPVersionProtocol(http.HTTPFactory())
+        negotiatedProtocol.requestFactory = DummyHTTPHandlerProxy
+        negotiatedProtocol.makeConnection(transport)
 
-        originalChannel = genericProtocol._channel
+        originalChannel = negotiatedProtocol._actualProtocol
 
         # We expect the transport has a underlying channel registered as
         # a producer.
         self.assertIs(transport.producer, originalChannel)
 
         # Force the upgrade.
-        genericProtocol.dataReceived(b"P")
+        negotiatedProtocol.dataReceived(b"P")
 
         # The transport should not have the original channel as its
         # producer...
         self.assertIsNot(transport.producer, originalChannel)
 
         # ...it should have the new H2 channel as its producer
-        self.assertIs(transport.producer, genericProtocol._channel)
+        self.assertIs(transport.producer, negotiatedProtocol._actualProtocol)
 
 
 class HTTPLoopbackTests(unittest.TestCase):
@@ -4004,7 +4008,7 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
             proto.dataReceived(x)
 
         # we're just testing HTTP/1.1 here, not HTTP/2
-        proto._channel.requests[0].finish()  # type:ignore[union-attr]
+        proto._actualProtocol.requests[0].finish()  # type:ignore[union-attr]
 
         # A log message should be written out
         self.assertIn(b'sometime "GET /path HTTP/1.1"', logFile.getvalue())
@@ -4044,7 +4048,7 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         factory.startFactory()
         factory.logFile = BytesIO()
         proto = factory.buildProtocol(None)
-        proto._channel._optimisticEagerReadSize = 0
+        proto._actualProtocol._optimisticEagerReadSize = 0
 
         val = [b"GET /path HTTP/1.1\r\n", b"\r\n\r\n"]
 
@@ -4059,7 +4063,7 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         proto.dataReceived(b"GET ")  # just a few extra bytes to exhaust the
         # optimistic buffer size
         self.assertEqual(trans.producerState, "paused")
-        proto._channel.requests[0].finish()
+        proto._actualProtocol.requests[0].finish()
         self.assertEqual(trans.producerState, "producing")
 
     def test_provides_IDeprecatedHTTPChannelToRequestInterface(self):
