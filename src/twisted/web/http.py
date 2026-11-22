@@ -524,14 +524,13 @@ def toChunk(data: bytes) -> tuple[bytes, bytes, bytes, bytes]:
 
 def fromChunk(data: bytes) -> tuple[bytes, bytes]:
     """
-    Convert chunk to string.
+    Convert a buffer beginning with some chunk-encoded data into a 2-tuple of
+    C{(chunk, remaining)}.
 
-    Note that this function is not specification compliant: it doesn't handle
-    chunk extensions.
+    @note: this function is not specification compliant: it doesn't handle
+        chunk extensions.
 
-    @type data: C{bytes}
-
-    @return: tuple of (result, remaining) - both C{bytes}.
+    @return: tuple of C{(result, remaining)} - both C{bytes}.
 
     @raise ValueError: If the given data is not a correctly formatted chunked
         byte string.
@@ -1068,14 +1067,11 @@ class Request:  # type:ignore[misc]
 
         This method is not intended for users.
 
-        @type command: C{bytes}
         @param command: The HTTP verb of this request.  This has the case
             supplied by the client (eg, it maybe "get" rather than "GET").
 
-        @type path: C{bytes}
         @param path: The URI of this request.
 
-        @type version: C{bytes}
         @param version: The HTTP version of this request.
         """
         assert self.content is not None
@@ -1184,10 +1180,8 @@ class Request:  # type:ignore[misc]
         """
         Get an HTTP request header.
 
-        @type key: C{bytes} or C{str}
         @param key: The name of the header to get the value of.
 
-        @rtype: C{bytes} or C{str} or L{None}
         @return: The value of the specified header, or L{None} if that header
             was not present in the request. The string type of the result
             matches the type of C{key}.
@@ -2304,7 +2298,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     @ivar _requestProducerStreaming: A boolean that tracks whether the producer
         on the L{Request} side of this channel has registered itself as a
         L{interfaces.IPushProducer} or an L{interfaces.IPullProducer}.
-    @type _requestProducerStreaming: L{bool} or L{None}
 
     @ivar _waitingForTransport: A boolean that tracks whether the transport has
         asked us to stop producing.  This is used to keep track of what we're
@@ -2347,8 +2340,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         the client and buffer before pausing the transport.
 
         This behavior has been in place since Twisted 17.9.0 .
-
-    @type _optimisticEagerReadSize: L{int}
     """
 
     maxHeaders = 500
@@ -2371,7 +2362,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     _requestProducerStreaming: bool | None = None
     _waitingForTransport = False
     _abortingCall = None
-    _optimisticEagerReadSize = 0x4000
+    _optimisticEagerReadSize: int = 0x4000
     _log = Logger()
 
     def __init__(self):
@@ -3149,37 +3140,28 @@ class _GenericHTTPChannelProtocol(proxyForInterface(IProtocol, "_channel")):  # 
     between them depending on TLS negotiated protocol.
 
     @ivar _negotiatedProtocol: The protocol negotiated with ALPN, if any.
-    @type _negotiatedProtocol: Either a bytestring containing the ALPN token
-        for the negotiated protocol, or L{None} if no protocol has yet been
-        negotiated.
 
     @ivar _channel: The object capable of behaving like a L{HTTPChannel} that
         is backing this object.  By default this is a L{HTTPChannel}, but if a
         HTTP protocol upgrade takes place this may be a different channel
         object.  Must implement L{IProtocol}.
-    @type _channel: L{HTTPChannel}
 
     @ivar _requestFactory: A callable to use to build L{IRequest} objects.
-    @type _requestFactory: L{IRequest}
 
     @ivar _site: A reference to the creating L{twisted.web.server.Site} object.
-    @type _site: L{twisted.web.server.Site}
 
     @ivar _factory: A reference to the creating L{HTTPFactory} object.
-    @type _factory: L{HTTPFactory}
 
     @ivar _timeOut: A timeout value to pass to the backing channel.
-    @type _timeOut: L{int} or L{None}
 
     @ivar _callLater: A value for the C{callLater} callback.
-    @type _callLater: L{callable}
     """
 
-    _negotiatedProtocol = None
-    _requestFactory = Request
+    _negotiatedProtocol: bytes | None = None
+    _requestFactory: Callable[..., IRequest] = Request
     _factory: HTTPFactory = None  # type:ignore[assignment]
     _site: Site = None  # type:ignore[assignment]
-    _timeOut = None
+    _timeOut: int | None = None
     _callLater: Callable[
         [float, Callable[[], None]], IDelayedCall
     ] = None  # type:ignore[assignment]
@@ -3403,16 +3385,13 @@ class HTTPFactory(protocol.ServerFactory[_GenericHTTPChannelProtocol]):
         """
         @param logPath: File path to which access log messages will be written
             or C{None} to disable logging.
-        @type logPath: L{str} or L{bytes}
 
         @param timeout: The initial value of L{timeOut}, which defines the idle
             connection timeout in seconds, or C{None} to disable the idle
             timeout.
-        @type timeout: L{float}
 
         @param logFormatter: An object to format requests into log lines for
             the access log.  L{combinedLogFormatter} when C{None} is passed.
-        @type logFormatter: L{IAccessLogFormatter} provider
 
         @param reactor: An L{IReactorTime} provider used to manage connection
             timeouts and compute logging timestamps. Defaults to the global
