@@ -36,6 +36,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from twisted.web.iweb import IRequest, _invokeSomeRequestFactory
+
 __all__ = [
     "SWITCHING",
     "OK",
@@ -198,10 +200,15 @@ from twisted.web.http_headers import (
     _nameEncoder,
     _sanitizeLinearWhitespace,
 )
-from twisted.web.iweb import IAccessLogFormatter, INonQueuedRequestFactory, IRequest
+from twisted.web.iweb import (
+    ChannelDefinition,
+    IAccessLogFormatter,
+    IMinimalRequest,
+    _SomeRequestFactory,
+)
 
 try:
-    from twisted.web._http2 import H2Connection, H2Stream
+    from twisted.web._http2 import H2Connection
 
     H2_ENABLED = True
 except ImportError:
@@ -842,13 +849,13 @@ _handleCloseFails = Logger().failureHandler("while closing upload file")
 
 
 @implementer(
-    IRequest,
+    IMinimalRequest,
     interfaces.IConsumer,
     _IDeprecatedHTTPChannelToRequestInterface,
 )
 # Ignoring the nominal non-compliance with the zope interface here, since
 # fixing the type annotations is a big project.
-class Request:  # type:ignore[misc]
+class Request:
     """
     A HTTP request.
 
@@ -909,7 +916,7 @@ class Request:  # type:ignore[misc]
     args: dict[bytes, list[bytes]] | None = None
     path: bytes = None  # type:ignore[assignment]
     content: BinaryIO | None = None
-    channel: HTTPChannel | H2Stream | None
+    channel: ChannelDefinition | None
     _forceSSL = 0
     _disconnected: bool = False
     _log: Logger = Logger()
@@ -917,7 +924,7 @@ class Request:  # type:ignore[misc]
 
     def __init__(
         self,
-        channel: HTTPChannel | H2Stream,
+        channel: ChannelDefinition,
         queued: object = _QUEUED_SENTINEL,
         parsePOSTFormSubmission: bool = True,
     ) -> None:
@@ -1190,43 +1197,7 @@ class Request:  # type:ignore[misc]
 
     def notifyFinish(self) -> Deferred[None]:
         """
-        Notify when the response to this request has finished.
-
-        @note: There are some caveats around the reliability of the delivery of
-            this notification.
-
-                1. If this L{Request}'s channel is paused, the notification
-                   will not be delivered.  This can happen in one of two ways;
-                   either you can call C{request.transport.pauseProducing}
-                   yourself, or,
-
-                2. In order to deliver this notification promptly when a client
-                   disconnects, the reactor must continue reading from the
-                   transport, so that it can tell when the underlying network
-                   connection has gone away.  Twisted Web will only keep
-                   reading up until a finite (small) maximum buffer size before
-                   it gives up and pauses the transport itself.  If this
-                   occurs, you will not discover that the connection has gone
-                   away until a timeout fires or until the application attempts
-                   to send some data via L{Request.write}.
-
-                3. It is theoretically impossible to distinguish between
-                   successfully I{sending} a response and the peer successfully
-                   I{receiving} it.  There are several networking edge cases
-                   where the L{Deferred}s returned by C{notifyFinish} will
-                   indicate success, but the data will never be received.
-                   There are also edge cases where the connection will appear
-                   to fail, but in reality the response was delivered.  As a
-                   result, the information provided by the result of the
-                   L{Deferred}s returned by this method should be treated as a
-                   guess; do not make critical decisions in your applications
-                   based upon it.
-
-        @rtype: L{Deferred}
-        @return: A L{Deferred} which will be triggered when the request is
-            finished -- with a L{None} value if the request finishes
-            successfully or with an error if the request is interrupted by an
-            error (for example, the client closing the connection prematurely).
+        @see: L{IMinimalRequest.notifyFinish}
         """
         result: Deferred[None] = Deferred()
         if self._wasFinishNotified:
@@ -2335,7 +2306,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     __content = None
 
     # set in instances or subclasses
-    requestFactory = Request
+    requestFactory: _SomeRequestFactory = Request
 
     _savedTimeOut = None
     _receivedHeaderCount = 0
@@ -2366,7 +2337,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.resetTimeout()
         basic.LineReceiver.dataReceived(self, data)
 
-    def lineReceived(self, line):
+    def lineReceived(self, line: bytes) -> None:
         """
         Called for each line from request until the end of headers when
         it enters binary mode.
@@ -2380,7 +2351,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             # if this connection is not persistent, drop any data which
             # the client (illegally) sent after the last request.
             if not self.persistent:
-                self.dataReceived = self.lineReceived = lambda *args: None
+                self.dataReceived = (  # type:ignore[method-assign]
+                    self.lineReceived  # type:ignore[method-assign]
+                ) = lambda *args: None
                 return
 
             # IE sends an extraneous empty line (\r\n) after a POST request;
@@ -2390,22 +2363,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 return
 
             # create a new Request object
-            if INonQueuedRequestFactory.providedBy(self.requestFactory):
-                request = self.requestFactory(self)
-            else:
-                request = self.requestFactory(self, len(self.requests))
+            request = _invokeSomeRequestFactory(self.requestFactory, self)
             self.requests.append(request)
 
             self.__first_line = 0
 
             try:
-                command, request, version = _parseRequestLine(line)
+                command, requestPath, version = _parseRequestLine(line)
             except ValueError:
                 self._respondToBadRequestAndDisconnect()
                 return
 
             self._command = command
-            self._path = request
+            self._path = requestPath
             self._version = version
         elif line == b"":
             # End of headers.
@@ -3138,7 +3108,7 @@ class _NegotiatedHTTPVersionProtocol(proxyForInterface(IProtocol, "_actualProtoc
     """
 
     _negotiatedProtocol: bytes | None = None
-    _requestFactory: Callable[..., IRequest] = Request
+    _requestFactory: _SomeRequestFactory = Request
     _factory: HTTPFactory = None  # type:ignore[assignment]
     _site: Site = None  # type:ignore[assignment]
     _timeOut: int | None = None
@@ -3161,7 +3131,7 @@ class _NegotiatedHTTPVersionProtocol(proxyForInterface(IProtocol, "_actualProtoc
         self._actualProtocol.factory = value
 
     @property
-    def requestFactory(self):
+    def requestFactory(self) -> _SomeRequestFactory:
         """
         A callable to use to build L{IRequest} objects.
 
@@ -3170,7 +3140,7 @@ class _NegotiatedHTTPVersionProtocol(proxyForInterface(IProtocol, "_actualProtoc
         return self._actualProtocol.requestFactory
 
     @requestFactory.setter
-    def requestFactory(self, value):
+    def requestFactory(self, value: _SomeRequestFactory) -> None:
         """
         A callable to use to build L{IRequest} objects.
 
@@ -3178,7 +3148,6 @@ class _NegotiatedHTTPVersionProtocol(proxyForInterface(IProtocol, "_actualProtoc
         propagation to any new channel.
 
         @param value: The new callable to use.
-        @type value: A L{callable} returning L{IRequest}
         """
         self._requestFactory = value
         self._actualProtocol.requestFactory = value

@@ -25,6 +25,7 @@ from twisted.python.runtime import platformType
 from twisted.python.url import URL
 from twisted.python.util import InsensitiveDict
 from twisted.web import http, resource, server
+from twisted.web.iweb import IRequest
 from twisted.web.util import redirectTo
 
 # isort: off
@@ -379,7 +380,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         return self.getsize()
 
     def makeProducer(
-        self, request: http.Request, fileForReading: IO[bytes]
+        self, request: IRequest, fileForReading: IO[bytes]
     ) -> StaticProducer:
         """
         Make a L{StaticProducer} that will produce the body of this response.
@@ -401,7 +402,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             contentEncoding=self.encoding,
         )
 
-    def _commonReadPreflight(self, request: http.Request) -> bytes | None:
+    def _commonReadPreflight(self, request: IRequest) -> bytes | None:
         """
         Perform pre-flight checks common to C{GET} and C{HEAD} requests,
         executed before any file is opened for permission checks.
@@ -426,7 +427,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         request.setHeader(b"accept-ranges", b"bytes")
         return None
 
-    def render_GET(self, request: http.Request) -> Any:
+    def render_GET(self, request: IRequest) -> Any:
         """
         Begin sending the contents of this L{File} (or a subset of the
         contents, based on the 'range' header) to the given request.
@@ -445,7 +446,7 @@ class File(resource.Resource, filepath.FilePath[str]):
             raise
         return server.NOT_DONE_YET
 
-    def render_HEAD(self, request: http.Request) -> Any:
+    def render_HEAD(self, request: IRequest) -> Any:
         """
         Get the status of this file and return a HEAD response.
         """
@@ -459,7 +460,7 @@ class File(resource.Resource, filepath.FilePath[str]):
         _simpleContentHeaders(request, self.getFileSize(), self.type, self.encoding)
         return b""
 
-    def redirect(self, request: http.Request) -> bytes:
+    def redirect(self, request: IRequest) -> bytes:
         return redirectTo(_addSlash(request), request)
 
     def listNames(self):

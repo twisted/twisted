@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import io
 from collections import deque
-from typing import TYPE_CHECKING, Any, Literal, Protocol as TypingProtocol
+from typing import TYPE_CHECKING, Any, Literal
 
 from zope.interface import implementer
 
@@ -44,10 +44,14 @@ from twisted.logger import Logger
 from twisted.protocols.policies import TimeoutMixin
 from twisted.python.failure import Failure
 from twisted.web.error import ExcessiveBufferingError
-from twisted.web.iweb import IRequest
+from twisted.web.iweb import (
+    IMinimalRequest,
+    _invokeSomeRequestFactory,
+    _SomeRequestFactory,
+)
 
 if TYPE_CHECKING:
-    from twisted.web.http import HTTPChannel as HTTP11Channel, HTTPFactory
+    from twisted.web.http import HTTPFactory
     from twisted.web.server import Site
 
 # This API is currently considered private.
@@ -55,13 +59,6 @@ __all__: list[str] = []
 
 
 _END_STREAM_SENTINEL: Literal[-1] = -1
-
-
-class _RequestFactory(TypingProtocol):
-    def __call__(
-        self, channel: H2Stream | HTTP11Channel, queued: bool = False
-    ) -> IRequest:
-        ...
 
 
 @implementer(IProtocol, IPushProducer)
@@ -122,7 +119,7 @@ class H2Connection(Protocol, TimeoutMixin):
     factory: HTTPFactory = None  # type:ignore[assignment]
     site: Site = None  # type:ignore[assignment]
     # None defaults for legacy compatibility.
-    requestFactory: _RequestFactory
+    requestFactory: _SomeRequestFactory
 
     abortTimeout: int = 15
 
@@ -942,14 +939,14 @@ class H2Stream:
 
     # We need a transport property for t.w.h.Request, but HTTP/2 doesn't want
     # to expose it. So we just set it to None.
-    transport = None
+    transport: ITransport | None = None
 
     def __init__(
         self,
         streamID: int,
         connection: H2Connection,
         headers: list[tuple[bytes, bytes]],
-        requestFactory: _RequestFactory,
+        requestFactory: _SomeRequestFactory,
         site: Site,
         factory: HTTPFactory,
     ) -> None:
@@ -983,7 +980,7 @@ class H2Stream:
         self._producerProducing = False
         self._inboundDataBuffer: deque[bytes] = deque()
         self._conn = connection
-        self._request: IRequest = requestFactory(self, queued=False)
+        self._request: IMinimalRequest = _invokeSomeRequestFactory(requestFactory, self)
         self._buffer = io.BytesIO()
 
         self._convertHeaders(headers)

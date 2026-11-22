@@ -30,6 +30,7 @@ from twisted.trial.unittest import TestCase
 from twisted.web import http, resource, script, static
 from twisted.web._ranges import _parseRangeHeader
 from twisted.web._responses import FOUND
+from twisted.web.iweb import IRequest
 from twisted.web.server import UnsupportedMethod
 from twisted.web.test._util import _render
 from twisted.web.test.requesthelper import DummyRequest
@@ -395,7 +396,7 @@ class StaticFileTests(TestCase):
                 return openFile
 
             def makeProducer(
-                self, request: http.Request, fileForReading: IO[bytes]
+                self, request: IRequest, fileForReading: IO[bytes]
             ) -> static.StaticProducer:
                 raise RuntimeError("oops")
 

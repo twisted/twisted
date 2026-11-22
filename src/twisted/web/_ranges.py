@@ -15,12 +15,8 @@ from zope.interface import implementer
 
 from twisted.internet import abstract, interfaces
 from twisted.logger import Logger
-from twisted.web.http import (
-    OK,
-    PARTIAL_CONTENT,
-    REQUESTED_RANGE_NOT_SATISFIABLE,
-    Request,
-)
+from twisted.web.http import OK, PARTIAL_CONTENT, REQUESTED_RANGE_NOT_SATISFIABLE
+from twisted.web.iweb import IMinimalRequest
 
 ValidRange = tuple[int | None, int | None]
 ValidRanges = list[ValidRange]
@@ -109,7 +105,7 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
 
 
 def _simpleContentHeaders(
-    request: Request,
+    request: IMinimalRequest,
     length: int,
     contentType: str | None = None,
     contentEncoding: str | None = None,
@@ -148,7 +144,7 @@ class StaticProducer:
 
     bufferSize: int = abstract.FileDescriptor.bufferSize
 
-    def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
+    def __init__(self, request: IMinimalRequest, fileObject: IO[bytes]) -> None:
         """
         Initialize the instance.
 
@@ -157,7 +153,7 @@ class StaticProducer:
         @param fileObject: The already-open file object to send to the given
             request.
         """
-        self.request: Request | None = request
+        self.request: IMinimalRequest | None = request
         self.fileObject = fileObject
 
     def start(self) -> None:
@@ -196,7 +192,7 @@ class StaticProducer:
 
 
 def _setupNoRange(
-    request: Request,
+    request: IMinimalRequest,
     fullFileSize: int,
     fileForReading: IO[bytes],
     contentType: str | None,
@@ -228,7 +224,7 @@ def _contentRange(offset: int, length: int, resourceSize: int) -> bytes:
     return b"bytes %d-%d/%d" % (offset, offset + length - 1, resourceSize)
 
 
-def _notSatisfiableFor(request: Request, fullFileSize: int) -> None:
+def _notSatisfiableFor(request: IMinimalRequest, fullFileSize: int) -> None:
     """
     The given request is not satisfiable, according to the RFC.  Set an
     appropriate response code and content-range header.
@@ -238,7 +234,7 @@ def _notSatisfiableFor(request: Request, fullFileSize: int) -> None:
 
 
 def _setupSingleRange(
-    request: Request,
+    request: IMinimalRequest,
     oneRange: ValidRange,
     fullFileSize: int,
     fileForReading: IO[bytes],
@@ -276,7 +272,7 @@ class SingleRangeStaticProducer(StaticProducer):
     """
 
     def __init__(
-        self, request: Request, fileObject: IO[bytes], offset: int, size: int
+        self, request: IMinimalRequest, fileObject: IO[bytes], offset: int, size: int
     ) -> None:
         """
         Initialize the instance.
@@ -322,7 +318,7 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
     No longer used in the request-handling pipeline anywhere.
     """
 
-    def __init__(self, request: Request, fileObject: IO[bytes]) -> None:
+    def __init__(self, request: IMinimalRequest, fileObject: IO[bytes]) -> None:
         here = fileObject.tell()
         fileObject.seek(0, SEEK_END)
         size = fileObject.tell()
@@ -331,7 +327,7 @@ class NoRangeStaticProducer(SingleRangeStaticProducer):
 
 
 def _setupMultiRange(
-    request: Request,
+    request: IMinimalRequest,
     byteRanges: ValidRanges,
     fullFileSize: int,
     fileForReading: IO[bytes],
@@ -396,7 +392,7 @@ class MultipleRangeStaticProducer(StaticProducer):
     partBoundary: bytes | None
 
     def __init__(
-        self, request: Request, fileObject: IO[bytes], rangeInfo: MimeRanges
+        self, request: IMinimalRequest, fileObject: IO[bytes], rangeInfo: MimeRanges
     ) -> None:
         """
         Initialize the instance.
@@ -480,7 +476,7 @@ class MultipleRangeStaticProducer(StaticProducer):
 
 
 def _setupRangeProducer(
-    request: Request,
+    request: IMinimalRequest,
     openFile: IO[bytes],
     fileSize: int,
     contentType: str | None,
