@@ -88,13 +88,10 @@ class H2Connection(Protocol, TimeoutMixin):
 
     @ivar _consumerBlocked: A flag tracking whether or not the L{IConsumer}
         that is consuming this data has asked us to stop producing.
-    @type _consumerBlocked: L{bool}
 
     @ivar _sendingDeferred: A L{Deferred} used to restart the data-sending loop
         when more response data has been produced.  Will not be present if
         there is outstanding data still to send.
-
-    @type _consumerBlocked: A L{twisted.internet.defer.Deferred}, or L{None}
 
     @ivar _outboundStreamQueues: A map of stream IDs to queues, used to store
         data blocks that are yet to be sent on the connection.  These are used
@@ -104,15 +101,10 @@ class H2Connection(Protocol, TimeoutMixin):
         L{deque} queues, which contain either L{bytes} objects or
         C{_END_STREAM_SENTINEL}.
 
-    @ivar _sender: A handle to the data-sending loop, allowing it to be
-        terminated if needed.
-    @type _sender: L{twisted.internet.task.LoopingCall}
-
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
         the transport down cleanly to give up and forcibly terminate it.  This
         is only used when we time a connection out, to prevent errors causing
         the FD to get leaked.  If this is L{None}, we will wait forever.
-    @type abortTimeout: L{int}
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
@@ -122,10 +114,8 @@ class H2Connection(Protocol, TimeoutMixin):
         (RST_STREAM) allowed in a burst.  With C{_resetTokenRate} this token
         bucket rate-limits resets to defend against HTTP/2 Rapid Reset
         (CVE-2023-44487).
-    @type _resetTokenBurst: L{int}
 
     @cvar _resetTokenRate: The number of reset tokens replenished each second.
-    @type _resetTokenRate: L{int}
     """
 
     # These all REALLY need to be constructor arguments.
@@ -134,13 +124,13 @@ class H2Connection(Protocol, TimeoutMixin):
     # None defaults for legacy compatibility.
     requestFactory: _RequestFactory
 
-    abortTimeout = 15
+    abortTimeout: int = 15
 
     _log = Logger()
     _abortingCall = None
 
-    _resetTokenBurst = 1000
-    _resetTokenRate = 33
+    _resetTokenBurst: int = 1000
+    _resetTokenRate: int = 33
 
     def __init__(self, reactor: Any = None) -> None:
         config = h2.config.H2Configuration(client_side=False, header_encoding=None)
@@ -151,7 +141,7 @@ class H2Connection(Protocol, TimeoutMixin):
         self._consumerBlocked: Deferred[None] | None = None
         self._sendingDeferred: Deferred[int] | None = None
         self._outboundStreamQueues: dict[int, deque[bytes | Literal[-1]]] = {}
-        self._streamCleanupCallbacks: dict[int, Deferred[None]] = {}
+        self._streamCleanupCallbacks: dict[int, Deferred[int]] = {}
         self._stillProducing = True
 
         # Limit the number of buffered control frame (e.g. PING and
@@ -189,7 +179,6 @@ class H2Connection(Protocol, TimeoutMixin):
         Called whenever a chunk of data is received from the transport.
 
         @param data: The data received from the transport.
-        @type data: L{bytes}
         """
         try:
             events = self.conn.receive_data(data)
@@ -472,7 +461,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received request.
-        @type event: C{h2.events.RequestReceived}
         """
         stream = H2Stream(
             event.stream_id,
@@ -504,7 +492,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             received data.
-        @type event: C{h2.events.DataReceived}
         """
         stream = self.streams[event.stream_id]
         stream.receiveDataChunk(event.data, event.flow_controlled_length)
@@ -516,7 +503,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             completed stream.
-        @type event: C{h2.events.StreamEnded}
         """
         stream = self.streams[event.stream_id]
         stream.requestComplete()
@@ -527,7 +513,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @param event: The Hyper-h2 event that encodes information about the
             reset stream.
-        @type event: C{h2.events.StreamReset}
         """
         stream = self.streams[event.stream_id]
         stream.connectionLost(
@@ -554,13 +539,12 @@ class H2Connection(Protocol, TimeoutMixin):
         else:
             self._resetTokens -= 1
 
-    def _handlePriorityUpdate(self, event):
+    def _handlePriorityUpdate(self, event: h2.events.PriorityUpdated) -> None:
         """
         Internal handler for when a stream priority is updated.
 
         @param event: The Hyper-h2 event that encodes information about the
             stream reprioritization.
-        @type event: C{h2.events.PriorityUpdated}
         """
         try:
             self.priority.reprioritize(
@@ -644,7 +628,6 @@ class H2Connection(Protocol, TimeoutMixin):
         Called by L{H2Stream} objects to signal completion of a response.
 
         @param streamID: The ID of the stream to write the data to.
-        @type streamID: L{int}
         """
         self._outboundStreamQueues[streamID].append(_END_STREAM_SENTINEL)
         self.priority.unblock(streamID)
@@ -653,26 +636,24 @@ class H2Connection(Protocol, TimeoutMixin):
             self._sendingDeferred = None
             d.callback(streamID)
 
-    def abortRequest(self, streamID):
+    def abortRequest(self, streamID: int) -> None:
         """
         Called by L{H2Stream} objects to request early termination of a stream.
         This emits a RstStream frame and then removes all stream state.
 
         @param streamID: The ID of the stream to write the data to.
-        @type streamID: L{int}
         """
         self.conn.reset_stream(streamID)
         stillActive = self._tryToWriteControlData()
         if stillActive:
             self._requestDone(streamID)
 
-    def _requestDone(self, streamID):
+    def _requestDone(self, streamID: int) -> None:
         """
         Called internally by the data sending loop to clean up state that was
         being used for the stream. Called when the stream is complete.
 
         @param streamID: The ID of the stream to clean up state for.
-        @type streamID: L{int}
         """
         del self._outboundStreamQueues[streamID]
         self.priority.remove_stream(streamID)
@@ -703,17 +684,16 @@ class H2Connection(Protocol, TimeoutMixin):
 
         return windowSize - alreadyConsumed
 
-    def _handleWindowUpdate(self, event):
+    def _handleWindowUpdate(self, event: h2.events.WindowUpdated) -> None:
         """
         Manage flow control windows.
 
         Streams that are blocked on flow control will register themselves with
-        the connection. This will fire deferreds that wake those streams up and
-        allow them to continue processing.
+        the connection.  This will fire deferreds that wake those streams up
+        and allow them to continue processing.
 
         @param event: The Hyper-h2 event that encodes information about the
             flow control window change.
-        @type event: C{h2.events.WindowUpdated}
         """
         streamID = event.stream_id
 
@@ -761,16 +741,14 @@ class H2Connection(Protocol, TimeoutMixin):
         """
         return self.transport.getHost()
 
-    def openStreamWindow(self, streamID, increment):
+    def openStreamWindow(self, streamID: int, increment: int) -> None:
         """
         Open the stream window by a given increment.
 
         @param streamID: The ID of the stream whose window needs to be opened.
-        @type streamID: L{int}
 
         @param increment: The amount by which the stream window must be
         incremented.
-        @type increment: L{int}
         """
         self.conn.acknowledge_received_data(increment, streamID)
         self._tryToWriteControlData()
@@ -785,34 +763,32 @@ class H2Connection(Protocol, TimeoutMixin):
         # A channel is secure if its transport is ISSLTransport.
         return ISSLTransport(self.transport, None) is not None
 
-    def _send100Continue(self, streamID):
+    def _send100Continue(self, streamID: int) -> None:
         """
         Sends a 100 Continue response, used to signal to clients that further
         processing will be performed.
 
         @param streamID: The ID of the stream that needs the 100 Continue
         response
-        @type streamID: L{int}
         """
         headers = [(b":status", b"100")]
         self.conn.send_headers(headers=headers, stream_id=streamID)
         self._tryToWriteControlData()
 
-    def _respondToBadRequestAndDisconnect(self, streamID):
+    def _respondToBadRequestAndDisconnect(self, streamID: int) -> None:
         """
         This is a quick and dirty way of responding to bad requests.
 
-        As described by HTTP standard we should be patient and accept the
-        whole request from the client before sending a polite bad request
-        response, even in the case when clients send tons of data.
+        As described by HTTP standard we should be patient and accept the whole
+        request from the client before sending a polite bad request response,
+        even in the case when clients send tons of data.
 
         Unlike in the HTTP/1.1 case, this does not actually disconnect the
-        underlying transport: there's no need. This instead just sends a 400
+        underlying transport: there's no need.  This instead just sends a 400
         response and terminates the stream.
 
         @param streamID: The ID of the stream that needs the 100 Continue
-        response
-        @type streamID: L{int}
+            response
         """
         headers = [(b":status", b"400")]
         self.conn.send_headers(headers=headers, stream_id=streamID, end_stream=True)
@@ -822,16 +798,14 @@ class H2Connection(Protocol, TimeoutMixin):
             stream.connectionLost(Failure(ConnectionLost("Invalid request")))
             self._requestDone(streamID)
 
-    def _streamIsActive(self, streamID):
+    def _streamIsActive(self, streamID: int) -> bool:
         """
         Checks whether Twisted has still got state for a given stream and so
         can process events for that stream.
 
         @param streamID: The ID of the stream that needs processing.
-        @type streamID: L{int}
 
         @return: Whether the stream still has state allocated.
-        @rtype: L{bool}
         """
         return streamID in self.streams
 
@@ -978,7 +952,7 @@ class H2Stream:
         requestFactory: _RequestFactory,
         site: Site,
         factory: HTTPFactory,
-    ):
+    ) -> None:
         """
         Initialize this HTTP/2 stream.
 
@@ -986,24 +960,17 @@ class H2Stream:
             to.
 
         @param connection: The HTTP/2 connection this stream belongs to.
-        @type connection: L{H2Connection}
 
         @param headers: The HTTP/2 request headers.
-        @type headers: A L{list} of L{tuple}s of header name and header value,
-            both as L{bytes}.
 
         @param requestFactory: A function that builds appropriate request
             request objects.
-        @type requestFactory: A callable that returns a
-            L{twisted.web.iweb.IRequest}.
 
         @param site: The L{twisted.web.server.Site} object this stream belongs
             to, if any.
-        @type site: L{twisted.web.server.Site}
 
         @param factory: The L{twisted.web.http.HTTPFactory} object that
             constructed this stream's parent connection.
-        @type factory: L{twisted.web.http.HTTPFactory}
         """
 
         self.streamID = streamID
