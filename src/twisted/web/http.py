@@ -853,8 +853,6 @@ _handleCloseFails = Logger().failureHandler("while closing upload file")
     interfaces.IConsumer,
     _IDeprecatedHTTPChannelToRequestInterface,
 )
-# Ignoring the nominal non-compliance with the zope interface here, since
-# fixing the type annotations is a big project.
 class Request:
     """
     A HTTP request.
