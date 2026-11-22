@@ -856,27 +856,22 @@ class Request:  # type:ignore[misc]
     the request will be processed.
 
     @ivar method: The HTTP method that was used, e.g. C{b'GET'}.
-    @type method: L{bytes}
 
     @ivar uri: The full encoded URI which was requested (including query
         arguments), e.g. C{b'/a/b%20/c?q=v'}.
-    @type uri: L{bytes}
 
     @ivar path: The encoded path of the request URI (not including query
         arguments), e.g. C{b'/a/b%20/c'}.
-    @type path: L{bytes}
 
     @ivar args: A mapping of decoded query argument names as L{bytes} to
         corresponding query argument values as L{list}s of L{bytes}.
         For example, for a URI with C{foo=bar&foo=baz&quux=spam}
         as its query part C{args} will be C{{b'foo': [b'bar', b'baz'],
         b'quux': [b'spam']}}.
-    @type args: L{dict} of L{bytes} to L{list} of L{bytes}
 
     @ivar content: A file-like object giving the request body.  This may be
         a file on disk, an L{io.BytesIO}, or some other type.  The
         implementation is free to decide on a per-request basis.
-    @type content: L{typing.BinaryIO}
 
     @ivar cookies: The cookies that will be sent in the response.
     @type cookies: L{list} of L{bytes}
@@ -895,19 +890,17 @@ class Request:  # type:ignore[misc]
     @ivar _disconnected: A flag which is C{False} until the connection over
         which this request was received is closed and which is C{True} after
         that.
-    @type _disconnected: L{bool}
 
     @ivar _log: A logger instance for request related messages.
-    @type _log: L{twisted.logger.Logger}
     """
 
     producer: None | interfaces.IProducer = None
     finished = 0
     code = OK
     code_message = RESPONSES[OK]
-    method = b"(no method yet)"
-    clientproto = b"(no clientproto yet)"
-    uri = b"(no uri yet)"
+    method: bytes = b"(no method yet)"
+    clientproto: bytes = b"(no clientproto yet)"
+    uri: bytes = b"(no uri yet)"
     startedWriting = 0
     chunked = 0
     sentLength = 0  # content-length of response, or total bytes sent via chunking
@@ -918,8 +911,8 @@ class Request:  # type:ignore[misc]
     content: BinaryIO | None = None
     channel: HTTPChannel | H2Stream | None
     _forceSSL = 0
-    _disconnected = False
-    _log = Logger()
+    _disconnected: bool = False
+    _log: Logger = Logger()
     _parsePOSTFormSubmission: bool
 
     def __init__(
