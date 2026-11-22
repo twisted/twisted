@@ -253,13 +253,11 @@ class File(resource.Resource, filepath.FilePath[str]):
 
         @param path: The filename of the file from which this L{File} will
             serve data.
-        @type path: C{str}
 
         @param defaultType: A I{major/minor}-style MIME type specifier
             indicating the I{Content-Type} with which this L{File}'s data
             will be served if a MIME type cannot be determined based on
             C{path}'s extension.
-        @type defaultType: C{str}
 
         @param ignoredExts: A sequence giving the extensions of paths in the
             filesystem which will be ignored for the purposes of child
@@ -270,7 +268,6 @@ class File(resource.Resource, filepath.FilePath[str]):
 
         @param registry: The registry object being used to handle this
             request.  If L{None}, one will be created.
-        @type registry: L{Registry}
 
         @param allowExt: Ignored parameter, only present for backwards
             compatibility.  Do not pass a value for this parameter.
