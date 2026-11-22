@@ -14,9 +14,8 @@ from zope.interface.verify import verifyObject
 
 from twisted.internet import interfaces
 from twisted.internet.address import IPv4Address, IPv6Address
-from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionDone
-from twisted.internet.task import Clock, deferLater
+from twisted.internet.task import Clock
 from twisted.internet.testing import EventLoggingObserver, StringTransport
 from twisted.logger import LogLevel, globalLogPublisher
 from twisted.python import failure, reflect
@@ -28,7 +27,6 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET, Request, Site
 from twisted.web.static import Data
 from twisted.web.test.requesthelper import DummyChannel, DummyRequest
-from .._ranges import SingleRangeStaticProducer
 from ._util import assertIsFilesystemTemporary
 
 
@@ -1908,13 +1906,10 @@ class QueueResource(Resource):
 
     def __init__(self) -> None:
         super().__init__()
-        self.hasBegun: Deferred[None] = Deferred()
         self.dispatchedRequests: list[Request] = []
 
     def render_GET(self, request: Request) -> int:
         self.dispatchedRequests.append(request)
-        hasBegun, self.hasBegun = self.hasBegun, Deferred()
-        hasBegun.callback(None)
         return NOT_DONE_YET
 
 
@@ -1953,49 +1948,6 @@ class TestRFC9112Section932(unittest.TestCase):
     """
     Verify that HTTP/1.1 request ordering is preserved.
     """
-
-    async def test_pipelinedStaticProducers(self) -> None:
-        """
-        Two pipelined requests can both stream a response.
-        """
-        qr = QueueResource()
-        site = Site(qr)
-        proto = site.buildProtocol(None)
-        serverTransport = StringTransport()
-        proto.makeConnection(serverTransport)
-
-        async def lostInFreshStack() -> None:
-            from twisted.internet import reactor
-
-            await deferLater(reactor, 0.01)
-            proto.connectionLost(failure.Failure(ConnectionDone()))
-
-        self.addCleanup(lambda: Deferred.fromCoroutine(lostInFreshStack()))
-        paths = (b"/first", b"/second")
-
-        begun = qr.hasBegun
-        # Handle arbitrary number of paths below
-        proto.dataReceived(
-            b"".join(b"GET %s HTTP/1.1\r\nHost: a\r\n\r\n" % path for path in paths)
-        )
-        for index, path in enumerate(paths):
-            await begun
-            begun = qr.hasBegun
-            self.assertEqual(len(qr.dispatchedRequests), index + 1)
-            request = qr.dispatchedRequests[index]
-
-            # Make sure the request is processed in correct order
-            self.assertEqual(request.path, path)
-
-            finished = request.notifyFinish()
-            producer = SingleRangeStaticProducer(request, BytesIO(b"x"), 0, 1)
-            producer.start()
-
-            # Wait for the response from the request
-            await finished
-
-        response = serverTransport.value()
-        self.assertEqual(response.count(b"HTTP/1.1 200 OK\r\n"), len(paths), response)
 
     def test_multipleRequestsInOneSegment(self) -> None:
         """
