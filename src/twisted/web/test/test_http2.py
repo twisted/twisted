@@ -6,7 +6,8 @@ Test HTTP/2 support.
 """
 
 import itertools
-from typing import TypeAlias
+from collections.abc import Callable
+from typing import Generic, ParamSpec, TypeAlias, TypeVar
 
 from zope.interface import directlyProvides, providedBy
 
@@ -14,6 +15,7 @@ import httpx
 
 from twisted.internet import defer, error, reactor, task
 from twisted.internet.address import IPv4Address
+from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IReactorSSL
 from twisted.internet.testing import MemoryReactorClock, StringTransport
 from twisted.internet.threads import deferToThread
@@ -23,6 +25,7 @@ from twisted.python.reflect import requireModule
 from twisted.test.test_internet import DummyProducer
 from twisted.trial import unittest
 from twisted.web import http
+from twisted.web.iweb import IMinimalRequest, _IChannelRequest
 from twisted.web.server import Site
 from twisted.web.static import Data
 from twisted.web.test.test_http import (
@@ -31,7 +34,6 @@ from twisted.web.test.test_http import (
     DummyHTTPHandler,
     DummyHTTPHandlerProxy,
     DummyPullProducerHandlerProxy,
-    _IDeprecatedHTTPChannelToRequestInterfaceProxy,
     _makeRequestProxyFactory,
 )
 
@@ -370,8 +372,11 @@ class DummyProducerHandler(http.Request):
 
 DummyProducerHandlerProxy = _makeRequestProxyFactory(DummyProducerHandler)
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-class NotifyingRequestFactory:
+
+class NotifyingRequestFactory(Generic[P]):
     """
     A L{http.Request} factory that calls L{http.Request.notifyFinish} on all
     L{http.Request} objects before it returns them, and squirrels the resulting
@@ -379,8 +384,8 @@ class NotifyingRequestFactory:
     as possible to ensure that we always see the result.
     """
 
-    def __init__(self, wrappedFactory):
-        self.results = []
+    def __init__(self, wrappedFactory: Callable[P, IMinimalRequest]) -> None:
+        self.results: list[Deferred[None]] = []
         self._wrappedFactory = wrappedFactory
 
         # Add interfaces provided by the factory we are wrapping. We expect
@@ -389,10 +394,10 @@ class NotifyingRequestFactory:
         for interface in providedBy(self._wrappedFactory):
             directlyProvides(self, interface)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> _IChannelRequest:
         req = self._wrappedFactory(*args, **kwargs)
         self.results.append(req.notifyFinish())
-        return _IDeprecatedHTTPChannelToRequestInterfaceProxy(req)
+        return _IChannelRequest(req)
 
 
 NotifyingRequestFactoryProxy = _makeRequestProxyFactory(NotifyingRequestFactory)
