@@ -1086,11 +1086,11 @@ class INonQueuedRequestFactory(Interface):
 
     def __call__(channel: ChannelDefinition) -> _IChannelRequest:
         """
-        @see: L{RequestFactory}
+        Create a request for the given channel.
 
         @param channel: The channel for the request.
 
-        @return: A request object.
+        @return: A channel-facing request object.
         """
 
 
