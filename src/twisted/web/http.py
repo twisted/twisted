@@ -34,6 +34,7 @@ also useful for HTTP clients (such as the chunked encoding parser).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from twisted.web.iweb import IRequest, _IChannelRequest, _invokeSomeRequestFactory
@@ -2501,7 +2502,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         ):
             self._send100Continue()
 
-    def checkPersistence(self, request, version):
+    def checkPersistence(self, request: _IChannelRequest, version: bytes) -> bool:
         """
         Check if the channel should close or not.
 
@@ -2509,10 +2510,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             against which checks will be made to determine if this connection
             can remain open after a matching response is returned.
 
-        @type version: C{bytes}
         @param version: The version of the request.
 
-        @rtype: C{bool}
         @return: A flag which, if C{True}, indicates that this connection may
             remain open to receive another request; if C{False}, the connection
             must be closed in order to indicate the completion of the response
@@ -2657,18 +2656,15 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         assert self.transport is not None, "transport must be active to write headers"
         self.transport.writeSequence(headerSequence)
 
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Called by L{Request} objects to write response data.
 
-        @param data: The data chunk to write to the stream.
-        @type data: L{bytes}
-
-        @return: L{None}
+        @param data: The data chunk to write to the response stream.
         """
-        self.transport.write(data)
+        self.transport.write(data)  # type:ignore[union-attr]
 
-    def writeSequence(self, iovec):
+    def writeSequence(self, iovec: Iterable[bytes]) -> None:
         """
         Write a list of strings to the HTTP response.
 
@@ -2677,31 +2673,30 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
         @return: L{None}
         """
-        self.transport.writeSequence(iovec)
+        self.transport.writeSequence(iovec)  # type:ignore[union-attr]
 
-    def getPeer(self):
+    def getPeer(self) -> IAddress:
         """
         Get the remote address of this connection.
 
-        @return: An L{IAddress} provider.
+        @return: The address of the remote client of the connection (the peer).
         """
-        return self.transport.getPeer()
+        return self.transport.getPeer()  # type:ignore[union-attr]
 
-    def getHost(self):
+    def getHost(self) -> IAddress:
         """
         Get the local address of this connection.
 
-        @return: An L{IAddress} provider.
+        @return: The address that the remote client of the connection (the
+            peer) is connected to.
         """
-        return self.transport.getHost()
+        return self.transport.getHost()  # type:ignore[union-attr]
 
     def loseConnection(self) -> None:
         """
         Closes the connection. Will write any data that is pending to be sent
         on the network, but if this response has not yet been written to the
         network will not write anything.
-
-        @return: L{None}
         """
         self._networkConsumer.unregisterProducer()
         assert self.transport is not None
@@ -2723,10 +2718,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         whenever the write buffer fills up and C{resumeProducing} will only be
         called when it empties.
 
-        @type producer: L{IProducer} provider
         @param producer: The L{IProducer} that will be producing data.
 
-        @type streaming: L{bool}
         @param streaming: C{True} if C{producer} provides L{IPushProducer},
         C{False} if C{producer} provides L{IPullProducer}.
 
@@ -2854,23 +2847,19 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         self.loseConnection()
 
 
-def _escape(s):
+def _escape(s: bytes | str) -> str:
     """
     Return a string like python repr, but always escaped as if surrounding
     quotes were double quotes.
 
     @param s: The string to escape.
-    @type s: L{bytes} or L{str}
 
     @return: An escaped string.
-    @rtype: L{str}
     """
     if not isinstance(s, bytes):
         s = s.encode("ascii")
 
     r = repr(s)
-    if not isinstance(r, str):
-        r = r.decode("ascii")
     if r.startswith("b"):
         r = r[1:]
     if r.startswith("'"):
