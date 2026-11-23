@@ -74,6 +74,9 @@ def _parseRangeHeader(rangeHeader: bytes) -> ValidRanges:
 
     @return: A list C{[(start, stop)]} of pairs.
     """
+    if not rangeHeader:
+        # Empty or missing range header is fine; do not log a warning.
+        return []
 
     def invalid() -> ValidRanges:
         log.warn(
