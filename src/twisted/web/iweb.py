@@ -991,7 +991,7 @@ class ChannelDefinition(TypingProtocol):
             compatibility and should be removed in a future version.
         """
 
-    def requestDone(self, request: IMinimalRequest) -> None:
+    def requestDone(self, request: _IChannelRequest) -> None:
         """¬
         The request has completed and should no longer own the channel.
         """

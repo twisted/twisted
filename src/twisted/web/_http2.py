@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 from collections import deque
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Literal
 
 from zope.interface import implementer
@@ -32,7 +33,9 @@ from twisted.internet._producer_helpers import _PullToPush
 from twisted.internet.defer import Deferred
 from twisted.internet.error import ConnectionLost
 from twisted.internet.interfaces import (
+    IAddress,
     IConsumer,
+    IDelayedCall,
     IProducer,
     IProtocol,
     IPushProducer,
@@ -76,14 +79,12 @@ class H2Connection(Protocol, TimeoutMixin):
     here.
 
     @ivar conn: The HTTP/2 connection state machine.
-    @type conn: C{h2.connection.H2Connection}
 
     @ivar streams: A mapping of stream IDs to L{H2Stream} objects, used to call
         specific methods on streams when events occur.
 
     @ivar priority: A HTTP/2 priority tree used to ensure that responses are
         prioritised appropriately.
-    @type priority: L{priority.PriorityTree}
 
     @ivar _consumerBlocked: A flag tracking whether or not the L{IConsumer}
         that is consuming this data has asked us to stop producing.
@@ -96,18 +97,14 @@ class H2Connection(Protocol, TimeoutMixin):
         data blocks that are yet to be sent on the connection.  These are used
         both to handle producers that do not respect L{IConsumer} but also to
         allow priority to multiplex data appropriately.
-    @type _outboundStreamQueues: A L{dict} mapping L{int} stream IDs to
-        L{deque} queues, which contain either L{bytes} objects or
-        C{_END_STREAM_SENTINEL}.
 
     @ivar abortTimeout: The number of seconds to wait after we attempt to shut
         the transport down cleanly to give up and forcibly terminate it.  This
         is only used when we time a connection out, to prevent errors causing
         the FD to get leaked.  If this is L{None}, we will wait forever.
 
-    @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
-        used to forcibly close the transport if it doesn't close cleanly.
-    @type _abortingCall: L{twisted.internet.base.DelayedCall}
+    @ivar _abortingCall: The handle of the delayed call that will be used to
+        forcibly close the transport if it doesn't close cleanly.
 
     @cvar _resetTokenBurst: The maximum number of peer-initiated stream resets
         (RST_STREAM) allowed in a burst.  With C{_resetTokenRate} this token
@@ -126,10 +123,13 @@ class H2Connection(Protocol, TimeoutMixin):
     abortTimeout: int = 15
 
     _log = Logger()
-    _abortingCall = None
+    _abortingCall: IDelayedCall | None = None
 
     _resetTokenBurst: int = 1000
     _resetTokenRate: int = 33
+    conn: h2.connection.H2Connection
+    priority: priority.PriorityTree
+    _outboundStreamQueues: dict[int, deque[bytes | Literal[-1]]]
 
     def __init__(self, reactor: Any = None) -> None:
         config = h2.config.H2Configuration(client_side=False, header_encoding=None)
@@ -670,7 +670,6 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @return: The amount of room remaining in the send window for the given
             stream, including the data queued to be sent.
-        @rtype: L{int}
         """
         # TODO: This involves a fair bit of looping and computation for
         # something that is called a lot. Consider caching values somewhere.
@@ -716,7 +715,7 @@ class H2Connection(Protocol, TimeoutMixin):
                 if self._outboundStreamQueues.get(stream.streamID):
                     self.priority.unblock(stream.streamID)
 
-    def getPeer(self):
+    def getPeer(self) -> IAddress:
         """
         Get the remote address of this connection.
 
@@ -727,16 +726,16 @@ class H2Connection(Protocol, TimeoutMixin):
 
         @return: An L{IAddress} provider.
         """
-        return self.transport.getPeer()
+        return self.transport.getPeer()  # type:ignore[union-attr]
 
-    def getHost(self):
+    def getHost(self) -> IAddress:
         """
         Similar to getPeer, but returns an address describing this side of the
         connection.
 
         @return: An L{IAddress} provider.
         """
-        return self.transport.getHost()
+        return self.transport.getHost()  # type:ignore[union-attr]
 
     def openStreamWindow(self, streamID: int, increment: int) -> None:
         """
@@ -750,12 +749,11 @@ class H2Connection(Protocol, TimeoutMixin):
         self.conn.acknowledge_received_data(increment, streamID)
         self._tryToWriteControlData()
 
-    def _isSecure(self):
+    def _isSecure(self) -> bool:
         """
         Returns L{True} if this channel is using a secure transport.
 
         @returns: L{True} if this channel is secure.
-        @rtype: L{bool}
         """
         # A channel is secure if its transport is ISSLTransport.
         return ISSLTransport(self.transport, None) is not None
@@ -895,50 +893,49 @@ class H2Stream:
     stream-specific level.
 
     @ivar streamID: The numerical stream ID that this object corresponds to.
-    @type streamID: L{int}
 
     @ivar producing: Whether this stream is currently allowed to produce data
         to its consumer.
-    @type producing: L{bool}
 
     @ivar command: The HTTP verb used on the request.
-    @type command: L{unicode}
 
     @ivar path: The HTTP path used on the request.
-    @type path: L{unicode}
 
     @ivar producer: The object producing the response, if any.
-    @type producer: L{IProducer}
 
     @ivar site: The L{twisted.web.server.Site} object this stream belongs to,
         if any.
-    @type site: L{twisted.web.server.Site}
 
     @ivar factory: The L{twisted.web.http.HTTPFactory} object that constructed
         this stream's parent connection.
-    @type factory: L{twisted.web.http.HTTPFactory}
 
     @ivar _producerProducing: Whether the producer stored in producer is
         currently producing data.
-    @type _producerProducing: L{bool}
 
     @ivar _inboundDataBuffer: Any data that has been received from the network
         but has not yet been received by the consumer.
 
     @ivar _conn: A reference to the connection this stream belongs to.
-    @type _conn: L{H2Connection}
 
     @ivar _request: A request object that this stream corresponds to.
-    @type _request: L{twisted.web.iweb.IRequest}
 
     @ivar _buffer: A buffer containing data produced by the producer that could
         not be sent on the network at this time.
-    @type _buffer: L{io.BytesIO}
     """
 
     # We need a transport property for t.w.h.Request, but HTTP/2 doesn't want
     # to expose it. So we just set it to None.
     transport: ITransport | None = None
+    streamID: int
+    producing: bool
+    producer: IPushProducer | _PullToPush | None
+    command: bytes | None
+    site: Site | None
+    factory: HTTPFactory
+    _producerProducing: bool
+    _conn: H2Connection
+    _request: _IChannelRequest
+    _buffer: io.BytesIO
 
     def __init__(
         self,
@@ -1121,12 +1118,11 @@ class H2Stream:
             self.streamID,
         )
 
-    def requestDone(self, request):
+    def requestDone(self, request: _IChannelRequest) -> None:
         """
         Called by a consumer to clean up whatever permanent state is in use.
 
         @param request: The request calling the method.
-        @type request: L{twisted.web.iweb.IRequest}
         """
         self._conn.endRequest(self.streamID)
 
@@ -1152,39 +1148,36 @@ class H2Stream:
         self._conn._respondToBadRequestAndDisconnect(self.streamID)
 
     # Implementation: ITransport
-    def write(self, data):
+    def write(self, data: bytes) -> None:
         """
         Write a single chunk of data into a data frame.
 
         @param data: The data chunk to send.
-        @type data: L{bytes}
         """
         self._conn.writeDataToStream(self.streamID, data)
-        return
 
-    def writeSequence(self, iovec):
+    def writeSequence(self, iovec: Iterable[bytes]) -> None:
         """
         Write a sequence of chunks of data into data frames.
 
         @param iovec: A sequence of chunks to send.
-        @type iovec: An iterable of L{bytes} chunks.
         """
         for chunk in iovec:
             self.write(chunk)
 
-    def loseConnection(self):
+    def loseConnection(self) -> None:
         """
         Close the connection after writing all pending data.
         """
         self._conn.endRequest(self.streamID)
 
-    def abortConnection(self):
+    def abortConnection(self) -> None:
         """
         Forcefully abort the connection by sending a RstStream frame.
         """
         self._conn.abortRequest(self.streamID)
 
-    def getPeer(self):
+    def getPeer(self) -> IAddress:
         """
         Get information about the peer.
         """
@@ -1196,12 +1189,11 @@ class H2Stream:
         """
         return self._conn.getHost()
 
-    def isSecure(self):
+    def isSecure(self) -> bool:
         """
         Returns L{True} if this channel is using a secure transport.
 
         @returns: L{True} if this channel is secure.
-        @rtype: L{bool}
         """
         return self._conn._isSecure()
 
