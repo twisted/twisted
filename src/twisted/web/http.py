@@ -1509,11 +1509,11 @@ class Request:
     @deprecated(Version("Twisted", 18, 4, 0), replacement="getClientAddress")
     def getClientIP(self) -> str | None:
         """
-          Return the IP address of the client who submitted this request.
+        Return the IP address of the client who submitted this request.
 
-          This method is B{deprecated}.  Use L{getClientAddress} instead.
+        This method is B{deprecated}.  Use L{getClientAddress} instead.
 
-        b  @returns: the client IP address
+        @returns: the client IP address
         """
         if isinstance(self.client, (address.IPv4Address, address.IPv6Address)):
             return self.client.host

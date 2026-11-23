@@ -431,10 +431,10 @@ class IMinimalRequest(IConsumer):
         @note: There are some caveats around the reliability of the delivery of
             this notification.
 
-                1. If this L{Request}'s channel is paused, the notification
-                   will not be delivered.  This can happen in one of two ways;
-                   either you can call C{request.transport.pauseProducing}
-                   yourself, or,
+                1. If this L{IMinimalRequest}'s channel is paused, the
+                   notification will not be delivered.  This can happen in one
+                   of two ways; either you can call
+                   C{request.transport.pauseProducing} yourself, or,
 
                 2. In order to deliver this notification promptly when a client
                    disconnects, the reactor must continue reading from the
@@ -444,7 +444,7 @@ class IMinimalRequest(IConsumer):
                    it gives up and pauses the transport itself.  If this
                    occurs, you will not discover that the connection has gone
                    away until a timeout fires or until the application attempts
-                   to send some data via L{Request.write}.
+                   to send some data via L{IMinimalRequest.write}.
 
                 3. It is theoretically impossible to distinguish between
                    successfully I{sending} a response and the peer successfully
