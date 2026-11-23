@@ -36,7 +36,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from twisted.web.iweb import IRequest, _invokeSomeRequestFactory
+from twisted.web.iweb import IRequest, _IChannelRequest, _invokeSomeRequestFactory
 
 __all__ = [
     "SWITCHING",
@@ -125,7 +125,7 @@ from urllib.parse import (
     urlparse as _urlparse,
 )
 
-from zope.interface import Attribute, Interface, implementer, provider
+from zope.interface import implementer, provider
 
 from incremental import Version
 
@@ -560,101 +560,6 @@ def parseContentRange(header):
     return (start, end, realLength)
 
 
-class _IDeprecatedHTTPChannelToRequestInterface(Interface):
-    """
-    The interface L{HTTPChannel} expects of L{Request}.
-    """
-
-    requestHeaders = Attribute(
-        "A L{http_headers.Headers} instance giving all received HTTP request "
-        "headers."
-    )
-
-    responseHeaders = Attribute(
-        "A L{http_headers.Headers} instance holding all HTTP response "
-        "headers to be sent."
-    )
-
-    def connectionLost(reason):
-        """
-        The underlying connection has been lost.
-
-        @param reason: A failure instance indicating the reason why
-            the connection was lost.
-        @type reason: L{twisted.python.failure.Failure}
-        """
-
-    def gotLength(length):
-        """
-        Called when L{HTTPChannel} has determined the length, if any,
-        of the incoming request's body.
-
-        @param length: The length of the request's body.
-        @type length: L{int} if the request declares its body's length
-            and L{None} if it does not.
-        """
-
-    def handleContentChunk(data):
-        """
-        Deliver a received chunk of body data to the request.  Note
-        this does not imply chunked transfer encoding.
-
-        @param data: The received chunk.
-        @type data: L{bytes}
-        """
-
-    def parseCookies():
-        """
-        Parse the request's cookies out of received headers.
-        """
-
-    def requestReceived(command, path, version):
-        """
-        Called when the entire request, including its body, has been
-        received.
-
-        @param command: The request's HTTP command.
-        @type command: L{bytes}
-
-        @param path: The request's path.  Note: this is actually what
-            RFC7320 calls the URI.
-        @type path: L{bytes}
-
-        @param version: The request's HTTP version.
-        @type version: L{bytes}
-        """
-
-    def __eq__(other: object) -> bool:
-        """
-        Determines if two requests are the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are the same object and L{False}
-            when not.
-        """
-
-    def __ne__(other: object) -> bool:
-        """
-        Determines if two requests are not the same object.
-
-        @param other: Another object whose identity will be compared
-            to this instance's.
-
-        @return: L{True} when the two are not the same object and
-            L{False} when they are.
-        """
-
-    def __hash__():
-        """
-        Generate a hash value for the request.
-
-        @return: The request's hash value.
-        @rtype: L{int}
-        """
-
-
 class StringTransport:
     """
     I am a BytesIO wrapper that conforms for the transport API. I support
@@ -848,11 +753,7 @@ _hostHeaderExpression = re.compile(rb"^\[?(?P<host>.*?)\]?(:\d+)?$")
 _handleCloseFails = Logger().failureHandler("while closing upload file")
 
 
-@implementer(
-    IMinimalRequest,
-    interfaces.IConsumer,
-    _IDeprecatedHTTPChannelToRequestInterface,
-)
+@implementer(IMinimalRequest, interfaces.IConsumer, _IChannelRequest)
 class Request:
     """
     A HTTP request.
@@ -2305,6 +2206,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     # set in instances or subclasses
     requestFactory: _SomeRequestFactory = Request
+    requests: list[_IChannelRequest]
 
     _savedTimeOut = None
     _receivedHeaderCount = 0
@@ -2717,25 +2619,27 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return True
         return False
 
-    def writeHeaders(self, version, code, reason, headers):
-        """Called by L{Request} objects to write a complete set of HTTP headers to
-        a transport.
+    def writeHeaders(
+        self,
+        version: bytes,
+        code: bytes,
+        reason: bytes,
+        headers: Headers | list[tuple[bytes, bytes]],
+    ) -> None:
+        """Called by L{Request} objects to write a complete set of HTTP headers
+        to a transport.
 
         @param version: The HTTP version in use.
-        @type version: L{bytes}
 
         @param code: The HTTP status code to write.
-        @type code: L{bytes}
 
         @param reason: The HTTP reason phrase to write.
-        @type reason: L{bytes}
 
-        @param headers: The headers to write to the transport.
-        @type headers: L{twisted.web.http_headers.Headers}, or (for backwards
+        @param headers: The headers to write to the transport, which should be
+            a L{twisted.web.http_headers.Headers}, or (for backwards
             compatibility purposes only) any iterable of two-tuples of
-            L{bytes}, representing header names and header values. The latter
+            L{bytes}, representing header names and header values.  The latter
             option is not actually used by Twisted.
-
         """
         if not isinstance(headers, Headers):
             # Turn into Headers instance for security reasons, to make sure we
@@ -2751,6 +2655,7 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             for value in values:
                 headerSequence.extend((name, b": ", value, b"\r\n"))
         headerSequence.append(b"\r\n")
+        assert self.transport is not None, "transport must be active to write headers"
         self.transport.writeSequence(headerSequence)
 
     def write(self, data):

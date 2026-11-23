@@ -33,6 +33,109 @@ if TYPE_CHECKING:
     from twisted.web.template import Flattenable, Tag
 
 
+class _IChannelRequest(Interface):
+    """
+    The interface that a L{ChannelDefinition} expects of its request.
+
+    This is a separate interface from L{IMinimalRequest} even though they are
+    present on the same object, since L{IMinimalRequest} is application-facing
+    and this is channel-facing.
+
+    This is private because it is a hodgepodge of different methods that demand
+    too much specificity of the request, something extracted rather than
+    intentionally designed.
+    """
+
+    requestHeaders = Attribute(
+        "A L{http_headers.Headers} instance giving all received HTTP request "
+        "headers."
+    )
+
+    responseHeaders = Attribute(
+        "A L{http_headers.Headers} instance holding all HTTP response "
+        "headers to be sent."
+    )
+
+    def connectionLost(reason):
+        """
+        The underlying connection has been lost.
+
+        @param reason: A failure instance indicating the reason why
+            the connection was lost.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+    def gotLength(length):
+        """
+        Called when L{HTTPChannel} has determined the length, if any,
+        of the incoming request's body.
+
+        @param length: The length of the request's body.
+        @type length: L{int} if the request declares its body's length
+            and L{None} if it does not.
+        """
+
+    def handleContentChunk(data):
+        """
+        Deliver a received chunk of body data to the request.  Note
+        this does not imply chunked transfer encoding.
+
+        @param data: The received chunk.
+        @type data: L{bytes}
+        """
+
+    def parseCookies():
+        """
+        Parse the request's cookies out of received headers.
+        """
+
+    def requestReceived(command, path, version):
+        """
+        Called when the entire request, including its body, has been
+        received.
+
+        @param command: The request's HTTP command.
+        @type command: L{bytes}
+
+        @param path: The request's path.  Note: this is actually what
+            RFC7320 calls the URI.
+        @type path: L{bytes}
+
+        @param version: The request's HTTP version.
+        @type version: L{bytes}
+        """
+
+    def __eq__(other: object) -> bool:
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        """
+
+    def __ne__(other: object) -> bool:
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        """
+
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
 class IMinimalRequest(IConsumer):
     """
     The minimal interface required of an HTTP request implementation, for
@@ -928,7 +1031,7 @@ class ChannelDefinition(TypingProtocol):
 
         @param version: The HTTP version in use.
 
-        @param code: The HTTP status code to write.
+        @param code: The HTTP status code to write, already encoded as bytes.
 
         @param reason: The HTTP reason phrase to write.
 
@@ -957,7 +1060,7 @@ class _LegacyQueuedRequestFactory(TypingProtocol):
     taking a now-unused 'queued' parameter.
     """
 
-    def __call__(self, channel: ChannelDefinition, queued: bool) -> IMinimalRequest:
+    def __call__(self, channel: ChannelDefinition, queued: bool) -> _IChannelRequest:
         """
         Create an L{IRequest} that is operating on the given channel.  There
         must only be one L{IRequest} object processing at any given time on a
@@ -975,7 +1078,7 @@ class INonQueuedRequestFactory(Interface):
     ``queued`` parameter from legacy versions of Twisted.
     """
 
-    def __call__(channel: ChannelDefinition) -> IRequest:
+    def __call__(channel: ChannelDefinition) -> _IChannelRequest:
         """
         @see: L{RequestFactory}
 
@@ -990,7 +1093,7 @@ _SomeRequestFactory = INonQueuedRequestFactory | _LegacyQueuedRequestFactory
 
 def _invokeSomeRequestFactory(
     some: _SomeRequestFactory, channel: ChannelDefinition
-) -> IMinimalRequest:
+) -> _IChannelRequest:
     """
     Manage legacy compatibility with queued versus non-queued request factory,
     by invoking the given callable with the right number of arguments.

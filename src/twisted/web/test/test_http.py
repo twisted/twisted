@@ -54,9 +54,7 @@ from ._util import assertIsFilesystemTemporary
 
 
 class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
-    proxyForInterface(  # type: ignore[misc]
-        http._IDeprecatedHTTPChannelToRequestInterface
-    )
+    proxyForInterface(iweb._IChannelRequest)  # type: ignore[misc]
 ):
     """
     Proxy L{_IDeprecatedHTTPChannelToRequestInterface}.  Used to
@@ -4786,7 +4784,7 @@ class HTTPChannelSanitizationTests(unittest.SynchronousTestCase):
     Test that L{HTTPChannel} sanitizes its output.
     """
 
-    def test_writeHeadersSanitizesLinearWhitespace(self):
+    def test_writeHeadersSanitizesLinearWhitespace(self) -> None:
         """
         L{HTTPChannel.writeHeaders} removes linear whitespace from the
         list of header names and values it receives.
