@@ -2243,14 +2243,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
             return
 
         if self.__first_line:
-            # if this connection is not persistent, drop any data which
-            # the client (illegally) sent after the last request.
-            if not self.persistent:
-                self.dataReceived = (  # type:ignore[method-assign]
-                    self.lineReceived  # type:ignore[method-assign]
-                ) = lambda *args: None
-                return
-
             # IE sends an extraneous empty line (\r\n) after a POST request;
             # eat up such a line, but only ONCE
             if not line and self.__first_line == 1:
