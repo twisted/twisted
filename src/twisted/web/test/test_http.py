@@ -442,7 +442,7 @@ class HTTP1_0Tests(unittest.TestCase, ResponseTestMixin):
         """
         b = StringTransport()
         a = http.HTTPChannel()
-        a.requestFactory = DummyHTTPHandlerProxy
+        a.requestFactory = DummyNewHTTPHandler
         a.makeConnection(b)
         # one byte at a time, to stress it.
         for byte in iterbytes(self.requests):
