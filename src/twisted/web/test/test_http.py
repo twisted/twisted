@@ -53,7 +53,7 @@ from twisted.web.test.requesthelper import (
 from ._util import assertIsFilesystemTemporary
 
 
-class _IDeprecatedHTTPChannelToRequestInterfaceProxy(
+class _ChannelRequestProxy(
     proxyForInterface(iweb._IChannelRequest)  # type: ignore[misc]
 ):
     """
@@ -78,7 +78,7 @@ def _makeRequestProxyFactory(clsToWrap):
 
     def _makeRequestProxy(*args, **kwargs):
         instance = clsToWrap(*args, **kwargs)
-        return _IDeprecatedHTTPChannelToRequestInterfaceProxy(instance)
+        return _ChannelRequestProxy(instance)
 
     # For INonQueuedRequestFactory
     directlyProvides(_makeRequestProxy, providedBy(clsToWrap))
