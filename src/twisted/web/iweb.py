@@ -1005,7 +1005,8 @@ class ChannelDefinition(TypingProtocol):
     def registerProducer(self, producer: IProducer, streaming: bool) -> None:
         """
         Allow registering a producer with the underlying transport for
-        flow-control purposes, the same as L{twisted.internet.interfaced.IConsumer}.
+        flow-control purposes, the same as
+        L{IConsumer<twisted.internet.interfaces.IConsumer>}.
         """
 
     def unregisterProducer(self) -> None:
