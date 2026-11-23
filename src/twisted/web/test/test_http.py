@@ -3927,7 +3927,7 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         req.unregisterProducer()
         self.assertEqual((None, None), (req.producer, req.transport.producer))
 
-    def test_unregisterNonQueuedStreamingProducer(self):
+    def test_unregisterNonQueuedStreamingProducer(self) -> None:
         """
         L{Request.unregisterProducer} unregisters a non-queued streaming
         producer from the request and the request's transport.
@@ -3942,9 +3942,9 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         """
         L{Request.unregisterProducer} will remove a reference to the producer even if the connection is done.
         """
-        req = http.Request(DummyChannel(), False)  # type:ignore[arg-type]
+        req = http.Request(DummyChannel(), False)
         req.transport = StringTransport()
-        req.registerProducer(DummyProducer(), True)  # type:ignore[arg-type]
+        req.registerProducer(DummyProducer(), True)
         req.connectionLost(Failure(ConnectionLost("bye")))
         self.assertIsNot(req.producer, None)
         req.unregisterProducer()
@@ -4064,14 +4064,13 @@ class RequestTests(SynchronousTestCase, ResponseTestMixin):
         proto._actualProtocol.requests[0].finish()
         self.assertEqual(trans.producerState, "producing")
 
-    def test_provides_IDeprecatedHTTPChannelToRequestInterface(self):
+    def test_provides_IChannelRequest(self) -> None:
         """
-        L{http.Request} provides
-        L{http._IDeprecatedHTTPChannelToRequestInterface}, which
-        defines the interface used by L{http.HTTPChannel}.
+        L{http.Request} provides L{iweb._IChannelRequest}, which defines the
+        interface used by L{http.HTTPChannel}.
         """
         req = http.Request(DummyChannel(), False)
-        verifyObject(http._IDeprecatedHTTPChannelToRequestInterface, req)
+        verifyObject(http._IChannelRequest, req)
 
     def test_eq(self):
         """

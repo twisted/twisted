@@ -117,6 +117,9 @@ class DummyChannel:
     def requestDone(self, request):
         pass
 
+    def _respondToBadRequestAndDisconnect(self) -> None:
+        ...
+
     def writeHeaders(self, version, code, reason, headers):
         if isinstance(headers, Headers):
             headers = [

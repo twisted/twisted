@@ -1849,13 +1849,13 @@ class _ChunkedTransferDecoder:
 
     @ivar _maxTrailerHeadersSize: Maximum bytes for trailer header from the
         response.
-    @type _maxTrailerHeadersSize: C{int}
 
     @ivar _receivedTrailerHeadersSize: Bytes received so far for the tailer headers.
-    @type _receivedTrailerHeadersSize: C{int}
     """
 
     state = "CHUNK_LENGTH"
+    _maxTrailerHeadersSize: int
+    _receivedTrailerHeadersSize: int
 
     def __init__(
         self,
@@ -2106,24 +2106,18 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _transferDecoder: L{None} or a decoder instance if the request body
         uses the I{chunked} Transfer-Encoding.
-    @type _transferDecoder: L{_ChunkedTransferDecoder}
 
     @ivar maxHeaders: Maximum number of headers allowed per request.
-    @type maxHeaders: C{int}
 
     @ivar totalHeadersSize: Maximum bytes for request line plus all headers
         from the request.
-    @type totalHeadersSize: C{int}
 
     @ivar _receivedHeaderSize: Bytes received so far for the header.
-    @type _receivedHeaderSize: C{int}
 
     @ivar _handlingRequest: Whether a request is currently being processed.
-    @type _handlingRequest: L{bool}
 
     @ivar _dataBuffer: Any data that has been received from the connection
         while processing an outstanding request.
-    @type _dataBuffer: L{list} of L{bytes}
 
     @ivar _networkProducer: Either the transport, if it provides
         L{interfaces.IPushProducer}, or a null implementation of
@@ -2165,7 +2159,6 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
 
     @ivar _abortingCall: The L{twisted.internet.base.DelayedCall} that will be
         used to forcibly close the transport if it doesn't close cleanly.
-    @type _abortingCall: L{twisted.internet.base.DelayedCall}
 
     @ivar _optimisticEagerReadSize: When a resource takes a long time to answer
         a request (via L{twisted.web.server.NOT_DONE_YET}, hopefully one day by
@@ -2194,8 +2187,8 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
         This behavior has been in place since Twisted 17.9.0 .
     """
 
-    maxHeaders = 500
-    totalHeadersSize = 16384
+    maxHeaders: int = 500
+    totalHeadersSize: int = 16384
     abortTimeout: int = 15
 
     length: int | None = 0
@@ -2209,13 +2202,16 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
     requests: list[_IChannelRequest]
 
     _savedTimeOut = None
-    _receivedHeaderCount = 0
-    _receivedHeaderSize = 0
+    _receivedHeaderCount: int = 0
+    _receivedHeaderSize: int = 0
     _requestProducer: interfaces.IPushProducer | None = None
     _requestProducerStreaming: bool | None = None
     _waitingForTransport: bool = False
-    _abortingCall = None
+    _abortingCall: IDelayedCall | None = None
     _optimisticEagerReadSize: int = 0x4000
+    _transferDecoder: _ChunkedTransferDecoder | None
+    _handlingRequest: bool
+    _dataBuffer: list[bytes]
     _log = Logger()
 
     def __init__(self):
@@ -2482,6 +2478,9 @@ class HTTPChannel(basic.LineReceiver, policies.TimeoutMixin):
                 self._networkProducer.pauseProducing()
             return
 
+        assert (
+            self._transferDecoder is not None
+        ), "transfer decoder must be active to parse requests"
         try:
             self._transferDecoder.dataReceived(data)
         except _MalformedChunkedDataError:
