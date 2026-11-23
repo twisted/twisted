@@ -1053,6 +1053,11 @@ class ChannelDefinition(TypingProtocol):
         Get the address of the local host of the underlying transport.
         """
 
+    def isSecure(self) -> bool:
+        """
+        Is this channel currently secured using transport-layer security?
+        """
+
 
 class _LegacyQueuedRequestFactory(TypingProtocol):
     """
