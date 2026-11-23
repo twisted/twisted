@@ -11,8 +11,11 @@ import sys
 import time
 from unittest import skipIf
 
+from zope.interface import implementer
+
 from twisted.internet import abstract, base, defer, error, interfaces, protocol, reactor
 from twisted.internet.defer import Deferred, passthru
+from twisted.internet.interfaces import IProducer
 from twisted.internet.tcp import Connector
 from twisted.python import util
 from twisted.trial.unittest import TestCase
@@ -1160,6 +1163,7 @@ class ProtocolTests(TestCase):
         self.assertIsInstance(protocol, factory.protocol)
 
 
+@implementer(IProducer)
 class DummyProducer:
     """
     Very uninteresting producer implementation used by tests to ensure the

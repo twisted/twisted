@@ -13,24 +13,138 @@ Interface definitions for L{twisted.web}.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol as TypingProtocol, Sequence
 
 from zope.interface import Attribute, Interface
 
 from twisted.cred.credentials import IUsernameDigestHash
 from twisted.internet.defer import Deferred
-from twisted.internet.interfaces import IOpenSSLClientConnectionCreator, IPushProducer
+from twisted.internet.interfaces import (
+    IAddress,
+    IConsumer,
+    IOpenSSLClientConnectionCreator,
+    IProducer,
+    IPushProducer,
+    ITransport,
+)
 from twisted.web.http_headers import Headers
 
 if TYPE_CHECKING:
     from twisted.web.template import Flattenable, Tag
 
 
-class IRequest(Interface):
+class _IChannelRequest(Interface):
     """
-    An HTTP request.
+    The interface that a L{ChannelDefinition} expects of its request.
 
-    @since: 9.0
+    This is a separate interface from L{IMinimalRequest} even though they are
+    present on the same object, since L{IMinimalRequest} is application-facing
+    and this is channel-facing.
+
+    This is private because it is a hodgepodge of different methods that demand
+    too much specificity of the request, something extracted rather than
+    intentionally designed.
+    """
+
+    requestHeaders = Attribute(
+        "A L{http_headers.Headers} instance giving all received HTTP request "
+        "headers."
+    )
+
+    responseHeaders = Attribute(
+        "A L{http_headers.Headers} instance holding all HTTP response "
+        "headers to be sent."
+    )
+
+    def connectionLost(reason):
+        """
+        The underlying connection has been lost.
+
+        @param reason: A failure instance indicating the reason why
+            the connection was lost.
+        @type reason: L{twisted.python.failure.Failure}
+        """
+
+    def gotLength(length):
+        """
+        Called when L{HTTPChannel} has determined the length, if any,
+        of the incoming request's body.
+
+        @param length: The length of the request's body.
+        @type length: L{int} if the request declares its body's length
+            and L{None} if it does not.
+        """
+
+    def handleContentChunk(data):
+        """
+        Deliver a received chunk of body data to the request.  Note
+        this does not imply chunked transfer encoding.
+
+        @param data: The received chunk.
+        @type data: L{bytes}
+        """
+
+    def parseCookies():
+        """
+        Parse the request's cookies out of received headers.
+        """
+
+    def requestReceived(command, path, version):
+        """
+        Called when the entire request, including its body, has been
+        received.
+
+        @param command: The request's HTTP command.
+        @type command: L{bytes}
+
+        @param path: The request's path.  Note: this is actually what
+            RFC7320 calls the URI.
+        @type path: L{bytes}
+
+        @param version: The request's HTTP version.
+        @type version: L{bytes}
+        """
+
+    def __eq__(other: object) -> bool:
+        """
+        Determines if two requests are the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are the same object and L{False}
+            when not.
+        """
+
+    def __ne__(other: object) -> bool:
+        """
+        Determines if two requests are not the same object.
+
+        @param other: Another object whose identity will be compared
+            to this instance's.
+
+        @return: L{True} when the two are not the same object and
+            L{False} when they are.
+        """
+
+    def __hash__():
+        """
+        Generate a hash value for the request.
+
+        @return: The request's hash value.
+        @rtype: L{int}
+        """
+
+
+class IMinimalRequest(IConsumer):
+    """
+    The minimal interface required of an HTTP request implementation, for
+    protocol-level concerns.
+
+    @see: L{IRequest} for the expanded request interface which also includes
+        resource-traversal-state concerns.
+
+    @since: Twisted NEXT
     """
 
     method = Attribute("A L{bytes} giving the HTTP method that was used.")
@@ -48,16 +162,6 @@ class IRequest(Interface):
         "For example, for a URI with C{foo=bar&foo=baz&quux=spam} "
         "for its query part, C{args} will be C{{b'foo': [b'bar', b'baz'], "
         "b'quux': [b'spam']}}."
-    )
-
-    prepath = Attribute(
-        "The URL path segments which have been processed during resource "
-        "traversal, as a list of L{bytes}."
-    )
-
-    postpath = Attribute(
-        "The URL path segments which have not (yet) been processed "
-        "during resource traversal, as a list of L{bytes}."
     )
 
     requestHeaders = Attribute(
@@ -199,48 +303,6 @@ class IRequest(Interface):
         @rtype: C{bool}
         """
 
-    def getSession(sessionInterface=None):
-        """
-        Look up the session associated with this request or create a new one if
-        there is not one.
-
-        @return: The L{Session} instance identified by the session cookie in
-            the request, or the C{sessionInterface} component of that session
-            if C{sessionInterface} is specified.
-        """
-
-    def URLPath():
-        """
-        @return: A L{URLPath<twisted.python.urlpath.URLPath>} instance
-            which identifies the URL for which this request is.
-        """
-
-    def prePathURL():
-        """
-        At any time during resource traversal or resource rendering,
-        returns an absolute URL to the most nested resource which has
-        yet been reached.
-
-        @see: {twisted.web.server.Request.prepath}
-
-        @return: An absolute URL.
-        @rtype: L{bytes}
-        """
-
-    def rememberRootURL():
-        """
-        Remember the currently-processed part of the URL for later
-        recalling.
-        """
-
-    def getRootURL():
-        """
-        Get a previously-remembered URL.
-
-        @return: An absolute URL.
-        @rtype: L{bytes}
-        """
-
     # Methods for outgoing response
     def finish():
         """
@@ -362,23 +424,105 @@ class IRequest(Interface):
            request.setHost('www.example.com', 443, ssl=1)
         """
 
-
-class INonQueuedRequestFactory(Interface):
-    """
-    A factory of L{IRequest} objects that does not take a ``queued`` parameter.
-    """
-
-    def __call__(channel):
+    def notifyFinish() -> Deferred[None]:
         """
-        Create an L{IRequest} that is operating on the given channel. There
-        must only be one L{IRequest} object processing at any given time on a
-        channel.
+        Notify when the response to this request has finished.
 
-        @param channel: A L{twisted.web.http.HTTPChannel} object.
-        @type channel: L{twisted.web.http.HTTPChannel}
+        @note: There are some caveats around the reliability of the delivery of
+            this notification.
 
-        @return: A request object.
-        @rtype: L{IRequest}
+                1. If this L{IMinimalRequest}'s channel is paused, the
+                   notification will not be delivered.  This can happen in one
+                   of two ways; either you can call
+                   C{request.transport.pauseProducing} yourself, or,
+
+                2. In order to deliver this notification promptly when a client
+                   disconnects, the reactor must continue reading from the
+                   transport, so that it can tell when the underlying network
+                   connection has gone away.  Twisted Web will only keep
+                   reading up until a finite (small) maximum buffer size before
+                   it gives up and pauses the transport itself.  If this
+                   occurs, you will not discover that the connection has gone
+                   away until a timeout fires or until the application attempts
+                   to send some data via L{IMinimalRequest.write}.
+
+                3. It is theoretically impossible to distinguish between
+                   successfully I{sending} a response and the peer successfully
+                   I{receiving} it.  There are several networking edge cases
+                   where the L{Deferred}s returned by C{notifyFinish} will
+                   indicate success, but the data will never be received.
+                   There are also edge cases where the connection will appear
+                   to fail, but in reality the response was delivered.  As a
+                   result, the information provided by the result of the
+                   L{Deferred}s returned by this method should be treated as a
+                   guess; do not make critical decisions in your applications
+                   based upon it.
+
+        @return: A L{Deferred} which will be triggered when the request is
+            finished -- with a L{None} value if the request finishes
+            successfully or with an error if the request is interrupted by an
+            error (for example, the client closing the connection prematurely).
+        """
+
+
+class IRequest(IMinimalRequest):
+    """
+    The expanded request interface used by L{twisted.web.server} that includes
+    elements for resource hierarchy traversal and session management.
+
+    @since: Twisted 9.0
+    """
+
+    prepath = Attribute(
+        "The URL path segments which have been processed during resource "
+        "traversal, as a list of L{bytes}."
+    )
+
+    postpath = Attribute(
+        "The URL path segments which have not (yet) been processed "
+        "during resource traversal, as a list of L{bytes}."
+    )
+
+    def URLPath():
+        """
+        @return: A L{URLPath<twisted.python.urlpath.URLPath>} instance
+            which identifies the URL for which this request is.
+        """
+
+    def getRootURL():
+        """
+        Get a previously-remembered URL.
+
+        @return: An absolute URL.
+        @rtype: L{bytes}
+        """
+
+    def getSession(sessionInterface=None):
+        """
+        Look up the session associated with this request or create a new one if
+        there is not one.
+
+        @return: The L{Session} instance identified by the session cookie in
+            the request, or the C{sessionInterface} component of that session
+            if C{sessionInterface} is specified.
+        """
+
+    def rememberRootURL():
+        """
+        Remember the currently-processed part of the URL for later
+        recalling.
+        """
+
+    def prePathURL():
+        """
+        At any time during resource traversal or resource rendering,
+        returns an absolute URL to the most nested resource which has
+        yet been reached.
+
+        @see: {twisted.web.server.Request.prepath}
+
+        @return: An absolute URL.
+        @rtype: L{bytes}
         """
 
 
@@ -824,6 +968,146 @@ class IAgentEndpointFactory(Interface):
         @raises twisted.internet.error.SchemeNotSupported: If the given
             URI's scheme cannot be handled by this factory.
         """
+
+
+class ChannelDefinition(TypingProtocol):
+    """
+    An HTTP channel is the transport for an individual HTTP request, which
+    might be an HTTP/1.1 TCP connection, or an HTTP/2 stream.  This protocol
+    defines the methods which Twisted's HTTP implementation will expect of a
+    channel.
+
+    @note: Some of the methods on this protocol are private, and thus any
+        implementations outside of Twisted may stop working as those methods
+        change.
+    """
+
+    @property
+    def transport(self) -> ITransport | None:
+        """
+        The underlying transport, or nothing.
+
+        @note: In HTTP/2 this is always C{None}; it is exposed for
+            compatibility and should be removed in a future version.
+        """
+
+    def requestDone(self, request: _IChannelRequest) -> None:
+        """¬
+        The request has completed and should no longer own the channel.
+        """
+
+    def _respondToBadRequestAndDisconnect(self) -> None:
+        """
+        Immediately issue an HTTP 400 response and disconnect the underlying
+        transport.
+        """
+
+    def registerProducer(self, producer: IProducer, streaming: bool) -> None:
+        """
+        Allow registering a producer with the underlying transport for
+        flow-control purposes, the same as
+        L{IConsumer<twisted.internet.interfaces.IConsumer>}.
+        """
+
+    def unregisterProducer(self) -> None:
+        """
+        Unregister the current producer from the underlying transport.
+        """
+
+    def write(self, data: bytes) -> None:
+        """
+        Write some data to the body of the response.
+        """
+
+    def writeSequence(self, data: Sequence[bytes]) -> None:
+        """
+        Write a sequence of data to the body of the response.
+        """
+
+    def writeHeaders(
+        self, version: bytes, code: bytes, reason: bytes, headers: Headers
+    ) -> None:
+        """
+        The headers are fully constructed; write them to the transport.
+
+        @param version: The HTTP version in use.
+
+        @param code: The HTTP status code to write, already encoded as bytes.
+
+        @param reason: The HTTP reason phrase to write.
+
+        @param headers: The headers to write to the transport.
+        """
+
+    def loseConnection(self) -> None:
+        """
+        Drop the connection to the underlying transport.
+        """
+
+    def getPeer(self) -> IAddress:
+        """
+        Get the address of the remote peer of the underlying transport.
+        """
+
+    def getHost(self) -> IAddress:
+        """
+        Get the address of the local host of the underlying transport.
+        """
+
+    def isSecure(self) -> bool:
+        """
+        Is this channel currently secured using transport-layer security?
+        """
+
+
+class _LegacyQueuedRequestFactory(TypingProtocol):
+    """
+    A callable that produces a request object from a given channel, while
+    taking a now-unused 'queued' parameter.
+    """
+
+    def __call__(self, channel: ChannelDefinition, queued: bool) -> _IChannelRequest:
+        """
+        Create an L{IRequest} that is operating on the given channel.  There
+        must only be one L{IRequest} object processing at any given time on a
+        channel.
+
+        @param channel: The channel for the request.
+
+        @return: A request object.
+        """
+
+
+class INonQueuedRequestFactory(Interface):
+    """
+    A factory of L{IRequest} objects that does not take the now-unused
+    ``queued`` parameter from legacy versions of Twisted.
+    """
+
+    def __call__(channel: ChannelDefinition) -> _IChannelRequest:
+        """
+        Create a request for the given channel.
+
+        @param channel: The channel for the request.
+
+        @return: A channel-facing request object.
+        """
+
+
+_SomeRequestFactory = INonQueuedRequestFactory | _LegacyQueuedRequestFactory
+
+
+def _invokeSomeRequestFactory(
+    some: _SomeRequestFactory, channel: ChannelDefinition
+) -> _IChannelRequest:
+    """
+    Manage legacy compatibility with queued versus non-queued request factory,
+    by invoking the given callable with the right number of arguments.
+    """
+    if INonQueuedRequestFactory.providedBy(some):
+        return some(channel)
+    else:
+        return some(channel, False)
 
 
 UNKNOWN_LENGTH = "twisted.web.iweb.UNKNOWN_LENGTH"

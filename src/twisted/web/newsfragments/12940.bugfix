@@ -1,0 +1,1 @@
+twisted.web.static.File will no longer leak file descriptors when encountering various filesystem or request-state errors.
